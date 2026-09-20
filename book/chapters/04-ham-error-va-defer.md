@@ -134,10 +134,3 @@ error gần nơi nó xảy ra giữ nguyên bằng chứng. defer là công cụ
 tự, còn panic và recover là cơ chế hẹp cho trạng thái bất thường, không phải
 shortcut để khỏi thiết kế error path. Chương dữ liệu sẽ dùng những ranh giới
 này để xem slice, map và pointer chia sẻ hay sao chép điều gì.
-
-## Nguồn
-
-- Go Language Specification: Function declarations, Defer statements,
-  Handling panics.
-- Package errors, fmt, strconv, os trong Go standard library.
-- Effective Go: Defer; Panic; Recover.

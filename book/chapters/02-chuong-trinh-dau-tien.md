@@ -115,10 +115,3 @@ static typing, còn zero value là một tính năng thiết kế có ích nhưn
 đọc trong ngữ cảnh. Chương tiếp theo sẽ dùng các kiểu và control flow để biến
 một chương trình chỉ in text thành một chương trình có quyết định rõ ràng.
 
-## Nguồn
-
-- Go Language Specification: Packages, Program initialization and execution,
-  Variables.
-- Effective Go: Formatting; Control structures.
-- Go command documentation, `go.dev/cmd/go`.
-

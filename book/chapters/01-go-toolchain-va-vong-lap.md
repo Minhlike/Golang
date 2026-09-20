@@ -94,9 +94,3 @@ Module là ranh giới dependency; package là ranh giới code/import. Hãy qua
 hồi ngắn. Chương sau sẽ đặt một chương trình đầu tiên vào đúng các ranh giới
 đó, thay vì ném một file `main.go` vào bất kỳ thư mục nào rồi cầu may.
 
-## Nguồn
-
-- Go Modules Reference, `go.dev/ref/mod`.
-- Go 1.26 Release Notes, phần `go mod init`, `go.dev/doc/go1.26`.
-- Go Command documentation, `go.dev/cmd/go`.
-

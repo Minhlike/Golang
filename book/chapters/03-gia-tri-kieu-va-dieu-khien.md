@@ -160,8 +160,3 @@ nghĩa mà type đơn lẻ không mang nổi. if, switch và for ít nhưng đ�
 coi thứ tự điều kiện là logic có thể kiểm thử. Chương sau sẽ dùng hàm để đặt
 ranh giới nhỏ cho logic đó, rồi xử lý error mà không đẩy mọi tình huống xấu vào
 panic.
-
-## Nguồn
-
-- Go Language Specification: Constants, Variables, Assignments, Statements.
-- Effective Go: Control structures.

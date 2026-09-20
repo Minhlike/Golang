@@ -58,3 +58,21 @@ nhận cấu hình, chạy kiểm tra đồng thời có giới hạn, xuất me
 có lý do tồn tại là giúp một nhóm vận hành phát hiện dependency bị suy giảm
 trước khi người dùng báo lỗi.
 
+## Ý đồ sư phạm, không phải template chương
+
+Sách không có một khuôn bắt buộc kiểu mở bài, định nghĩa, ví dụ, bài tập, đáp
+án, tổng kết. Trước mỗi chương, tác giả phải xác định người học cần đổi trực
+giác nào, ngộ nhận nào cần bị phá vỡ, và kỹ năng hay bằng chứng nào cho thấy
+anh đã hiểu. Hình thức được chọn theo mục tiêu đó, không theo sự tiện lợi khi
+viết.
+
+Vì vậy, syntax có thể đi từ một ví dụ rồi rút quy luật; slice, pointer và memory
+model có thể mở bằng tình huống bất ngờ rồi truy dấu dữ liệu; concurrency bắt
+đầu từ race hoặc deadlock; network từ sequence diagram hay trace; performance
+từ số đo; DevOps/SRE từ incident mô phỏng và công cụ được xây dần. Case study,
+guided investigation, debugging session, code review, failure analysis và
+mini-project đều là hình thức hợp lệ khi chúng dạy tốt hơn văn xuôi tuyến tính.
+
+Một chương chỉ có exercise, recap, diagram, checklist hoặc đáp án khi chúng tạo
+ra giá trị học tập cụ thể. Chương 5 sẽ mở bằng cuộc điều tra về slice aliasing,
+không lặp lại trình tự của các chương trước.
