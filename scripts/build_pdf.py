@@ -44,6 +44,7 @@ CHAPTERS = [
     ROOT / "book/chapters/02-gia-tri-slice-va-aliasing.md",
     ROOT / "book/chapters/03-mo-hinh-du-lieu-va-trach-nhiem-thay-doi.md",
     ROOT / "book/chapters/04-bien-loi.md",
+    ROOT / "book/chapters/05-thiet-ke-package.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"

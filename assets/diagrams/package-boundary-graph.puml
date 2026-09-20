@@ -1,0 +1,23 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam shadowing false
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
+skinparam ArrowColor #222222
+left to right direction
+
+rectangle "cmd/opsprobe\ncomposition root\nin kết quả" as cmd
+rectangle "internal/config\npolicy target" as config
+rectangle "probe\nCheck, model, error boundary" as probe
+
+cmd --> config : đọc target
+cmd --> probe : tạo Service, gọi Check
+note bottom of probe
+không import ngược cmd hoặc config
+end note
+@enduml
