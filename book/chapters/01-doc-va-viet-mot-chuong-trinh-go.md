@@ -1,6 +1,6 @@
 # Chương 1 — Đọc và viết một chương trình Go
 
-Một tệp nguồn là một lời khẳng định có cấu trúc, không phải một chuỗi keyword. Ta sẽ bắt đầu từ một chương trình rất nhỏ: nó nhận một mã trạng thái và in ra một nhãn mà người trực vận hành có thể đọc. Cố ý chọn ví dụ này vì nó đủ thực để có dữ liệu, lựa chọn và thông điệp, nhưng chưa che mất ngôn ngữ dưới một dự án.
+Một tệp nguồn có hình học riêng: phần đầu đặt nó vào package, vài declaration đứng ở cấp tệp, rồi các block lồng vào nhau. Ta sẽ bắt đầu từ một chương trình rất nhỏ: nó nhận một mã trạng thái và in ra một nhãn mà người trực vận hành có thể đọc. Ví dụ đủ thực để có dữ liệu, lựa chọn và thông điệp, nhưng chưa che mất ngôn ngữ dưới một dự án.
 
 ~~~go
 package main
@@ -23,6 +23,12 @@ func main() {
 }
 ~~~
 
+<!-- pagebreak -->
+
+![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
+
+Hình 3 — Hãy nhìn figure này như bản đồ định vị trước khi đọc chi tiết. Nó cho thấy package name, main package, function declaration và entry function là các khái niệm có quan hệ, nhưng không phải là một khái niệm duy nhất.
+
 Chưa cần đọc từng dòng. Hãy chỉ theo ba câu hỏi: chương trình bắt đầu ở đâu, giá trị nào được tạo, và giá trị nào bị gửi ra màn hình? Câu trả lời là main, literal 503 cùng các giá trị trả về từ classify, và lời gọi Println.
 
 ## Bản đồ của một tệp nguồn
@@ -31,7 +37,7 @@ Từ đầu xuống cuối, tệp trên có bốn vùng: package nói tệp thu�
 
 | Dòng hoặc mảnh code | Nó là gì khi đọc | Nó có tác dụng gì |
 | --- | --- | --- |
-| package main | package declaration | Đặt tệp vào package tạo executable. |
+| package main | package declaration | Đặt tệp vào package có tên main. Một executable hoàn chỉnh cần main package và func main không argument, không result. |
 | import "fmt" | import declaration | Cho phép tham chiếu fmt từ standard library. |
 | const service = "checkout" | declaration + literal | Gắn một tên không đổi với chuỗi. |
 | func classify(status int) string | function declaration + signature | Đặt tên hàm, tham số kiểu int và kết quả kiểu string. |
@@ -40,7 +46,7 @@ Từ đầu xuống cuối, tệp trên có bốn vùng: package nói tệp thu�
 | status := 503 | short variable declaration | Tạo biến status trong block main. |
 | fmt.Println(...) | function call statement | Gọi hàm để có hiệu ứng in ra stdout. |
 
-Các nhãn này không phải để học thuộc. Chúng cho ta một cách chỉ vị trí khi compiler báo lỗi: lỗi có thể nằm trong một biểu thức, kiểu của một lời gọi, hay phạm vi của một tên — không phải mơ hồ là “code bị sai”.
+Các nhãn này cho ta một cách chỉ vị trí khi compiler báo lỗi: lỗi có thể nằm trong một biểu thức, kiểu của một lời gọi, hay phạm vi của một tên thay vì chỉ là cảm giác mơ hồ rằng “code bị sai”.
 
 ![Sơ đồ khái niệm: compiler đọc source theo các lớp, từ token đến kiểm tra kiểu và chương trình chạy.](../../assets/diagrams/compiler-doc-go.png)
 
@@ -51,6 +57,18 @@ Hình 1 — Đây là mô hình đọc, không phải sơ đồ nội bộ chín
 Ở dòng const service, service là identifier: một cái tên do người viết chọn. fmt, Println, classify, status và label cũng là identifier. Ngược lại, package, import, const, func, if và return là keyword; chúng dành riêng cho cấu trúc ngôn ngữ nên bạn không thể dùng chúng để tự đặt tên.
 
 Tên không tự mang giá trị. Câu status := 503 tạo một biến, rồi gắn giá trị literal 503 vào biến đó. Trong cùng block, câu label := classify(status) tạo một biến khác, nhận kết quả mà hàm trả về. Tên tồn tại từ điểm khai báo đến cuối block bao quanh.
+
+### Phóng to một statement
+
+Compiler không đọc status := 503 như một câu tiếng Anh. Nó tách câu này thành các token có vai trò cú pháp, rồi ghép các token thành statement.
+
+~~~text
+status    :=    503
+  │       │      │
+identifier operator integer literal
+~~~
+
+Đây là một mức đọc khác với mức file hoặc function: identifier gọi lại một tên trong source, := là operator khai báo-ngắn, còn 503 là integer literal. Khi nhìn code theo từng mức như vậy, một compiler message có chỗ để bám vào.
 
 ~~~go
 func main() {
@@ -64,6 +82,10 @@ func main() {
 ~~~
 
 Khối if được tạo bởi cặp ngoặc nhọn. label chỉ hữu ích bên trong khối đó. Đây là một giới hạn có chủ ý: người đọc không phải lục lại toàn bộ tệp để đoán một tên có còn sống hay không.
+
+![Vết của scope: label nằm trong if block, còn status sống ở main block.](../../assets/diagrams/go-scope-trace.png)
+
+Hình 4 — Scope không mô tả dữ liệu được lưu ở đâu trong bộ nhớ. Nó chỉ giới hạn nơi tên được phép được tham chiếu trong source.
 
 > **Dừng lại để dự đoán:** nếu bỏ comment ở dòng cuối, compiler phàn nàn về giá trị hay về tên? Câu trả lời là tên: label không còn được khai báo trong scope mà lời gọi Println đang đứng.
 
@@ -95,11 +117,14 @@ func main() {
 }
 ~~~
 
-Short declaration := vừa tạo tên vừa gán giá trị. Nó chỉ hợp lệ bên trong thân hàm. Nếu service đã tồn tại trong cùng scope, dùng = khi chỉ muốn thay giá trị:
+Hãy nhìn một thay đổi trước khi học rule. Lần đầu, ta tạo status và cho nó giá trị. Lần sau, status đã có trong cùng block; ta chỉ thay giá trị của nó.
 
 ~~~go
-label = "degraded"
+status := 503
+status = 200
 ~~~
+
+Vì dòng thứ hai không tạo một tên mới, nó dùng = thay vì :=. Short declaration chỉ dùng trong function body. Với nhiều tên ở vế trái, một vài tên cũ vẫn có thể xuất hiện lại, miễn là trong cùng block có ít nhất một biến khác _ là mới. Quy tắc này làm việc khai báo trong code thật bớt cứng nhắc, nhưng ý định vẫn rõ: := phải giới thiệu được một tên mới.
 
 | Muốn làm gì? | Viết gì? | Điều compiler cần biết |
 | --- | --- | --- |
@@ -134,7 +159,7 @@ urgent := status >= 500 ||
 
 ### Function: đặt tên cho một quyết định có thể tái dùng
 
-Khi điều kiện có ý nghĩa riêng, đưa nó vào hàm. Đây không phải “cho code đẹp”; nó cho người đọc một tên ở đúng mức trừu tượng.
+Khi điều kiện có ý nghĩa riêng, đưa nó vào hàm. Người đọc khi đó gặp một tên ở đúng mức trừu tượng thay vì phải giải mã lại cùng một điều kiện ở mọi nơi.
 
 ~~~go
 func classify(status int) string {
@@ -186,9 +211,9 @@ for _, status := range statuses {
 
 []int là slice của int; cặp ngoặc nhọn tạo literal gồm ba phần tử. range cung cấp index và value. Tên _ bảo Go bỏ index đi vì ta không cần nó. Mỗi lượt, status là giá trị hiện tại; lời gọi severity dùng nó và Println in kết quả. Ta sẽ quay lại slice, bộ nhớ và aliasing ở chương sau — hiện tại chỉ cần thấy luồng đọc của vòng lặp.
 
-## Kiểu không phải nghi thức: nó giới hạn những phép có nghĩa
+## Kiểu giới hạn những phép có nghĩa
 
-Go suy ra nhiều kiểu từ literal, nhưng vẫn kiểm tra chúng chặt. int biểu diễn số nguyên, string biểu diễn chuỗi byte được hiểu theo UTF-8, bool biểu diễn true/false. Một biến có kiểu xác định; phép toán đòi các vế tương thích.
+Go suy ra nhiều kiểu từ literal, nhưng vẫn kiểm tra chúng chặt. int biểu diễn số nguyên; bool biểu diễn true hoặc false; string là một sequence of bytes không thể sửa trực tiếp. Text trong Go thường dùng UTF-8, và range trên string có semantics liên quan UTF-8/rune, nhưng string vẫn có thể chứa chuỗi byte không phải UTF-8 hợp lệ. Một biến có kiểu xác định; phép toán đòi các vế tương thích.
 
 ~~~go
 status := 503
@@ -205,16 +230,33 @@ fmt.Sprint tạo string để dùng cho hiển thị. Trong những ranh giới 
 
 ## Đọc compiler như một người cộng tác khó tính
 
-Hãy tạo thư mục lab part1-reading-go rồi chạy tệp main.go. Thử từng thay đổi một, hoàn tác sau mỗi lần, và đọc lỗi trước khi sửa.
+Phần này là một cuộc điều tra nhỏ, không phải checklist lệnh. Trong lab part1-reading-go, giữ một bản đang chạy được. Sau đó tạo từng lỗi một, dự đoán trước, chạy compiler, và phân loại thông báo. Đừng sửa ngay khi vừa thấy chữ đỏ.
+
+| Case | Thay đổi có chủ ý | Dự đoán cần kiểm tra |
+| --- | --- | --- |
+| A | Viết status = 503 khi status chưa tồn tại | Lỗi thuộc về identifier hay giá trị? |
+| B | Đổi classify nhận string nhưng caller vẫn đưa status kiểu int | Compiler nói về function hay type của argument? |
+| C | Dùng label sau khi rời if block | Tên biến mất vì giá trị bị xóa hay vì scope kết thúc? |
+
+Kết quả dưới đây được chạy bằng Go 1.27.1 trên ba source file tối thiểu, mỗi case chỉ có một lỗi chủ ý. Dòng dài ở Case B được ngắt khi dàn trang; nội dung của compiler message được giữ nguyên.
 
 ~~~text
-go run .
-go test ./...
-go vet ./...
+[case-a]
+# command-line-arguments
+.\main.go:4:2: undefined: status
+
+[case-b]
+# command-line-arguments
+.\main.go:9:15: cannot use status (variable of type int)
+    as string value in argument to classify
+
+[case-c]
+# command-line-arguments
+.\main.go:8:6: undefined: label
 ~~~
 
-Thay đổi thứ nhất: đổi status := 503 thành status = 503. Khi chưa có status trong scope, compiler sẽ nói tên chưa được khai báo. Thay đổi thứ hai: đổi tham số của classify từ int thành string nhưng vẫn gọi với status. Lần này lỗi nói về kiểu của đối số. Hai lỗi đều là phản hồi cấu trúc: compiler không đoán hộ bạn bạn muốn tạo tên mới hay chuyển một số thành chuỗi.
+Case A là lỗi tên: compiler không thể gán cho một identifier chưa được khai báo. Case B đi xa hơn, vì tên tồn tại nhưng type của giá trị đưa vào không khớp parameter. Case C quay lại scope: label từng tồn tại trong block con, nhưng không thể được tham chiếu từ câu lệnh đứng sau block đó. Thông báo có thể khác đôi chút giữa phiên bản Go, còn ba loại lỗi thì vẫn là ba loại lỗi bạn cần nhìn ra.
 
 > **Bài đọc cuối chương:** không cần viết chương trình mới. Hãy nhìn hàm severity, dự đoán kết quả cho 200, 404 và 503, rồi viết một test table nhỏ cho ba dự đoán đó. Nếu test thất bại, lần theo branch được chọn thay vì sửa output một cách mù.
 
-Ở đây ta đã có từ vựng để đọc phần lớn tệp Go nhỏ: package đưa tệp vào một đơn vị, khai báo đặt tên, biểu thức tạo giá trị, statement điều phối hiệu ứng, block giới hạn scope, và hàm biến một đoạn quyết định thành một đơn vị có hợp đồng. Chương tiếp theo sẽ không lặp lại danh sách này. Nó sẽ hỏi câu khó hơn: khi giá trị đi qua hàm, copy, slice và string, dữ liệu nào thực sự được chia sẻ?
+Đến đây, bạn đã có từ vựng để đọc phần lớn tệp Go nhỏ: package đưa tệp vào một đơn vị, declaration đặt tên, expression tạo giá trị, statement điều phối hiệu ứng, block giới hạn scope, và function biến một đoạn quyết định thành đơn vị có hợp đồng. Chương tiếp theo sẽ mở bằng một hiện tượng khó chịu hơn: hai biến trông độc lập, nhưng một thay đổi qua biến này lại hiện ra ở biến kia. Câu hỏi là chúng đã chia sẻ điều gì.

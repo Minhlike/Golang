@@ -38,6 +38,7 @@ from reportlab.platypus.doctemplate import PageTemplate
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = [
+    ROOT / "book/chapters/00-truoc-khi-viet-dong-go-dau-tien.md",
     ROOT / "book/chapters/00-mo-cua-vao-go.md",
     ROOT / "book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
 ]
@@ -133,6 +134,10 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
             "TableHeader", parent=base["BodyText"], fontName=body_bold,
             fontSize=11.2, leading=14.8, textColor=colors.black,
         ),
+        "caption": ParagraphStyle(
+            "Caption", parent=base["BodyText"], fontName=body, fontSize=10.8,
+            leading=14.2, textColor=colors.HexColor("#333333"), spaceAfter=10,
+        ),
     }
 
 
@@ -171,6 +176,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
     paragraph_lines: list[str] = []
     code_lines: list[str] = []
     table_lines: list[str] = []
+    pending_image: Image | None = None
     in_code = False
 
     def flush_paragraph() -> None:
@@ -205,7 +211,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ("TOPPADDING", (0, 0), (-1, -1), 6),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
-        story.extend([Spacer(1, 3), table, Spacer(1, 10)])
+        story.append(KeepTogether([Spacer(1, 3), table, Spacer(1, 10)]))
         table_lines = []
 
     def add_code_block() -> None:
@@ -224,7 +230,21 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
         code_lines = []
 
+    def flush_image() -> None:
+        nonlocal pending_image
+        if pending_image is not None:
+            story.extend([Spacer(1, 4), pending_image, Spacer(1, 6)])
+            pending_image = None
+
     for line in lines:
+        if pending_image is not None and line.startswith("Hình "):
+            story.append(KeepTogether([
+                Spacer(1, 4), pending_image, Spacer(1, 4),
+                Paragraph(inline(line, mono), s["caption"]),
+            ]))
+            pending_image = None
+            continue
+        flush_image()
         if line.startswith(("```", "~~~")):
             flush_paragraph()
             if in_code:
@@ -239,6 +259,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             table_lines.append(line)
             continue
         flush_table()
+        if line.strip() == "<!-- pagebreak -->":
+            flush_paragraph()
+            story.append(PageBreak())
+            continue
         image = re.fullmatch(r"!\[[^]]*\]\(([^)]+)\)", line)
         if image:
             flush_paragraph()
@@ -247,7 +271,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                 raise FileNotFoundError(f"Thiếu diagram: {asset}")
             drawing = Image(str(asset))
             drawing._restrictSize(16.8 * cm, 12.8 * cm)
-            story.extend([Spacer(1, 4), drawing, Spacer(1, 6)])
+            drawing.hAlign = "CENTER"
+            pending_image = drawing
             continue
         quote = re.match(r"^>\s+(.+)$", line)
         if quote:
@@ -289,6 +314,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         paragraph_lines.append(line.strip())
     if in_code:
         raise ValueError(f"Unclosed code fence: {chapter}")
+    flush_image()
     flush_table()
     flush_paragraph()
 

@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 17
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F4F4F1
+  BorderColor #000000
+  FontColor #000000
+  RoundCorner 4
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontName "Source Sans 3"
+  FontSize 16
+  FontColor #000000
+}
+skinparam arrowColor #000000
+left to right direction
+
+rectangle "package main\n\nimport \"fmt\"\n\nconst service = \"checkout\"\n\nfunc classify(status int) string { ... }\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as source
+note right of source
+  package main: package name
+  import: tên từ package khác
+  const và func: declaration cấp tệp
+  main: entry function của executable
+  status, label: tên sống trong main block
+end note
+@enduml

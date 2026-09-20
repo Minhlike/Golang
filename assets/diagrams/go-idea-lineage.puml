@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F4F4F1
+  BorderColor #000000
+  FontColor #000000
+  RoundCorner 6
+}
+skinparam arrowColor #000000
+skinparam ArrowThickness 1.2
+left to right direction
+
+rectangle "C family\ncú pháp cơ bản" as c
+rectangle "Pascal / Modula / Oberon\ndeclaration và package" as pmo
+rectangle "CSP\nTony Hoare" as csp
+rectangle "Newsqueak" as news
+rectangle "Alef" as alef
+rectangle "Limbo" as limbo
+rectangle "Go\nthiết kế mới cho\nsoftware engineering" as go
+
+c --> go
+pmo --> go
+csp --> news
+news --> alef
+alef --> limbo
+limbo --> go
+@enduml
