@@ -8,13 +8,13 @@ Ngày 21 tháng 9 năm 2007, ba người bắt đầu phác thảo mục tiêu c
 
 ![Dòng thời gian: các mốc đã thay đổi cách Go được thiết kế, triển khai hoặc dùng trong dự án.](../../assets/diagrams/go-history-timeline.png)
 
-Hình 1 — Dòng thời gian không kể mọi release. Nó chỉ giữ các bước làm thay đổi lời hứa của Go với người viết phần mềm: công khai, ổn định, triển khai lại nền tảng, dependency rõ ràng và generics tương thích ngược.
+@figure Dòng thời gian không kể mọi release. Nó chỉ giữ các bước làm thay đổi lời hứa của Go với người viết phần mềm: công khai, ổn định, triển khai lại nền tảng, dependency rõ ràng và generics tương thích ngược.
 
 Go được mở mã nguồn ngày 10 tháng 11 năm 2009. Ba năm đầu là giai đoạn ngôn ngữ còn thay đổi nhanh: nhóm thiết kế và cộng đồng thử, bỏ, sửa, rồi mới chốt một nền tảng ổn định. Go 1 phát hành ngày 28 tháng 3 năm 2012. Từ đây, Go 1 Compatibility Promise trở thành một phần của văn hóa dự án: code nguồn viết cho Go 1 được kỳ vọng tiếp tục build và chạy trong các bản Go 1 sau, với các ngoại lệ được nêu rõ. Lời hứa ấy làm thay đổi cách một feature được cân nhắc. Một bổ sung không chỉ cần hữu ích hôm nay; nó phải sống được cùng hệ sinh thái trong nhiều năm.
 
 Go 1.5 là một cột mốc về implementation. Toolchain compiler chuyển từ C sang Go, runtime cũng trở thành Go kèm một phần assembly. Garbage collector được thiết kế lại để chạy phần lớn công việc đồng thời với chương trình; scheduler cho phép giá trị mặc định của GOMAXPROCS chuyển từ 1 sang số logical CPU. Đó là những thay đổi nằm dưới mặt ngôn ngữ, nhưng chúng làm rõ mục tiêu ban đầu: một chương trình Go cần hợp với phần cứng nhiều lõi, không bắt người viết phải tự gánh mọi chi tiết của runtime.
 
-Những thay đổi lớn sau đó cũng đi theo nhịp tiến hóa thay vì đập đi làm lại. Go 1.11 đưa modules vào như một lựa chọn thay cho GOPATH, với versioning và package distribution tích hợp vào toolchain; mô hình này dần thành cách quản lý dependency quen thuộc. Go 1.18, phát hành năm 2022, đưa type parameters vào ngôn ngữ. Generics không xuất hiện như một món trang sức muộn màng: đó là một thay đổi lớn, được đặt trong khuôn khổ tương thích ngược của Go 1. “Go 2” vì thế không thành một nhánh rewrite tách rời; nhiều ý tưởng được thử, thảo luận và đưa dần vào dòng Go 1.x khi chứng minh được giá trị của chúng.
+Những thay đổi lớn sau đó cũng đi theo nhịp tiến hóa thay vì đập đi làm lại. Go 1.11 đưa modules vào như một lựa chọn thay cho GOPATH, với versioning và package distribution tích hợp vào toolchain; mô hình này dần thành cách quản lý dependency quen thuộc. Go 1.18, phát hành năm 2022, đưa type parameters vào ngôn ngữ. Đến Go 1.27 năm 2026, generic methods nối phần còn thiếu vào câu chuyện đó: method declaration có thể có type parameters riêng. “Go 2” vì thế không thành một nhánh rewrite tách rời; nhiều ý tưởng được thử, thảo luận và đưa dần vào dòng Go 1.x khi chứng minh được giá trị của chúng.
 
 ## Một dòng họ ý tưởng, không phải một cây sao chép
 
@@ -22,7 +22,7 @@ Go thuộc nhiều dòng tư tưởng cùng lúc. Cú pháp cơ bản đặt nó
 
 ![Bản đồ ý tưởng: các ảnh hưởng gặp nhau trong Go nhưng không quyết định mọi chi tiết thiết kế.](../../assets/diagrams/go-idea-lineage.png)
 
-Hình 2 — Nhánh CSP giải thích lịch sử của channels; nhánh C và Pascal/Modula/Oberon giải thích những điểm xuất phát khác. Thiết kế cuối cùng vẫn được tạo cho bài toán engineering mà Go nhắm đến.
+@figure Nhánh CSP giải thích lịch sử của channels; nhánh C và Pascal/Modula/Oberon giải thích những điểm xuất phát khác. Thiết kế cuối cùng vẫn được tạo cho bài toán engineering mà Go nhắm đến.
 
 Một ngôn ngữ được sinh ra cho codebase lớn không chỉ cần syntax gọn. Nó cần một cách làm việc chung quanh syntax: build nhanh, formatter, package/dependency rõ, compiler cho phản hồi sớm và tooling có thể phân tích source. Đó là lý do Go thường được nói đến cùng gofmt, go test và go command, thay vì chỉ cùng một danh sách tính năng ngôn ngữ.
 
@@ -40,9 +40,11 @@ Sau gần hai thập kỷ tiến hóa, cách tốt nhất để gặp các quy�
 
 ## Ghi chú kiểm chứng
 
-1. Go FAQ, Origins và Design — https://go.dev/doc/faq
-2. Russ Cox, Toward Go 2 — https://go.dev/blog/toward-go2
-3. Go 1 and the Future of Go Programs — https://go.dev/doc/go1compat
-4. Go 1.5 is released — https://go.dev/blog/go1.5
-5. Go 1.11 is released — https://go.dev/blog/go1.11
-6. Go 1.18 is released! — https://go.dev/blog/go1.18
+@references
+1. Go Team. Frequently Asked Questions: Origins and Design. go.dev/doc/faq
+2. Cox, Russ. Toward Go 2. 13 July 2017. go.dev/blog/toward-go2
+3. Go Team. Go 1 and the Future of Go Programs. March 2012. go.dev/doc/go1compat
+4. Gerrand, Andrew. Go 1.5 is released. 19 August 2015. go.dev/blog/go1.5
+5. Bonventre, Andrew. Go 1.11 is released. 24 August 2018. go.dev/blog/go1.11
+6. Go Team. Go 1.18 is released! 15 March 2022. go.dev/blog/go1.18
+7. Go Team. Go 1.27 Release Notes. 2026. go.dev/doc/go1.27

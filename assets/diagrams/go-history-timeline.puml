@@ -12,6 +12,8 @@ skinparam rectangle {
 }
 skinparam arrowColor #000000
 skinparam ArrowThickness 1.2
+skinparam nodesep 55
+skinparam ranksep 38
 top to bottom direction
 
 rectangle "2007\nMục tiêu được phác thảo\nTên Go được đề xuất" as y2007
@@ -21,11 +23,13 @@ rectangle "2012\nGo 1\nCompatibility Promise" as y2012
 rectangle "2015\nGo 1.5\nToolchain/runtime bằng Go\nGC concurrent, GOMAXPROCS" as y2015
 rectangle "2018\nGo 1.11\nModules bắt đầu" as y2018
 rectangle "2022\nGo 1.18\nType parameters" as y2022
+rectangle "2026\nGo 1.27\nGeneric methods" as y2026
 
 y2007 --> y2008
 y2008 --> y2009
 y2009 --> y2012
-y2012 --> y2015
+y2012 -right-> y2015
 y2015 --> y2018
 y2018 --> y2022
+y2022 --> y2026
 @enduml

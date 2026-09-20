@@ -1,0 +1,26 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 19
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "a: [3]int\n[10] [20] [30]" as a
+rectangle "b: [3]int\n[99] [20] [30]" as b
+a ..> b : b := a\nsao chép mọi phần tử
+note bottom of a : a[0] vẫn là 10
+note bottom of b : b[0] trở thành 99
+@enduml

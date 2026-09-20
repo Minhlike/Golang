@@ -12,6 +12,13 @@ skinparam rectangle {
 }
 skinparam arrowColor #000000
 skinparam ArrowThickness 1.2
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
 top to bottom direction
 
 rectangle "Tệp .go\nchữ bạn viết" as source

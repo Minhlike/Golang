@@ -1,0 +1,18 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 17
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+top to bottom direction
+rectangle "A. cap còn chỗ\nold, s --> storage A\nold: [99 20] · s: [99 20 30]" as reuse
+rectangle "B. cap đã chạm giới hạn\nold --> storage A [10 20]\ngrown --> storage B [99 20 30]" as allocate
+reuse -down-> allocate : kết quả append phụ thuộc capacity
+@enduml

@@ -27,7 +27,7 @@ func main() {
 
 ![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
 
-Hình 3 — Hãy nhìn figure này như bản đồ định vị trước khi đọc chi tiết. Nó cho thấy package name, main package, function declaration và entry function là các khái niệm có quan hệ, nhưng không phải là một khái niệm duy nhất.
+@figure Hãy nhìn figure này như bản đồ định vị trước khi đọc chi tiết. Nó cho thấy package name, main package, function declaration và entry function là các khái niệm có quan hệ, nhưng không phải là một khái niệm duy nhất.
 
 Chưa cần đọc từng dòng. Hãy chỉ theo ba câu hỏi: chương trình bắt đầu ở đâu, giá trị nào được tạo, và giá trị nào bị gửi ra màn hình? Câu trả lời là main, literal 503 cùng các giá trị trả về từ classify, và lời gọi Println.
 
@@ -50,7 +50,7 @@ Các nhãn này cho ta một cách chỉ vị trí khi compiler báo lỗi: lỗ
 
 ![Sơ đồ khái niệm: compiler đọc source theo các lớp, từ token đến kiểm tra kiểu và chương trình chạy.](../../assets/diagrams/compiler-doc-go.png)
 
-Hình 1 — Đây là mô hình đọc, không phải sơ đồ nội bộ chính xác của Go compiler. Nó giải thích vì sao một dấu ngoặc, một tên không tồn tại và phép cộng sai kiểu thường bị bắt trước khi chương trình có cơ hội chạy.
+@figure Đây là mô hình đọc, không phải sơ đồ nội bộ chính xác của Go compiler. Nó giải thích vì sao một dấu ngoặc, một tên không tồn tại và phép cộng sai kiểu thường bị bắt trước khi chương trình có cơ hội chạy.
 
 ## Một tên chỉ có nghĩa trong phạm vi của nó
 
@@ -85,7 +85,7 @@ Khối if được tạo bởi cặp ngoặc nhọn. label chỉ hữu ích bên
 
 ![Vết của scope: label nằm trong if block, còn status sống ở main block.](../../assets/diagrams/go-scope-trace.png)
 
-Hình 4 — Scope không mô tả dữ liệu được lưu ở đâu trong bộ nhớ. Nó chỉ giới hạn nơi tên được phép được tham chiếu trong source.
+@figure Scope không mô tả dữ liệu được lưu ở đâu trong bộ nhớ. Nó chỉ giới hạn nơi tên được phép được tham chiếu trong source.
 
 > **Dừng lại để dự đoán:** nếu bỏ comment ở dòng cuối, compiler phàn nàn về giá trị hay về tên? Câu trả lời là tên: label không còn được khai báo trong scope mà lời gọi Println đang đứng.
 
@@ -124,7 +124,7 @@ status := 503
 status = 200
 ~~~
 
-Vì dòng thứ hai không tạo một tên mới, nó dùng = thay vì :=. Short declaration chỉ dùng trong function body. Với nhiều tên ở vế trái, một vài tên cũ vẫn có thể xuất hiện lại, miễn là trong cùng block có ít nhất một biến khác _ là mới. Quy tắc này làm việc khai báo trong code thật bớt cứng nhắc, nhưng ý định vẫn rõ: := phải giới thiệu được một tên mới.
+Vì dòng thứ hai không tạo một tên mới, nó dùng = thay vì :=. Short declaration chỉ dùng trong function body. Với nhiều tên ở vế trái, tên cũ có thể xuất hiện lại khi chúng đã có trong cùng block (hoặc parameter list tương ứng), type không đổi, và có ít nhất một non-blank variable mới. `_` không được tính là tên mới. Đây là trường hợp tiện lợi khi bổ sung một kết quả mới mà vẫn giữ một biến đã có.
 
 | Muốn làm gì? | Viết gì? | Điều compiler cần biết |
 | --- | --- | --- |

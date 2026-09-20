@@ -41,6 +41,7 @@ CHAPTERS = [
     ROOT / "book/chapters/00-truoc-khi-viet-dong-go-dau-tien.md",
     ROOT / "book/chapters/00-mo-cua-vao-go.md",
     ROOT / "book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    ROOT / "book/chapters/02-gia-tri-slice-va-aliasing.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
@@ -138,6 +139,11 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
             "Caption", parent=base["BodyText"], fontName=body, fontSize=10.8,
             leading=14.2, textColor=colors.HexColor("#333333"), spaceAfter=10,
         ),
+        "reference": ParagraphStyle(
+            "Reference", parent=base["BodyText"], fontName=heading, fontSize=9.7,
+            leading=13.0, textColor=colors.HexColor("#333333"), leftIndent=14,
+            firstLineIndent=-12, spaceAfter=4,
+        ),
     }
 
 
@@ -169,14 +175,16 @@ def chapter_titles() -> list[str]:
 
 
 def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono: str,
-                 page_break_before: bool) -> None:
+                 page_break_before: bool, numbering: dict[str, int]) -> None:
     if page_break_before:
         story.append(PageBreak())
     lines = chapter.read_text(encoding="utf-8").splitlines()
     paragraph_lines: list[str] = []
     code_lines: list[str] = []
     table_lines: list[str] = []
+    table_caption: str | None = None
     pending_image: Image | None = None
+    in_references = False
     in_code = False
 
     def flush_paragraph() -> None:
@@ -186,7 +194,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             paragraph_lines = []
 
     def flush_table() -> None:
-        nonlocal table_lines
+        nonlocal table_lines, table_caption
         if not table_lines:
             return
         rows = [[cell.strip() for cell in row.strip().strip("|").split("|")]
@@ -211,8 +219,18 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ("TOPPADDING", (0, 0), (-1, -1), 6),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
-        story.append(KeepTogether([Spacer(1, 3), table, Spacer(1, 10)]))
+        flowables = [Spacer(1, 3), table]
+        if table_caption:
+            numbering["table"] += 1
+            flowables.extend([
+                Spacer(1, 4),
+                Paragraph(f"Bảng {numbering['table']} — {inline(table_caption, mono)}",
+                          s["caption"]),
+            ])
+        flowables.append(Spacer(1, 10))
+        story.append(KeepTogether(flowables))
         table_lines = []
+        table_caption = None
 
     def add_code_block() -> None:
         """Make tabs deterministic and keep code distinct in light mode."""
@@ -237,12 +255,18 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             pending_image = None
 
     for line in lines:
-        if pending_image is not None and line.startswith("Hình "):
+        if pending_image is not None and line.startswith("@figure "):
+            numbering["figure"] += 1
             story.append(KeepTogether([
                 Spacer(1, 4), pending_image, Spacer(1, 4),
-                Paragraph(inline(line, mono), s["caption"]),
+                Paragraph(
+                    f"Hình {numbering['figure']} — {inline(line[8:], mono)}",
+                    s["caption"],
+                ),
             ]))
             pending_image = None
+            continue
+        if pending_image is not None and not line.strip():
             continue
         flush_image()
         if line.startswith(("```", "~~~")):
@@ -259,6 +283,14 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             table_lines.append(line)
             continue
         flush_table()
+        if line.startswith("@table "):
+            flush_paragraph()
+            table_caption = line[7:]
+            continue
+        if line.strip() == "@references":
+            flush_paragraph()
+            in_references = True
+            continue
         if line.strip() == "<!-- pagebreak -->":
             flush_paragraph()
             story.append(PageBreak())
@@ -295,6 +327,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         heading = re.match(r"^(#{1,3})\s+(.+)$", line)
         if heading:
             flush_paragraph()
+            in_references = False
             level = len(heading.group(1))
             story.append(Paragraph(inline(heading.group(2), mono), s[f"h{level}"]))
             continue
@@ -309,7 +342,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             flush_paragraph()
             text = (bullet or numbered).group(1 if bullet else 2)
             marker = "•" if bullet else f"{numbered.group(1)}."
-            story.append(Paragraph(inline(text, mono), s["bullet"], bulletText=marker))
+            paragraph_style = s["reference"] if in_references else s["bullet"]
+            story.append(Paragraph(inline(text, mono), paragraph_style, bulletText=marker))
             continue
         paragraph_lines.append(line.strip())
     if in_code:
@@ -353,8 +387,9 @@ def build() -> None:
     for title in chapter_titles():
         story.append(Paragraph(inline(title, mono), s["toc"], bulletText="•"))
     story.append(PageBreak())
+    numbering = {"figure": 0, "table": 0}
     for index, chapter in enumerate(CHAPTERS):
-        add_markdown(story, chapter, s, mono, page_break_before=index > 0)
+        add_markdown(story, chapter, s, mono, page_break_before=index > 0, numbering=numbering)
     doc.build(story)
 
     reader = PdfReader(str(CANDIDATE))

@@ -11,6 +11,13 @@ skinparam rectangle {
   RoundCorner 4
 }
 skinparam arrowColor #000000
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
 frame "main block" as main {
   rectangle "status" as status
   frame "if block" as ifblock {
