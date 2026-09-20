@@ -1,0 +1,21 @@
+@startuml
+title Bản đồ khái niệm của cuốn sách
+skinparam backgroundColor #FEFEFE
+skinparam rectangle {
+  RoundCorner 12
+  BorderColor #176B87
+  BackgroundColor #EAF6F6
+}
+rectangle "Ngôn ngữ và dữ liệu\npackage, type, error, slice" as language
+rectangle "Đồng thời và runtime\ncontext, race, scheduler" as runtime
+rectangle "Service và dữ liệu\nHTTP, TLS, SQL, persistence" as service
+rectangle "DevOps/SRE\nCLI, observability, Docker, K8s, AWS" as sre
+language --> runtime : ownership và cancellation
+runtime --> service : timeout và resource
+service --> sre : vận hành và đo đạc
+note bottom
+Conceptual diagram:
+đường học, không phải kiến trúc runtime.
+end note
+@enduml
+
