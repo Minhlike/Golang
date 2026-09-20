@@ -40,6 +40,8 @@ CHAPTERS = [
     ROOT / "book/chapters/00-loi-noi-dau.md",
     ROOT / "book/chapters/01-go-toolchain-va-vong-lap.md",
     ROOT / "book/chapters/02-chuong-trinh-dau-tien.md",
+    ROOT / "book/chapters/03-gia-tri-kieu-va-dieu-khien.md",
+    ROOT / "book/chapters/04-ham-error-va-defer.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
@@ -225,7 +227,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         code_lines = []
 
     for line in lines:
-        if line.startswith("```"):
+        if line.startswith(("```", "~~~")):
             flush_paragraph()
             if in_code:
                 add_code_block()
