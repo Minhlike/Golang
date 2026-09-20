@@ -335,3 +335,136 @@ func recordProbe(registry map[string]Service, name string, healthy bool) bool {
 Signature này nói rõ ba vai: `registry` là map value để lookup và gán entry; `name` là snapshot string; `healthy` là snapshot bool. `service` là struct copy lấy từ entry. Nếu key không có, function không bịa ra service mới mà trả `false`; nếu có, nó ghi value đã sửa về map. Khi công cụ bắt đầu đọc config và probe endpoint ở phần sau, cách đọc signature này sẽ giúp ta biết dữ liệu nào được chia sẻ, dữ liệu nào được snapshot, và mutation nào có thể lần lại.
 
 Sau chương này, một signature không còn chỉ là tên type. Nó cho biết ta đang đưa vào function một snapshot, một cửa sổ tới storage dùng chung, một map value dẫn tới map data, hay một pointer mở đường tới variable caller. Khi cần debug mutation, hãy viết ra trước/sau lời gọi: variable nào tồn tại ở caller, parameter nào xuất hiện ở function, và expression nào thực sự là đích gán.
+
+## Khi hành vi thuộc về service
+
+`recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một service, chữ ký bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho service, một hàm khác ghi kết quả probe, hàm nữa kiểm tra cấu hình. Lúc này method giúp đặt hành vi cạnh type mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc value semantics đã xây.
+
+~~~go
+func (service Service) Summary() string {
+	return service.Name
+}
+
+func (service *Service) Record(healthy bool) {
+	service.Healthy = healthy
+	if !healthy {
+		service.Retries++
+	}
+}
+~~~
+
+Một method là function có receiver: phần parameter đặc biệt đứng trước tên method. `Summary` nhận `Service` value, nên receiver là một struct value được dùng để tạo kết quả. `Record` nhận `*Service`, vì hành vi này có ý định sửa pointee. Tên receiver không phải từ khóa và không phải một biến toàn cục bí mật; nó chỉ là parameter được viết ở vị trí riêng để gắn method với `Service`.
+
+~~~go
+billing := Service{Name: "billing", Healthy: true}
+
+fmt.Println(billing.Summary()) // billing
+billing.Record(false)
+fmt.Println(billing.Healthy, billing.Retries) // false 1
+~~~
+
+`billing.Record(false)` hợp lệ vì `billing` là variable addressable. Trong trường hợp này, Go cho phép cách viết ngắn của `(&billing).Record(false)`. Sự tiện lợi ấy không biến value receiver thành pointer receiver: method set của `Service` chỉ có methods khai báo với receiver `Service`; method set của `*Service` có cả methods receiver `Service` lẫn `*Service`.
+
+![Hai lời gọi method trên cùng một Service variable: value receiver nhận value, pointer receiver đi qua địa chỉ của variable addressable.](../../assets/diagrams/method-receiver-trace.png)
+
+@figure Method vẫn dựa trên receiver value. `Summary` dùng Service value; `Record` cần `*Service` để chọn pointee làm đích mutation. Mũi tên là trace semantics, không mô tả bộ nhớ vật lý.
+
+Điều này giải thích một lỗi compiler rất có ích. Map index không addressable, nên Go không thể tự lấy địa chỉ ổn định cho một value trả về từ map để gọi pointer-receiver method:
+
+~~~go
+// services["billing"].Record(false) // không hợp lệ
+
+service := services["billing"]
+service.Record(false)
+services["billing"] = service
+~~~
+
+Đoạn sửa dùng đúng mô hình cũ: map lookup cho struct value, local variable `service` addressable, pointer-receiver method mutate local pointee, rồi caller gán struct value đã đổi về map. Nếu code thật cần nhiều nơi cùng giữ identity của một service, `map[string]*Service` có thể hợp lý; nhưng không dùng pointer chỉ để né phép gán lại mà chưa hiểu ownership.
+
+### Composition trước, embedding sau
+
+Một service có endpoint và state; hai phần đó là các khái niệm riêng. Composition đơn giản nhất là đặt chúng vào những field có tên, để người đọc thấy quan hệ "có một":
+
+~~~go
+type Endpoint struct {
+	Host string
+	Port int
+}
+
+type ProbeState struct {
+	Healthy bool
+	Retries int
+}
+
+type Service struct {
+	Name     string
+	Endpoint Endpoint
+	State    ProbeState
+}
+~~~
+
+`Service` có `Endpoint` và `ProbeState`; không có quan hệ kế thừa nào được ngụ ý. Đây là cách composition thường rõ nhất khi domain có các phần độc lập. Embedding cũng là một công cụ của Go, nhưng nó đưa field và method được promote vào selector của type ngoài. Ta sẽ chỉ dùng nó khi một API có lợi từ sự promote đó; hiện tại field có tên giữ ownership và đường đi của data rõ hơn.
+
+## Interface xuất hiện ở nơi cần một hành vi
+
+Một interface không phải bản thiết kế cha để mọi struct đi theo. Nó là một contract nhỏ: code tiêu dùng nói mình cần method nào, còn type nào có method set phù hợp thì dùng được. Với `opsprobe`, phần in kết quả chưa cần toàn bộ `Service`; nó chỉ cần một dòng summary.
+
+~~~go
+type SummarySource interface {
+	Summary() string
+}
+
+func renderSummary(source SummarySource) string {
+	return "target: " + source.Summary()
+}
+~~~
+
+`renderSummary` không hỏi caller là `Service`, `StaticTarget`, hay một type tương lai. Nó chỉ gọi `Summary`. Không có từ khóa `implements`: assignment hoặc argument hợp lệ khi method set của type thỏa interface. Vì `Summary` có value receiver, cả `Service` và `*Service` đều có method đó trong method set.
+
+~~~go
+type StaticTarget string
+
+func (target StaticTarget) Summary() string {
+	return string(target)
+}
+
+fmt.Println(renderSummary(Service{Name: "billing"}))
+fmt.Println(renderSummary(StaticTarget("search (maintenance)")))
+~~~
+
+Kết quả là hai dòng có cùng format dù hai type không có ancestor chung. Interface ở đây được rút ra sau khi có consumer và hai provider có ý nghĩa. Nếu chỉ có một `Service` duy nhất và không có ranh giới cần thay thế, nhận trực tiếp `Service` thường dễ đọc hơn là thêm interface vì dự đoán tương lai.
+
+![Một consumer phụ thuộc vào contract Summary nhỏ, còn Service và StaticTarget độc lập thỏa contract bằng method set của chính chúng.](../../assets/diagrams/interface-contract.png)
+
+@figure `renderSummary` chỉ cần `Summary() string`. Sơ đồ cho thấy dependency đi từ consumer tới contract nhỏ; Service và StaticTarget không cần khai báo một quan hệ kế thừa hay đăng ký implements.
+
+Pointer receiver thay đổi interface satisfaction theo đúng rule method set. Nếu contract yêu cầu `Record(bool)`, `Service` value không thỏa vì method đó chỉ thuộc method set của `*Service`; `*Service` mới thỏa.
+
+~~~go
+type ProbeRecorder interface {
+	Record(bool)
+}
+
+func markFailed(recorder ProbeRecorder) {
+	recorder.Record(false)
+}
+
+billing := Service{Name: "billing", Healthy: true}
+markFailed(&billing) // *Service thỏa ProbeRecorder
+
+// markFailed(billing) // sai: Service thiếu Record
+~~~
+
+> **Bài tập - chọn contract nhỏ:** `renderSummary` cần biết `Name`, `Port`, `Healthy` và `Retries` hay chỉ cần `Summary() string`? Viết một type thứ hai có thể đi qua `renderSummary` mà không phải là `Service`, rồi giải thích vì sao interface đặt ở consumer thay vì được nhét sẵn vào mọi type.
+
+**Đáp án.** Consumer chỉ cần `Summary() string`, nên interface nên giữ đúng một method đó. `StaticTarget` ở ví dụ trên là một provider thứ hai: nó có thể là dữ liệu đọc từ một report thay vì service sống. Đặt interface cạnh `renderSummary` khiến contract phản ánh nhu cầu thật của consumer; `Service` không phải biết trước mọi interface mà code khác sẽ cần.
+
+## Một API nhỏ, đủ để đọc bằng semantics
+
+Ở cuối mạch này, `opsprobe` có thể diễn đạt ba ý định khác nhau mà không cần dựa vào danh từ mơ hồ như "reference type":
+
+- `func (service Service) Summary() string` nhận snapshot receiver và tạo mô tả.
+- `func (service *Service) Record(bool)` nhận pointer value, rồi sửa pointee có chủ ý.
+- `func renderSummary(SummarySource) string` nhận interface value và chỉ phụ thuộc vào hành vi mà consumer cần.
+
+Composition giữ data model có đường đi rõ ràng; methods đặt behavior cạnh type; interface tạo ranh giới khi có một consumer thực sự cần thay thế provider. Từ đây, chương về errors có thể cho những API này một cách báo thất bại rõ ràng: lỗi probe không nên chỉ đổi `Healthy` rồi biến mất, mà phải đi qua ranh giới function với thông tin đủ để caller quyết định.

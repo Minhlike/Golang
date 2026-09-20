@@ -9,6 +9,39 @@ type Service struct {
 	Retries int
 }
 
+type SummarySource interface {
+	Summary() string
+}
+
+type ProbeRecorder interface {
+	Record(bool)
+}
+
+type StaticTarget string
+
+func (service Service) Summary() string {
+	return fmt.Sprintf("%s healthy=%t retries=%d", service.Name, service.Healthy, service.Retries)
+}
+
+func (service *Service) Record(healthy bool) {
+	service.Healthy = healthy
+	if !healthy {
+		service.Retries++
+	}
+}
+
+func (target StaticTarget) Summary() string {
+	return string(target)
+}
+
+func renderSummary(source SummarySource) string {
+	return "target: " + source.Summary()
+}
+
+func markFailed(recorder ProbeRecorder) {
+	recorder.Record(false)
+}
+
 func recordFailure(service *Service) {
 	service.Healthy = false
 	service.Retries++
@@ -37,6 +70,9 @@ func recordProbe(registry map[string]Service, name string, healthy bool) bool {
 func main() {
 	billing := Service{Name: "billing", Port: 8080, Healthy: true}
 	recordFailure(&billing)
+	fmt.Println(billing.Healthy, billing.Retries)
+	fmt.Println(renderSummary(billing))
+	markFailed(&billing)
 	fmt.Println(billing.Healthy, billing.Retries)
 
 	attempts := map[string]int{"billing": 0}

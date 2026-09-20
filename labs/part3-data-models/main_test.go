@@ -2,6 +2,11 @@ package main
 
 import "testing"
 
+var _ SummarySource = Service{}
+var _ SummarySource = (*Service)(nil)
+var _ SummarySource = StaticTarget("")
+var _ ProbeRecorder = (*Service)(nil)
+
 func TestRecordFailureMutatesPointee(t *testing.T) {
 	billing := Service{Name: "billing", Healthy: true}
 	recordFailure(&billing)
@@ -49,5 +54,21 @@ func TestRecordProbeUpdatesExistingMapEntry(t *testing.T) {
 	}
 	if recordProbe(services, "search", false) {
 		t.Fatal("recordProbe reported a missing service as present")
+	}
+}
+
+func TestMethodReceiverContracts(t *testing.T) {
+	billing := Service{Name: "billing", Healthy: true}
+
+	if got := renderSummary(billing); got != "target: billing healthy=true retries=0" {
+		t.Fatalf("renderSummary(Service) = %q", got)
+	}
+	if got := renderSummary(StaticTarget("maintenance")); got != "target: maintenance" {
+		t.Fatalf("renderSummary(StaticTarget) = %q", got)
+	}
+
+	markFailed(&billing)
+	if billing.Healthy || billing.Retries != 1 {
+		t.Fatalf("billing = %+v, want Healthy=false and Retries=1", billing)
 	}
 }

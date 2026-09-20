@@ -1,0 +1,30 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "renderSummary\nconsumer" as consumer
+rectangle "SummarySource\nSummary() string" as contract
+rectangle "Service\nSummary() string" as service
+rectangle "StaticTarget\nSummary() string" as static
+consumer --> contract : cần contract
+service --> contract : method set thỏa
+static --> contract : method set thỏa
+note bottom of contract : không có extends\nkhông có implements
+@enduml
