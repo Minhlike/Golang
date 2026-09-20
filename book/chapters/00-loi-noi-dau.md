@@ -39,3 +39,11 @@ Code block là code có thể gõ, trừ khi ghi rõ “minh họa”. Output te
 được nêu khi có thể chạy hoặc khi được gắn nhãn minh họa. Với bài tập, dừng ở
 đường ngăn trước khi đọc đáp án; đừng biến em thành nút autocomplete có chân.
 
+## Nhịp đọc của edition này
+
+| Thành phần | Mục tiêu đọc |
+| --- | --- |
+| Văn xuôi | Hiểu lập luận dài mà không phải nheo mắt trên laptop. |
+| Code | Phân biệt rõ với lời văn, đủ lớn để đối chiếu từng dòng. |
+| Sơ đồ | Làm rõ quan hệ; luôn ghi khi chỉ là conceptual diagram. |
+| Bài tập và đáp án | Buộc dự đoán trước, rồi giải thích nguyên nhân sau. |

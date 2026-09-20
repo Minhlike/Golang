@@ -27,3 +27,9 @@ Renderer luôn tạo candidate trong `tmp/pdfs/`, kiểm tra mở lại được
 thay `Golang_Master.pdf`. Ở build đầu tiên, `Golang_Master.prev.pdf` là bản
 đã kiểm tra cùng nội dung; ở các build sau nó là bản hợp lệ liền trước.
 
+## Typography contract
+
+PDF nhúng Source Serif 4 cho thân bài 14 pt, Source Sans 3 cho hierarchy và
+JetBrains Mono 12 pt cho code. Thân bài luôn là đen trên nền trắng; chi tiết
+license và version font nằm ở `assets/fonts/README.md`. Không thay các giá trị
+này chỉ để tăng mật độ trang: ưu tiên là đọc liên tục trên laptop.

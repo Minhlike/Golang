@@ -23,11 +23,12 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Image,
-    KeepTogether,
     PageBreak,
     Paragraph,
     Preformatted,
     Spacer,
+    Table,
+    TableStyle,
 )
 from reportlab.platypus.flowables import HRFlowable
 from reportlab.platypus.frames import Frame
@@ -46,25 +47,30 @@ CURRENT = ROOT / "Golang_Master.pdf"
 PREVIOUS = ROOT / "Golang_Master.prev.pdf"
 
 
-def register_fonts() -> tuple[str, str, str]:
-    fonts = Path("C:/Windows/Fonts")
-    regular = fonts / "arial.ttf"
-    bold = fonts / "arialbd.ttf"
-    mono = fonts / "consola.ttf"
-    for path in (regular, bold, mono):
+def register_fonts() -> tuple[str, str, str, str, str]:
+    """Embed the approved reading fonts; never depend on a system font."""
+    fonts = ROOT / "assets/fonts"
+    body = fonts / "SourceSerif4-Regular.ttf"
+    body_bold = fonts / "SourceSerif4-Semibold.ttf"
+    heading = fonts / "SourceSans3-Regular.ttf"
+    heading_bold = fonts / "SourceSans3-Semibold.ttf"
+    mono = fonts / "JetBrainsMono-Regular.ttf"
+    for path in (body, body_bold, heading, heading_bold, mono):
         if not path.exists():
             raise FileNotFoundError(f"Thiếu font cần cho PDF: {path}")
-    pdfmetrics.registerFont(TTFont("BookSans", str(regular)))
-    pdfmetrics.registerFont(TTFont("BookSansBold", str(bold)))
+    pdfmetrics.registerFont(TTFont("BookSerif", str(body)))
+    pdfmetrics.registerFont(TTFont("BookSerifBold", str(body_bold)))
+    pdfmetrics.registerFont(TTFont("BookSans", str(heading)))
+    pdfmetrics.registerFont(TTFont("BookSansBold", str(heading_bold)))
     pdfmetrics.registerFont(TTFont("BookMono", str(mono)))
-    return "BookSans", "BookSansBold", "BookMono"
+    return "BookSerif", "BookSerifBold", "BookSans", "BookSansBold", "BookMono"
 
 
 def inline(text: str, mono: str) -> str:
     escaped = html.escape(text)
     escaped = re.sub(
         r"`([^`]+)`",
-        lambda m: f'<font name="{mono}" color="#154360">{m.group(1)}</font>',
+        lambda m: f'<font name="{mono}" color="#111111">{m.group(1)}</font>',
         escaped,
     )
     return re.sub(
@@ -74,51 +80,58 @@ def inline(text: str, mono: str) -> str:
     )
 
 
-def styles(regular: str, bold: str, mono: str) -> dict[str, ParagraphStyle]:
+def styles(body: str, body_bold: str, heading: str, heading_bold: str,
+           mono: str) -> dict[str, ParagraphStyle]:
     base = getSampleStyleSheet()
     return {
         "title": ParagraphStyle(
-            "BookTitle", parent=base["Title"], fontName=bold, fontSize=28,
-            leading=34, alignment=TA_CENTER, textColor=colors.HexColor("#123B52"),
+            "BookTitle", parent=base["Title"], fontName=heading_bold, fontSize=30,
+            leading=36, alignment=TA_CENTER, textColor=colors.HexColor("#103F59"),
             spaceAfter=18,
         ),
         "subtitle": ParagraphStyle(
-            "Subtitle", parent=base["BodyText"], fontName=regular, fontSize=12,
-            leading=18, alignment=TA_CENTER, textColor=colors.HexColor("#45636F"),
+            "Subtitle", parent=base["BodyText"], fontName=heading, fontSize=13,
+            leading=19, alignment=TA_CENTER, textColor=colors.HexColor("#333333"),
         ),
         "h1": ParagraphStyle(
-            "H1", parent=base["Heading1"], fontName=bold, fontSize=20,
-            leading=26, textColor=colors.HexColor("#123B52"), spaceBefore=4,
-            spaceAfter=13, keepWithNext=True,
+            "H1", parent=base["Heading1"], fontName=heading_bold, fontSize=23,
+            leading=29, textColor=colors.HexColor("#103F59"), spaceBefore=5,
+            spaceAfter=15, keepWithNext=True,
         ),
         "h2": ParagraphStyle(
-            "H2", parent=base["Heading2"], fontName=bold, fontSize=14,
-            leading=19, textColor=colors.HexColor("#176B87"), spaceBefore=14,
-            spaceAfter=7, keepWithNext=True,
+            "H2", parent=base["Heading2"], fontName=heading_bold, fontSize=16.5,
+            leading=22, textColor=colors.HexColor("#176B87"), spaceBefore=17,
+            spaceAfter=8, keepWithNext=True,
         ),
         "h3": ParagraphStyle(
-            "H3", parent=base["Heading3"], fontName=bold, fontSize=11.5,
-            leading=15, textColor=colors.HexColor("#176B87"), spaceBefore=10,
-            spaceAfter=5, keepWithNext=True,
+            "H3", parent=base["Heading3"], fontName=heading_bold, fontSize=14,
+            leading=19, textColor=colors.HexColor("#176B87"), spaceBefore=13,
+            spaceAfter=6, keepWithNext=True,
         ),
         "body": ParagraphStyle(
-            "Body", parent=base["BodyText"], fontName=regular, fontSize=10.3,
-            leading=15.4, alignment=TA_LEFT, spaceAfter=7,
+            "Body", parent=base["BodyText"], fontName=body, fontSize=14,
+            leading=21.4, alignment=TA_LEFT, textColor=colors.black, spaceAfter=9,
         ),
         "bullet": ParagraphStyle(
-            "Bullet", parent=base["BodyText"], fontName=regular, fontSize=10.3,
-            leading=15, leftIndent=14, firstLineIndent=-9, spaceAfter=3,
-            bulletFontName=regular,
+            "Bullet", parent=base["BodyText"], fontName=body, fontSize=14,
+            leading=21, textColor=colors.black, leftIndent=18, firstLineIndent=-10,
+            spaceAfter=4, bulletFontName=body,
         ),
         "toc": ParagraphStyle(
-            "TOC", parent=base["BodyText"], fontName=regular, fontSize=11,
-            leading=17, leftIndent=5, spaceAfter=4,
+            "TOC", parent=base["BodyText"], fontName=body, fontSize=14,
+            leading=21, textColor=colors.black, leftIndent=7, spaceAfter=5,
         ),
         "code": ParagraphStyle(
-            "Code", fontName=mono, fontSize=8.2, leading=11.4,
-            textColor=colors.HexColor("#17202A"), backColor=colors.HexColor("#F2F5F7"),
-            borderColor=colors.HexColor("#D5DDE1"), borderWidth=0.45,
-            borderPadding=7, spaceBefore=4, spaceAfter=10,
+            "Code", fontName=mono, fontSize=12, leading=16.5,
+            textColor=colors.black, spaceBefore=0, spaceAfter=0,
+        ),
+        "table": ParagraphStyle(
+            "Table", parent=base["BodyText"], fontName=body, fontSize=11.2,
+            leading=14.8, textColor=colors.black,
+        ),
+        "table_header": ParagraphStyle(
+            "TableHeader", parent=base["BodyText"], fontName=body_bold,
+            fontSize=11.2, leading=14.8, textColor=colors.black,
         ),
     }
 
@@ -157,6 +170,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
     lines = chapter.read_text(encoding="utf-8").splitlines()
     paragraph_lines: list[str] = []
     code_lines: list[str] = []
+    table_lines: list[str] = []
     in_code = False
 
     def flush_paragraph() -> None:
@@ -165,17 +179,66 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             story.append(Paragraph(inline(" ".join(paragraph_lines), mono), s["body"]))
             paragraph_lines = []
 
+    def flush_table() -> None:
+        nonlocal table_lines
+        if not table_lines:
+            return
+        rows = [[cell.strip() for cell in row.strip().strip("|").split("|")]
+                for row in table_lines]
+        if len(rows) < 2 or not all(re.fullmatch(r"[: -]+", cell) for cell in rows[1]):
+            raise ValueError(f"Bảng Markdown không hợp lệ trong {chapter}")
+        columns = len(rows[0])
+        if columns < 2 or any(len(row) != columns for row in rows):
+            raise ValueError(f"Cột bảng không nhất quán trong {chapter}")
+        data = []
+        for row_index, row in enumerate([rows[0], *rows[2:]]):
+            style = s["table_header"] if row_index == 0 else s["table"]
+            data.append([Paragraph(inline(cell, mono), style) for cell in row])
+        table = Table(data, colWidths=[16.8 * cm / columns] * columns, repeatRows=1,
+                      hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAF2F5")),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#7F8C8D")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.extend([Spacer(1, 3), table, Spacer(1, 10)])
+        table_lines = []
+
+    def add_code_block() -> None:
+        """Make tabs deterministic and keep code distinct in light mode."""
+        nonlocal code_lines
+        code = Preformatted("\n".join(code_lines).expandtabs(4), s["code"])
+        box = Table([[code]], colWidths=[16.8 * cm], hAlign="LEFT")
+        box.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F4F6F6")),
+            ("BOX", (0, 0), (-1, -1), 0.65, colors.HexColor("#AAB7B8")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 9),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+        ]))
+        story.extend([Spacer(1, 5), box, Spacer(1, 12)])
+        code_lines = []
+
     for line in lines:
         if line.startswith("```"):
             flush_paragraph()
             if in_code:
-                story.append(Preformatted("\n".join(code_lines), s["code"]))
-                code_lines = []
+                add_code_block()
             in_code = not in_code
             continue
         if in_code:
             code_lines.append(line)
             continue
+        if line.startswith("|"):
+            flush_paragraph()
+            table_lines.append(line)
+            continue
+        flush_table()
         image = re.fullmatch(r"!\[[^]]*\]\(([^)]+)\)", line)
         if image:
             flush_paragraph()
@@ -211,6 +274,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         paragraph_lines.append(line.strip())
     if in_code:
         raise ValueError(f"Unclosed code fence: {chapter}")
+    flush_table()
     flush_paragraph()
 
 
@@ -218,8 +282,8 @@ def footer(canvas, doc) -> None:
     canvas.saveState()
     canvas.setStrokeColor(colors.HexColor("#B8C7CC"))
     canvas.line(2.0 * cm, 1.55 * cm, A4[0] - 2.0 * cm, 1.55 * cm)
-    canvas.setFont("BookSans", 8)
-    canvas.setFillColor(colors.HexColor("#56717A"))
+    canvas.setFont("BookSans", 9.5)
+    canvas.setFillColor(colors.HexColor("#333333"))
     canvas.drawString(2.0 * cm, 1.08 * cm, "Golang Living Textbook - Edition nền móng")
     canvas.drawRightString(A4[0] - 2.0 * cm, 1.08 * cm, str(doc.page))
     canvas.restoreState()
@@ -229,14 +293,14 @@ def build() -> None:
     for chapter in CHAPTERS:
         if not chapter.exists():
             raise FileNotFoundError(f"Thiếu chapter: {chapter}")
-    regular, bold, mono = register_fonts()
-    s = styles(regular, bold, mono)
+    body, body_bold, heading, heading_bold, mono = register_fonts()
+    s = styles(body, body_bold, heading, heading_bold, mono)
     TMP.mkdir(parents=True, exist_ok=True)
-    frame = Frame(2.0 * cm, 2.0 * cm, A4[0] - 4.0 * cm, A4[1] - 3.9 * cm,
+    frame = Frame(2.1 * cm, 2.0 * cm, A4[0] - 4.2 * cm, A4[1] - 3.9 * cm,
                   id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     doc = BaseDocTemplate(str(CANDIDATE), pagesize=A4, title="Golang Master",
-                          author="Golang Living Textbook", leftMargin=2.0 * cm,
-                          rightMargin=2.0 * cm, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
+                          author="Golang Living Textbook", leftMargin=2.1 * cm,
+                          rightMargin=2.1 * cm, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
     doc.addPageTemplates([PageTemplate(id="book", frames=[frame], onPage=footer)])
     story: list = []
     cover(story, s)
