@@ -1,0 +1,27 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 0" as original
+rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 0" as copy
+original --> copy : candidate := billing\ncopy fields
+note bottom of original : billing.Healthy vẫn true
+note bottom of copy : candidate.Healthy = false
+@enduml

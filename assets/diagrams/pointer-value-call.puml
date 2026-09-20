@@ -1,0 +1,28 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "caller\nbalance: int\n100" as caller
+rectangle "parameter\nx: int\n100" as parameter
+rectangle "sau x += 20\nx: int\n120" as changed
+caller --> parameter : copy value 100
+parameter --> changed : gán lại x
+note bottom of caller : balance vẫn là 100
+@enduml

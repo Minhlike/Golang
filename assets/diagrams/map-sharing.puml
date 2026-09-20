@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "registry\nmap[string]int" as registry
+rectangle "alias\nmap[string]int" as alias
+rectangle "map data\nbilling → 2" as data
+registry --> data
+alias --> data
+note bottom of alias : alias := registry\ncopy map value
+note bottom of data : alias[\"billing\"]++\nhiện ra khi đọc registry
+@enduml

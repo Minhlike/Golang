@@ -1,0 +1,27 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #222222
+  FontColor #000000
+  RoundCorner 5
+}
+skinparam arrowColor #222222
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontName "Source Sans 3"
+  FontSize 15
+}
+left to right direction
+rectangle "caller variable\namount: int\n100" as amount
+rectangle "parameter\nbalance: *int\npointer value" as pointer
+pointer --> amount : trỏ tới amount
+note bottom of pointer : *balance chọn variable này\nđể đọc hoặc gán
+note bottom of amount : *balance += 20\nđổi amount thành 120
+@enduml
