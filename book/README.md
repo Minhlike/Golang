@@ -1,78 +1,42 @@
 # Bản đồ cuốn sách
 
-Cuốn sách đi từ ngôn ngữ, qua thiết kế phần mềm và hệ thống, đến các công cụ
-DevOps/SRE. Thứ tự này có chủ ý: không thể debug timeout HTTP, goroutine leak
-hay controller Kubernetes một cách đáng tin nếu chưa hiểu ownership dữ liệu,
-error và cancellation.
+Đây là một cuốn sách đi từ việc **đọc được một tệp Go** đến việc thiết kế, đo đạc và vận hành phần mềm. Mỗi chương là một chuyển dịch đáng kể trong cách nghĩ, không phải một từ khoá hay một API bị tách riêng.
 
-## Phần I - Nền móng để tự viết Go
+## Phần I — Đọc và viết Go có chủ đích
 
-1. Go, toolchain và vòng lặp học có thể kiểm chứng.
-2. Một chương trình Go: package, module, `go run`, `go build` và lỗi biên dịch.
-3. Giá trị, kiểu, điều khiển luồng và tư duy zero value.
-4. Hàm, `defer`, lỗi, `panic` và `recover`.
-5. Array, slice, string, rune, UTF-8 và aliasing.
-6. Map, struct, pointer, value semantics và API nhỏ.
+1. **Một chương trình Go, đọc từ ngoài vào trong.** Tệp nguồn, package, import, tên, literal, khai báo, biểu thức, câu lệnh, block, kiểu, hàm, điều khiển luồng và cách compiler ghép chúng thành một chương trình.
+2. **Giá trị di chuyển qua chương trình.** Biến, const, assignment, conversion, hàm, return, zero value, array, slice, string và điểm mà hai biến bắt đầu dùng chung dữ liệu.
+3. **Mô hình dữ liệu và ownership.** Struct, map, pointer, method, interface, composition và cách chọn API nhỏ dễ đổi.
 
-## Phần II - Tổ chức code để sửa được
+## Phần II — Làm cho code sửa được và tin được
 
-7. Method, interface, embedding và composition.
-8. Error design: wrapping, `errors.Is`, `errors.As` và boundary lỗi.
-9. Generics: constraint, `~`, `comparable`, và lúc không dùng.
-10. Package design, modules, `internal/`, config và documentation.
-11. Testing, table-driven tests, fakes, fuzzing, benchmark và race detector.
-12. I/O, filesystem, JSON, CSV, time, streaming và `context`.
+4. **Biên lỗi.** Error, wrapping, cancellation, defer, panic/recover và quyết định lỗi nào phải đi qua ranh giới nào.
+5. **Thiết kế package.** Module, import graph, internal, configuration, documentation, generics và dependency mà một người đọc có thể lần theo.
+6. **Thay đổi không sợ hãi.** Một đoạn code khó test được refactor dần sang unit test, fake, fuzz, race detector, benchmark và contract test.
+7. **Dữ liệu đi vào và đi ra.** Filesystem, stream, JSON/CSV, time, context và các lựa chọn khiến một chương trình I/O không tự treo.
 
-## Phần III - Đồng thời và runtime
+## Phần III — Nhiều việc cùng lúc, nhưng không mất kiểm soát
 
-13. Concurrency, parallelism, goroutine và scheduler - mô hình trước, API sau.
-14. Channel, `select`, ownership, cancellation và backpressure.
-15. Mutex, atomic, memory model, data race, deadlock và leak.
-16. Pipeline, fan-in/fan-out, worker pool và bounded concurrency.
-17. Stack, heap, escape analysis, GC, G/M/P, syscall và network poller.
-18. Profiling, trace, benchmark methodology và tối ưu dựa trên số đo.
+8. **Một race bắt đầu từ đâu.** Goroutine, scheduler, shared state và bằng chứng của race condition trước khi nói về API đồng thời.
+9. **Dòng công việc có áp suất.** Channel, select, ownership, timeout, cancellation, backpressure, worker pool và leak.
+10. **Khi chương trình chậm hoặc phình.** Benchmark, pprof, trace, allocation, escape, GC, G/M/P, syscall và cách đo trước khi tối ưu.
 
-## Phần IV - Dịch vụ và dữ liệu
+## Phần IV — Giao tiếp, dữ liệu và dịch vụ
 
-19. TCP, UDP, DNS, socket và những phần Linux cần để đọc network code.
-20. HTTP client: timeout, reuse connection, TLS, retry và cancellation.
-21. HTTP server: routing tối giản, middleware, shutdown và security boundary.
-22. Database: `database/sql`, pool, transaction, migration và PostgreSQL.
-23. Persistence, cache, serialization và consistency ở mức lập trình viên.
-24. Reflection, `unsafe`, memory layout và các giới hạn không nên vượt qua.
+11. **Một request thực sự đi đâu.** DNS, TCP, TLS, HTTP, connection reuse, retry, timeout và trace của client.
+12. **Một service sống và tắt thế nào.** HTTP server, routing, middleware, validation, shutdown, log và security boundary.
+13. **Dữ liệu có trạng thái.** database/sql, pool, transaction, migration, cache, serialization và consistency mà lập trình viên phải thấy.
+14. **Góc khuất của ngôn ngữ.** Reflection, unsafe, memory layout và các giới hạn cần được chứng minh trước khi vượt qua.
 
-## Phần V - Go cho DevOps/SRE
+## Phần V — Go trong vận hành
 
-25. CLI và filesystem automation.
-26. Process, signal, `os/exec`, pipe, log và kiểm soát concurrency.
-27. API automation, health check, structured log và configuration.
-28. Prometheus metrics, OpenTelemetry, tracing và điều tra sự cố.
-29. Docker, OCI và đóng gói một service Go.
-30. Kubernetes API, client-go, controller và reconciliation loop.
-31. AWS SDK v2, IAM tối thiểu, cost guardrail và cleanup.
-32. CI/CD, supply-chain security, reliability, profiling và case study.
+15. **Từ incident đến công cụ.** CLI, process, signal, os/exec, cấu hình và log; xây công cụ chẩn đoán cho một sự cố mô phỏng.
+16. **Thấy được hệ thống.** Health check, metrics, tracing, SLI/SLO và điều tra sự cố bằng dữ liệu thay vì suy đoán.
+17. **Đóng gói và điều phối.** OCI/Docker, Kubernetes API, controller, reconciliation và ranh giới vận hành.
+18. **Đưa thay đổi ra production.** CI/CD, supply-chain security, IAM tối thiểu, cost guardrail, rollback và case study cuối sách.
 
-`opsprobe` là dự án xuyên suốt. Nó bắt đầu bằng CLI kiểm tra endpoint, sau đó
-nhận cấu hình, chạy kiểm tra đồng thời có giới hạn, xuất metrics và trace, rồi
-được đóng gói cho container/Kubernetes/AWS. Dự án không phải CRUD đội lốt: nó
-có lý do tồn tại là giúp một nhóm vận hành phát hiện dependency bị suy giảm
-trước khi người dùng báo lỗi.
+`opsprobe` là dự án xuyên suốt, nhưng không bị ép vào mọi trang. Nó chỉ xuất hiện khi một kiến thức cần được đặt vào áp lực của hệ thống thật: đầu tiên là một CLI đọc được endpoint; sau đó là kiểm tra có giới hạn đồng thời, dữ liệu quan sát được, và cuối cùng là một artefact có thể vận hành.
 
-## Ý đồ sư phạm, không phải template chương
+## Cách dùng bản hiện tại
 
-Sách không có một khuôn bắt buộc kiểu mở bài, định nghĩa, ví dụ, bài tập, đáp
-án, tổng kết. Trước mỗi chương, tác giả phải xác định người học cần đổi trực
-giác nào, ngộ nhận nào cần bị phá vỡ, và kỹ năng hay bằng chứng nào cho thấy
-anh đã hiểu. Hình thức được chọn theo mục tiêu đó, không theo sự tiện lợi khi
-viết.
-
-Vì vậy, syntax có thể đi từ một ví dụ rồi rút quy luật; slice, pointer và memory
-model có thể mở bằng tình huống bất ngờ rồi truy dấu dữ liệu; concurrency bắt
-đầu từ race hoặc deadlock; network từ sequence diagram hay trace; performance
-từ số đo; DevOps/SRE từ incident mô phỏng và công cụ được xây dần. Case study,
-guided investigation, debugging session, code review, failure analysis và
-mini-project đều là hình thức hợp lệ khi chúng dạy tốt hơn văn xuôi tuyến tính.
-
-Một chương chỉ có exercise, recap, diagram, checklist hoặc đáp án khi chúng tạo
-ra giá trị học tập cụ thể. Chương 5 sẽ mở bằng cuộc điều tra về slice aliasing,
-không lặp lại trình tự của các chương trước.
+Bản PDF đang hoàn thiện **Phần I, Chương 1** với một mạch duy nhất: đọc một chương trình, làm nó thay đổi từng bước, rồi tự dự đoán compiler sẽ chấp nhận hay từ chối điều gì. Những phần tiếp theo chỉ được viết sau khi nhịp học và ngôn ngữ trình bày của phần nền móng đã được kiểm tra trực quan.

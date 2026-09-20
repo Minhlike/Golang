@@ -23,6 +23,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Image,
+    KeepTogether,
     PageBreak,
     Paragraph,
     Preformatted,
@@ -37,11 +38,8 @@ from reportlab.platypus.doctemplate import PageTemplate
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = [
-    ROOT / "book/chapters/00-loi-noi-dau.md",
-    ROOT / "book/chapters/01-go-toolchain-va-vong-lap.md",
-    ROOT / "book/chapters/02-chuong-trinh-dau-tien.md",
-    ROOT / "book/chapters/03-gia-tri-kieu-va-dieu-khien.md",
-    ROOT / "book/chapters/04-ham-error-va-defer.md",
+    ROOT / "book/chapters/00-mo-cua-vao-go.md",
+    ROOT / "book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
@@ -88,7 +86,7 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
     return {
         "title": ParagraphStyle(
             "BookTitle", parent=base["Title"], fontName=heading_bold, fontSize=30,
-            leading=36, alignment=TA_CENTER, textColor=colors.HexColor("#103F59"),
+            leading=36, alignment=TA_CENTER, textColor=colors.black,
             spaceAfter=18,
         ),
         "subtitle": ParagraphStyle(
@@ -97,17 +95,17 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
         ),
         "h1": ParagraphStyle(
             "H1", parent=base["Heading1"], fontName=heading_bold, fontSize=23,
-            leading=29, textColor=colors.HexColor("#103F59"), spaceBefore=5,
+            leading=29, textColor=colors.black, spaceBefore=5,
             spaceAfter=15, keepWithNext=True,
         ),
         "h2": ParagraphStyle(
             "H2", parent=base["Heading2"], fontName=heading_bold, fontSize=16.5,
-            leading=22, textColor=colors.HexColor("#176B87"), spaceBefore=17,
+            leading=22, textColor=colors.black, spaceBefore=17,
             spaceAfter=8, keepWithNext=True,
         ),
         "h3": ParagraphStyle(
             "H3", parent=base["Heading3"], fontName=heading_bold, fontSize=14,
-            leading=19, textColor=colors.HexColor("#176B87"), spaceBefore=13,
+            leading=19, textColor=colors.black, spaceBefore=13,
             spaceAfter=6, keepWithNext=True,
         ),
         "body": ParagraphStyle(
@@ -144,7 +142,7 @@ def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
         Paragraph("GOLANG", s["title"]),
         Paragraph("Living Textbook cho Software Engineering và DevOps/SRE", s["subtitle"]),
         Spacer(1, 1.1 * cm),
-        HRFlowable(width="64%", thickness=1.2, color=colors.HexColor("#1F7A8C"),
+        HRFlowable(width="64%", thickness=1.0, color=colors.black,
                    hAlign="CENTER"),
         Spacer(1, 1.1 * cm),
         Paragraph("Edition nền móng", s["subtitle"]),
@@ -199,8 +197,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         table = Table(data, colWidths=[16.8 * cm / columns] * columns, repeatRows=1,
                       hAlign="LEFT")
         table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAF2F5")),
-            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#7F8C8D")),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 7),
             ("RIGHTPADDING", (0, 0), (-1, -1), 7),
@@ -216,14 +214,14 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         code = Preformatted("\n".join(code_lines).expandtabs(4), s["code"])
         box = Table([[code]], colWidths=[16.8 * cm], hAlign="LEFT")
         box.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F4F6F6")),
-            ("BOX", (0, 0), (-1, -1), 0.65, colors.HexColor("#AAB7B8")),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F3F1")),
+            ("BOX", (0, 0), (-1, -1), 0.65, colors.HexColor("#777777")),
             ("LEFTPADDING", (0, 0), (-1, -1), 10),
             ("RIGHTPADDING", (0, 0), (-1, -1), 10),
             ("TOPPADDING", (0, 0), (-1, -1), 9),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
         ]))
-        story.extend([Spacer(1, 5), box, Spacer(1, 12)])
+        story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
         code_lines = []
 
     for line in lines:
@@ -248,8 +246,23 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             if not asset.exists():
                 raise FileNotFoundError(f"Thiếu diagram: {asset}")
             drawing = Image(str(asset))
-            drawing._restrictSize(16.0 * cm, 10.7 * cm)
+            drawing._restrictSize(16.8 * cm, 12.8 * cm)
             story.extend([Spacer(1, 4), drawing, Spacer(1, 6)])
+            continue
+        quote = re.match(r"^>\s+(.+)$", line)
+        if quote:
+            flush_paragraph()
+            note = Table([[Paragraph(inline(quote.group(1), mono), s["body"])]],
+                         colWidths=[16.8 * cm], hAlign="LEFT")
+            note.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F5F5F2")),
+                ("LINEBEFORE", (0, 0), (0, -1), 2.0, colors.black),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.extend([Spacer(1, 4), note, Spacer(1, 11)])
             continue
         if not line.strip():
             flush_paragraph()
@@ -263,7 +276,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         if line.strip() == "---":
             flush_paragraph()
             story.extend([Spacer(1, 3), HRFlowable(width="100%", thickness=0.55,
-                         color=colors.HexColor("#AAB7B8")), Spacer(1, 5)])
+                         color=colors.HexColor("#999999")), Spacer(1, 5)])
             continue
         bullet = re.match(r"^[-*]\s+(.+)$", line)
         numbered = re.match(r"^(\d+)\.\s+(.+)$", line)
@@ -282,7 +295,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
 
 def footer(canvas, doc) -> None:
     canvas.saveState()
-    canvas.setStrokeColor(colors.HexColor("#B8C7CC"))
+    canvas.setStrokeColor(colors.HexColor("#B5B5B5"))
     canvas.line(2.0 * cm, 1.55 * cm, A4[0] - 2.0 * cm, 1.55 * cm)
     canvas.setFont("BookSans", 9.5)
     canvas.setFillColor(colors.HexColor("#333333"))

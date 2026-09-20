@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 21
+skinparam defaultFontColor #000000
+skinparam rectangle {
+  BackgroundColor #F4F4F1
+  BorderColor #000000
+  FontColor #000000
+  RoundCorner 6
+}
+skinparam arrowColor #000000
+skinparam ArrowThickness 1.2
+top to bottom direction
+
+rectangle "Tệp .go\nchữ bạn viết" as source
+rectangle "Token\npackage · tên · số · dấu" as tokens
+rectangle "Cấu trúc\nkhai báo · biểu thức · block" as syntax
+rectangle "Kiểm tra kiểu\nint, string, bool, lời gọi" as types
+rectangle "Chương trình\nđược chạy" as run
+
+source -right-> tokens : tách
+tokens -down-> syntax : ghép
+syntax -left-> types : hiểu nghĩa
+types -down-> run : hợp lệ
+
+note bottom of types
+  Mô hình đọc khái niệm.
+  Compiler thật có nhiều bước hơn.
+end note
+@enduml
