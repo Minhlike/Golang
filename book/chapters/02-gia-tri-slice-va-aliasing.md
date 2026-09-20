@@ -169,7 +169,11 @@ func redactedCopy(fields []string) []string {
 
 copy sao chép tối đa số phần tử vừa với destination và trả về số phần tử đã copy. Ở đây make tạo backing array mới, nên preview độc lập ở tầng slice elements. Đổi lấy independence là allocation và chi phí copy; với buffer lớn hoặc đường xử lý nóng, đó là một quyết định cần có lý do. Với một preview cần an toàn khỏi mutation, nó diễn đạt đúng intent.
 
-> **Điều tra ngắn:** hãy viết test cho redactedCopy. Test cần chứng minh đồng thời hai điều: kết quả có *** ở phần tử đầu, và requestFields ban đầu vẫn là api-key. Chỉ kiểm tra output preview chưa đủ để bắt aliasing bug.
+**Thực hành - bug hunt có kiểm chứng.** Mở `labs/part2-values` trong VS Code và chạy riêng `TestRedactedCopyDoesNotMutateInput` trước khi sửa source. Sau đó thay phần tạo `preview` bằng `preview := fields`. Đừng đoán bằng mắt: chạy lại test để thấy nó báo input đã bị mutate. Khôi phục code, xóa thân `redactedCopy`, rồi tự viết lại từ contract của test mà không nhìn implementation cũ. Đây là một bước nhỏ, nhưng nó buộc mental model “copy slice value vẫn có thể chia sẻ storage” đi qua một failure thật.
+
+---
+
+**Đáp án — chỉ đọc sau khi đã tự làm.** `preview := fields` chỉ copy slice descriptor, nên `preview[0]` vẫn sửa phần tử chung với `requestFields`. Bản đúng cần một backing array mới, chẳng hạn `make` rồi `copy`. Test phải giữ cả hai assertion: preview bị redacted và input không đổi; bỏ assertion thứ hai là bỏ mất contract ownership.
 
 ## String: bytes trước, text sau
 
