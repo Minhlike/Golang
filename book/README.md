@@ -11,7 +11,7 @@
 ## Phần II — Làm cho code sửa được và tin được
 
 4. **Biên lỗi.** Error, wrapping, cancellation, defer, panic/recover và quyết định lỗi nào phải đi qua ranh giới nào.
-5. **Thiết kế package.** Module, import graph, internal, configuration, documentation, generics và dependency mà một người đọc có thể lần theo.
+5. **Thiết kế package.** Module, import graph, internal, configuration, documentation và dependency mà một người đọc có thể lần theo.
 6. **Thay đổi không sợ hãi.** Một đoạn code khó test được refactor dần sang unit test, fake, fuzz, race detector, benchmark và contract test.
 7. **Dữ liệu đi vào và đi ra.** Filesystem, stream, JSON/CSV, time, context và các lựa chọn khiến một chương trình I/O không tự treo.
 
@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I**, **Chương 4** và đang mở **Chương 5** bằng một refactor package thật của `opsprobe`. Các phần tiếp theo chỉ được viết sau khi nhịp học, code và layout của phần đang mở đã được kiểm tra trực quan.
+Bản PDF đã hoàn thành **Phần I** và **Chương 5**, rồi đang mở **Chương 6** bằng một refactor biến orchestration của `opsprobe` thành code có thể kiểm chứng. Các phần tiếp theo chỉ được viết sau khi nhịp học, code và layout của phần đang mở đã được kiểm tra trực quan.
