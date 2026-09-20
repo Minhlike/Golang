@@ -31,3 +31,16 @@ go vet ./...
 
 Chỉ sau khi một trong các lệnh trên đã cho feedback, mới mở
 `../part5-package-design` để so đường dependency và cách tách contract.
+
+Sau khi refactor đầu tiên đã xanh, requirement thay đổi: operator có thể đặt
+`OPS_PROBE_TARGET` theo dạng `host:port` để thay endpoint mặc định. Chạy:
+
+```powershell
+go test -tags configexercise ./...
+```
+
+Test mới là contract cho `internal/config.LoadTargets`; lúc đầu nó sẽ fail cho
+đến khi package config tồn tại và nhận được capability mới. Parser phải dùng
+`net.SplitHostPort`, từ chối host rỗng hoặc port ngoài `1..65535`, còn command
+là nơi đưa `os.LookupEnv` vào. Khôi phục acceptance bằng `go test -tags
+configexercise ./...`; chỉ sau đó mới đối chiếu reference implementation.

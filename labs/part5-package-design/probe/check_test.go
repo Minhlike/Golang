@@ -39,7 +39,7 @@ func TestCheckReturnsSuccessfulObservation(t *testing.T) {
 	if got != service.Endpoint {
 		t.Fatalf("runner endpoint = %+v, want %+v", got, service.Endpoint)
 	}
-	if result != (Result{Service: "billing", Healthy: true}) {
+	if result != (Result{Service: "billing"}) {
 		t.Fatalf("Check() result = %+v", result)
 	}
 }

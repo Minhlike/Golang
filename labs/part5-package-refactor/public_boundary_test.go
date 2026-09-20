@@ -24,7 +24,7 @@ func TestCheckReturnsACompletedObservation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Check() error = %v", err)
 	}
-	if result != (probe.Result{Service: "billing", Healthy: true}) {
+	if result != (probe.Result{Service: "billing"}) {
 		t.Fatalf("Check() result = %+v", result)
 	}
 }

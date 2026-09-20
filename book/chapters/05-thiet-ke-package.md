@@ -40,7 +40,7 @@ type Endpoint struct { Host string; Port int }
 type Service struct { Name string; Endpoint Endpoint }
 
 type Runner func(context.Context, Endpoint) error
-type Result struct { Service string; Healthy bool }
+type Result struct { Service string }
 
 func Check(
 	ctx context.Context,
@@ -96,11 +96,7 @@ for _, target := range config.DefaultTargets() {
 		fmt.Printf("%s: %v\n", service.Name, err)
 		continue
 	}
-	fmt.Printf(
-		"%s healthy=%t\n",
-		result.Service,
-		result.Healthy,
-	)
+	fmt.Printf("%s healthy=true\n", result.Service)
 }
 ~~~
 
@@ -111,7 +107,7 @@ Mapping này trông như boilerplate nhỏ, nhưng nó giữ dependency directio
 Lab kiểm tra ba điều có thể bị hỏng khi tách package:
 
 - `probe.Check` chuyển cancellation thành error có thể nhận diện bằng `errors.Is`, và không chạy runner khi context đã bị cancel.
-- Result thành công mang đúng service name và `Healthy=true`.
+- Result thành công mang đúng service name.
 - `internal/config` trả dữ liệu độc lập theo từng lần gọi; caller sửa slice nhận được không làm thay default của lần sau.
 
 Test cuối không phải để khẳng định “mọi slice đều dangerous”. Nó chứng minh ownership của config factory: `DefaultTargets` tạo dữ liệu mới cho caller thay vì phát một slice dùng chung. Đây là cùng câu hỏi value semantics của Chương 2, nay được đặt vào một package boundary.
@@ -125,6 +121,55 @@ Lần này không bắt đầu từ implementation đã tách. Mở `labs/part5-
 > **Bài tập - đặt code ở đâu?** Một bạn muốn thêm `fmt.Println` vào `probe.Check` để in progress, và muốn `probe` gọi `config.DefaultTargets` để đỡ mapping ở `main`. Với dependency graph trên, hai thay đổi đó tạo ra rủi ro gì? Đề xuất nơi thay thế cho mỗi việc.
 
 **Đáp án.** `fmt.Println` kéo presentation vào package có thể import; command nên quyết định format và nơi ghi output. Để `probe` gọi config đảo dependency từ domain operation sang application policy, khiến test probe phải mang config theo. Progress có thể là result/event do caller trình bày; mapping nên ở command hoặc một application service nằm phía ngoài cả `probe` lẫn config.
+
+## Một config source là dữ liệu không tin cậy, không phải endpoint
+
+Requirement tiếp theo đến từ người vận hành: trong một lần chạy, họ muốn đổi endpoint mặc định mà không sửa source. Ta chọn một biến môi trường có shape rõ ràng: `OPS_PROBE_TARGET=payments.internal:9443`. Đây là capability của application, không phải capability của `probe`. `probe.Check` chỉ nhận `Endpoint` đã hợp lệ; nó không có lý do để biết chuỗi đó đến từ môi trường, file hay một flag tương lai.
+
+Điều này giữ một ranh giới quan trọng. Environment luôn đưa vào string; endpoint cần host và port có ý nghĩa. Việc tách, chuyển kiểu và kiểm tra range là công việc của `internal/config`. Command đưa implementation thật `os.LookupEnv` vào boundary ấy, rồi chỉ nhận `[]Target` hoặc error. Shape của API đủ nhỏ để test mà không đổi environment của máy:
+
+~~~go
+type LookupEnv func(string) (string, bool)
+
+func LoadTargets(lookup LookupEnv) ([]Target, error)
+~~~
+
+Đây không phải một dependency-injection framework. `LookupEnv` chỉ là function type nói đúng dependency mà config cần: với một key, trả value và cho biết key có tồn tại hay không. Trong test, một closure nhỏ thay `os.LookupEnv`; trong command, `os.LookupEnv` thỏa đúng signature. Nhờ vậy test mô tả input rõ ràng mà không có test nào phải sửa environment process chung.
+
+`host:port` cũng không nên được cắt bằng `strings.Split`. Dấu `:` xuất hiện trong IPv6, nên `net.SplitHostPort` là parser phù hợp cho grammar socket. `payments.internal:9443` là input hợp lệ; IPv6 cần bracket như `[2001:db8::9]:9443`. Sau khi tách, port vẫn là text: `strconv.Atoi` chuyển nó thành `int`, rồi config kiểm tra range `1..65535` trước khi tạo target. Mọi input lỗi trả error có context để CLI in ra và dừng với exit code khác 0.
+
+Ở đây không cần sentinel mới. Caller hiện chỉ có một policy cho config lỗi: báo người dùng và dừng trước khi probe bắt đầu. Nếu sau này CLI cần phân biệt lỗi syntax với secret bị thiếu để đưa remediation khác nhau, đó mới là lúc error identity đáng được đưa vào contract. Chương 4 không dạy “mọi error phải có type”; nó dạy chỉ giữ identity khi caller có quyết định khác nhau.
+
+**Thực hành - requirement thay đổi sau refactor.** Sau khi hoàn thành lần tách package đầu tiên trong `labs/part5-package-refactor`, chạy `go test -tags configexercise ./...`. Test đòi `internal/config.LoadTargets` nhận một function đọc environment và đổi endpoint khi có `OPS_PROBE_TARGET`. Tự chọn file, API và error message; constraints là dùng `net.SplitHostPort`, từ chối host rỗng và port ngoài `1..65535`, còn `cmd/opsprobe` mới được gọi `os.LookupEnv`. Khi test xanh, chạy command với `OPS_PROBE_TARGET=payments.internal:9443` để kiểm tra đường đi runtime.
+
+---
+
+**Đáp án — chỉ đọc sau khi đã tự làm.** Reference implementation giữ `LoadTargets` trong `internal/config`, bắt đầu từ `DefaultTargets` để ownership của slice không đổi, rồi chỉ override host và port của target đầu. Command xử lý error ở process boundary bằng stderr và exit code `2`; `probe` không thay đổi. Đây là dấu hiệu refactor tốt: requirement về source config đi qua một package, trong khi operation kiểm tra endpoint không cần biết nguồn dữ liệu vừa đổi.
+
+## Code review: một field không có trạng thái thứ hai
+
+Sau config change, ta đọc lại public API thay vì vội thêm feature khác. `Check` có hai outcome: return `error` khi operation không hoàn tất, hoặc return `Result` khi runner thành công. Trong contract này, `Result.Healthy` luôn là `true`. Field đó trông vô hại, nhưng nó gợi cho caller một trạng thái thứ hai mà function không bao giờ trả về.
+
+Đây là một bug thiết kế, không phải bug compiler. Một caller mới có thể viết `if !result.Healthy { retry() }`, rồi tin rằng branch ấy có ý nghĩa. Thực tế, failure đã đi qua `error`; `result` zero value đi cùng error không phải một observation “unhealthy”. Giữ bool chỉ vì câu in terminal cần chữ `true` làm biên API rộng hơn dữ liệu mà operation thực sự cung cấp.
+
+Ta thu hẹp `Result` còn service đã hoàn tất. `cmd/opsprobe` đã có nhánh `err == nil`, nên chính command - nơi sở hữu presentation - in `healthy=true`. Không có information bị mất: success đã là bằng chứng của `true`; failure vẫn là error với context. Đây là một lần refactor đặc biệt đáng làm vì test không đỏ trước khi đổi. Test cũ xanh, nhưng contract cũ làm người đọc có thể suy luận sai.
+
+~~~go
+// Result identifies the service whose check completed successfully.
+type Result struct {
+	Service string
+}
+~~~
+
+Một comment tốt giờ cũng có thể viết chính xác hơn: Result không “chứa health status”, mà định danh service có check thành công. Khi API thật sự cần diễn đạt nhiều trạng thái quan sát - ví dụ healthy, degraded, unreachable với timestamp và latency - đó sẽ là một model khác, được thiết kế cùng requirement và test riêng. Đừng giữ placeholder cho một feature chưa tồn tại chỉ để API trông linh hoạt.
+
+<!-- pagebreak -->
+
+**Thực hành - review dưới ràng buộc.** Trong `labs/part5-package-design`, tạm giữ `Healthy bool` trong `Result` rồi viết ra hai outcome mà `Check` có thể trả. Sau đó bỏ field, sửa test và chỉ sửa presentation ở command cho đến khi `go test ./...` cùng `go run ./cmd/opsprobe` đều xanh. Không được chuyển failure thành `Result{Healthy: false}`: điều đó làm mất error chain mà Chương 4 đã xây. Trong bản refactor độc lập, `public_boundary_test.go` là contract tối thiểu; hãy sửa implementation theo test, không thêm field chỉ để đoán tương lai.
+
+---
+
+**Đáp án — chỉ đọc sau khi đã tự làm.** `Result{Service: service.Name}` là đủ cho nhánh thành công. Sau `err == nil`, command tự in literal `healthy=true`. Nếu một ngày cần health state mà vẫn giữ operation failure riêng, API sẽ cần một contract mới nói rõ result nào có thể xuất hiện cùng error nào; đó không phải việc của bool hiện tại.
 
 ## Điểm dừng: package đủ nhỏ để thay đổi
 
