@@ -154,3 +154,131 @@ Lab `part4-error-boundaries` biến ba contract này thành test. `ProbeFunc` đ
 Ta chưa retry, chưa timeout, và chưa cleanup tài nguyên; mọi thứ đó sẽ chỉ làm mạch này khó đọc nếu đưa vào trước. Hiện tại API đã có ranh giới rõ: `nil` nghĩa là operation hoàn tất, error giữ được nguyên nhân và context, còn caller dùng `Is` hoặc `As` đúng theo quyết định mình cần.
 
 Phần tiếp theo của Chương 4 sẽ đặt error boundary này dưới áp lực của tài nguyên và cancellation: `defer` phải chạy ở đâu, `context` đi qua API nào, và vì sao `panic` không phải đường tắt thay cho một failure có thể dự đoán.
+
+## Cancellation không phải health signal
+
+Một probe có thể bị hủy vì người dùng dừng CLI, vì request cha hết thời gian, hoặc vì service quản lý gọi đang shutdown. Không tình huống nào trong số đó chứng minh endpoint của `billing` đang down. Nếu `applyProbe` gộp mọi error vào nhánh `Record(false)`, một cancellation của caller sẽ tạo ra một health signal giả.
+
+`context.Context` mang deadline và tín hiệu cancellation qua ranh giới API. Nó đi vào đầu signature, không được cất trong `Service`, và được truyền xuống function có thể chặn:
+
+~~~go
+type ProbeFunc func(context.Context, Endpoint) error
+
+func applyProbe(
+	ctx context.Context,
+	registry map[string]Service,
+	name string,
+	run ProbeFunc,
+) error
+~~~
+
+Trước khi chạy probe, boundary kiểm tra cancellation để không bắt đầu I/O vô ích. Nếu cancellation đến trong lúc `run` đang làm việc, `run` phải tôn trọng `ctx` và trả `ctx.Err()`. `applyProbe` nhận diện hai nguyên nhân chuẩn `context.Canceled` và `context.DeadlineExceeded`, giữ chúng trong error chain, nhưng không thay health state:
+
+~~~go
+if err := ctx.Err(); err != nil {
+	return fmt.Errorf("probe canceled: %w", err)
+}
+
+if err := run(ctx, service.Endpoint); err != nil {
+	if errors.Is(err, context.Canceled) ||
+		errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("probe incomplete: %w", err)
+	}
+
+	service.Record(false)
+	registry[name] = service
+	failed := &ProbeFailure{
+		Service: service.Name,
+		Endpoint: service.Endpoint,
+		Cause: err,
+	}
+	return fmt.Errorf("probe %q: %w", name, failed)
+}
+~~~
+
+Đây là một policy của `opsprobe`, không phải luật rằng cancellation không bao giờ có ý nghĩa vận hành. Tại boundary này, state `Healthy` có nghĩa là kết quả của lần quan sát hoàn tất. Một operation bị hủy chưa đưa ra quan sát đó. Caller vẫn có thể dùng `errors.Is(err, context.Canceled)` để dừng yên lặng, hoặc `errors.Is(err, context.DeadlineExceeded)` để báo timeout.
+
+## `defer` đứng cạnh acquisition
+
+Cancellation không tự đóng mọi resource mà một function đã mở. Ownership nằm ở nơi acquisition thành công: function nào có session thì function đó phải sắp cleanup trước khi gọi phần có thể return. Ta tách phần này khỏi health state để đọc được policy cleanup mà không lẫn nó với policy endpoint:
+
+~~~go
+type ProbeSession interface {
+	Close() error
+}
+
+type OpenSession func(Endpoint) (ProbeSession, error)
+type SessionProbe func(
+	context.Context,
+	Endpoint,
+	ProbeSession,
+) error
+
+func runWithSession(
+	ctx context.Context,
+	endpoint Endpoint,
+	open OpenSession,
+	run SessionProbe,
+) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	session, err := open(endpoint)
+	if err != nil {
+		return fmt.Errorf("open session: %w", err)
+	}
+	defer func() {
+		if closeErr := session.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("close session: %w", closeErr)
+			}
+		}
+	}()
+
+	return run(ctx, endpoint, session)
+}
+~~~
+
+`defer` được đăng ký ngay sau khi `open` thành công. Nếu `open` thất bại, chưa có session để đóng. Nếu `run` return theo bất kỳ nhánh nào, `Close` chạy trước khi `runWithSession` trả result cuối cùng. Named result `err` ở đây có lý do cụ thể: cleanup error chỉ trở thành result khi operation chính đã thành công. Nếu `run` đã có error, code giữ primary failure thay vì thay thế nó bằng một lỗi close thứ cấp. Một hệ thống có yêu cầu lưu cả hai có thể dùng policy khác, nhưng phải làm điều đó có chủ ý.
+
+![Ba đường đi của một probe có cancellation và session: cancellation trước acquisition không tạo resource; mọi return sau acquisition đi qua Close trước khi error trở về caller.](../../assets/diagrams/cancellation-cleanup-trace.png)
+
+@figure `defer` không phải một câu thần chú dọn dẹp toàn chương trình. Nó ràng buộc cleanup với scope đã nhận ownership. Error từ `Close` chỉ thay result khi `run` chưa có failure để bảo toàn nguyên nhân chính.
+
+Lưu ý một ranh giới khác: caller tạo context dẫn xuất phải gọi `cancel`, kể cả khi deadline có thể tự hết. Trong code ngắn, pattern là `ctx, cancel := context.WithTimeout(parent, timeout)` ngay sau đó `defer cancel()`. `cancel` giải phóng resource liên quan tới context; còn `session.Close` giải phóng resource mà `runWithSession` đã acquire. Hai cleanup này có owner khác nhau.
+
+## Code review: đừng dùng `recover` để che failure dự đoán được
+
+Một review có thể gặp đoạn sau và thấy nó “tránh crash”:
+
+~~~go
+defer func() {
+	if recovered := recover(); recovered != nil {
+		err = fmt.Errorf("probe failed: %v", recovered)
+	}
+}()
+~~~
+
+Đoạn này không phải cách thay thế cho `return error`. Cancellation, timeout, config thiếu và connection refused đều là outcome mà API đã dự kiến; chúng phải đi qua `error` chain để caller phân loại được. Dùng `recover` ở đây biến bug lập trình như nil dereference hoặc invariant hỏng thành một string mơ hồ, trong khi state có thể đã bị thay đổi dở dang.
+
+`panic` dành cho tình trạng không thể tiếp tục theo contract nội bộ hoặc cho những boundary được thiết kế riêng để cách ly code không tin cậy. `recover` chỉ có chỗ khi boundary đó có kế hoạch phục hồi state, ghi nhận đầy đủ và có contract rõ ràng sau recovery. `opsprobe` hiện không có boundary như vậy; để panic lộ ra trong test thường trung thực hơn là giả nó thành “probe failed”.
+
+> **Bài tập - trace cleanup:** `ctx` bị cancel sau khi `open` trả một session, còn `run` trả `context.Canceled`. `Close` có được gọi không? Error cuối giữ identity nào? `registry["billing"]` có nên đổi `Healthy` hay `Retries` không?
+
+**Đáp án.** `Close` được gọi đúng một lần vì `defer` đã được đăng ký sau acquisition. `runWithSession` giữ `context.Canceled` là primary error nếu `Close` cũng lỗi; `applyProbe` bọc nguyên nhân đó để `errors.Is(err, context.Canceled)` vẫn true. Vì operation không hoàn tất một quan sát endpoint, policy hiện tại giữ nguyên `Healthy` và `Retries`.
+
+## Kết chương: failure có đường đi
+
+Một error boundary tốt không cố làm mọi failure giống nhau. `ErrUnknownService` cho caller một loại lỗi để cấu hình; `ProbeFailure` giữ context của quan sát thật; wrapping giữ identity; cancellation đi qua `Context` nhưng không bị viết nhầm thành health signal; `defer` đóng resource mà scope đã nhận ownership. `panic` vẫn là tín hiệu khác, không phải lối tắt để khỏi thiết kế result.
+
+`opsprobe` nay nói rõ điều nó sở hữu, quan sát và để caller quyết định. Tiếp theo: package boundary, export và dependency kín.
+
+### Bốn câu hỏi trước khi merge một error boundary
+
+- Caller có một quyết định khác nhau cho từng outcome không? Nếu có, hãy giữ identity bằng sentinel hoặc type có dữ liệu; đừng bắt caller parse message.
+- Failure này có phải quan sát về domain không? Timeout hay cancellation của caller không tự động là bằng chứng endpoint unhealthy.
+- Resource được acquire ở đâu, và cleanup có được đăng ký ngay sau acquisition không? Mỗi `defer` nên chỉ rõ scope nào đang nhận ownership.
+- Nếu cleanup cũng lỗi, primary failure nào không được phép biến mất? Policy có thể khác giữa hệ thống, nhưng cần được kiểm thử như một contract.
+
+Khi bốn câu trả lời hiện ngay trong signature, error chain, state transition và test, người đọc sau không cần đoán error có bị nuốt, retry có bị tăng sai, hay resource có bị bỏ quên. Đó là chuẩn bị cần thiết trước khi tách code thành package.

@@ -1,0 +1,34 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
+skinparam ArrowColor #222222
+
+start
+if (ctx đã bị cancel?) then (có)
+  :trả ctx.Err();
+  note right: chưa acquire session
+  stop
+else (không)
+  :open endpoint;
+  if (open thành công?) then (có)
+    :defer session.Close();
+    :run(ctx, endpoint, session);
+    :Close chạy trước return;
+    if (run đã lỗi?) then (có)
+      :giữ primary error;
+    else (không)
+      :trả close error nếu có;
+    endif
+  else (không)
+    :trả open error;
+  endif
+endif
+stop
+@enduml

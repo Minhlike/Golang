@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
@@ -24,7 +25,14 @@ func (service *Service) Record(healthy bool) {
 	}
 }
 
-type ProbeFunc func(Endpoint) error
+type ProbeFunc func(context.Context, Endpoint) error
+
+type ProbeSession interface {
+	Close() error
+}
+
+type OpenSession func(Endpoint) (ProbeSession, error)
+type SessionProbe func(context.Context, Endpoint, ProbeSession) error
 
 var ErrUnknownService = errors.New("service is not configured")
 
@@ -48,13 +56,44 @@ func (failure *ProbeFailure) Unwrap() error {
 	return failure.Cause
 }
 
-func applyProbe(registry map[string]Service, name string, run ProbeFunc) error {
+func runWithSession(
+	ctx context.Context,
+	endpoint Endpoint,
+	open OpenSession,
+	run SessionProbe,
+) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	session, err := open(endpoint)
+	if err != nil {
+		return fmt.Errorf("open session: %w", err)
+	}
+	defer func() {
+		if closeErr := session.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("close session: %w", closeErr)
+			}
+		}
+	}()
+
+	return run(ctx, endpoint, session)
+}
+
+func applyProbe(ctx context.Context, registry map[string]Service, name string, run ProbeFunc) error {
 	service, found := registry[name]
 	if !found {
 		return fmt.Errorf("unknown %q: %w", name, ErrUnknownService)
 	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("probe canceled: %w", err)
+	}
 
-	if err := run(service.Endpoint); err != nil {
+	if err := run(ctx, service.Endpoint); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("probe incomplete: %w", err)
+		}
 		service.Record(false)
 		registry[name] = service
 		failed := &ProbeFailure{
@@ -79,7 +118,7 @@ func main() {
 		},
 	}
 
-	err := applyProbe(registry, "billing", func(Endpoint) error {
+	err := applyProbe(context.Background(), registry, "billing", func(context.Context, Endpoint) error {
 		return errors.New("connection refused")
 	})
 

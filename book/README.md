@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I** và đang mở **Chương 4** bằng một mạch từ failure của `opsprobe` đến error boundary. Các phần tiếp theo chỉ được viết sau khi nhịp học, code và layout của phần đang mở đã được kiểm tra trực quan.
+Bản PDF đã hoàn thành **Phần I** và **Chương 4**: từ failure của `opsprobe` đến error boundary, cancellation và cleanup. Các phần tiếp theo chỉ được viết sau khi nhịp học, code và layout của phần đang mở đã được kiểm tra trực quan.
