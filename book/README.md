@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đang hoàn thiện **Phần I, Chương 1** với một mạch duy nhất: đọc một chương trình, làm nó thay đổi từng bước, rồi tự dự đoán compiler sẽ chấp nhận hay từ chối điều gì. Những phần tiếp theo chỉ được viết sau khi nhịp học và ngôn ngữ trình bày của phần nền móng đã được kiểm tra trực quan.
+Bản PDF đã hoàn thành **Phần I** và đang mở **Chương 4** bằng một mạch từ failure của `opsprobe` đến error boundary. Các phần tiếp theo chỉ được viết sau khi nhịp học, code và layout của phần đang mở đã được kiểm tra trực quan.
