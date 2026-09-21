@@ -17,7 +17,7 @@
 
 ## Phần III — Nhiều việc cùng lúc, nhưng không mất kiểm soát
 
-8. **Một race bắt đầu từ đâu.** Goroutine, scheduler, shared state và bằng chứng của race condition trước khi nói về API đồng thời.
+8. **Một race bắt đầu từ đâu.** Các access chung không có thứ tự an toàn, bốn tầng bằng chứng, và cách đọc race report trước khi nói về API đồng thời.
 9. **Dòng công việc có áp suất.** Channel, select, ownership, timeout, cancellation, backpressure, worker pool và leak.
 10. **Khi chương trình chậm hoặc phình.** Benchmark, pprof, trace, allocation, escape, GC, G/M/P, syscall và cách đo trước khi tối ưu.
 
@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I** và **Chương 6**. Chapter 7 đang mở bằng một minimal reproducer về stream boundary và resource lifetime; `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
+Bản PDF đã hoàn thành **Phần I** và **Chương 6**. Chapter 7 mở bằng một chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 bắt đầu bằng failure analysis về race. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
