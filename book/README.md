@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I** và **Chương 6**. Chapter 7 mở bằng một chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 bắt đầu bằng failure analysis về race. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
+Bản PDF đã hoàn thành **Phần I**, **Chương 6**, **Chương 7** và **Chương 8**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.

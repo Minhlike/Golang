@@ -2,7 +2,7 @@
 
 Một chương trình kiểm tra nhiều endpoint thường có một người thu thập kết quả và một người trình bày. Bản chạy thử có thể luôn in đúng trên laptop, nên ta rất dễ gọi nó là “chạy song song được”. Nhưng kết quả đúng trong một lượt không tạo ra một lời hứa đúng cho lượt kế tiếp.
 
-Mô hình tinh thần của chương này là **race không phải là hai goroutine cùng tồn tại; race là các lần chạm vào cùng dữ liệu mà không có thứ tự an toàn giữa chúng**. Trước khi chọn channel, mutex hay atomic, ta phải lần được những lần chạm đó và hỏi: thứ tự nào thực sự được thiết lập?
+Mô hình tinh thần của chương này là **race không phải là hai goroutine cùng tồn tại; race là các lần chạm vào cùng dữ liệu mà không có thứ tự an toàn giữa chúng**. Trước khi chọn channel, mutex hay atomic, ta phải lần được những lần truy cập đó và hỏi: thứ tự nào thực sự được thiết lập?
 
 ## Một lá cờ không tự công bố kết quả
 
@@ -22,10 +22,10 @@ func collect() {
 	ready = true
 }
 
-func show() {
+func show() summary {
 	for !ready {
 	}
-	fmt.Println(latest)
+	return latest
 }
 ~~~
 
@@ -46,26 +46,66 @@ Vì vậy ở đây không chỉ có một vấn đề “đôi khi in cũ”. C
 
 Hai tầng đầu là lời hứa để thiết kế. Tầng thứ ba chỉ hữu ích khi giải thích một vết chạy hoặc một vấn đề hiệu năng; đừng dùng nó để biện minh rằng race “khó xảy ra”. Tầng cuối là bằng chứng thực nghiệm mạnh cho đường đã chạy, nhưng nó không thay thế lập luận về thứ tự. Một test xanh không cho phép ta đổi “chưa quan sát thấy” thành “được bảo đảm”.
 
-## Đọc báo cáo như bản đồ truy cập
+## Vẽ chứng minh thay vì đoán lịch chạy
 
-Mở `labs/part6-race-detector/broken/counter_race_test.go`. Từ thư mục `labs/part6-race-detector`, chạy ca kiểm tra có chủ ý hỏng:
+Chương 6 đã dùng race detector để tìm một lần truy cập thực sự xung đột. Ở đây bước kế tiếp không phải chạy lại cùng báo cáo, mà là viết được lời giải thích cho phiên bản đúng trước khi chạy. Ta sẽ dùng ba mũi tên:
+
+- **sequenced-before**: thứ tự của code trong một goroutine. `append` xong rồi mới `Done` là một mũi tên loại này.
+- **synchronized-before**: mũi tên mà ngôn ngữ hoặc API công bố. Ví dụ `Mutex.Unlock` và một `Mutex.Lock` về sau, hoặc `Done` và `Wait` mà nó mở khóa.
+- **happens-before**: đường đi tạo bởi hai loại mũi tên trên. Nếu lần ghi đi đến lần đọc qua đường này, người đọc có một lý do được cam kết để thấy giá trị đó.
+
+Đừng biến ba tên thành câu thần chú. Với mỗi kết quả cần đọc, hãy vẽ đường cụ thể. Trong ví dụ `ready`, không có cạnh nào từ `latest = ...` sang việc `show` đọc `latest`; vì vậy lời giải không thể chỉ là thêm một vòng lặp chờ.
+
+## Một khóa bảo vệ một bất biến, không bảo vệ một dòng
+
+Một `Mutex` hợp với dữ liệu thật sự được sở hữu chung, khi nhiều goroutine cần lần lượt sửa hoặc chụp lại cùng một trạng thái. Bất biến của lab mới là: **sau khi người điều phối đã chờ tất cả worker hoàn tất, snapshot chứa đúng một report của mỗi worker**. Mutex bảo vệ slice `reports` trong lúc thêm và sao chép; `WaitGroup` cho người điều phối biết khi nào có thể đánh giá bất biến.
+
+Trước khi mở `fixed/registry.go`, chỉ đọc `exercise/registry_test.go`. Test đang đòi một `Registry`, một `Add(Report)` và một `Snapshot() []Report`. Hãy tự quyết định field nào cần có, method nào dùng pointer receiver, và vùng lock cần bao trùm đến đâu. Lệnh khởi đầu cố ý đỏ vì phần hiện thực chưa tồn tại:
 
 ~~~powershell
-go test -race -tags raceexercise ./broken
+go test -tags exercise ./exercise
 ~~~
 
-Báo cáo sẽ chỉ ra hai lần truy cập xung đột và nơi goroutine được tạo. Đừng dừng ở dòng `WARNING: DATA RACE`. Với mỗi vết gọi, viết ra ba điều: variable chung nào bị chạm; thao tác là đọc hay ghi; và sự kiện đồng bộ nào, nếu có, đặt một lần truy cập trước lần kia. Ở ca kiểm tra này, câu trả lời cuối cùng là “không có”. Đó mới là nguyên nhân; counter chỉ là vật chứng.
+Đừng đáp bằng cách trả slice nội bộ. Bài cũ về aliasing đã cho ta lý do: người gọi giữ slice trả về có thể thay phần tử của nó. `Snapshot` ở đây hứa một ảnh chụp của container, nên lab dùng `copy` để người gọi không ghi đè phần tử bên trong registry. `Report` chỉ có string value để câu hỏi của bài vẫn là thứ tự; quyền sở hữu sâu hơn của object lồng nhau sẽ quay lại khi nó có nhu cầu thật.
 
-Đây là tầng **đo được**, không phải định nghĩa của race. Công cụ cần chương trình thật sự chạy đến lần truy cập; một nhánh chưa chạy có thể vẫn sai mà báo cáo chưa thấy. Ngược lại, khi công cụ đã chỉ ra hai lần truy cập không đồng bộ, đừng chạy đi chạy lại để hy vọng báo cáo biến mất. Ta cần thay thiết kế sao cho có một quan hệ thứ tự được tài liệu cam kết.
+Một phần hiện thực được chấp nhận không cần biết bộ lập lịch sẽ chạy worker nào trước. Nó chỉ cần khiến mỗi `Add` lock trước khi append, unlock sau đó, và `Snapshot` lock trong lúc tạo bản sao. Tài liệu `sync` cam kết `Unlock` xảy ra trước một `Lock` về sau trên cùng mutex. Đây là lời hứa API, không phải suy luận từ số core hay một lần test xanh.
 
-## Chưa chọn cơ chế
+## WaitGroup tạo mốc hoàn tất, không thay Mutex
 
-Ở điểm này, cố chọn `sync.Mutex` hay channel là sớm. Hai cơ chế đều có thể tạo quan hệ đồng bộ, nhưng chúng kể hai câu chuyện quyền sở hữu khác nhau. Nếu vội biến mọi trạng thái dùng chung thành mutex, người học dễ có một đoạn xanh mà không biết lock đang bảo vệ điều bất biến nào. Nếu vội dùng channel, người học dễ biến nó thành một biến toàn cục vòng vo.
+Test đặt `wg.Add(workers)` trước khi tạo goroutine. Mỗi worker gọi `registry.Add(report)` rồi mới `wg.Done()` qua `defer`. Khi `wg.Wait()` trả về, mỗi `Done` đã mở khóa nó; do đó mọi `Add` trước `Done` đã nằm trước thời điểm assertion gọi `Snapshot`.
 
-Trước khi thấy lời giải, hãy trả lời cho ví dụ `summary`: dữ liệu nào phải được công bố cùng nhau; ai được phép đọc nó; và sự kiện nào báo người đọc rằng bản đó đã sẵn sàng? Chỉ khi trả lời được ba câu này, chương sau mới chọn cơ chế đồng bộ phù hợp thay vì chọn API theo thói quen.
+Đường chứng minh cho một worker có thể đọc thành lời:
+
+~~~text
+Add append reports
+  → Unlock registry.mu
+  → Done
+  → Wait returns
+  → Snapshot Lock
+  → copy reports
+~~~
+
+Mũi tên đầu, thứ hai và mũi tên sau `Wait` là thứ tự trong code; `Done → Wait returns` là điều `sync.WaitGroup` công bố. Mutex giữ các access vào slice không chồng lên nhau. `WaitGroup` không thay thế lock: nếu các worker cùng append vào một slice mà không khóa, chúng vẫn race dù main có chờ đến khi tất cả xong mới đếm kết quả.
+
+Sau khi tự làm, chạy bản tham chiếu độc lập:
+
+~~~powershell
+go test -race ./fixed
+~~~
+
+Kết quả xanh ở đây là hai loại bằng chứng cùng lúc: test kiểm tra bất biến cụ thể, còn race detector không thấy lần truy cập racy trên đường chạy của test. Nó vẫn không phải lời khẳng định rằng mọi API tương lai thêm vào `Registry` đều an toàn. Bất cứ method mới nào đọc hoặc ghi `reports` đều phải quay lại bất biến và phạm vi lock.
+
+## Điều `go` cho phép, điều nó không hứa
+
+Lệnh `go f()` thiết lập một quan hệ từ nơi khởi động đến lúc `f` bắt đầu. Điều đó đủ để goroutine mới thấy dữ liệu đã được chuẩn bị trước lệnh `go`; nó không cho chiều ngược lại. Việc `f` return hay goroutine kết thúc không tự báo cho goroutine khác rằng công việc đã xong. Đó là lý do `WaitGroup` trong lab là một phần của chứng minh, không phải nghi thức để test bớt flake.
+
+Không dùng `time.Sleep` để thay mũi tên còn thiếu. Sleep chỉ đoán rằng worker có đủ thời gian trên một lần chạy; nó không công bố thứ tự nào và làm test vừa chậm vừa không chắc. Cũng chưa dùng channel hoặc atomic để vá ví dụ `ready`: chúng có nghĩa riêng và sẽ được dạy đầy đủ ở Chương 9, nơi câu hỏi chuyển sang truyền công việc, quyền sở hữu và áp suất của dòng dữ liệu.
+
+Chương này kết thúc khi anh nhìn hai goroutine không còn hỏi “có chạy cùng lúc không?”, mà hỏi “lần truy cập nào cùng dữ liệu, bất biến nào cần giữ, và đường happens-before nào làm điều đó đúng?”. Câu hỏi ấy đi cùng anh qua channel, HTTP handler, cache và code runtime; cơ chế có thể đổi, nhưng trách nhiệm chứng minh thứ tự không đổi.
 
 ## Ghi chú kiểm chứng
 
 @references
 1. Go Team. The Go Memory Model, phiên bản 6 June 2022. go.dev/ref/mem
 2. Go Team. Data Race Detector. go.dev/doc/articles/race_detector
+3. Go Team. Package sync. pkg.go.dev/sync
