@@ -63,12 +63,12 @@ Test trong exercise chỉ chốt wire format; benchmark đã có sẵn workload 
 Khi benchmark cho thấy một operation có chi phí đáng quan tâm, profiler giúp xem chi phí tụ lại ở đâu. Thu profile trên workload tương ứng với câu hỏi; đừng lấy profile của một test khởi động program rồi suy luận về đường nóng production.
 
 ~~~powershell
-go test -run '^$' -bench BenchmarkRender -cpuprofile cpu.out -memprofile mem.out ./fixed
+go test -run '^$' -bench BenchmarkRender `
+  -cpuprofile cpu.out -memprofile mem.out ./fixed
 go tool pprof -top cpu.out
-go tool pprof -top -alloc_space mem.out
 ~~~
 
-CPU profile lấy mẫu những lúc process thực sự dùng CPU. Nó phù hợp để tìm stack đang làm computation; nó không biến thời gian request bị block ở network thành CPU time. Heap profile là profile mẫu của allocation/heap, nên `-alloc_space` hữu ích khi hỏi tổng lượng byte đã cấp phát theo đường code, còn `-inuse_space` gần hơn với câu hỏi “đến cuối profile, cái gì đang còn sống”. Hai góc nhìn có thể chỉ đến hai quyết định khác nhau.
+CPU profile lấy mẫu những lúc process thực sự dùng CPU. Nó phù hợp để tìm stack đang làm computation; nó không biến thời gian request bị block ở network thành CPU time. Heap profile là profile mẫu của allocation/heap; chạy thêm `go tool pprof -top -alloc_space mem.out` khi hỏi tổng lượng byte đã cấp phát theo đường code. `-inuse_space` gần hơn với câu hỏi “đến cuối profile, cái gì đang còn sống”. Hai góc nhìn có thể chỉ đến hai quyết định khác nhau.
 
 `flat` là chi phí gắn trực tiếp vào function; `cum` gồm cả thời gian bên dưới lời gọi của nó. Một function có `flat` nhỏ nhưng `cum` lớn không phải vô tội: nó có thể là cánh cửa dẫn vào công việc đắt. Hãy chọn một stack nổi bật, đọc source và kiểm tra lại bằng benchmark. Đó là vòng lặp điều tra nhỏ nhất:
 
