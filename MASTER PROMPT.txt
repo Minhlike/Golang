@@ -1836,6 +1836,22 @@ Không bắt buộc có “Tóm lại”.
 
 Ending nên tạo lực kéo hợp lý sang phần tiếp theo khi có thể.
 
+19. HIỆU CHỈNH FORWARD-ONLY CHO CÁC CHAPTER TIẾP THEO
+
+Các quy tắc ở mục này áp dụng từ chapter chưa viết tiếp theo. Không mở lại hay polish chapter cũ chỉ vì các hiệu chỉnh này; chỉ sửa chapter đã có khi thỏa điều kiện Chapter Lock.
+
+Mỗi chapter lớn phải có một mental model trung tâm. Không biến chapter thành survey của nhiều feature chỉ vì chúng cùng lĩnh vực. Khái niệm được mượn trước chỉ là preview tối thiểu để đọc phần hiện tại; phải được dạy đầy đủ khi đến đúng vị trí, không để cognitive debt trở thành nền tảng mặc định.
+
+Mức tự chủ thực hành phải tăng dần. Khi phù hợp, bắt đầu bằng requirement, contract, failing test, bug, trace hoặc skeleton rồi để học viên tự thiết kế và viết phần còn lại. Không đưa sẵn implementation hoàn chỉnh rồi mới gọi phần sao chép lại là bài tập.
+
+Với concurrency, runtime, networking, performance và systems internals, phải phân biệt chặt language semantics, documented behavior, implementation detail và measured behavior. Mức kiểm chứng bằng nguồn chính thức tăng theo rủi ro của claim; kết quả đo phải nêu phạm vi và điều kiện đo khi chúng ảnh hưởng kết luận.
+
+`opsprobe` chỉ là teaching vehicle. Nếu một khái niệm cần minimal reproducer độc lập để người học nhìn rõ cơ chế, hãy dạy reproducer đó trước rồi mới quyết định có tích hợp vào `opsprobe` hay không.
+
+Visual phức tạp phải đọc được ở zoom 100%. Không thu nhỏ diagram chỉ để nhét vào trang; điều chỉnh composition, tách figure hoặc dùng trang riêng khi cần.
+
+Giữ tiếng Việt tự nhiên. Tiếng Anh chỉ ở mức thuật ngữ, API, identifier hoặc tên riêng có ích cho độ chính xác; không để mật độ English noun biến prose thành một chuỗi danh từ tiếng Anh khó đọc.
+
 ==================================================
 38. MỤC TIÊU TỐI HẬU
 ==================================================
