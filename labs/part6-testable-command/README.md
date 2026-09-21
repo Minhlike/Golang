@@ -33,3 +33,10 @@ go test -run=^$ `
   -fuzz=FuzzLoadTargetsNeverReturnsInvalidTarget `
   -fuzztime=2s ./internal/config
 ```
+
+Đo parser trước khi tối ưu nó. Benchmark này là phép đo local, không phải lý do
+để cache config vốn chỉ được đọc lúc khởi động:
+
+```powershell
+go test -run=^$ -bench=BenchmarkLoadTargets -benchmem ./internal/config
+```
