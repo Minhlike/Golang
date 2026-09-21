@@ -167,7 +167,7 @@ def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
                    hAlign="CENTER"),
         Spacer(1, 1.1 * cm),
         Paragraph("Edition nền móng", s["subtitle"]),
-        Paragraph("Được kiểm chứng với Go 1.27.1 - 21-09-2026", s["subtitle"]),
+        Paragraph("Được kiểm chứng với Go 1.27.1 - 22-09-2026", s["subtitle"]),
         Spacer(1, 4.8 * cm),
         Paragraph("Markdown là nguồn gốc. PDF là bản đọc được, có thể tái tạo cục bộ.", s["subtitle"]),
         PageBreak(),

@@ -69,6 +69,21 @@ func TestCreateCheckRejectsUnsafeScheme(t *testing.T) {
 	}
 }
 
+func TestCreateCheckRejectsAnotherJSONValue(t *testing.T) {
+	store := &memoryStore{}
+	handler := NewHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/v1/checks", bytes.NewBufferString(`{"target":"https://api.test"} {"target":"https://other.test"}`))
+	resp := httptest.NewRecorder()
+
+	handler.ServeHTTP(resp, req)
+	if resp.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", resp.Result().StatusCode, http.StatusBadRequest)
+	}
+	if len(store.created) != 0 {
+		t.Fatalf("store received %#v", store.created)
+	}
+}
+
 func TestServeUntilStoppedDrainsAndReturns(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -102,6 +117,24 @@ func TestServeUntilStoppedDrainsAndReturns(t *testing.T) {
 func TestServeUntilStoppedRejectsNilServer(t *testing.T) {
 	if err := ServeUntilStopped(context.Background(), nil, nil, time.Second); err == nil {
 		t.Fatal("ServeUntilStopped(nil) error = nil")
+	}
+}
+
+func TestServeUntilStoppedRejectsNilListener(t *testing.T) {
+	if err := ServeUntilStopped(context.Background(), &http.Server{}, nil, time.Second); err == nil {
+		t.Fatal("ServeUntilStopped(nil listener) error = nil")
+	}
+}
+
+func TestServeUntilStoppedRejectsNonPositiveGrace(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	if err := ServeUntilStopped(context.Background(), &http.Server{}, ln, 0); err == nil {
+		t.Fatal("ServeUntilStopped(zero grace) error = nil")
 	}
 }
 

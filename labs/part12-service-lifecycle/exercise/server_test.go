@@ -66,6 +66,21 @@ func TestCreateCheckRejectsUnsafeScheme(t *testing.T) {
 	}
 }
 
+func TestCreateCheckRejectsAnotherJSONValue(t *testing.T) {
+	store := &fakeStore{}
+	handler := NewHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/v1/checks", bytes.NewBufferString(`{"target":"https://api.test"} {"target":"https://other.test"}`))
+	resp := httptest.NewRecorder()
+
+	handler.ServeHTTP(resp, req)
+	if resp.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", resp.Result().StatusCode, http.StatusBadRequest)
+	}
+	if len(store.created) != 0 {
+		t.Fatalf("store was called with %#v", store.created)
+	}
+}
+
 type fakeStore struct{ created []Check }
 
 func (s *fakeStore) Create(_ context.Context, check Check) (Check, error) {

@@ -18,7 +18,7 @@ type Work func(context.Context, Job) error
 
 func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result {
 	out := make(chan Result)
-	if workers <= 0 {
+	if workers <= 0 || ctx.Err() != nil {
 		close(out)
 		return out
 	}
@@ -27,7 +27,7 @@ func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result 
 	var workersDone sync.WaitGroup
 	workersDone.Add(workers)
 
-	for range workers {
+	for i := 0; i < workers; i++ {
 		go func() {
 			defer workersDone.Done()
 			for {
@@ -36,6 +36,9 @@ func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result 
 					return
 				case job, ok := <-in:
 					if !ok {
+						return
+					}
+					if ctx.Err() != nil {
 						return
 					}
 					result := Result{Job: job, Err: work(ctx, job)}

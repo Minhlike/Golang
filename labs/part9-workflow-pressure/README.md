@@ -15,6 +15,10 @@ output. Một goroutine coordinator phải chờ toàn bộ worker rồi đóng 
 một lần. `Run` có thể trả output đã đóng nếu `workers <= 0`; đó là policy của
 lab để API vẫn nhỏ.
 
+Hãy giữ thêm một biên cancellation: nếu context đã bị hủy trước khi dispatcher
+bàn giao việc, `Work` không được chạy. Kiểm tra cancellation ở dispatcher là
+chưa đủ; một worker vừa nhận job vẫn có thể phải dừng trước lúc gọi `Work`.
+
 Khi test xanh, chạy lại với race detector:
 
 ```powershell

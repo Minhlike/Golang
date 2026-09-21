@@ -102,6 +102,23 @@ func TestRunCancellationDoesNotLeaveAnUnconsumedSend(t *testing.T) {
 	}
 }
 
+func TestRunCanceledBeforeDispatchDoesNotStartWork(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	ran := false
+
+	out := Run(ctx, []Job{{Name: "billing"}}, 1, func(context.Context, Job) error {
+		ran = true
+		return nil
+	})
+	for range out {
+		t.Fatal("canceled run produced a result")
+	}
+	if ran {
+		t.Fatal("Work ran after cancellation was already observed")
+	}
+}
+
 func TestRunWithNoWorkersReturnsClosedOutput(t *testing.T) {
 	out := Run(context.Background(), []Job{{Name: "billing"}}, 0, func(context.Context, Job) error {
 		t.Fatal("Work ran with no workers")

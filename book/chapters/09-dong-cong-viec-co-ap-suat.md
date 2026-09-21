@@ -76,6 +76,8 @@ Mở `exercise/pool_test.go` trước. Test không cho sẵn hiện thực; nó 
 - Khi context bị hủy trong lúc output không được tiêu thụ, output vẫn phải đóng; worker không được mắc kẹt ở send.
 - Khi dispatcher không còn job và mọi worker đã return, output đóng đúng một lần để consumer có thể kết thúc `range`.
 
+Có một biên nhỏ nhưng đáng giữ ngay từ đầu: nếu `ctx` đã bị hủy trước khi dispatcher kịp bàn giao job, `Work` không được bắt đầu chỉ vì một worker vừa được tạo. Cancellation là policy dừng nhận việc mới; đưa một `Job` vào `Work` với context đã hết hạn chỉ tạo thêm một kết quả không còn người sở hữu.
+
 Chạy lệnh khởi đầu; nó phải đỏ vì API chưa tồn tại:
 
 ~~~powershell
@@ -101,6 +103,8 @@ case <-ctx.Done():
 ~~~
 
 `ctx.Err()` trước `select` là policy có chủ đích của lab: nếu cancellation đã được quan sát sau `Work`, result đó không còn được bàn giao, kể cả khi consumer vừa quay lại. Bên trong `select`, cancellation vẫn là đường thoát cho trường hợp consumer biến mất trong lúc worker đang chờ. Phần còn lại là thiết kế của anh: dispatcher đưa `jobs` vào channel thế nào để cũng nghe `ctx.Done`; worker nhận đến khi `jobs` đóng ra sao; goroutine nào chờ `WaitGroup`; và trường hợp `workers <= 0` trả output đóng ngay hay bị từ chối ở API boundary. Test hiện tại chốt policy thứ nhất để câu hỏi vẫn tập trung vào lifecycle.
+
+Đừng chỉ kiểm tra cancellation ở dispatcher. Một job có thể đã được bàn giao đúng lúc cancellation xảy ra; worker cần kiểm tra lại trước khi gọi `Work`. Điều này không cưỡng bức một `Work` đang chạy phải dừng — chính `Work` còn phải tôn trọng context của nó — nhưng nó giữ được lời hứa hẹp hơn và kiểm chứng được: sau khi cancellation đã được quan sát, pool không khởi động một job mới.
 
 Sau khi tự làm, chạy bản tham chiếu với race detector:
 

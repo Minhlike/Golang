@@ -20,6 +20,16 @@ func ServeUntilStopped(
 	ln net.Listener,
 	grace time.Duration,
 ) error {
+	if srv == nil {
+		return errors.New("HTTP server is required")
+	}
+	if ln == nil {
+		return errors.New("listener is required")
+	}
+	if grace <= 0 {
+		return errors.New("shutdown grace must be positive")
+	}
+
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.Serve(ln) }()
 
@@ -49,11 +59,13 @@ func ServeUntilStopped(
 }
 ~~~
 
-`shutdownCtx` được tạo từ `context.Background()` có chủ đích. Root context đã bị cancel để yêu cầu dừng; nếu lấy deadline shutdown trực tiếp từ nó, deadline sẽ bị cancel ngay trước khi `Shutdown` có cơ hội drain. `grace` phải đến từ SLO, thời gian deploy và loại request của service, không phải một con số copy từ ví dụ. Sau deadline, `Shutdown` trả error; quyết định tiếp theo - log, alarm, force close hay để supervisor xử lý - là policy cần được viết rõ ở boundary vận hành.
+Ba guard đầu không phải defensive programming vô định. `srv`, `ln` và `grace` là ba điều kiện đầu vào của lifecycle helper; nếu một trong chúng thiếu, chạy `Serve` chỉ để nhận panic hoặc treo không giúp caller sửa cấu hình. `shutdownCtx` được tạo từ `context.Background()` có chủ đích. Root context đã bị cancel để yêu cầu dừng; nếu lấy deadline shutdown trực tiếp từ nó, deadline sẽ bị cancel ngay trước khi `Shutdown` có cơ hội drain. `grace` phải đến từ SLO, thời gian deploy và loại request của service, không phải một con số copy từ ví dụ. Sau deadline, `Shutdown` trả error; quyết định tiếp theo - log, alarm, force close hay để supervisor xử lý - là policy cần được viết rõ ở boundary vận hành.
 
 ## Handler là cửa kiểm tra, không phải nơi “cố hiểu” input
 
 Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
+
+> **Dừng để dự đoán:** request có document đầu hợp lệ rồi nối thêm `{"debug":true}` có được gọi `Store` không? Nếu câu trả lời là không, code phải có một bước chứng minh stream đã kết thúc; `Decode` thành công một lần chưa đủ bằng chứng.
 
 ~~~go
 func (a app) createCheck(
@@ -75,6 +87,11 @@ func (a app) createCheck(
 		badRequest(w)
 		return
 	}
+	var extra struct{}
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		badRequest(w)
+		return
+	}
 	check, err := a.store.Create(r.Context(), input)
 	if err != nil {
 		internalError(w)
@@ -84,20 +101,22 @@ func (a app) createCheck(
 }
 ~~~
 
-Đoạn code không phải decoder hoàn chỉnh cho mọi API. Nếu contract cần từ chối nhiều JSON value nối tiếp, handler còn phải kiểm tra input kết thúc sau value đầu tiên. Nếu endpoint nhận upload, một giới hạn 4 KiB rõ ràng không phù hợp. Ý chính là limit, schema và validation phải xuất hiện trước khi input trở thành công việc nội bộ; đừng parse vô hạn rồi mới hỏi request có hợp lệ hay không.
+Lần `Decode` thứ hai không lấy một check khác. Nó chỉ chứng minh sau value đầu tiên còn whitespace và `io.EOF`; nếu còn JSON value, request bị từ chối trước khi chạm `Store`. Đoạn code vẫn không phải decoder hoàn chỉnh cho mọi API: endpoint nhận upload chẳng hạn không thể dùng một giới hạn 4 KiB như vậy. Ý chính là limit, schema và validation phải xuất hiện trước khi input trở thành công việc nội bộ; đừng parse vô hạn rồi mới hỏi request có hợp lệ hay không.
 
 `http.MaxBytesReader` là một quota ở boundary body. `Decoder.DisallowUnknownFields` chọn strict schema, hữu ích khi client gửi JSON nhầm field mà ta không muốn lặng lẽ bỏ qua. Strictness là lựa chọn compatibility: một API mở rộng có thể cần versioning hoặc field policy khác. Nhưng “bỏ qua mọi field lạ” không được là phản xạ vô thức khi input điều khiển hành vi có chi phí.
 
-Lab bắt đầu bằng các test đỏ cho request hợp lệ, method sai, JSON chứa field lạ và target sai. Tự viết handler trước khi mở `fixed/`:
+Lab bắt đầu bằng các test đỏ cho request hợp lệ, method sai, JSON chứa field lạ, document thứ hai và target sai. Tự viết handler trước khi mở `fixed/`:
 
 ~~~powershell
 cd labs/part12-service-lifecycle
 go test -tags exercise ./exercise
 go test -race -tags exercise ./exercise
+go test -tags lifecycleexercise ./exercise
+go test -race -tags lifecycleexercise ./exercise
 go test ./fixed
 ~~~
 
-Test dùng `httptest`, nên kiểm chứng được contract HTTP mà không mở port ra mạng. `ResponseRecorder.Result()` là snapshot response sau khi handler đã chạy; đừng `DeepEqual` cả `http.Response`, chỉ assert status, header và body mà API đã hứa.
+Test handler còn đặt hai JSON value nối nhau để tách hai failure dễ lẫn: document đầu hợp lệ không cho phép phần còn lại trở thành input bí mật bị bỏ qua. Sau khi handler xanh, test `lifecycleexercise` đưa listener cục bộ và context cancel vào `ServeUntilStopped`; contract là listener phục vụ được request trước cancellation, server return sau shutdown, và precondition sai bị trả thành error thay vì biến thành panic. Test dùng `httptest` hoặc listener cục bộ, nên kiểm chứng được contract HTTP mà không mở port ra mạng. `ResponseRecorder.Result()` là snapshot response sau khi handler đã chạy; đừng `DeepEqual` cả `http.Response`, chỉ assert status, header và body mà API đã hứa.
 
 ## Routing và middleware là cách đặt luật ở đúng biên
 
@@ -121,11 +140,11 @@ Timeout client ở chương trước bảo vệ người *gọi*. Server còn ph
 | `IdleTimeout` | Keep-alive không gửi request tiếp | Bao lâu connection rảnh vẫn đáng giữ? |
 | `MaxHeaderBytes` | Header bất thường lớn | Cookie/proxy hợp lệ chiếm bao nhiêu? |
 
-Không có bộ số chung đúng cho mọi service. Với các timeout đọc/ghi/idle, zero có thể có nghĩa không đặt timeout theo documented behavior của `net/http`; riêng `MaxHeaderBytes` có default riêng. Chỉ giữ default một cách vô thức vẫn là một policy. Hãy chọn workload, proxy, upload path và memory budget trước khi đặt number, rồi kiểm thử ingress thật khi hệ thống bắt đầu có traffic.
+Không có bộ số chung đúng cho mọi service. Với timeout đọc/ghi/idle, zero có thể nghĩa là không đặt timeout theo documented behavior của `net/http`; `MaxHeaderBytes` có default riêng. Default vô thức vẫn là policy. Chọn workload, proxy, upload path và memory budget trước khi đặt number; rồi kiểm thử ingress thật khi có traffic.
 
 `Server.Shutdown` không giết request active, nên handler cần tôn trọng `r.Context()` khi gọi database, outbound client hoặc worker. Chương 9 và 11 đã cho ta hai nửa còn lại: goroutine phải có đường thoát khi context bị hủy; client request phải nhận context của caller. Graceful shutdown chỉ thực sự graceful khi các boundary bên trong chịu trả lại quyền điều khiển.
 
-Một service đáng tin không được đánh giá bằng việc nó mở port nhanh thế nào. Hãy xem nó từ ngoài vào trong: input bị giới hạn và validate ở đâu, business code nhận contract gì, response và log có tách public/private không, server dừng nhận việc mới lúc nào, request cũ có bao lâu để hoàn tất, và case nào còn cần owner riêng như WebSocket. Khi trả lời được các câu đó, service đã có một lifecycle để vận hành thay vì chỉ có một `ListenAndServe`.
+Service đáng tin được đánh giá ở boundary: input bị giới hạn ở đâu, business code nhận gì, response/log tách public/private không, server ngừng nhận việc khi nào và request cũ được bao lâu để kết thúc. WebSocket cần một owner riêng. Trả lời được các câu ấy, service có lifecycle để vận hành thay vì chỉ `ListenAndServe`.
 
 @references
 1. Go Team. Package `net/http`, phần Handler, Server fields, `Shutdown` và `ResponseWriter`. pkg.go.dev/net/http

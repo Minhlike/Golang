@@ -50,10 +50,13 @@ Lab của chương bắt đầu bằng test đỏ: hàm `Render` chưa tồn t�
 cd labs/part10-measure-first
 go test -tags exercise ./exercise
 go test -race -tags exercise ./exercise
+go test -run '^$' `
+  -bench BenchmarkRenderRepresentativeInput `
+  -benchmem -count=5 -tags exercise ./exercise
 go test -bench . -benchmem ./fixed
 ~~~
 
-Sau khi test xanh, hãy nhìn benchmark rồi mới mở `fixed/`. Nếu code của anh nhanh hơn reference nhưng bỏ dấu xuống dòng hoặc đổi format số, anh vừa thắng một cuộc thi khác. Nếu hai bản tương đương trong phạm vi đo, ưu tiên bản dễ đọc hơn. Một tối ưu chỉ đáng giữ khi lợi ích của nó nằm đúng nơi vấn đề cần giải và cái giá về độ phức tạp có thể biện minh.
+Test trong exercise chỉ chốt wire format; benchmark đã có sẵn workload 1.000 reading để anh không vô tình đo cả phần dựng input. Trước lượt đo đầu tiên, hãy viết ra một giả thuyết có thể bị bác bỏ, chẳng hạn: “nối string trong vòng lặp tạo allocation tăng theo số reading”. Bắt đầu bằng implementation đơn giản mà anh tự chọn, giữ output xanh, rồi chạy năm lượt benchmark. Chỉ khi đã có baseline mới mở `fixed/` để so cách reference phân bổ công việc. Nếu số thay đổi mà output không còn đúng, anh vừa thắng một cuộc thi khác. Nếu hai bản tương đương trong phạm vi đo, ưu tiên bản dễ đọc hơn. Một tối ưu chỉ đáng giữ khi lợi ích của nó nằm đúng nơi vấn đề cần giải và cái giá về độ phức tạp có thể biện minh.
 
 ## Profile để thay “có lẽ” bằng một đường đi có tên
 

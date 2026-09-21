@@ -102,6 +102,9 @@ func ServeUntilStopped(ctx context.Context, srv *http.Server, ln net.Listener, g
 	if srv == nil {
 		return fmt.Errorf("HTTP server is required")
 	}
+	if ln == nil {
+		return fmt.Errorf("listener is required")
+	}
 	if grace <= 0 {
 		return fmt.Errorf("shutdown grace must be positive")
 	}
