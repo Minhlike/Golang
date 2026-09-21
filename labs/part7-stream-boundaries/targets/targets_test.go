@@ -29,6 +29,23 @@ func TestDecodeRejectsAdditionalDocument(t *testing.T) {
 	}
 }
 
+func TestReadBoundedKeepsInputAtLimit(t *testing.T) {
+	got, err := ReadBounded(strings.NewReader("12345"), 5)
+	if err != nil {
+		t.Fatalf("ReadBounded() error = %v", err)
+	}
+	if string(got) != "12345" {
+		t.Fatalf("ReadBounded() = %q", got)
+	}
+}
+
+func TestReadBoundedRejectsInputOverLimit(t *testing.T) {
+	_, err := ReadBounded(strings.NewReader("123456"), 5)
+	if !errors.Is(err, ErrDocumentTooLarge) {
+		t.Fatalf("ReadBounded() error = %v, want ErrDocumentTooLarge", err)
+	}
+}
+
 func TestSaveReturnsCloseError(t *testing.T) {
 	closeErr := errors.New("flush failed")
 	w := &closeFailWriter{closeErr: closeErr}

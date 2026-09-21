@@ -32,9 +32,21 @@ Contract tối thiểu của `Read(p)` là: nó trả `n` byte nằm trong `p[:n
 
 Đừng tự viết vòng `Read` chỉ để chứng minh đã hiểu contract nếu standard library đã có primitive đúng. `io.ReadAll` là lựa chọn hợp lý khi input có giới hạn kích thước đáng tin và việc giữ toàn bộ trong memory là chấp nhận được. Khi input có thể lớn hoặc vô hạn, thiết kế phải chuyển sang xử lý dần từng phần. Khác biệt này không phải micro-optimization: nó quyết định chương trình có thể bị ép allocate bao nhiêu memory bởi input không tin cậy.
 
+## Giới hạn byte trước khi gọi parser
+
+“Tệp cấu hình chỉ nhỏ” không phải là một giới hạn. Nếu chương trình nhận một đường dẫn hoặc reader từ bên ngoài, nó cần đặt giới hạn ngay tại ranh giới mình kiểm soát. Chỉ đặt giới hạn sau `json.Decode` là quá muộn: bộ phân tích đã có quyền đọc bất cứ lượng byte nào trước khi chính sách được áp dụng.
+
+Trước khi mở `bounded.go`, chỉ đọc hai test `TestReadBounded...`. Chúng đòi `ReadBounded` nhận tối đa `max` byte; input lớn hơn đúng một byte phải trả error mà caller nhận diện được bằng `errors.Is`. Hãy tự viết phần thân theo ba bước: bọc reader để chỉ cho phép tối đa `max + 1` byte, đọc phần đã bọc, rồi so độ dài với `max`. Byte thứ `max + 1` không phải dữ liệu cần giữ; nó là bằng chứng phân biệt tệp vừa chạm ngưỡng với tệp thật sự vượt ngưỡng.
+
+Lab đầy đủ còn từ chối `max < 0` và thêm ngữ cảnh cho error. Những chi tiết đó cần có trong code chạy thật, nhưng chúng không được che câu hỏi đang học: vì sao phải xin thêm đúng một byte.
+
+`io.LimitReader` chỉ giới hạn số byte mà reader bọc ngoài sẽ trả; nó không tự nói JSON có hợp lệ hay không, và cũng không làm input nhỏ trở nên đáng tin. Vì thế giới hạn byte là một chính sách tài nguyên riêng; `Decode` vẫn chịu trách nhiệm cho cấu trúc JSON và số tài liệu. Hai test ngắn bảo vệ hai câu hỏi khác nhau, không gộp chúng thành một assertion mơ hồ kiểu “cấu hình lỗi”.
+
+Đây cũng là điểm cần tránh một lời hứa sai về cancellation. `io.Reader` chỉ công bố `Read`; interface không mang `context.Context`. Một wrapper như `ReadBounded` có thể dừng sau khi nhận đủ byte, nhưng không tự làm một underlying reader đang block thức dậy. Với file local, điều đó thường không phải policy cần thêm ở đây. Với body HTTP, deadline và cancellation thuộc lifecycle request sẽ được dạy lại ở chương networking, nơi ta nhìn được owner của connection và cách transport phản ứng.
+
 ## Failing test trước parser
 
-Lab `labs/part7-stream-boundaries` không gắn ngay file JSON vào `opsprobe`. Project xuyên suốt hiện chưa có requirement file config; nhét nó vào lúc này chỉ khiến một mental model mới bị lẫn với policy endpoint cũ. Ta dùng minimal reproducer để thấy ranh giới stream trước.
+Lab `labs/part7-stream-boundaries` không gắn ngay tệp JSON vào `opsprobe`. Project xuyên suốt hiện chưa cần tệp cấu hình; nhét nó vào lúc này chỉ khiến trực giác mới bị lẫn với chính sách endpoint cũ. Ta dùng một chương trình tái hiện tối thiểu để thấy ranh giới stream trước.
 
 Mở `targets/targets_test.go` và chỉ đọc `TestDecodeConsumesChunkedStream`. `chunkReader` cố tình chỉ nhả ba byte trong mỗi lần gọi. Trước khi xem `Decode`, hãy trả lời: nếu implementation giả định một lượt `Read` là đủ, test sẽ mất đoạn nào của document? Sau đó tạm đổi tên `Decode`, chạy test và tự dựng lại function theo contract mà test đòi.
 
@@ -73,33 +85,20 @@ func Decode(r io.Reader) ([]Target, error) {
 
 Khi đọc file, `defer file.Close()` gần acquisition giúp không rò file descriptor. Khi ghi file, `Close` còn có thể là nơi buffer được flush và failure cuối cùng lộ ra. Nếu function ghi JSON chỉ trả error của `Encode`, caller có thể báo thành công trước khi biết output có được đóng hoàn chỉnh hay không.
 
-Vì vậy lab đặt việc mở resource sau một function value và trả close error nếu write đã thành công:
+Lab đầy đủ mở resource rồi đặt `defer Close` ngay sau acquisition. Để nhìn riêng policy chọn result, phần lõi có thể viết ngắn hơn:
 
 ~~~go
-func Save(
-	open func() (io.WriteCloser, error),
-	targets []Target,
-) (err error) {
-	w, err := open()
-	if err != nil {
-		return fmt.Errorf("open target output: %w", err)
+func save(w io.WriteCloser, targets []Target) error {
+	writeErr := Encode(w, targets)
+	closeErr := w.Close()
+	if writeErr != nil {
+		return writeErr
 	}
-	defer func() {
-		if closeErr := w.Close(); err == nil &&
-			closeErr != nil {
-			err = fmt.Errorf(
-				"close target output: %w",
-				closeErr,
-			)
-		}
-	}()
-	return Encode(w, targets)
+	return closeErr
 }
 ~~~
 
-Named result ở đây không phải mẹo cú pháp để dùng khắp nơi. Nó cho defer một nơi rõ ràng để giữ error chính nếu `Encode` đã fail, hoặc đưa close error ra nếu ghi trước đó thành công. `TestSaveReturnsCloseError` dùng một writer giả có `Close` fail để giữ policy này. Đó là test boundary nhỏ: nó không cần filesystem thật để chứng minh caller không nuốt result cuối của resource.
-
-`Encode` dùng `json.Encoder`; newline chỉ là presentation tiện cho tool dòng lệnh, không phải một phần của data model. Nếu output thành machine contract của `opsprobe`, command boundary phải quyết định và test riêng như Chương 6 đã làm.
+Lab đầy đủ vẫn đóng tài nguyên trên mọi đường return. Đoạn trên chỉ làm policy lộ ra: giữ write error trước, rồi mới trả close error. Writer giả giữ contract ấy mà không cần filesystem thật.
 
 ## Tự kiểm tra trước khi tích hợp
 
@@ -110,9 +109,11 @@ go test ./...
 go vet ./...
 ~~~
 
-Thử lần lượt: bỏ lượt `Decode` thứ hai; cho `chunkReader` nhả một byte; rồi cho fake writer fail ở `Write` trước `Close`. Trước mỗi lượt, dự đoán test nào vỡ. `Save` không được che write error.
+Thử lần lượt: bỏ lượt `Decode` thứ hai; cho `chunkReader` nhả một byte; rồi cho writer giả fail ở `Write` trước `Close`. Dự đoán test nào vỡ.
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Bỏ lượt decode thứ hai làm `TestDecodeRejectsAdditionalDocument` thất bại vì parser chấp nhận hai document. Chunk nhỏ hơn không đổi contract của reader. Khi write và close đều fail, write error giữ nguyên vì defer chỉ thay result khi chưa có error trước đó.
+**Đáp án — chỉ đọc sau khi đã tự làm.** Bỏ lượt decode thứ hai làm `TestDecodeRejectsAdditionalDocument` thất bại; chunk nhỏ hơn không đổi contract. Khi write và close cùng fail, phải giữ write error.
+
+Với limit, input dài đúng `max` byte được trả nguyên vẹn; input dài `max + 1` trả error giữ identity `ErrDocumentTooLarge`. Đó là lý do lab không dùng một `if len(data) == max` mơ hồ: bằng chứng cần phân biệt đúng ngưỡng với vượt ngưỡng.
 
 Chương này không thêm file config vào `opsprobe`: chưa có yêu cầu vận hành nào bắt nó phải có. Đó là giữ teaching vehicle phục vụ bài học. Khi một yêu cầu thật cần import/export target, stream boundary và close policy ở lab này sẽ là nền để tích hợp có chủ đích.
 
