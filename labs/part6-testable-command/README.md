@@ -4,6 +4,11 @@
 mapping config, config error trước runner, probe failure theo từng service và
 cancellation của cả run.
 
+Sau đó đọc `internal/config/config_test.go`. Hai bảng ở đây không dùng để kiểm
+tra từng chi tiết implementation: chúng giữ contract của default, override và
+các input phải bị từ chối. Tự thêm case IPv6 `[2001:db8::10]:443` trước khi xem
+lời giải trong sách.
+
 Sau khi đã dự đoán, đổi tên `Run` trong `internal/app/run.go` rồi chạy
 `go test ./...` để compiler chỉ những contract còn thiếu. Viết lại `Run` từ
 test, không gọi `os.LookupEnv`, `fmt.Printf` hoặc `os.Exit` trong package app.
