@@ -96,6 +96,16 @@ Khi caller cần stream một response lớn, policy lab không còn đúng: kh�
 
 Client và `Transport` an toàn khi dùng đồng thời; tài liệu `net/http` khuyên tạo rồi reuse chúng vì transport có state như connection cache. Reuse không có nghĩa dùng một global vô danh. Hãy đóng gói một client đã cấu hình đúng policy của service, truyền nó vào boundary cần gọi mạng, và giữ transport cũng như deadline có thể kiểm thử được.
 
+### Thí nghiệm local: request thứ hai có thật sự dùng connection cũ?
+
+`labs/part11-request-path/fixed/reuse_test.go` dùng `httptest.Server`, một `http.Transport` mới và `httptrace`. Không có DNS hoặc TLS trong thí nghiệm HTTP cục bộ này; đó là chủ ý để cô lập pool idle connection. Hai request tuần tự đọc hết rồi đóng body. Test kiểm tra `GotConnInfo.Reused` là `false` cho request đầu, `true` cho request sau. Nó không chứng minh mọi request production sẽ reuse: server có thể đóng connection, body có thể chưa được trả về pool, quota hay HTTP/2 có thể đổi đường đi. Nó chỉ cho ta bằng chứng tái lập được cho mệnh đề hẹp: sau khi transport có một idle connection phù hợp, round trip kế tiếp có thể bỏ qua việc tạo connection mới.
+
+~~~powershell
+cd labs/part11-request-path
+go test -run TestTransportReusesIdleConnection ./fixed
+go test -race ./fixed
+~~~
+
 Khi nhìn một request chậm, đừng hỏi “API nào chậm?”. Hãy hỏi connection có được reuse không, timeout nào đã hết, DNS/TLS/first byte nằm ở đâu trên trace, body đã được trả nợ chưa, và retry có giữ nguyên nghiệp vụ không. Những câu ấy biến một dòng log 1.8 giây thành một điều tra có thể kết thúc.
 
 @references

@@ -12,7 +12,7 @@ import re
 import shutil
 from pathlib import Path
 
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
@@ -183,6 +183,38 @@ def chapter_titles() -> list[str]:
             raise ValueError(f"Chapter does not start with H1: {chapter}")
         result.append(first[2:])
     return result
+
+
+def chapter_pages(reader: PdfReader, titles: list[str]) -> dict[str, int]:
+    """Find chapter opening pages from the first pass, without hard-coding them."""
+    pages: dict[str, int] = {}
+    # The front-matter TOC contains every chapter title, so it cannot be used
+    # as a chapter opening. Page 3 is the first manuscript page.
+    for page_number, page in enumerate(reader.pages[2:], start=3):
+        text = " ".join((page.extract_text() or "").split())
+        for title in titles:
+            if title not in pages and " ".join(title.split()) in text:
+                pages[title] = page_number
+    missing = [title for title in titles if title not in pages]
+    if missing:
+        raise RuntimeError(f"Không xác định được trang mở đầu: {missing}")
+    return pages
+
+
+def add_outline(candidate: Path, titles: list[str]) -> PdfReader:
+    """Add reader navigation after pagination has settled."""
+    reader = PdfReader(str(candidate))
+    pages = chapter_pages(reader, titles)
+    writer = PdfWriter()
+    writer.clone_document_from_reader(reader)
+    writer.add_outline_item("Mục lục", 1)
+    for title in titles:
+        writer.add_outline_item(title, pages[title] - 1)
+    outlined = candidate.with_name("Golang_Master.outlined.pdf")
+    with outlined.open("wb") as stream:
+        writer.write(stream)
+    outlined.replace(candidate)
+    return PdfReader(str(candidate))
 
 
 def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono: str,
@@ -375,20 +407,15 @@ def footer(canvas, doc) -> None:
     canvas.restoreState()
 
 
-def build() -> None:
-    for chapter in CHAPTERS:
-        if not chapter.exists():
-            raise FileNotFoundError(f"Thiếu chapter: {chapter}")
-    body, body_bold, heading, heading_bold, mono = register_fonts()
+def build_document(story: list, body: str, body_bold: str, heading: str,
+                   heading_bold: str, mono: str, toc_pages: dict[str, int] | None) -> None:
     s = styles(body, body_bold, heading, heading_bold, mono)
-    TMP.mkdir(parents=True, exist_ok=True)
     frame = Frame(2.1 * cm, 2.0 * cm, A4[0] - 4.2 * cm, A4[1] - 3.9 * cm,
                   id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     doc = BaseDocTemplate(str(CANDIDATE), pagesize=A4, title="Golang Master",
                           author="Golang Living Textbook", leftMargin=2.1 * cm,
                           rightMargin=2.1 * cm, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
     doc.addPageTemplates([PageTemplate(id="book", frames=[frame], onPage=footer)])
-    story: list = []
     cover(story, s)
     story.append(Paragraph("Mục lục của edition này", s["h1"]))
     story.append(Paragraph(
@@ -396,14 +423,26 @@ def build() -> None:
         "được giữ trong `book/README.md` để có thể mở rộng mà không giả vờ rằng "
         "chúng đã được viết xong.", s["body"]))
     for title in chapter_titles():
-        story.append(Paragraph(inline(title, mono), s["toc"], bulletText="•"))
+        suffix = f" — trang {toc_pages[title]}" if toc_pages else ""
+        story.append(Paragraph(inline(title + suffix, mono), s["toc"], bulletText="•"))
     story.append(PageBreak())
     numbering = {"figure": 0, "table": 0}
     for index, chapter in enumerate(CHAPTERS):
         add_markdown(story, chapter, s, mono, page_break_before=index > 0, numbering=numbering)
     doc.build(story)
 
-    reader = PdfReader(str(CANDIDATE))
+
+def build() -> None:
+    for chapter in CHAPTERS:
+        if not chapter.exists():
+            raise FileNotFoundError(f"Thiếu chapter: {chapter}")
+    body, body_bold, heading, heading_bold, mono = register_fonts()
+    TMP.mkdir(parents=True, exist_ok=True)
+    titles = chapter_titles()
+    build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=None)
+    toc_pages = chapter_pages(PdfReader(str(CANDIDATE)), titles)
+    build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=toc_pages)
+    reader = add_outline(CANDIDATE, titles)
     extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
     if len(reader.pages) < 6 or "GOLANG" not in extracted or "Chương 1" not in extracted:
         raise RuntimeError("Candidate PDF failed semantic validation.")

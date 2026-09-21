@@ -19,7 +19,7 @@ type Endpoint struct {
 type ProbeFunc func(Endpoint) error
 ~~~
 
-`ProbeFunc` nhận endpoint value và trả về `error`. Nếu không có lỗi, result là `nil`. Nếu có lỗi, caller nhận một error value. `error` là interface của Go; điều đáng chú ý ở đây không phải interface đó có một method, mà là failure đi ra cùng result channel với một shape thống nhất. Không dùng `panic` để báo endpoint unreachable, và cũng không in log bên trong `ProbeFunc` rồi giả vờ thành công.
+`ProbeFunc` nhận endpoint value và trả về `error`. Nếu không có lỗi, giá trị trả về là `nil`. Nếu có lỗi, caller nhận một error value. `error` là interface của Go; điều đáng chú ý ở đây không phải interface đó có một method, mà là failure đi ra trên đường trả về với một shape thống nhất. Không dùng `panic` để báo endpoint unreachable, và cũng không in log bên trong `ProbeFunc` rồi giả vờ thành công.
 
 API ghi kết quả của `opsprobe` đổi từ câu hỏi “có entry không?” sang “tôi đã probe và cập nhật state được chưa?”
 
@@ -88,7 +88,7 @@ func (failure *ProbeFailure) Unwrap() error {
 }
 ~~~
 
-`Error` tạo message cho người đọc. `Unwrap` nói rõ `Cause` vẫn là nguyên nhân nằm dưới lớp context này. `ProbeFailure` dùng pointer receiver; vì vậy khi ta cần lấy nó từ error chain, target của `errors.As` là `*ProbeFailure`:
+`Error` tạo message cho người đọc. `Unwrap` nói rõ `Cause` vẫn là nguyên nhân nằm dưới lớp context này. Error value cần tìm trong chain là `*ProbeFailure`, vì `ProbeFailure` dùng pointer receiver. Còn argument `target` thực tế truyền cho `errors.As` là `&failure`: pointer tới variable nhận kết quả. Hàm sẽ gán error tìm được vào variable đó:
 
 ~~~go
 var failure *ProbeFailure
@@ -172,7 +172,7 @@ func applyProbe(
 ) error
 ~~~
 
-Trước khi chạy probe, boundary kiểm tra cancellation để không bắt đầu I/O vô ích. Nếu cancellation đến trong lúc `run` đang làm việc, `run` phải tôn trọng `ctx` và trả `ctx.Err()`. `applyProbe` nhận diện hai nguyên nhân chuẩn `context.Canceled` và `context.DeadlineExceeded`, giữ chúng trong error chain, nhưng không thay health state:
+Trước khi chạy probe, boundary kiểm tra cancellation để không bắt đầu I/O vô ích. Nếu cancellation đến trong lúc `run` đang làm việc, `run` phải tôn trọng `ctx` và trả một error vẫn nhận diện được bằng `errors.Is(err, context.Canceled)` hoặc `errors.Is(err, context.DeadlineExceeded)`. Trả thẳng `ctx.Err()` là cách đơn giản; wrapping để thêm context cũng đúng nếu không làm mất identity. `applyProbe` nhận diện hai nguyên nhân chuẩn ấy, giữ chúng trong error chain, nhưng không thay health state:
 
 ~~~go
 if err := ctx.Err(); err != nil {
@@ -262,7 +262,7 @@ defer func() {
 
 Đoạn này không phải cách thay thế cho `return error`. Cancellation, timeout, config thiếu và connection refused đều là outcome mà API đã dự kiến; chúng phải đi qua `error` chain để caller phân loại được. Dùng `recover` ở đây biến bug lập trình như nil dereference hoặc invariant hỏng thành một string mơ hồ, trong khi state có thể đã bị thay đổi dở dang.
 
-`panic` dành cho tình trạng không thể tiếp tục theo contract nội bộ hoặc cho những boundary được thiết kế riêng để cách ly code không tin cậy. `recover` chỉ có chỗ khi boundary đó có kế hoạch phục hồi state, ghi nhận đầy đủ và có contract rõ ràng sau recovery. `opsprobe` hiện không có boundary như vậy; để panic lộ ra trong test thường trung thực hơn là giả nó thành “probe failed”.
+`panic` thường phù hợp với lỗi lập trình, invariant nội bộ không giữ được, hoặc boundary recovery được thiết kế rõ để cách ly code không tin cậy. `recover` chỉ có chỗ khi boundary đó có kế hoạch phục hồi state, ghi nhận đầy đủ và có contract rõ ràng sau recovery. `opsprobe` hiện không có boundary như vậy; để panic lộ ra trong test thường trung thực hơn là giả nó thành “probe failed”.
 
 > **Bài tập - trace cleanup:** `ctx` bị cancel sau khi `open` trả một session, còn `run` trả `context.Canceled`. `Close` có được gọi không? Error cuối giữ identity nào? `registry["billing"]` có nên đổi `Healthy` hay `Retries` không?
 

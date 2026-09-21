@@ -62,7 +62,7 @@ fmt.Println(amount) // 120
 
 @figure `balance` trong function là pointer value được truyền theo value. `*balance` truy cập pointee; sơ đồ cố ý không dùng địa chỉ số hay stack/heap để tránh biến mental model thành chi tiết runtime.
 
-Phép `&` không dùng được với mọi expression. Go yêu cầu operand addressable: variable, dereference pointer, index của slice, field của struct addressable, index của array addressable, hoặc composite literal là những trường hợp quan trọng ở giai đoạn này. Map index không addressable - ta sẽ thấy lý do thực hành của giới hạn đó khi đưa map vào mô hình service.
+Phép `&` không dùng được với mọi expression. Thông thường, operand của `&` phải addressable: variable, dereference pointer, index của slice, field của struct addressable, hoặc index của array addressable là những trường hợp quan trọng ở giai đoạn này. Go specification có một ngoại lệ hữu ích: được phép lấy địa chỉ của composite literal, như `&Service{Name: "billing"}`. Không cần gọi composite literal là “addressable” để dùng đúng quy tắc; hãy nhớ hai ý riêng: `&x` thường cần một nơi có thể gán, còn literal có ngoại lệ được phép tạo value rồi lấy địa chỉ của nó. Map index không addressable - ta sẽ thấy lý do thực hành của giới hạn đó khi đưa map vào mô hình service.
 
 ### Nil là thiếu pointee, không phải "pointer rỗng vô hại"
 
@@ -236,7 +236,7 @@ billing, found := services["billing"]
 fmt.Println(found, billing.Port) // true 8080
 ~~~
 
-`string` là key type; `Service` là element type. `found` là kết quả thứ hai của map lookup, thường gọi là comma-ok. Nó phân biệt key không có mặt với element có zero value. Điều này quan trọng với counter: `services["missing"].Retries` không phải cách hợp lệ để đọc field, nhưng với `map[string]int`, lookup key thiếu và key có value `0` đều cho `0` nếu chỉ nhận một result.
+`string` là key type; `Service` là element type. `found` là kết quả thứ hai của map lookup, thường gọi là comma-ok. Nó phân biệt key không có mặt với element có zero value. Một lookup một-result vẫn hoàn toàn hợp lệ: `services["missing"].Retries` đọc `Retries` của zero value `Service{}`, nên cho `0`. Nhưng `0` khi ấy có thể là “chưa có service” hoặc “service có `Retries == 0`”; đó là lý do phải dùng comma-ok khi sự hiện diện của entry mang ý nghĩa.
 
 ~~~go
 attempts := map[string]int{"billing": 0}

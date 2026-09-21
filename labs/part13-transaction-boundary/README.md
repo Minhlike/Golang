@@ -41,3 +41,11 @@ go test -race ./fixed
 Test dùng SQLite có chủ đích để chứng minh atomicity. Placeholder `?`,
 constraint và concurrency behavior của driver này không phải specification của
 mọi database.
+
+## Retry không nằm trong contract hiện tại
+
+`TestDisableRepeatedCallRecordsAnotherAuditEvent` chạy `Disable` hai lần và
+chốt hai audit event. Đây không phải lỗi của transaction: mỗi lượt đều atomic.
+Nó là chứng cứ rằng API của lab chưa hứa retry-safe. Nếu product cần “cùng một
+operation chỉ ghi một lần”, API phải nhận operation identity (ví dụ idempotency
+key) và schema phải giữ identity đó bằng một quy tắc như unique constraint.

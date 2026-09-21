@@ -11,7 +11,7 @@ Hãy tưởng tượng `/v1/checks` nhận một target, lưu một yêu cầu k
 ![Vòng đời phục vụ và rút lui của service](../../assets/diagrams/http-service-lifecycle.png)
 @figure Lifecycle khái niệm khi service graceful shutdown. Deadline của shutdown là policy vận hành: nó giới hạn thời gian chờ, không biến mọi request thành thành công.
 
-Một hàm chạy server có thể giữ contract ấy trong một nơi thay vì để `main` thoát vì mọi error đều trông giống nhau:
+Một hàm chạy server có thể giữ contract ấy trong một nơi thay vì để `main` thoát vì mọi error đều trông giống nhau. Hãy đọc phần đầu và phần shutdown dưới đây như hai đoạn liên tiếp của cùng một function; tách chúng ra cũng giúp lifecycle hiện rõ hơn trên trang:
 
 ~~~go
 func ServeUntilStopped(
@@ -41,7 +41,11 @@ func ServeUntilStopped(
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
 	}
+~~~
 
+Đến đây server đã nhận yêu cầu dừng, nhưng `ctx` không nên bị dùng trực tiếp làm shutdown context: nó đã canceled. Ta tạo một ngân sách thời gian mới để `Shutdown` có cơ hội drain request đang chạy:
+
+~~~go
 	base := context.Background()
 	shutdownCtx, cancel := context.WithTimeout(base, grace)
 	defer cancel()
@@ -60,6 +64,25 @@ func ServeUntilStopped(
 ~~~
 
 Ba guard đầu không phải defensive programming vô định. `srv`, `ln` và `grace` là ba điều kiện đầu vào của lifecycle helper; nếu một trong chúng thiếu, chạy `Serve` chỉ để nhận panic hoặc treo không giúp caller sửa cấu hình. `shutdownCtx` được tạo từ `context.Background()` có chủ đích. Root context đã bị cancel để yêu cầu dừng; nếu lấy deadline shutdown trực tiếp từ nó, deadline sẽ bị cancel ngay trước khi `Shutdown` có cơ hội drain. `grace` phải đến từ SLO, thời gian deploy và loại request của service, không phải một con số copy từ ví dụ. Sau deadline, `Shutdown` trả error; quyết định tiếp theo - log, alarm, force close hay để supervisor xử lý - là policy cần được viết rõ ở boundary vận hành.
+
+### Từ signal của process sang context của server
+
+`ServeUntilStopped` đã nhận một `context.Context`, nên `main` chỉ cần nối process lifecycle vào input đó. Trên Unix-like host, `signal.NotifyContext` biến `SIGINT` hoặc `SIGTERM` thành cancellation; `defer stop()` hủy đăng ký signal handling khi `main` rời đi. Sau signal đầu tiên, `ServeUntilStopped` đi vào `Shutdown` với `grace` đã chọn thay vì cắt request ngay.
+
+~~~go
+ctx, stop := signal.NotifyContext(
+	context.Background(),
+	os.Interrupt,
+	syscall.SIGTERM,
+)
+defer stop()
+
+if err := ServeUntilStopped(ctx, srv, ln, 15*time.Second); err != nil {
+	return err
+}
+~~~
+
+Đây là bridge ở process boundary, không phải permission cho handler bỏ qua `r.Context()`: `Shutdown` chờ active request, còn cancellation phải đi tiếp tới database hay outbound HTTP mà request đó đang chờ. Trên Windows, `os.Interrupt` là signal portable; service host và process supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
 
 ## Handler là cửa kiểm tra, không phải nơi “cố hiểu” input
 

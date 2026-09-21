@@ -56,6 +56,21 @@ func TestDisableRejectsNilDatabase(t *testing.T) {
 	}
 }
 
+func TestDisableRepeatedCallRecordsAnotherAuditEvent(t *testing.T) {
+	db := openTestDB(t, "CREATE TABLE check_events (check_id INTEGER NOT NULL, action TEXT NOT NULL CHECK (action = 'disabled'))")
+	insertCheck(t, db, 42, true)
+
+	if err := Disable(context.Background(), db, 42); err != nil {
+		t.Fatalf("first Disable() error = %v", err)
+	}
+	if err := Disable(context.Background(), db, 42); err != nil {
+		t.Fatalf("second Disable() error = %v", err)
+	}
+	if got := eventCount(t, db, 42); got != 2 {
+		t.Fatalf("event count after two calls = %d, want 2", got)
+	}
+}
+
 func openTestDB(t *testing.T, auditSchema string) *sql.DB {
 	t.Helper()
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", strings.ReplaceAll(t.Name(), "/", "_"))

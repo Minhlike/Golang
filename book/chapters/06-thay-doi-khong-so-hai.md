@@ -157,7 +157,7 @@ tests := []struct {
 
 Điểm dễ bỏ sót không nằm ở vòng `for`, mà ở assertion. Test này chỉ hứa rằng từng input không hợp lệ bị từ chối; nó không hứa nguyên văn error message. Message là chi tiết có thể sửa để tốt hơn cho operator. Rule “input này không được phép tạo target” mới là contract. Nếu CLI hoặc API cần phân loại lỗi bằng máy, khi đó mới có lý do để thiết kế error type hay sentinel rõ ràng; đừng dùng string comparison như một cách thay thế cho thiết kế đó.
 
-Có một bẫy nhỏ khi viết subtest: đừng lấy địa chỉ của biến loop rồi giữ nó để dùng sau vòng lặp. Ở đây `t.Run` chạy đồng bộ, closure đọc `tt` ngay trong body, nên không có goroutine nào sống qua iteration. Bài về parallel subtest sẽ quay lại bẫy này cùng race detector; hiện tại ta giữ test tuần tự để policy parser là thứ duy nhất cần nghĩ.
+Với edition Go 1.27.1 này, range variable được khai báo bằng `:=` có một variable riêng ở mỗi iteration (semantics từ Go 1.22), nên closure không còn vô tình cùng giữ một variable `tt` như folklore Go cũ. Nhưng một bẫy pointer khác vẫn còn: `&tt` trỏ tới bản copy của iteration, không phải phần tử thật trong slice `tests`. Nếu mục tiêu là mutate phần tử gốc, hãy range lấy index rồi dùng `&tests[i]`. Ở đây `t.Run` chạy đồng bộ và closure chỉ đọc `tt`, nên pointer lẫn lifetime goroutine đều không phải điều policy parser cần nghĩ.
 
 **Bài review ngắn.** Trước khi chạy test, hãy tự phân loại năm hàng trên: hàng nào bị `net.SplitHostPort` từ chối, hàng nào đi qua parser nhưng bị validation của sách từ chối? Sau đó thêm một case hợp lệ cho IPv6 theo dạng `[2001:db8::10]:443`. Assertion của nó phải kiểm tra `Host` không còn dấu ngoặc và `Port == 443`, thay vì chỉ kiểm tra `err == nil`.
 
@@ -307,7 +307,7 @@ go test -run=^$ `
 
 Sau khi thấy parser có nhiều validation, một phản xạ quen thuộc là đề nghị cache kết quả: “`net.SplitHostPort` có thể chậm”. Nhưng `LoadTargets` hiện chỉ chạy khi command khởi tạo. Kể cả một benchmark cho thấy override tốn allocation, điều đó chưa biến nó thành bottleneck của một CLI chạy vài probe. Benchmark tốt bắt đầu bằng câu hỏi đủ cụ thể để kết quả có thể thay đổi một quyết định.
 
-Ở đây câu hỏi hẹp là: một lần load default, hostname override và IPv6 override có chi phí tương đối ra sao trên máy đang chạy? Test setup nằm ngoài timer; `b.N` do framework chọn để lấy mẫu đủ lâu, còn `b.ReportAllocs` yêu cầu output thêm allocation:
+Ở đây câu hỏi hẹp là: một lần load default, hostname override và IPv6 override có chi phí tương đối ra sao trên máy đang chạy? Test setup nằm trước `b.Loop()`, nên timer của benchmark hiện đại không tính phần đó; `b.ReportAllocs` yêu cầu output thêm allocation:
 
 ~~~go
 func BenchmarkLoadTargets(b *testing.B) {
@@ -326,8 +326,7 @@ func BenchmarkLoadTargets(b *testing.B) {
 				return tt.raw, tt.raw != ""
 			}
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, _ = LoadTargets(lookup)
 			}
 		})

@@ -77,6 +77,30 @@ CPU profile lấy mẫu những lúc process thực sự dùng CPU. Nó phù h�
 
 Profile có overhead và có thể làm méo phép đo. Tài liệu chẩn đoán của Go còn lưu ý một số loại diagnostic có thể ảnh hưởng lẫn nhau. Thu từng loại riêng khi cần chính xác, ghi lại command, và đừng kết luận từ profile lấy trong một môi trường không giống nơi lỗi xuất hiện.
 
+## Case study cục bộ: một giả thuyết sống sót qua profile
+
+`labs/part10-measure-first` giữ hai implementation cùng một wire format. `baseline.Render` nối string bằng `+=` trong mỗi iteration; `fixed.Render` dùng `strings.Builder` và `strconv.FormatInt`. Workload là đúng 1.000 `Reading`, tên `endpoint-0000` đến `endpoint-0999`, dựng một lần ngoài vòng benchmark. Đây là microbenchmark của renderer; nó không đo JSON, network, scheduler hay latency của một service.
+
+Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. Cùng workload, cùng binary package và `-count=5` giúp tránh so một lần chạy đơn lẻ với một lần chạy đơn lẻ:
+
+~~~powershell
+cd labs/part10-measure-first
+go test -run '^$' -bench BenchmarkRender -benchmem -count=5 ./baseline ./fixed
+go test -run '^$' -bench BenchmarkRender -cpuprofile baseline-cpu.out ./baseline
+go tool pprof -top baseline-cpu.out
+~~~
+
+Kết quả của năm lượt ngày 22-09-2026 trên Windows amd64, CPU 12th Gen Intel Core i5-12500H, cho thấy nhiễu đáng kể ở `ns/op` nhưng một chênh lệch ổn định về allocation. Các khoảng dưới đây là khoảng quan sát, không phải median hay SLO:
+
+@table Case study Render: cùng output, cùng input 1.000 reading, Go 1.27.1
+
+| Implementation | Thời gian quan sát | Allocation quan sát |
+| --- | --- | --- |
+| `baseline` (`+=`) | 1.38–3.78 ms/op | khoảng 10.44 MB/op; 1.900–1.901 allocs/op |
+| `fixed` (`strings.Builder`) | 26.1–86.1 µs/op | khoảng 87.6 KB/op; 917 allocs/op |
+
+CPU profile của baseline (1.55 giây, 2.55 giây CPU sample với `GOMAXPROCS=16`) có `runtime.concatstrings` khoảng 25.9% cumulative và `runtime.memmove` 16.1% flat; `baseline.Render` nằm trên 30.6% cumulative sample. Evidence này ủng hộ giả thuyết về intermediate string và copy, thay vì phán đoán từ tên `Render`. Chỉ sau evidence ấy mới đổi implementation; test wire format chạy lại trước benchmark sau thay đổi. Kết luận không phải “luôn dùng `Builder`”. Với output vài byte hoặc code chạy một lần lúc khởi động, lợi ích có thể không đáng đổi cách viết. Ở workload này, profile và benchmark cùng hướng về chi phí dựng string lặp lại; ở workload khác, phải đo lại thay vì mang kết luận đi theo tên API.
+
 ## Trace kể chuyện thời gian, không thay profile
 
 Khi câu hỏi chuyển từ “CPU đi đâu?” sang “goroutine này chờ ai, scheduler có bị nghẽn, hay syscall kéo dài bao lâu?”, execution trace cho một timeline giàu ngữ cảnh hơn. Nó có thể được tạo từ test:
