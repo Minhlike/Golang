@@ -88,6 +88,27 @@ func TestApplyProbePassesConfiguredEndpointAndRecordsSuccess(t *testing.T) {
 
 func TestApplyProbeCancellationDoesNotChangeHealthState(t *testing.T) {
 	registry := testRegistry()
+	ran := false
+
+	err := applyProbe(context.Background(), registry, "billing", func(context.Context, Endpoint) error {
+		ran = true
+		return context.Canceled
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("errors.Is(err, context.Canceled) = false; err = %v", err)
+	}
+	if !ran {
+		t.Fatal("probe did not return its cancellation")
+	}
+	service := registry["billing"]
+	if !service.Healthy || service.Retries != 0 {
+		t.Fatalf("service after canceled probe = %+v", service)
+	}
+}
+
+func TestApplyProbeRejectsCanceledContextBeforeRunningProbe(t *testing.T) {
+	registry := testRegistry()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	ran := false
@@ -102,10 +123,6 @@ func TestApplyProbeCancellationDoesNotChangeHealthState(t *testing.T) {
 	}
 	if ran {
 		t.Fatal("probe ran after context cancellation")
-	}
-	service := registry["billing"]
-	if !service.Healthy || service.Retries != 0 {
-		t.Fatalf("service after canceled probe = %+v", service)
 	}
 }
 

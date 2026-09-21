@@ -1,7 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
+skinparam defaultFontSize 28
 skinparam shadowing false
 skinparam rectangle {
   BackgroundColor #FFFFFF
@@ -14,16 +14,16 @@ skinparam note {
   FontColor #000000
 }
 skinparam ArrowColor #222222
-left to right direction
+top to bottom direction
 
 rectangle "ProbeFunc\ntrả nguyên nhân gốc" as run
 rectangle "ProbeFailure\nservice + endpoint + nguyên nhân" as failure
 rectangle "applyProbe\ncontext operation với %w" as boundary
 rectangle "caller\nerrors.Is / errors.As" as caller
 
-run --> failure : nguyên nhân
-failure --> boundary : error được wrap
-boundary --> caller : error trả về
+run -down-> failure : nguyên nhân
+failure -down-> boundary : error được wrap
+boundary -down-> caller : error trả về
 note bottom of caller
 Is: chọn xử lý theo loại
 As: đọc context probe có cấu trúc
