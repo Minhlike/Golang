@@ -6,7 +6,7 @@ Mô hình tinh thần của chương này là: **service là một boundary bi�
 
 ## Một deploy bị cắt ngang cho thấy thiếu contract nào
 
-Hãy tưởng tượng `/v1/checks` nhận một target, lưu một yêu cầu kiểm tra, rồi trả `201`. Trong một lần deploy, load balancer chuyển traffic đi nhưng process cũ nhận tín hiệu dừng ngay giữa lúc đang ghi response. Có ba trạng thái cần phân biệt: service còn nhận connection mới, đang để request đã nhận đi tới chỗ kết thúc, hay đã dừng. `Server.Shutdown` của `net/http` đóng listener, đóng idle connection, rồi chờ active connection trở về idle và đóng. Nó không tự chờ connection bị hijack, như WebSocket; những connection dài hạn cần lifecycle riêng.
+Hãy tưởng tượng `/v1/checks` nhận một target, lưu một yêu cầu kiểm tra, rồi trả `201`. Trong một lần deploy, load balancer chuyển traffic đi nhưng process cũ nhận tín hiệu dừng ngay giữa lúc đang ghi response. Có ba trạng thái cần phân biệt: service còn nhận connection mới, đang để request đã nhận đi tới chỗ kết thúc, hay đã dừng. `Server.Shutdown` của `net/http` đóng listener, đóng idle connection, rồi chờ active connection trở về idle và đóng. Nó không tự cancel context của handler đang active. `r.Context()` của incoming request có lifecycle riêng: nó bị cancel khi client disconnect, request HTTP/2 bị hủy, hoặc khi `ServeHTTP` trả về — không phải chỉ vì `Shutdown` vừa được gọi. Nó không tự chờ connection bị hijack, như WebSocket; những connection dài hạn cần lifecycle riêng.
 
 ![Vòng đời phục vụ và rút lui của service](../../assets/diagrams/http-service-lifecycle.png)
 @figure Lifecycle khái niệm khi service graceful shutdown. Deadline của shutdown là policy vận hành: nó giới hạn thời gian chờ, không biến mọi request thành thành công.
@@ -67,7 +67,7 @@ Ba guard đầu không phải defensive programming vô định. `srv`, `ln` và
 
 ### Từ signal của process sang context của server
 
-`ServeUntilStopped` đã nhận một `context.Context`, nên `main` chỉ cần nối process lifecycle vào input đó. Trên Unix-like host, `signal.NotifyContext` biến `SIGINT` hoặc `SIGTERM` thành cancellation; `defer stop()` hủy đăng ký signal handling khi `main` rời đi. Sau signal đầu tiên, `ServeUntilStopped` đi vào `Shutdown` với `grace` đã chọn thay vì cắt request ngay.
+`ServeUntilStopped` đã nhận một `context.Context`, nên `main` chỉ cần nối process lifecycle vào input đó. Trên Unix-like host, `signal.NotifyContext` biến `SIGINT` hoặc `SIGTERM` thành cancellation; `defer stop()` hủy đăng ký signal handling khi `main` rời đi. Cho đến khi `stop()` được gọi, signal vẫn bị chuyển hướng theo policy này; nếu hệ thống muốn interrupt thứ hai quay lại default hoặc force-exit, đó phải là một quyết định thiết kế có chủ đích. Sau signal đầu tiên, `ServeUntilStopped` đi vào `Shutdown` với `grace` đã chọn thay vì cắt request ngay.
 
 ~~~go
 ctx, stop := signal.NotifyContext(
@@ -77,12 +77,30 @@ ctx, stop := signal.NotifyContext(
 )
 defer stop()
 
-if err := ServeUntilStopped(ctx, srv, ln, 15*time.Second); err != nil {
+if err := ServeUntilStopped(
+	ctx,
+	srv,
+	ln,
+	15*time.Second,
+); err != nil {
 	return err
 }
 ~~~
 
-Đây là bridge ở process boundary, không phải permission cho handler bỏ qua `r.Context()`: `Shutdown` chờ active request, còn cancellation phải đi tiếp tới database hay outbound HTTP mà request đó đang chờ. Trên Windows, `os.Interrupt` là signal portable; service host và process supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
+Đây là bridge ở process boundary, không phải permission cho handler bỏ qua `r.Context()`: `Shutdown` chỉ ngừng nhận request mới và chờ request đang chạy; nó không tự cancel `r.Context()` của những handler đó. Handler vẫn phải truyền `r.Context()` vào database hay outbound HTTP để phản ứng với lifecycle riêng của incoming request.
+
+Nếu policy của service là signal cũng phải cancel handler đang chạy, việc đó cần được nối một cách tường minh, chẳng hạn bằng application context làm `Server.BaseContext` rồi cancel context ấy khi nhận signal:
+
+~~~go
+appCtx, cancelApp := context.WithCancel(context.Background())
+srv.BaseContext = func(net.Listener) context.Context {
+	return appCtx
+}
+// Policy đã chọn khi nhận signal:
+cancelApp()
+~~~
+
+Đó là một policy khác với graceful drain thuần túy: handler nào quan sát context có thể dừng trước khi hoàn tất công việc đang phục vụ. Chọn nó khi bounded shutdown đáng giá hơn việc để request đang chạy hoàn thành. Trên Windows, `os.Interrupt` là signal portable; service host và process supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
 
 ## Handler là cửa kiểm tra, không phải nơi “cố hiểu” input
 
@@ -165,7 +183,7 @@ Timeout client ở chương trước bảo vệ người *gọi*. Server còn ph
 
 Không có bộ số chung đúng cho mọi service. Với timeout đọc/ghi/idle, zero có thể nghĩa là không đặt timeout theo documented behavior của `net/http`; `MaxHeaderBytes` có default riêng. Default vô thức vẫn là policy. Chọn workload, proxy, upload path và memory budget trước khi đặt number; rồi kiểm thử ingress thật khi có traffic.
 
-`Server.Shutdown` không giết request active, nên handler cần tôn trọng `r.Context()` khi gọi database, outbound client hoặc worker. Chương 9 và 11 đã cho ta hai nửa còn lại: goroutine phải có đường thoát khi context bị hủy; client request phải nhận context của caller. Graceful shutdown chỉ thực sự graceful khi các boundary bên trong chịu trả lại quyền điều khiển.
+`Server.Shutdown` không giết request active và cũng không tự cancel `r.Context()` của handler. Handler vẫn cần tôn trọng `r.Context()` khi gọi database, outbound client hoặc worker vì incoming request có lifecycle riêng. Chương 9 và 11 đã cho ta hai nửa còn lại: goroutine phải có đường thoát khi context bị hủy; client request phải nhận context của caller. Graceful shutdown chỉ thực sự graceful khi các boundary bên trong chịu trả lại quyền điều khiển.
 
 Service đáng tin được đánh giá ở boundary: input bị giới hạn ở đâu, business code nhận gì, response/log tách public/private không, server ngừng nhận việc khi nào và request cũ được bao lâu để kết thúc. WebSocket cần một owner riêng. Trả lời được các câu ấy, service có lifecycle để vận hành thay vì chỉ `ListenAndServe`.
 

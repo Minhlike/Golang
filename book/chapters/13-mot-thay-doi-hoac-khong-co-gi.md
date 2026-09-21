@@ -55,11 +55,14 @@ go test -race ./fixed
 
 ~~~go
 // Đáp án tham chiếu: một transaction, một commit.
-func Disable(ctx context.Context, db *sql.DB, checkID int64) error {
+func Disable(
+	ctx context.Context,
+	db *sql.DB,
+	checkID int64,
+) error {
 	if db == nil {
 		return errors.New("database is required")
 	}
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin disable transaction: %w", err)
@@ -80,9 +83,12 @@ func Disable(ctx context.Context, db *sql.DB, checkID int64) error {
 		return ErrCheckNotFound
 	}
 
-	if _, err := tx.ExecContext(ctx,
-		"INSERT INTO check_events(check_id, action) VALUES (?, ?)",
-		checkID, "disabled",
+	if _, err := tx.ExecContext(
+		ctx,
+		"INSERT INTO check_events(check_id, action) " +
+			"VALUES (?, ?)",
+		checkID,
+		"disabled",
 	); err != nil {
 		return fmt.Errorf("record disable event: %w", err)
 	}
@@ -106,7 +112,10 @@ Dấu `?` cũng không phải syntax phổ quát. SQLite driver của lab dùng 
 Một hiểu nhầm kế tiếp là xem `sql.Open` như bằng chứng database đang sống. Việc mở handle thường không thực hiện kết nối ngay. Khi startup hoặc health policy thực sự cần kiểm tra reachability, dùng `PingContext` với deadline phù hợp; đừng biến một ping thành nghi thức trước mọi query rồi gọi đó là reliability.
 
 ~~~go
-func OpenAndCheck(ctx context.Context, dsn string) (*sql.DB, error) {
+func OpenAndCheck(
+	ctx context.Context,
+	dsn string,
+) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open database handle: %w", err)
@@ -166,7 +175,7 @@ Khi requirement nói client có thể retry cùng một operation mà chỉ đư
 
 > **Bài suy luận ngắn.** Một caller timeout sau `Commit` rồi gọi lại `Disable` mà không gửi operation identity. State `enabled=false` nói được gì, và audit count nói được gì? Đáp án: caller không thể phân biệt “lần trước của chính tôi đã commit” với “một actor khác đã tắt check”; count hai cũng không cho biết hai lần gọi có phải cùng ý định. Nếu distinction đó quan trọng, retry phải có contract riêng.
 
-Tương tự, transaction không biến mọi concurrent operation thành tuần tự. `sql.TxOptions` cho phép caller yêu cầu isolation; database và driver có thể hỗ trợ, hạ cấp hoặc từ chối tùy hệ. Trước khi dùng isolation để bảo vệ một invariant thật, đọc tài liệu database đang chạy, viết test cạnh tranh cho invariant đó và quan sát lỗi/lock/latency. Ở chương này, ta chỉ khóa một contract nhỏ có thể chứng minh cục bộ: event lỗi thì update không được tồn tại.
+Tương tự, transaction không biến mọi concurrent operation thành tuần tự. `sql.TxOptions` cho phép caller yêu cầu isolation; khi caller yêu cầu non-default isolation level mà driver không hỗ trợ, `BeginTx` trả error. Database và driver thực tế vẫn quyết định các anomaly, lock và latency có ý nghĩa gì, nên trước khi dùng isolation để bảo vệ một invariant thật, đọc tài liệu database đang chạy, viết test cạnh tranh cho invariant đó và quan sát lỗi/lock/latency. Ở chương này, ta chỉ khóa một contract nhỏ có thể chứng minh cục bộ: event lỗi thì update không được tồn tại.
 
 Schema cũng là state. Khi service có record thật, `CREATE TABLE` trong test không còn là cách đưa thay đổi ra production. Migration cần thứ tự, người sở hữu, khả năng kiểm tra và kế hoạch rollback hoặc forward-fix. Cache cũng cần source of truth rõ ràng: nếu cache giữ `enabled=true` sau một commit tắt check, caller vẫn đang thấy câu chuyện cũ. Những boundary đó sẽ được mở tiếp sau khi nền transaction đã đủ chắc.
 

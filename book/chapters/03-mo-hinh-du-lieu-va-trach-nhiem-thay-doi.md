@@ -254,7 +254,8 @@ Map literal tạo map đã sẵn sàng ghi. `make(map[string]Service)` cũng t�
 var services map[string]Service
 fmt.Println(services["billing"].Name) // ""
 
-// services["billing"] = billing // panic: assignment to entry in nil map
+// services["billing"] = billing
+// panic: assignment to entry in nil map
 services = make(map[string]Service)
 services["billing"] = billing
 ~~~
@@ -295,7 +296,11 @@ Nếu domain muốn registry quản lý các `*Service`, thì mutation qua point
 
 ~~~go
 services := map[string]*Service{
-	"billing": &Service{Name: "billing", Port: 8080, Healthy: true},
+	"billing": {
+		Name:    "billing",
+		Port:    8080,
+		Healthy: true,
+	},
 }
 
 services["billing"].Healthy = false
@@ -323,7 +328,11 @@ delete(latencyByService, "billing")
 `opsprobe` chưa cần network để hưởng lợi từ model này. Một update value-oriented cho registry không cần pointer: lấy struct value ra khỏi map, sửa bản local, rồi gán nó trở lại entry. Map parameter được truyền theo value, nhưng map value ấy vẫn mở đường tới map data của caller; chính phép gán cuối là mutation có chủ ý lên registry chung.
 
 ~~~go
-func recordProbe(registry map[string]Service, name string, healthy bool) bool {
+func recordProbe(
+	registry map[string]Service,
+	name string,
+	healthy bool,
+) bool {
 	service, found := registry[name]
 	if !found {
 		return false
@@ -435,7 +444,9 @@ func (target StaticTarget) Summary() string {
 }
 
 fmt.Println(renderSummary(Service{Name: "billing"}))
-fmt.Println(renderSummary(StaticTarget("search (maintenance)")))
+fmt.Println(renderSummary(
+	StaticTarget("search (maintenance)"),
+))
 ~~~
 
 Kết quả là hai dòng có cùng format dù hai type không có ancestor chung. Interface ở đây được rút ra sau khi có consumer và hai provider có ý nghĩa. Nếu chỉ có một `Service` duy nhất và không có ranh giới cần thay thế, nhận trực tiếp `Service` thường dễ đọc hơn là thêm interface vì dự đoán tương lai.

@@ -33,7 +33,8 @@ select {
 case out <- result:
 	// Consumer đã nhận quyền sở hữu result.
 case <-ctx.Done():
-	// Không có lần bàn giao nào nữa; worker được phép kết thúc.
+	// Không có lần bàn giao nào nữa.
+	// Worker được phép kết thúc.
 }
 ~~~
 

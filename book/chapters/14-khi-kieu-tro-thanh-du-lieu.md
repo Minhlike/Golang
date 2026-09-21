@@ -53,7 +53,9 @@ Hai field export được chọn vì API công khai của loader chỉ được 
 Đây là implementation tham chiếu của boundary nhỏ. Nó chỉ nhận `string`; parse port, duration, URL hay secret policy thuộc các contract khác, nên không bị giấu sau một helper “tự làm mọi thứ”.
 
 ~~~go
-var ErrDestination = errors.New("destination must be a non-nil pointer to struct")
+var ErrDestination = errors.New(
+	"destination must be a non-nil pointer to struct",
+)
 
 func ApplyEnv(dst any, values map[string]string) error {
 	value := reflect.ValueOf(dst)
@@ -75,11 +77,17 @@ func ApplyEnv(dst any, values map[string]string) error {
 			continue
 		}
 		if field.Type.Kind() != reflect.String {
-			return fmt.Errorf("env field %s must be string", field.Name)
+			return fmt.Errorf(
+				"env field %s must be string",
+				field.Name,
+			)
 		}
 		fieldValue := target.Field(i)
 		if !fieldValue.CanSet() {
-			return fmt.Errorf("env field %s cannot be set", field.Name)
+			return fmt.Errorf(
+				"env field %s cannot be set",
+				field.Name,
+			)
 		}
 		fieldValue.SetString(raw)
 	}

@@ -115,7 +115,11 @@ func applyProbe(
 ) error {
 	service, found := registry[name]
 	if !found {
-		return fmt.Errorf("unknown %q: %w", name, ErrUnknownService)
+		return fmt.Errorf(
+			"unknown %q: %w",
+			name,
+			ErrUnknownService,
+		)
 	}
 
 	if err := run(service.Endpoint); err != nil {

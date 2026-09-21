@@ -81,12 +81,19 @@ Profile có overhead và có thể làm méo phép đo. Tài liệu chẩn đoá
 
 `labs/part10-measure-first` giữ hai implementation cùng một wire format. `baseline.Render` nối string bằng `+=` trong mỗi iteration; `fixed.Render` dùng `strings.Builder` và `strconv.FormatInt`. Workload là đúng 1.000 `Reading`, tên `endpoint-0000` đến `endpoint-0999`, dựng một lần ngoài vòng benchmark. Đây là microbenchmark của renderer; nó không đo JSON, network, scheduler hay latency của một service.
 
-Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. Cùng workload, cùng binary package và `-count=5` giúp tránh so một lần chạy đơn lẻ với một lần chạy đơn lẻ:
+Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. So sánh có ý nghĩa khi giữ cùng máy hoặc môi trường, Go version, workload và benchmark contract; `-count=5` giúp tránh đối chiếu một lần chạy đơn lẻ với một lần chạy đơn lẻ:
 
 ~~~powershell
 cd labs/part10-measure-first
-go test -run '^$' -bench BenchmarkRender -benchmem -count=5 ./baseline ./fixed
-go test -run '^$' -bench BenchmarkRender -cpuprofile baseline-cpu.out ./baseline
+go test -run '^$' `
+  -bench BenchmarkRender `
+  -benchmem -count=5 `
+  ./baseline ./fixed
+
+go test -run '^$' `
+  -bench BenchmarkRender `
+  -cpuprofile baseline-cpu.out `
+  ./baseline
 go tool pprof -top baseline-cpu.out
 ~~~
 

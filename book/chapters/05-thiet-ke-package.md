@@ -68,7 +68,11 @@ type Target struct {
 
 func DefaultTargets() []Target {
 	return []Target{
-		{Name: "billing", Host: "billing.internal", Port: 8443},
+		{
+			Name: "billing",
+			Host: "billing.internal",
+			Port: 8443,
+		},
 	}
 }
 ~~~
@@ -155,7 +159,8 @@ Sau config change, ta đọc lại public API thay vì vội thêm feature khác
 Ta thu hẹp `Result` còn service đã hoàn tất. `cmd/opsprobe` đã có nhánh `err == nil`, nên chính command - nơi sở hữu presentation - in `healthy=true`. Không có information bị mất: success đã là bằng chứng của `true`; failure vẫn là error với context. Đây là một lần refactor đặc biệt đáng làm vì test không đỏ trước khi đổi. Test cũ xanh, nhưng contract cũ làm người đọc có thể suy luận sai.
 
 ~~~go
-// Result identifies the service whose check completed successfully.
+// Result identifies the service whose check
+// completed successfully.
 type Result struct {
 	Service string
 }

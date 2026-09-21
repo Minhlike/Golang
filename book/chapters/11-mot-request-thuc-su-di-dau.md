@@ -52,7 +52,12 @@ TCP, TLS và HTTP là các lớp khác nhau. Connection được tạo tới đ�
 ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 defer cancel()
 
-req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+req, err := http.NewRequestWithContext(
+	ctx,
+	http.MethodGet,
+	rawURL,
+	nil,
+)
 if err != nil {
 	return err
 }

@@ -77,10 +77,14 @@ func TestRunMapsEnvironmentTargetToRunner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if got != (probe.Endpoint{Host: "payments.internal", Port: 9443}) {
+	if got != (probe.Endpoint{
+		Host: "payments.internal",
+		Port: 9443,
+	}) {
 		t.Fatalf("runner endpoint = %+v", got)
 	}
-	if outcomes[0].Err != nil || outcomes[0].Service != "billing" {
+	if outcomes[0].Err != nil ||
+		outcomes[0].Service != "billing" {
 		t.Fatalf("outcome = %+v", outcomes[0])
 	}
 }
@@ -151,7 +155,10 @@ tests := []struct {
 	{name: "empty host", raw: ":8443"},
 	{name: "non-numeric port", raw: "payments.internal:https"},
 	{name: "port zero", raw: "payments.internal:0"},
-	{name: "port above TCP range", raw: "payments.internal:65536"},
+	{
+		name: "port above TCP range",
+		raw:  "payments.internal:65536",
+	},
 }
 ~~~
 
@@ -278,7 +285,9 @@ func FuzzLoadTargetsNeverReturnsInvalidTarget(f *testing.F) {
 			t.Fatalf("got %d targets", len(targets))
 		}
 		target := targets[0]
-		if target.Host == "" || target.Port < 1 || target.Port > 65535 {
+		if target.Host == "" ||
+			target.Port < 1 ||
+			target.Port > 65535 {
 			t.Fatalf("invalid target %+v", target)
 		}
 	})
@@ -316,7 +325,10 @@ func BenchmarkLoadTargets(b *testing.B) {
 		raw  string
 	}{
 		{name: "default"},
-		{name: "hostname override", raw: "payments.internal:9443"},
+		{
+			name: "hostname override",
+			raw:  "payments.internal:9443",
+		},
 		{name: "IPv6 override", raw: "[2001:db8::10]:443"},
 	}
 
@@ -371,7 +383,10 @@ func TestRunWritesSuccessContract(t *testing.T) {
 		&out,
 		&errOut,
 		func(string) (string, bool) { return "", false },
-		func(context.Context, probe.Endpoint) error { return nil },
+		func(
+			context.Context,
+			probe.Endpoint,
+		) error { return nil },
 	)
 
 	if code != 0 {
