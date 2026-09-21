@@ -340,3 +340,65 @@ Chạy từ lab với `go test -run=^$ -bench=BenchmarkLoadTargets -benchmem ./i
 Trong case này, kết luận có thể là “không tối ưu”. Đó là một kết quả kỹ thuật hoàn toàn hợp lệ: config parse một lần chưa đáng đổi API, thêm cache hay làm code kém đọc. Benchmark đã làm việc của nó khi giúp ta từ chối một tối ưu không có pressure, chứ không chỉ khi nó dẫn tới một patch nhanh hơn.
 
 **Bài review.** Chạy benchmark hai lần. Chỉ đề xuất tối ưu khi có workload như config reload trong hot loop hoặc profile thật; “số lớn hơn” chưa đủ.
+
+## Contract ở ranh giới process
+
+Unit test của `app.Run` cố ý không biết terminal hay exit code. Điều đó giúp nó giữ boundary hẹp, nhưng cũng tạo một khoảng trống cần kiểm tra ở đúng nơi: command vẫn phải in success vào stdout, đưa config error sang stderr và trả mã exit `2`. Đây là contract nhìn thấy được của process; đổi nó có thể làm script của operator hỏng dù các package phía trong vẫn xanh.
+
+Gọi `main` trong test thường làm khoảng trống ấy khó kiểm chứng, vì `os.Exit` kết thúc process test. Thay vì fake cả process, ta rút phần presentation thành một function nhỏ nhận writer và trả exit code. `main` chỉ nối dependency thật vào function đó:
+
+~~~go
+func main() {
+	runner := func(context.Context, probe.Endpoint) error {
+		return nil
+	}
+	os.Exit(run(
+		context.Background(),
+		os.Stdout,
+		os.Stderr,
+		os.LookupEnv,
+		runner,
+	))
+}
+~~~
+
+`run` vẫn gọi `app.Run`; nó chỉ thêm policy process rất nhỏ. Test vì thế có thể dùng `bytes.Buffer` làm stdout và stderr, rồi quan sát đúng ba thứ mà shell nhìn thấy: code, output thành công và output lỗi.
+
+~~~go
+func TestRunWritesSuccessContract(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := run(
+		context.Background(),
+		&out,
+		&errOut,
+		func(string) (string, bool) { return "", false },
+		func(context.Context, probe.Endpoint) error { return nil },
+	)
+
+	if code != 0 {
+		t.Fatalf("code = %d", code)
+	}
+	if out.String() != "billing healthy=true\n" {
+		t.Fatalf("stdout = %q", out.String())
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("stderr = %q", errOut.String())
+	}
+}
+~~~
+
+Test này không assert `run` loop outcome thế nào hay `app.Run` parse config ra sao. Những contract đó đã thuộc package riêng. Nó chỉ giữ lời hứa của command: success đọc được bằng máy trên stdout và không rò error message.
+
+Test phía failure cũng phải hẹp như vậy. Đưa vào một port không hợp lệ, để runner làm test fail nếu bị gọi, rồi assert exit `2`, stdout rỗng và diagnostic ở stderr. Đừng so toàn bộ message: wording validation có thể được cải thiện, còn nơi xuất hiện và exit policy mới là contract vận hành ổn định.
+
+**Bài code review.** Chuyển một `fmt.Fprintf` từ `out` sang `errOut` rồi quyết định đó là chỉnh presentation vô hại hay breaking change cho shell pipeline. Sau đó tưởng tượng một mode `--json`: contract test nên có case riêng cho mode được hứa rõ ràng này, không được làm contract text mode yếu đi đến mức nhận bất cứ output nào.
+
+---
+
+**Đáp án — chỉ đọc sau khi đã tự làm.** Trong shell pipeline, stdout thường mang dữ liệu command sau sẽ tiêu thụ; chuyển healthy result sang stderr có thể là breaking change. Test không cố đóng băng dấu câu mãi mãi. Nó bảo vệ boundary mà con người và automation dựa vào: success exit `0` và có result trên stdout; configuration failure exit `2`, không in success data, đồng thời có diagnostic ở stderr.
+
+Contract test này không thay thế một end-to-end test khởi động binary thật. Khi sau này command nhận flag, file config, signal hoặc network thật, một số luồng cần được kiểm chứng qua process thật. Nhưng dùng binary test để assert mọi dấu cách và mọi nhánh validation sẽ chậm, khó đọc và trùng với unit test. Ranh giới tốt là: logic có dependency thay thế được kiểm tra ở package bên trong; vài lời hứa mà process công bố được giữ ở `run`; chỉ một số đường đi quan trọng mới cần vượt ra integration test.
+
+Vì vậy, việc tách `run` không phải là đổi thiết kế chỉ để làm test pass. Nó làm chính sách vốn đã tồn tại trong `main` có tên, input và output rõ. Code review có thể hỏi một câu cụ thể: “thay đổi này có làm automation nhận stdout, stderr hoặc exit code khác không?” Nếu có, tác giả phải chủ động quyết định đó là compatibility change, chứ không để nó lọt qua dưới vỏ bọc refactor nội bộ.
+
+Đây là điểm dừng của mốc hiện tại: testability không đồng nghĩa phủ một lớp mock lên mọi package. Nó là khả năng đặt từng policy vào một boundary đủ nhỏ để ta tạo input, quan sát kết quả và biết chính xác thay đổi nào đang được bảo vệ.
