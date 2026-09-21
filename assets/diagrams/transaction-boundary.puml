@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 22
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #333333
+  FontColor #000000
+  RoundCorner 8
+}
+skinparam arrowColor #333333
+top to bottom direction
+
+rectangle "BEGIN\ntransaction" as begin
+rectangle "UPDATE\nchecks.enabled = false" as update
+rectangle "INSERT\ncheck_events: disabled" as audit
+rectangle "COMMIT\nstate mới được thấy" as committed
+rectangle "ROLLBACK\nstate cũ được giữ" as rolled
+
+begin --> update
+update --> audit
+audit --> committed : mọi statement\nthành công
+begin ..> rolled : lỗi ở bất kỳ bước nào
+
+note bottom of audit
+  Sơ đồ khái niệm về atomicity.
+  Isolation cụ thể còn do database
+  và TxOptions quyết định.
+end note
+@enduml

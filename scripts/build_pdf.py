@@ -52,6 +52,7 @@ CHAPTERS = [
     ROOT / "book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md",
     ROOT / "book/chapters/11-mot-request-thuc-su-di-dau.md",
     ROOT / "book/chapters/12-mot-service-song-va-tat-the-nao.md",
+    ROOT / "book/chapters/13-mot-thay-doi-hoac-khong-co-gi.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"

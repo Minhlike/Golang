@@ -26,6 +26,9 @@ tiên nguồn chính thức; URL được giữ thay vì commit bản sao tài l
 | https://pkg.go.dev/net/http | HTTP client, transport, handler, server và shutdown | Tài liệu chính thức Go |
 | https://pkg.go.dev/net/http/httptrace | Event trace cho outgoing HTTP request | Tài liệu chính thức Go |
 | https://pkg.go.dev/net/http/httptest | Kiểm thử handler và HTTP test server | Tài liệu chính thức Go |
+| https://pkg.go.dev/database/sql | `database/sql`: pool, context, transaction, `Rows` và contract driver | Tài liệu chính thức Go |
+| https://www.sqlite.org/lang_transaction.html | Atomicity và lifecycle transaction của SQLite trong lab cục bộ | Tài liệu chính thức SQLite |
+| https://pkg.go.dev/modernc.org/sqlite | Driver SQLite thuần Go dùng riêng cho lab transaction cục bộ | Xem license/version tại module; không phải production recommendation mặc định |
 | https://go.dev/doc/security/best-practices | Thực hành bảo mật chung trong Go | Tài liệu chính thức Go |
 | https://github.com/plantuml/plantuml/releases | PlantUML renderer | MIT/GPL dual license - xem release khi phân phối |
 

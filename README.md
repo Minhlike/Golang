@@ -2,7 +2,7 @@
 
 Nguồn của cuốn sách nằm trong `book/`; `Golang_Master.pdf` là bản đọc được
 render từ nguồn đó. Edition đầu tiên được kiểm chứng với Go 1.27.1 vào
-20-09-2026.
+22-09-2026.
 
 ## Cấu trúc
 

@@ -25,7 +25,7 @@
 
 11. **Một request thực sự đi đâu.** DNS, TCP, TLS, HTTP, connection reuse, retry, timeout và trace của client.
 12. **Một service sống và tắt thế nào.** HTTP server, routing, middleware, validation, shutdown, log và security boundary.
-13. **Dữ liệu có trạng thái.** database/sql, pool, transaction, migration, cache, serialization và consistency mà lập trình viên phải thấy.
+13. **Dữ liệu có trạng thái.** Một thao tác nhiều bước chỉ có ý nghĩa khi state sau cùng kể được một câu chuyện nhất quán; bắt đầu bằng transaction, rồi đi tới pool, migration, cache, serialization và consistency.
 14. **Góc khuất của ngôn ngữ.** Reflection, unsafe, memory layout và các giới hạn cần được chứng minh trước khi vượt qua.
 
 ## Phần V — Go trong vận hành
@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I**, **Chương 6** đến **Chương 12**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`; Chương 9 xây worker pool nhỏ từ contract về ownership, áp suất và cancellation. Chương 10 đặt benchmark, profile và trace vào một vòng điều tra có thể bác bỏ giả thuyết; Chương 11 lần theo một HTTP request theo các chặng có thể xảy ra và kiểm tra recorder trace an toàn khi hook chồng lên nhau; Chương 12 biến handler và shutdown thành một lifecycle có thể vận hành, có cả contract cho input nhiều document và precondition của listener. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
+Bản PDF đã hoàn thành **Phần I**, **Chương 6** đến **Chương 12**, và bắt đầu **Chương 13** bằng contract transaction có thể chạy trên SQLite cục bộ. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`; Chương 9 xây worker pool nhỏ từ contract về ownership, áp suất và cancellation. Chương 10 đặt benchmark, profile và trace vào một vòng điều tra có thể bác bỏ giả thuyết; Chương 11 lần theo một HTTP request theo các chặng có thể xảy ra và kiểm tra recorder trace an toàn khi hook chồng lên nhau; Chương 12 biến handler và shutdown thành một lifecycle có thể vận hành, có cả contract cho input nhiều document và precondition của listener. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
