@@ -1,0 +1,38 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 28
+skinparam shadowing false
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+}
+skinparam ArrowColor #222222
+top to bottom direction
+
+rectangle "dispatcher\nđộc quyền gửi Job" as dispatcher
+rectangle "jobs\nchan Job\nđược dispatcher đóng" as jobs
+rectangle "workers\nnhận Job, gọi Work\nkhông đóng jobs" as workers
+rectangle "coordinator\nWaitGroup xong\nđóng results đúng một lần" as coordinator
+rectangle "results\nchan Result\nworker gửi hoặc dừng vì ctx" as results
+rectangle "consumer\nrange đến khi results đóng" as consumer
+
+dispatcher -down-> jobs : gửi hoặc ctx.Done
+jobs -down-> workers : bàn giao Job
+workers -down-> coordinator : Done
+workers -down-> results : gửi Result hoặc ctx.Done
+coordinator -down-> results : close sau mọi worker
+results -down-> consumer : nhận Result
+
+note right of results
+Đây là sơ đồ ownership.
+Nó không mô tả scheduler
+hay thời điểm chạy thật.
+end note
+@enduml

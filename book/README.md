@@ -18,7 +18,7 @@
 ## Phần III — Nhiều việc cùng lúc, nhưng không mất kiểm soát
 
 8. **Một race bắt đầu từ đâu.** Các access chung không có thứ tự an toàn, bốn tầng bằng chứng, và cách đọc race report trước khi nói về API đồng thời.
-9. **Dòng công việc có áp suất.** Channel, select, ownership, timeout, cancellation, backpressure, worker pool và leak.
+9. **Dòng công việc có áp suất.** Channel, select, ownership, cancellation, backpressure, worker pool và leak.
 10. **Khi chương trình chậm hoặc phình.** Benchmark, pprof, trace, allocation, escape, GC, G/M/P, syscall và cách đo trước khi tối ưu.
 
 ## Phần IV — Giao tiếp, dữ liệu và dịch vụ
@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I**, **Chương 6**, **Chương 7** và **Chương 8**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
+Bản PDF đã hoàn thành **Phần I**, **Chương 6**, **Chương 7**, **Chương 8** và **Chương 9**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`; Chương 9 xây worker pool nhỏ từ contract về ownership, áp suất và cancellation. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
