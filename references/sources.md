@@ -18,6 +18,15 @@ tiên nguồn chính thức; URL được giữ thay vì commit bản sao tài l
 | https://pkg.go.dev/errors | Chuỗi lỗi, `errors.Is` và `errors.As` | Tài liệu chính thức Go |
 | https://pkg.go.dev/io | Contract của `Reader`, `Writer` và lifecycle I/O | Tài liệu chính thức Go |
 | https://pkg.go.dev/encoding/json | Decoder/Encoder JSON theo stream | Tài liệu chính thức Go |
+| https://pkg.go.dev/testing | Unit test, benchmark, `B.Loop` và allocation metric | Tài liệu chính thức Go |
+| https://go.dev/doc/diagnostics | Profile, trace và giới hạn của dữ liệu chẩn đoán | Tài liệu chính thức Go |
+| https://go.dev/cmd/trace | Execution trace của Go | Tài liệu chính thức Go |
+| https://pkg.go.dev/net | Resolver và network boundary | Tài liệu chính thức Go |
+| https://pkg.go.dev/crypto/tls | TLS config và xác minh hostname | Tài liệu chính thức Go |
+| https://pkg.go.dev/net/http | HTTP client, transport, handler, server và shutdown | Tài liệu chính thức Go |
+| https://pkg.go.dev/net/http/httptrace | Event trace cho outgoing HTTP request | Tài liệu chính thức Go |
+| https://pkg.go.dev/net/http/httptest | Kiểm thử handler và HTTP test server | Tài liệu chính thức Go |
+| https://go.dev/doc/security/best-practices | Thực hành bảo mật chung trong Go | Tài liệu chính thức Go |
 | https://github.com/plantuml/plantuml/releases | PlantUML renderer | MIT/GPL dual license - xem release khi phân phối |
 
 Khi cần đưa tài liệu tải về `references/`, chỉ thêm tài liệu được phép phân

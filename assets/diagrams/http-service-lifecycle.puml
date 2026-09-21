@@ -1,0 +1,26 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 20
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #333333
+  FontColor #000000
+  RoundCorner 8
+}
+skinparam arrowColor #333333
+left to right direction
+
+rectangle "ACCEPTING\nlistener mở\nnhận request mới" as accepting
+rectangle "DRAINING\nlistener đóng\nrequest đang chạy được drain" as draining
+rectangle "STOPPED\nkhông nhận\nrequest mới" as stopped
+
+accepting --> draining : cancel / deploy stop
+draining --> stopped : request hoàn tất\nhoặc deadline policy
+
+note bottom of draining
+  Hijacked connection (ví dụ WebSocket)
+  cần lifecycle riêng.
+end note
+@enduml

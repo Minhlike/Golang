@@ -1,0 +1,28 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 17
+skinparam activity {
+  BackgroundColor #F5F5F2
+  BorderColor #333333
+  FontColor #000000
+}
+skinparam arrowColor #333333
+
+start
+:Request có context và deadline;
+if (Có connection idle phù hợp?) then (có)
+  :Nhận connection đã reuse;
+else (không)
+  :Resolver cục bộ\nđổi host thành địa chỉ;
+  :Dial TCP;
+  if (URL là HTTPS?) then (có)
+    :TLS handshake\nvà xác minh hostname;
+  endif
+endif
+:Gửi HTTP request;
+:Nhận headers và response body;
+:Caller đọc/stream\nvà đóng body;
+stop
+@enduml

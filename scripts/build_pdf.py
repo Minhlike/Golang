@@ -49,6 +49,9 @@ CHAPTERS = [
     ROOT / "book/chapters/07-du-lieu-di-vao-va-di-ra.md",
     ROOT / "book/chapters/08-mot-race-bat-dau-tu-dau.md",
     ROOT / "book/chapters/09-dong-cong-viec-co-ap-suat.md",
+    ROOT / "book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md",
+    ROOT / "book/chapters/11-mot-request-thuc-su-di-dau.md",
+    ROOT / "book/chapters/12-mot-service-song-va-tat-the-nao.md",
 ]
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
@@ -164,7 +167,7 @@ def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
                    hAlign="CENTER"),
         Spacer(1, 1.1 * cm),
         Paragraph("Edition nền móng", s["subtitle"]),
-        Paragraph("Được kiểm chứng với Go 1.27.1 - 20-09-2026", s["subtitle"]),
+        Paragraph("Được kiểm chứng với Go 1.27.1 - 21-09-2026", s["subtitle"]),
         Spacer(1, 4.8 * cm),
         Paragraph("Markdown là nguồn gốc. PDF là bản đọc được, có thể tái tạo cục bộ.", s["subtitle"]),
         PageBreak(),

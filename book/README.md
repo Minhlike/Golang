@@ -39,4 +39,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF đã hoàn thành **Phần I**, **Chương 6**, **Chương 7**, **Chương 8** và **Chương 9**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`; Chương 9 xây worker pool nhỏ từ contract về ownership, áp suất và cancellation. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.
+Bản PDF đã hoàn thành **Phần I**, **Chương 6** đến **Chương 12**. Chương 7 dùng chương trình tái hiện tối thiểu về ranh giới stream và vòng đời tài nguyên; Chương 8 đi từ race report đến chứng minh thứ tự với `Mutex` và `WaitGroup`; Chương 9 xây worker pool nhỏ từ contract về ownership, áp suất và cancellation. Chương 10 đặt benchmark, profile và trace vào một vòng điều tra có thể bác bỏ giả thuyết; Chương 11 lần theo một HTTP request theo các chặng có thể xảy ra; Chương 12 biến handler và shutdown thành một lifecycle có thể vận hành. `opsprobe` chỉ nhận I/O mới khi có requirement vận hành thật.

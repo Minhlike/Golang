@@ -1,0 +1,30 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #333333
+  RoundCorner 8
+}
+skinparam arrowColor #333333
+left to right direction
+
+rectangle "Triệu chứng\nchậm hoặc phình" as symptom
+rectangle "Câu hỏi + workload\nđại diện" as question
+rectangle "Test giữ contract\nBenchmark đo operation" as measure
+rectangle "Profile hoặc trace\nthu hẹp giả thuyết" as evidence
+rectangle "Một thay đổi nhỏ\nđược đo lại" as change
+
+symptom --> question
+question --> measure
+measure --> evidence
+evidence --> change
+change --> measure : cùng contract
+
+note bottom of evidence
+  Không đoán từ tên API
+  hay từ vẻ ngoài source.
+end note
+@enduml
