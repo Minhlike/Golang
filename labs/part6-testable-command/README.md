@@ -24,3 +24,12 @@ Remove-Item Env:OPS_PROBE_TARGET
 
 Lệnh phải in lỗi validation rồi trả exit code khác 0. Không sửa test để chấp
 nhận runner chạy sau config error; đó là policy mà lab đang bảo vệ.
+
+Fuzz test không thay thế các case có tên. Nó giữ property rằng input được chấp
+nhận luôn tạo target hợp lệ. Chạy một lượt ngắn khi cần điều tra parser:
+
+```powershell
+go test -run=^$ `
+  -fuzz=FuzzLoadTargetsNeverReturnsInvalidTarget `
+  -fuzztime=2s ./internal/config
+```
