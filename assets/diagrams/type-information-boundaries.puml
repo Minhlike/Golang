@@ -1,0 +1,27 @@
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontColor #000000
+skinparam defaultFontSize 18
+skinparam rectangle {
+  BackgroundColor #F4F4F1
+  BorderColor #3F3F3F
+  RoundCorner 8
+}
+
+rectangle "Một operation cần abstraction" as operation
+rectangle "Generic\nCùng một operation trên nhiều type.\nConstraint quyết định phép hợp lệ." as generic
+rectangle "Interface nhỏ\nCaller cần behavior có thể thay thế.\nMethod contract được compiler kiểm tra." as iface
+rectangle "Reflection\nShape hoặc metadata là input runtime." as reflect
+
+operation --> generic : giữ type information
+operation --> iface : thay thế theo behavior
+operation --> reflect : inspect khi cần
+
+note bottom of generic
+`any` không phải bước giữa bắt buộc.
+Nó chỉ phù hợp ở boundary nhận nhiều shape.
+end note
+@enduml
