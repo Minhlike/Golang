@@ -190,4 +190,5 @@ Service đáng tin được đánh giá ở boundary: input bị giới hạn �
 @references
 1. Go Team. Package `net/http`, phần Handler, Server fields, `Shutdown` và `ResponseWriter`. pkg.go.dev/net/http
 2. Go Team. Package `net/http/httptest`, phần `ResponseRecorder` và test server. pkg.go.dev/net/http/httptest
-3. Go Team. Security Best Practices for Go Developers. go.dev/doc/security/best-practices
+3. Go Team. Package `os/signal`, phần `NotifyContext`. pkg.go.dev/os/signal
+4. Go Team. Security Best Practices for Go Developers. go.dev/doc/security/best-practices

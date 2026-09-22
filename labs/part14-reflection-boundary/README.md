@@ -11,6 +11,10 @@ go test ./fixed
 go test -race ./fixed
 ```
 
-Contract: destination phải là non-nil pointer tới struct; chỉ field exported có
-tag `env` được ghi; field tagged nhưng không phải `string` là schema lỗi; tag
-thiếu trong map giữ nguyên field. Không dùng `unsafe` để đi qua field private.
+Contract: destination phải là non-nil pointer tới struct; `nil` không typed cũng
+phải trả `ErrDestination`. Chỉ field exported có tag `env` và exact builtin type
+`string` mới eligible. `env:"-"` là opt-out có chủ đích; field unexported nhưng
+có tag `env` thật là schema lỗi, không được âm thầm bỏ qua. Named string type
+cũng bị từ chối. Nếu schema lỗi, toàn bộ destination phải giữ state trước lời
+gọi; tag thiếu trong map chỉ giữ nguyên field tương ứng. Không dùng `unsafe` để
+đi qua field private.

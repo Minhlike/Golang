@@ -26,7 +26,7 @@
 11. **Một request thực sự đi đâu.** DNS, TCP, TLS, HTTP, connection reuse, retry, timeout và trace của client.
 12. **Một service sống và tắt thế nào.** HTTP server, routing, middleware, validation, shutdown, log và security boundary.
 13. **Dữ liệu có trạng thái.** Một thao tác nhiều bước chỉ có ý nghĩa khi state sau cùng kể được một câu chuyện nhất quán; bắt đầu bằng transaction, rồi đi tới pool, migration, cache, serialization và consistency.
-14. **Góc khuất của ngôn ngữ.** Reflection, unsafe, memory layout và các giới hạn cần được chứng minh trước khi vượt qua.
+14. **Khi kiểu trở thành dữ liệu.** Reflection, unsafe, memory layout và các giới hạn cần được chứng minh trước khi vượt qua.
 
 ## Phần V — Go trong vận hành
 
