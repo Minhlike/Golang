@@ -1,0 +1,28 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam rectangle {
+  BackgroundColor #F7F7F4
+  BorderColor #5D5D5D
+  FontColor #111111
+  RoundCorner 8
+}
+skinparam note {
+  BackgroundColor #FFFCE1
+  BorderColor #777777
+}
+
+rectangle "trạng thái mong muốn\ndigest artefact, replicas, policy" as desired
+rectangle "controller\nquan sát -> quyết định -> hành động" as controller
+rectangle "trạng thái hiện tại\nPod, process, readiness, status" as current
+
+desired --> controller : spec
+current --> controller : trạng thái đã quan sát
+controller --> current : tạo / dừng / thay
+
+note bottom of controller
+  Một vòng không hứa trạng thái
+  cuối cùng ngay lập tức.
+end note
+@enduml
