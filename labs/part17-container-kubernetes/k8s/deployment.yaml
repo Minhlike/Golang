@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe-api
+  namespace: go-book
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: probe-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: probe-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: probe-api
+          # Local-only identity. A delivery system must replace this with the
+          # reviewed immutable digest, never :latest or a moving branch tag.
+          image: probe-api:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

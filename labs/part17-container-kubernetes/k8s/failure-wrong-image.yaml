@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe-api
+  namespace: go-book
+spec:
+  template:
+    spec:
+      containers:
+        - name: probe-api
+          image: example.invalid/probe-api:not-found

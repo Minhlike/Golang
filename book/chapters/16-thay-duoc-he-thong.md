@@ -126,6 +126,94 @@ Contract cố ý không nhận `target string`, URL hay error text. Những dữ
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Khai báo `Outcome` là closed set rồi `switch` trước khi tăng `Completed`. Đặt lock bao quanh cả validation và mutation để invalid outcome không thể race với snapshot hay tạo half-update. `SuccessRatio` trả `(float64, bool)`; boolean false là semantic cho no data, không phải error transport. Bản fixed ưu tiên một invariant dễ kiểm chứng hơn một API nhìn “linh hoạt”.
 
+## Stage hai: ba signal đi qua một service thật
+
+Recorder vừa rồi cố ý không biết Prometheus hay OpenTelemetry. Bây giờ, khi
+câu hỏi đã rõ, ta nối nó với tool thật mà không xây một platform quan sát khổng
+lồ. `labs/part16-real-signals` là một HTTP service nhỏ. Một request vào
+`/probe` tạo một server span `probe.request`; việc giả lập dependency tạo child
+span `probe.dependency`; kết quả cuối cùng được ghi thành JSON log, Prometheus
+counter và histogram. Console exporter in trace ra stdout để thấy quan hệ
+parent-child ngay trên máy local.
+
+~~~text
+HTTP /probe?mode=timeout
+    |
+    +-- structured log: mode, outcome, status, duration_ms
+    +-- counter: probe_requests_total{outcome="timeout"}
+    +-- histogram: probe_request_duration_seconds
+    |   {outcome="timeout"}
+    `-- trace: request -> dependency (deadline exceeded)
+~~~
+
+Đây là một evidence path, không phải ba cách đặt tên cho cùng một dòng. Counter
+trả lời *bao nhiêu lần đã hoàn tất theo outcome*. Histogram trả lời *duration
+phân bố thế nào so với bucket đã chọn*. Trace giữ quan hệ của **một** request
+với dependency nó gọi. Log giữ status và duration của event để người điều tra
+không phải suy từ aggregate về một request cụ thể.
+
+Mở `labs/part16-real-signals/README.md`, đọc nhiệm vụ tự điều tra, rồi chạy
+service. Console trace và JSON log được tách stdout/stderr có chủ ý: đừng parse
+output trace như log application trong production.
+
+~~~powershell
+cd labs/part16-real-signals
+go test ./...
+go vet ./...
+go test -race ./...
+go run ./cmd/probe-api
+~~~
+
+Ở terminal khác, chạy từng failure mode. `curl.exe -i` giữ nguyên HTTP status
+thay vì để shell biến response 503/504 thành lỗi khó đọc.
+
+~~~powershell
+curl.exe -i http://localhost:8080/probe?mode=ok
+curl.exe -i http://localhost:8080/probe?mode=slow
+curl.exe -i http://localhost:8080/probe?mode=fail
+curl.exe -i http://localhost:8080/probe?mode=timeout
+curl.exe -s http://localhost:8080/metrics
+~~~
+
+`ok` và `slow` đều là `success`; chậm không tự động đồng nghĩa với failure.
+`fail` là dependency trả lỗi ngay và service trả `503`. `timeout` là caller hết
+20 ms ngân sách trước dependency giả lập hoàn tất và service trả `504`. Đây là
+failure injection có boundary cụ thể, không phải latency ngẫu nhiên. So sánh
+JSON log, counter, histogram và trace trước khi mở source: evidence nào phân
+biệt `fail` với `timeout` nhanh nhất? evidence nào cho thấy `slow` vẫn thành
+công nhưng đã đi qua bucket khác?
+
+@table Instrument của lab và contract của nó
+
+| Instrument | Event boundary | Tập dữ liệu cố ý giữ hẹp | Điều không được suy ra |
+| --- | --- | --- | --- |
+| `probe_requests_total` | Handler hoàn tất. | `outcome`: `success`, `failure`, `timeout`. | Counter không giữ request nào fail. |
+| `probe_request_duration_seconds` | Cùng handler. | Cùng label; bucket 5–250 ms. | Bucket không phải SLO hay percentile chính xác. |
+| JSON log | Cùng handler. | mode, outcome, HTTP status, duration. | Một log không là rate theo thời gian. |
+| Hai spans | Request và dependency. | mode/outcome; error status khi fail. | Một trace không là thống kê cho mọi request. |
+
+Histogram bucket là một quyết định đo lường. Lab chọn 5, 10, 25, 50, 100 và
+250 ms để phân biệt timeout 20 ms với slow 40 ms trên laptop; nó không được
+chép thành threshold production. Muốn trả lời câu hỏi latency ở 2 giây, bucket
+cao nhất 250 ms đã làm mất độ phân giải cần thiết. Muốn để mỗi route, raw URL,
+user ID, trace ID hay error message làm label thì một metric aggregate lại bị
+đẩy thành kho event vô hạn. Lab chỉ đặt `outcome` vào label; `mode` có ít giá trị
+ở đây, nhưng vẫn không cần để trả lời câu hỏi vận hành đã chọn.
+
+**Dừng để dự đoán.** Sau khi chạy `ok`, `slow`, `fail`, `timeout` một lần,
+counter `success` là bao nhiêu? Restart process rồi scrape lại `/metrics`: vì
+sao con số reset không chứng minh probe cũ chưa từng diễn ra? Prometheus server
+lưu sample theo thời gian là boundary khác với client process đang export số
+cumulative hiện tại.
+
+Test của lab không giả vờ thay local collector hay dashboard. Nó kiểm tra ba
+contract có thể kiểm tra tự động: metric chỉ có label bounded, JSON log có
+`outcome`, và child span thực sự có parent là request span. Source dùng
+Prometheus Go client để tạo exposition `/metrics`, và OpenTelemetry Go SDK với
+console exporter dành cho debugging local. Khi đưa trace sang collector hay
+backend, endpoint, sampling, retention, privacy và quyền truy cập là policy
+mới phải được thiết kế; không ghi secret vào attribute chỉ để trace dễ tìm hơn.
+
 ## Khi dùng thư viện thật
 
 Khi requirement đã cần `/metrics`, histogram duration, exemplars, trace propagation, collector hoặc backend query, hãy dùng client library và semantic convention được duy trì thay vì tự phát minh wire format. Nhưng SDK không thể chọn SLI cho anh. Trước khi thêm một instrument, hãy viết câu hỏi vận hành, event boundary, unit, label cardinality, reset/restart behavior, ownership và action khi signal xấu. Nếu không trả lời được, thêm metric chỉ tạo thêm dữ liệu chứ không thêm khả năng thấy hệ thống.
@@ -137,3 +225,5 @@ Khi requirement đã cần `/metrics`, histogram duration, exemplars, trace prop
 2. Prometheus Authors. Instrumentation: naming, labels, counters và metric design. prometheus.io/docs/practices/instrumentation/
 3. Google SRE. Alerting on SLOs: SLI, objective, error budget và alert policy. sre.google/workbook/alerting-on-slos/
 4. Go Team. Package `sync`: `Mutex` và synchronization primitives. pkg.go.dev/sync
+5. Prometheus Authors. Prometheus Go client: metric primitives và HTTP exposition. pkg.go.dev/github.com/prometheus/client_golang/prometheus
+6. OpenTelemetry Authors. Go exporters: console exporter cho local debugging; collector/backend cho telemetry path thực tế. opentelemetry.io/docs/languages/go/exporters/
