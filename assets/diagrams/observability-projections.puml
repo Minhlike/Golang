@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 20
+skinparam rectangle {
+  BackgroundColor #F5F5F2
+  BorderColor #333333
+  FontColor #000000
+  RoundCorner 8
+}
+skinparam arrowColor #333333
+left to right direction
+
+rectangle "một lần probe\noutcome + duration" as event
+rectangle "log\nidentity và chi tiết" as log
+rectangle "metric\nđếm/đo đã aggregate" as metric
+rectangle "trace\nđường đi của một lần chạy" as trace
+rectangle "trạng thái instance\nở thời điểm hiện tại" as state
+rectangle "health\nliveness / readiness" as health
+
+event --> log
+event --> metric
+event --> trace
+state --> health
+
+note bottom of metric
+  Target, URL, trace ID không phải
+  label metric mặc định.
+end note
+@enduml
