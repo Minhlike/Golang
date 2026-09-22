@@ -1,0 +1,33 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 20
+skinparam arrowColor #333333
+hide footbox
+skinparam sequence {
+  ParticipantBackgroundColor #F5F5F2
+  ParticipantBorderColor #333333
+  ParticipantFontColor #000000
+  LifeLineBorderColor #777777
+  LifeLineBackgroundColor #FFFFFF
+}
+
+actor "người vận hành" as operator
+participant "incident command\nvalidate + ghi nhận" as command
+participant "runner\nstart + wait + classify" as runner
+participant "process con\nstdout / stderr / exit" as child
+
+operator -> command : target + deadline
+command -> runner : Spec + parent context
+runner -> child : executable + arguments
+child --> runner : output + exit status
+runner --> command : Result + error class
+command --> operator : diagnosis record
+
+note over runner
+  Context bị cancel sẽ ngắt
+  command process theo mặc định.
+  Policy cho process tree là việc riêng.
+end note
+@enduml
