@@ -142,45 +142,64 @@ Logic xét duyệt `Evaluate` ở trên cho ta thấy một quyết định prom
 bằng chứng gì. Nhưng trong thực tế, các bằng chứng ấy không xuất hiện cùng lúc
 trong một hàm Go đơn lẻ; chúng được tạo ra qua từng chặng của một pipeline phân
 tán. `labs/part18-workflow-delivery` kết nối lý thuyết này vào một quy trình
-hoàn chỉnh gồm ba phần: một workflow GitHub Actions bảo mật, một công cụ
-`promote-gate` bằng Go có thể chạy trong CI, và một cấu hình Terraform thiết lập
-cầu nối OIDC với hạ tầng đám mây.
+hoàn chỉnh gồm ba phần: một workflow GitHub Actions mẫu (reviewable specimen),
+một công cụ `promote-gate` bằng Go có thể chạy trong CI, và một cấu hình
+Terraform thiết lập cầu nối OIDC với hạ tầng đám mây.
+
+Để tránh những ngộ nhận tai hại trong vận hành, chuỗi delivery phải phân định
+rõ bảy lớp thông tin kỹ thuật:
+
+1. **Source revision:** Mã băm commit Git của mã nguồn đầu vào (ví dụ: `bcb3fe0`).
+2. **Local image identity:** Tên/tag cục bộ hoặc Image Config ID (`.Id`) mà
+   Docker daemon tạo ra trên máy build.
+3. **Manifest digest:** Mã băm nội dung bất biến của OCI Image Manifest
+   (`sha256:...`) bao gồm descriptor của mọi layer và config, được registry và
+   Kubernetes dùng làm định danh duy nhất.
+4. **Provenance:** Bản chứng thực (attestation) ghi nhận nguồn gốc commit,
+   builder và công thức build.
+5. **Verified evidence:** Kết quả xác minh chữ ký số của provenance từ công cụ
+   chuyên trách; tuyệt đối không dùng cờ boolean giả mạo.
+6. **Promotion decision:** Quyết định phê duyệt hoặc từ chối fail-closed dựa
+   trên bằng chứng đã xác minh.
+7. **Actual deployment:** Thao tác cập nhật desired state của workload bằng
+   chính manifest digest đã được duyệt.
 
 ~~~text
-Source Commit (revision SHA)
+Source Revision (git commit SHA)
       |
       v
-Job: verify (test, vet, race)
+Job: verify (test từng module: part16, part18)
       |
       v
-Job: build-artifact (multi-stage build)
-      |  --> xuất ra digest bất biến: sha256:...
+Job: build-artifact (Docker Buildx metadata)
+      |  --> phân biệt Image ID và OCI Manifest Digest
       v
 Job: promote-production (environment: production)
-      |  --> cấp quyền id-token: write (OIDC)
+      |  --> quyền id-token: write cho OIDC
       |  --> chạy promote-gate CLI (kiểm tra candidate)
-      |  --> cập nhật desired state bằng chính digest ấy
+      |  --> từ chối nếu thiếu verified evidence
+      |  --> cập nhật desired state bằng manifest digest
 ~~~
 
-### Workflow GitHub Actions và nguyên tắc đặc quyền tối thiểu
+### Workflow GitHub Actions mẫu và kiểm tra repo multi-module
 
-Tệp `labs/part18-workflow-delivery/workflows/delivery.yaml` minh họa cách cấu
-hình một quy trình CI/CD có trách nhiệm. Ba nguyên tắc thiết kế được áp dụng
-chặt chẽ:
+Tệp `labs/part18-workflow-delivery/workflows/delivery.yaml` là tài liệu nghiên
+cứu và kiểm tra mẫu (runnable specimen), không phải workflow đang kích hoạt trong
+`.github/workflows/`. Nó minh họa các nguyên tắc thiết kế cốt lõi:
 
-1. **Quyền mặc định chỉ đọc:** Khai báo `permissions: { contents: read }` ở cấp
-   cao nhất của workflow. Điều này đảm bảo runner không thể tùy tiện ghi đè mã
-   nguồn hay tạo release nếu không được cấp quyền tường minh ở từng job.
-2. **Ghim action bằng commit SHA bất biến:** Thay vì dùng tag trôi nổi như
-   `uses: actions/checkout@v4`, workflow ghim mã băm commit đầy đủ:
-   `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2`.
-   Một tag phiên bản có thể bị tác giả hoặc kẻ tấn công trỏ sang một commit
-   khác trong tương lai; chỉ commit SHA mới là định danh bất biến bảo vệ chuỗi
-   cung ứng phần mềm.
-3. **Định danh bằng Digest thay vì Tag:** Job `build-artifact` biên dịch image
-   và trích xuất mã băm nội dung `sha256:...`. Digest này được truyền qua
-   `outputs` để job sau sử dụng. Job deploy tuyệt đối không dùng `:latest` hay
-   tên branch để deploy ra môi trường production.
+1. **Kiểm tra đúng từng Go module:** Repository của chúng ta gồm nhiều module
+   độc lập và không có `go.work` ở root. Chạy `go test ./...` tại root sẽ thất
+   bại hoặc vô nghĩa. Job `verify` dùng `working-directory` để chạy test, vet,
+   và race detector riêng cho từng module thuộc delivery path:
+   `labs/part16-real-signals` (service) và `labs/part18-workflow-delivery` (gate).
+2. **Quyền mặc định chỉ đọc:** Khai báo `permissions: { contents: read }` ở cấp
+   cao nhất. Quyền `id-token: write` chỉ được mở duy nhất ở job deploy.
+3. **Ghim action bằng commit SHA bất biến:** Thay vì tag phiên bản có thể bị trôi,
+   workflow ghim mã băm commit 40 ký tự đầy đủ của từng Action.
+4. **Không đánh đồng Local Image ID với Manifest Digest:** Khi build cục bộ mà
+   chưa push registry, Docker daemon chỉ lưu Image Config ID (`.Id`). Chỉ khi
+   Buildx xuất metadata hoặc push lên registry, OCI Image Manifest Digest mới
+   tồn tại để làm định danh bất biến cho promotion.
 
 ~~~yaml
 # Trích đoạn từ workflows/delivery.yaml
@@ -196,13 +215,22 @@ jobs:
       - uses: actions/setup-go@3041d5d... # v5.3.0
         with:
           go-version: '1.27.1'
-      - run: |
+      # Kiểm tra từng module thuộc delivery path
+      - name: Verify Service Module
+        working-directory: labs/part16-real-signals
+        run: |
+          go test -v ./...
+          go vet ./...
+          go test -race ./...
+      - name: Verify Gate Module
+        working-directory: labs/part18-workflow-delivery
+        run: |
           go test -v ./...
           go vet ./...
           go test -race ./...
 ~~~
 
-### Thực thi Promotion Gate bằng Go
+### Thực thi Promotion Gate bằng Go và nguyên tắc Fail-Closed
 
 Để biến policy admission thành một chốt chặn tự động trong pipeline, thư mục
 `labs/part18-workflow-delivery/cmd/promote-gate` cung cấp một công cụ dòng lệnh
@@ -216,66 +244,74 @@ go vet ./...
 go test -race ./...
 ~~~
 
-Anh có thể chạy thử trực tiếp ba kịch bản vận hành để quan sát phản ứng của gate:
+Trong pipeline CI, `tests-passed=true` được suy ra hợp lệ vì job `verify` phía
+trước đã hoàn thành thành công trong đồ thị phụ thuộc (`needs: verify`). Tuy
+nhiên, `provenance-verified` chỉ có thể là `true` khi đã có một bước xác thực
+chữ ký số chuyên trách. Nếu stage này chưa có bước xác thực attestation thật, ta
+**tuyệt đối không truyền cờ giả mạo `--provenance-verified=true`** (evidence
+theater). Gate phải từ chối theo nguyên tắc fail-closed:
 
 ~~~powershell
 # Định danh digest mẫu 64 ký tự hex
 $DIGEST = "sha256:0123456789abcdef0123456789abcdef" + `
           "0123456789abcdef0123456789abcdef"
 
-# 1. Đạt chuẩn: trả về exit code 0
+# 1. Thiếu provenance: gate từ chối fail-closed (Exit 1)
 go run ./cmd/promote-gate `
   --digest $DIGEST `
-  --revision "e69965a" `
+  --revision "bcb3fe0" `
+  --tests-passed=true `
+  --provenance-verified=false
+
+# 2. Đạt chuẩn khi có đủ cả test và provenance (Exit 0)
+go run ./cmd/promote-gate `
+  --digest $DIGEST `
+  --revision "bcb3fe0" `
   --tests-passed=true `
   --provenance-verified=true
 
-# 2. Trượt test: trả về exit code 1
+# 3. Trượt test: gate từ chối (Exit 1)
 go run ./cmd/promote-gate `
   --digest $DIGEST `
-  --revision "e69965a" `
+  --revision "bcb3fe0" `
   --tests-passed=false `
   --provenance-verified=true
 
-# 3. Định danh trôi nổi: trả về exit code 2 (Lỗi đầu vào)
+# 4. Định danh trôi nổi :latest: lỗi đầu vào (Exit 2)
 go run ./cmd/promote-gate `
   --digest ":latest" `
-  --revision "e69965a"
+  --revision "bcb3fe0"
 ~~~
 
 Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo:
 `invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2.
-Tính chất fail-closed này ngăn chặn hoàn toàn việc một lệnh deploy vô tình đưa
-một image chưa xác thực vào production.
 
-### Cầu nối AWS OIDC và Terraform: không lưu trữ khóa dài hạn
-
-Trong các hệ thống CI truyền thống, người ta thường sao chép `AWS_ACCESS_KEY_ID`
-và `AWS_SECRET_ACCESS_KEY` vào Secret của repository. Đây là một rủi ro vận hành
-rất lớn: khóa dài hạn có thể bị rò rỉ, khó xoay vòng tự động, và thường bị cấp
-quyền quá rộng.
+### Cầu nối AWS OIDC và Terraform: phân quyền tối thiểu thực chất
 
 Mục `labs/part18-workflow-delivery/terraform/` cung cấp một cấu hình Terraform
 minh họa mô hình liên kết danh tính OpenID Connect (OIDC) giữa GitHub Actions và
-AWS IAM. Thay vì dùng secret tĩnh, GitHub Actions tạo ra một token JWT ngắn hạn
-được ký số; AWS STS xác thực chữ ký này và tạm thời cấp quyền cho job deploy.
+AWS IAM nhằm loại bỏ hoàn toàn các access key dài hạn tĩnh.
 
-Quyền `id-token: write` chỉ được mở duy nhất ở job `promote-production`:
+Cần hiểu đúng ranh giới của các cơ chế phân quyền trong cấu hình này:
 
-~~~yaml
-  promote-production:
-    needs: build-artifact
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-      id-token: write
-~~~
-
-Trong Terraform, quan hệ tin cậy được khóa chặt bằng claim `sub`:
+1. **Khóa chặt claim `sub`:** Trust policy bắt buộc claim `sub` phải khớp chính
+   xác `repo:Minhlike/Golang:environment:production`. Bất kỳ workflow nào chạy
+   từ repo fork hoặc branch khác đều bị AWS STS từ chối cấp token.
+2. **Hiểu đúng về Wildcard trong AWS IAM:** Ký tự đại diện `*` trong
+   `Resource = ["*"]` **chỉ được chấp nhận duy nhất** cho hành động
+   `ecr:GetAuthorizationToken`. Đây là đặc thù bắt buộc của AWS IAM vì service
+   này không hỗ trợ phân quyền ở cấp độ tài nguyên cho token xác thực ban đầu.
+   Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`)
+   đều bắt buộc phải khóa chặt vào Account ID cụ thể lấy từ
+   `data.aws_caller_identity.current.account_id` và tên repository cụ thể.
+3. **Tên ECR Repository tuân thủ chuẩn:** Biến `ecr_repository_name` được tách
+   riêng và áp dụng validation bắt buộc viết thường (`^[a-z0-9][a-z0-9-_/]*$`),
+   tránh xung đột với quy tắc đặt tên viết hoa của GitHub repository.
 
 ~~~hcl
 # Trích đoạn từ terraform/main.tf
+data "aws_caller_identity" "current" {}
+
 condition {
   test     = "StringEquals"
   variable = "token.actions.githubusercontent.com:sub"
@@ -283,28 +319,28 @@ condition {
 }
 ~~~
 
-Ranh giới này có ý nghĩa sống còn: ngay cả khi ai đó fork repository của anh
-hoặc chạy workflow từ một pull request cá nhân, token do GitHub cấp phát sẽ mang
-claim `sub` của repo fork đó, và AWS STS sẽ từ chối cấp quyền ngay lập tức.
-Quyền IAM đính kèm cũng được giới hạn hẹp (chỉ thao tác trên đúng ECR repo và
-service chỉ định), không sử dụng ký tự đại diện `*` cho các hành động nguy hiểm.
+Lưu ý: cấu hình Terraform này là tài liệu và mã nguồn kiểm tra cú pháp
+(reviewable code). Nó không chứng minh rằng role đã assume thành công, không
+chứng minh tài nguyên ECR/App Runner thực tế tồn tại, và không chứng minh lệnh
+deploy đã hoàn tất. Máy hiện tại không cài `terraform` hay `aws`; ta giữ
+blocker này rõ ràng, không tự cài và không tạo tài nguyên cloud thật.
 
-Lưu ý: cấu hình Terraform này được thiết kế ở dạng reviewable (để đọc, phân tích
-và kiểm tra cú pháp). Ta không tự ý chạy `terraform apply` hay tạo tài nguyên
-thật trên cloud khi chưa có sự phê duyệt cụ thể.
+@table Bảy tầng bằng chứng trong quy trình delivery có trách nhiệm
 
-@table Bốn chốt chặn bảo mật trong pipeline delivery
-
-| Chốt chặn | Cơ chế thực thi | Mối đe dọa ngăn chặn | Điều chưa giải quyết |
+| Tầng bằng chứng | Bản chất kỹ thuật | Trách nhiệm kiểm chứng | Giới hạn không được suy diễn |
 | --- | --- | --- | --- |
-| Pinned Action SHA | Ghim mã băm commit của Action trong YAML. | Tấn công đầu độc mã nguồn qua việc sửa tag release. | Bug tiềm ẩn bên trong chính Action đó. |
-| Test & Vet Gate | `go test`, `go vet`, `go test -race` bắt buộc. | Đưa code có race condition hoặc cú pháp lỗi ra xa hơn. | Logic nghiệp vụ chưa được viết test. |
-| Promotion Gate | CLI Go kiểm tra digest và revision hợp lệ. | Dùng `:latest`, thiếu bằng chứng provenance hoặc test trượt. | Chất lượng của môi trường production thật. |
-| Scoped OIDC Role | Khóa claim `sub` theo repo và environment. | Rò rỉ credential dài hạn hoặc tấn công từ repo fork. | Lỗi cấu hình bên trong cloud service. |
+| Source Revision | Git commit SHA. | Git commit graph. | Chưa chứng minh code biên dịch được. |
+| Verification | `go test`, `go vet`, `go test -race`. | Runner CI dependency graph. | Chỉ bao phủ các ca kiểm thử hiện có. |
+| Local Image ID | Config JSON hash (`.Id`). | Docker daemon cục bộ. | Không dùng làm định danh kéo ảnh từ xa. |
+| Manifest Digest | OCI Manifest Hash (`sha256:`). | Buildx metadata / Registry. | Chưa chứng minh container chạy đúng logic. |
+| Provenance | Build attestation metadata. | Verifier chuyên trách (Cosign/GH). | Thiếu verifier thì không được coi là verified. |
+| Promotion Gate | CLI Go kiểm tra fail-closed. | Admission policy. | Không thay thế được môi trường production thật. |
+| Deployment | Cập nhật desired state cụm. | Orchestrator controller. | Replica Available không bảo đảm business SLO. |
 
-**Dừng để dự đoán.** Nếu một lập trình viên tạo branch mới và cấu hình workflow
-deploy lên môi trường staging, job đó có thể tự ý đóng vai role production ở AWS
-không? Tại sao claim `sub` lại bảo vệ được hệ thống trong tình huống này?
+**Dừng để dự đoán.** Nếu một pipeline CI tự động gán cờ `--provenance-verified=true`
+mà không chạy bất kỳ lệnh xác thực chữ ký nào, điều gì sẽ xảy ra nếu một kẻ tấn
+công thay thế image trong registry bằng một image độc hại có cùng tag? Tại sao
+đây lại được gọi là "evidence theater"?
 
 ## Điểm dừng: evidence không thay thế trách nhiệm
 

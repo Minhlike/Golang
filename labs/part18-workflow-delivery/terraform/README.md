@@ -1,43 +1,44 @@
-# AWS OIDC + Terraform Bridge (Dry-run & Reviewable)
+# AWS OIDC + Terraform Bridge (Dry-run & Reviewable Specimen)
 
 Mục này cung cấp cấu hình Terraform minh họa cách thiết lập quan hệ tin cậy
 (federated trust relationship) giữa GitHub Actions và AWS IAM mà **không cần lưu
 trữ access key dài hạn**.
 
-## Ranh giới bảo đảm an toàn
+## Ranh giới bảo đảm an toàn và phạm vi kỹ thuật
 
-- **Tài liệu và code kiểm tra (Reviewable):** Đây là mã nguồn nhằm nghiên cứu và
-  đánh giá kiến trúc phân quyền.
-- **Không tự ý tạo tài nguyên thật:** Không chạy `terraform apply` trên bất kỳ
-  tài khoản cloud nào khi chưa có sự phê duyệt rõ ràng từ người dùng.
-- **Không chi phí:** Mã nguồn hoàn toàn phi trạng thái (stateless) và không phát
-  sinh phí dịch vụ.
+- **Mã nguồn kiểm tra và học tập (Reviewable Code):** Đây là tài liệu thiết kế và
+  code mẫu nhằm đánh giá kiến trúc phân quyền.
+- **Không tự ý tạo tài nguyên thật:** Tuyệt đối không chạy `terraform apply` trên
+  bất kỳ tài khoản cloud nào khi chưa có sự phê duyệt rõ ràng từ người dùng.
+- **Ranh giới công cụ thực tế:** Môi trường hiện tại không có `terraform` hay `aws`.
+  Vì vậy, cấu hình này không chứng minh rằng IAM role đã được assume thành công,
+  không chứng minh ECR hay App Runner resource thực tế tồn tại, và không chứng minh
+  rằng lệnh deploy đã hoàn tất. Lệnh `terraform validate` chỉ có thể coi là đã pass
+  nếu máy có cài Terraform CLI và lệnh đã chạy thật.
 
-## Ba lớp bảo vệ trong thiết kế
+## Các chốt chặn an toàn trong thiết kế
 
-1. **OIDC Provider (`aws_iam_openid_connect_provider`):**
-   AWS xác thực chữ ký của JSON Web Token (JWT) do chính hạ tầng GitHub cấp phát
-   thông qua cặp khóa công khai của `token.actions.githubusercontent.com`.
-
-2. **Khóa chặt claim `sub` trong Trust Policy:**
-   Một lỗi phổ biến là cho phép bất kỳ repository nào của GitHub assume role. Cấu
-   hình này khóa chặt điều kiện:
+1. **Khóa chặt claim `sub` trong Trust Policy:**
+   Cấu hình này khóa chặt điều kiện:
    ```json
    "token.actions.githubusercontent.com:sub": "repo:Minhlike/Golang:environment:production"
    ```
-   Điều này có nghĩa: ngay cả khi kẻ tấn công fork repository hoặc chạy workflow
-   từ branch feature cá nhân, họ vẫn không thể đóng vai role deploy này vì claim
-   `sub` sẽ khác giá trị mong đợi.
+   Ngay cả khi kẻ tấn công fork repository hoặc chạy workflow từ branch cá nhân,
+   họ không thể assume role deploy này vì claim `sub` của repo fork sẽ không khớp.
 
-3. **Đặc quyền tối thiểu (Least Privilege):**
-   Role này không có quyền Administrator. Quyền ECR chỉ giới hạn trong repository
-   chỉ định; quyền deploy chỉ được phép gọi trên đúng service chỉ định.
+2. **Làm rõ việc sử dụng Wildcard `*` trong IAM:**
+   Ký tự `*` trong `Resource = ["*"]` **chỉ được sử dụng duy nhất** cho hành động
+   `ecr:GetAuthorizationToken`. Đây là yêu cầu bắt buộc của chính AWS IAM vì action
+   này không hỗ trợ phân quyền ở cấp độ tài nguyên (resource-level scoping).
+   Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`, ...)
+   đều được khóa chặt vào Account ID và tên tài nguyên cụ thể.
 
-## Cách xem xét và kiểm tra cú pháp (nếu có terraform CLI)
+3. **Khóa Account ID động:**
+   Không dùng wildcard `*` hay hard-code Account ID trong ARN tài nguyên; cấu hình
+   dùng `data.aws_caller_identity.current.account_id` để lấy đúng Account ID của môi
+   trường thực thi.
 
-```powershell
-terraform fmt -check
-terraform validate
-# Chỉ chạy dry-run plan nếu có backend/credential thử nghiệm hợp lệ:
-# terraform plan
-```
+4. **Tên ECR Repository tuân thủ chuẩn:**
+   Tách riêng biến `ecr_repository_name` với quy tắc validation bắt buộc viết thường
+   (`^[a-z0-9][a-z0-9-_/]*$`), tránh lỗi không tương thích giữa tên GitHub repo viết
+   hoa và quy tắc đặt tên của AWS ECR.

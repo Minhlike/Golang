@@ -36,7 +36,7 @@ func TestCLIEvaluation(t *testing.T) {
 		}
 	})
 
-	t.Run("rejected", func(t *testing.T) {
+	t.Run("rejected_tests_failed", func(t *testing.T) {
 		cmd := exec.Command(goBin, "run", ".",
 			"--digest", validDigest,
 			"--revision", "abc1234",
@@ -50,8 +50,27 @@ func TestCLIEvaluation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected non-zero exit for rejected candidate")
 		}
-		if !strings.Contains(stderr.String(), "promotion rejected") {
-			t.Fatalf("expected rejection reason in stderr, got: %s", stderr.String())
+		if !strings.Contains(stderr.String(), "promotion rejected: tests not passed") {
+			t.Fatalf("expected tests rejection reason in stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("rejected_missing_provenance", func(t *testing.T) {
+		cmd := exec.Command(goBin, "run", ".",
+			"--digest", validDigest,
+			"--revision", "abc1234",
+			"--tests-passed=true",
+			"--provenance-verified=false",
+		)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err == nil {
+			t.Fatal("expected non-zero exit for missing provenance")
+		}
+		if !strings.Contains(stderr.String(), "promotion rejected: provenance not verified") {
+			t.Fatalf("expected provenance rejection reason in stderr, got: %s", stderr.String())
 		}
 	})
 
