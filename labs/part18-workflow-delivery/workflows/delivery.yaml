@@ -87,15 +87,27 @@ jobs:
             --load \
             labs/part16-real-signals
 
-          # Khi push registry thật, Buildx ghi nhận OCI manifest digest trong containerimage.digest
+          # Khi push registry thật hoặc export OCI layout, Buildx ghi nhận OCI manifest digest trong containerimage.digest
           MANIFEST_DIGEST=$(jq -r '."containerimage.digest" // empty' build-metadata.json 2>/dev/null || true)
+
+          # Phân biệt ranh giới kỹ thuật:
+          # - Local Image ID (.Id từ docker inspect): mã băm config JSON của daemon cục bộ.
+          # - OCI Manifest Digest: mã băm nội dung của OCI manifest (bao gồm layer descriptors).
+          # Nếu không push lên OCI registry (hoặc export OCI archive), daemon local KHÔNG CÓ
+          # manifest digest thật. Tuyệt đối không fallback vào chuỗi bịa đặt hay config ID.
           if [ -z "$MANIFEST_DIGEST" ]; then
-            # Trong môi trường local daemon chưa push registry:
-            CONFIG_ID=$(docker inspect --format='{{.Id}}' probe-api:build-${{ steps.vars.outputs.sha }})
-            echo "Local Image ID: $CONFIG_ID"
-            # Định danh manifest digest mẫu hợp lệ cho bước gate reviewable:
-            MANIFEST_DIGEST="sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+            echo "::error::Khong tim thay OCI manifest digest hop le tu build metadata." >&2
+            echo "Luu y: Image ID tu daemon cuc bo khong phai OCI manifest digest." >&2
+            echo "Can push len OCI registry de co manifest digest dung chuan truoc khi gate/deploy." >&2
+            exit 1
           fi
+
+          # Kiem tra dinh dang sha256:64hex hop le
+          if ! echo "$MANIFEST_DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$'; then
+            echo "::error::Manifest digest khong dung dinh dang sha256 (64 hex): $MANIFEST_DIGEST" >&2
+            exit 1
+          fi
+
           echo "digest=$MANIFEST_DIGEST" >> "$GITHUB_OUTPUT"
           echo "Artifact Manifest Digest: $MANIFEST_DIGEST for revision ${{ steps.vars.outputs.sha }}"
 
@@ -125,12 +137,13 @@ jobs:
           # tests-passed=true được suy ra hợp lệ từ dependency graph (job verify đã pass).
           # provenance-verified=false vì chưa có bước ký số / xác thực attestation chuyên trách.
           # Tuyệt đối không hard-code "true" (chống evidence theater).
-          # Gate sẽ từ chối candidate theo đúng nguyên tắc fail-closed:
+          # Gate sẽ từ chối candidate theo đúng nguyên tắc fail-closed và exit 1.
+          # Bỏ hoàn toàn || echo hay swallow error: job PHẢI DỪNG NGAY VỚI EXIT CODE KHÁC 0.
           go run ./labs/part18-workflow-delivery/cmd/promote-gate \
             --digest "${{ needs.build-artifact.outputs.image_digest }}" \
             --revision "${{ needs.build-artifact.outputs.source_revision }}" \
             --tests-passed=true \
-            --provenance-verified=false || echo "Gate đã từ chối theo nguyên tắc fail-closed: thiếu bằng chứng provenance."
+            --provenance-verified=false
 
       # Minh họa bước đổi OIDC token lấy quyền IAM tạm thời (không dùng long-lived secret)
       # - name: Assume AWS Role via OIDC
@@ -139,9 +152,12 @@ jobs:
       #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy-production
       #     aws-region: ap-southeast-1
 
-      - name: Deploy Desired State by Digest
-        run: |
-          echo "Promoting immutable artifact to production:"
-          echo "Image Digest: ${{ needs.build-artifact.outputs.image_digest }}"
-          echo "Revision: ${{ needs.build-artifact.outputs.source_revision }}"
-          # Tuyệt đối không dùng :latest hoặc branch tag để deploy production
+      # Bước deploy chỉ tồn tại dưới dạng tài liệu mô tả (documented / commented).
+      # Khi gate từ chối (exit code 1 ở trên), GitHub Actions dừng ngay lập tức và
+      # tuyệt đối KHÔNG CÓ BẤT KỲ LỆNH DEPLOY NÀO ĐƯỢC THỰC THI.
+      # - name: Deploy Desired State by Digest
+      #   run: |
+      #     echo "Promoting immutable artifact to production:"
+      #     echo "Image Digest: ${{ needs.build-artifact.outputs.image_digest }}"
+      #     echo "Revision: ${{ needs.build-artifact.outputs.source_revision }}"
+      #     # Tuyệt đối không dùng :latest hoặc branch tag để deploy production

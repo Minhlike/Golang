@@ -21,19 +21,24 @@ Toàn bộ các lỗi kỹ thuật phát hiện ở checkpoint trước đã đ�
      Không tuyên bố đây là pipeline đã chạy trên cloud.
 
 3. **Phân biệt ranh giới Artifact Identity (Image ID vs Manifest Digest):**
-   - Đã loại bỏ việc fallback từ `RepoDigests` sang `docker inspect .Id` rồi gọi bừa
-     đó là digest.
+   - Đã loại bỏ hoàn toàn việc fallback sang digest giả lập hay lấy bừa `docker inspect .Id`.
    - Làm rõ sự khác nhau giữa Local Image Config ID (`.Id` trong Docker daemon) và
      OCI Image Manifest Digest (`sha256:...` đại diện cho toàn bộ manifest và layer
      descriptors, được Buildx xuất ra qua `--metadata-file` hoặc khi push registry).
-     Promotion gate và Kubernetes deployment bắt buộc dùng Manifest Digest.
+   - Workflow specimen `delivery.yaml` bắt buộc trích xuất `containerimage.digest`,
+     kiểm tra định dạng regex `^sha256:[0-9a-f]{64}$`, và fail ngay (exit 1) nếu thiếu
+     digest thật thay vì bịa đặt bằng chứng.
+   - Promotion gate và Kubernetes deployment bắt buộc dùng Manifest Digest thật.
 
-4. **Loại bỏ Evidence Theater (Provenance Fail-Closed):**
+4. **Loại bỏ Evidence Theater (Provenance Fail-Closed Thực Sự):**
    - `tests-passed=true` được suy ra hợp lệ từ đồ thị phụ thuộc (`needs: verify`).
    - `provenance-verified` được đặt là `false` vì stage này chưa có bước xác thực
      chữ ký số/attestation chuyên trách (như Cosign hay GitHub Attestations).
    - Tuyệt đối không hard-code `true`. Promotion gate từ chối ứng viên đúng theo
-     nguyên tắc fail-closed: `promotion rejected: provenance not verified`.
+     nguyên tắc fail-closed: `promotion rejected: provenance not verified` và thoát với exit 1.
+   - Loại bỏ hoàn toàn `|| echo ...` hay các cơ chế nuốt lỗi trong workflow specimen:
+     khi gate từ chối, job dừng ngay lập tức và bước deploy (được chuyển sang dạng comment/tài liệu)
+     chứng minh không có bất kỳ lệnh phát hành nào được thực thi khi thiếu provenance.
 
 5. **Làm rõ việc sử dụng Wildcard `*` trong AWS IAM:**
    - Khẳng định chính xác: wildcard `*` trong `Resource = ["*"]` **chỉ được chấp nhận

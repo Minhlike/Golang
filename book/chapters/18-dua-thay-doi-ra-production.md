@@ -286,6 +286,8 @@ go run ./cmd/promote-gate `
 Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo:
 `invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2.
 
+Đặc biệt, trong pipeline CI, khi `promote-gate` trả về mã lỗi (khác 0) do thiếu provenance hoặc trượt test, job quảng bá phải dừng ngay lập tức. Mọi cơ chế nuốt lỗi (như `|| echo` hay `continue-on-error`) để bước deploy tiếp tục chạy đều là "evidence theater": dựng gate cho có nhưng vẫn âm thầm phát hành code không kiểm chứng. Candidate bị gate từ chối đồng nghĩa với việc không có bất kỳ lệnh deploy nào được phép kích hoạt.
+
 ### Cầu nối AWS OIDC và Terraform: phân quyền tối thiểu thực chất
 
 Mục `labs/part18-workflow-delivery/terraform/` cung cấp một cấu hình Terraform

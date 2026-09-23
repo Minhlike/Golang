@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opsprobe-config
+  namespace: default
+  labels:
+    app.kubernetes.io/name: opsprobe
+data:
+  default_concurrency: "4"
+  default_timeout: "3s"
+  max_active_runs: "10"
+  log_level: "info"
