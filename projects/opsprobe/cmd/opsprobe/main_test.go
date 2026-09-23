@@ -47,3 +47,22 @@ func TestRun_InvalidFlags(t *testing.T) {
 		t.Fatalf("expected error on invalid flag, got nil")
 	}
 }
+
+func TestRun_OneshotURL_WithTraceStdout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	args := []string{
+		"--oneshot-url=" + srv.URL,
+		"--timeout=1s",
+		"--log-level=error",
+		"--trace-stdout=true",
+	}
+
+	if err := run(args); err != nil {
+		t.Fatalf("expected run with trace-stdout to succeed, got %v", err)
+	}
+}

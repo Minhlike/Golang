@@ -8,8 +8,12 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Outcome đại diện cho kết quả phân loại vận hành của một lần probe.
@@ -22,7 +26,7 @@ const (
 	OutcomeCancel  Outcome = "cancel"
 )
 
-// Target khai báo một endpoint cần kiểm tra.
+// Target khai báo một endpoint cần kiểm tra với các ràng buộc bảo mật.
 type Target struct {
 	ID             string        `json:"id"`
 	URL            string        `json:"url"`
@@ -33,13 +37,21 @@ type Target struct {
 
 // Result lưu trữ kết quả và telemetry của một lần probe hoàn tất.
 type Result struct {
-	TargetID   string        `json:"target_id"`
-	URL        string        `json:"url"`
-	StatusCode int           `json:"status_code"`
-	Duration   time.Duration `json:"duration_ms"`
-	Outcome    Outcome       `json:"outcome"`
-	Error      string        `json:"error,omitempty"`
-	Timestamp  time.Time     `json:"timestamp"`
+	TargetID       string    `json:"target_id"`
+	URL            string    `json:"url"`
+	StatusCode     int       `json:"status_code"`
+	DurationNs     int64     `json:"duration_ns"`
+	DurationMs     float64   `json:"duration_ms"`
+	Outcome        Outcome   `json:"outcome"`
+	ReusedEligible bool      `json:"reused_eligible"`
+	Error          string    `json:"error,omitempty"`
+	Timestamp      time.Time `json:"timestamp"`
+}
+
+// WorkerObserver nhận thông báo khi một worker thực sự bắt đầu và kết thúc probe.
+type WorkerObserver interface {
+	WorkerStarted()
+	WorkerStopped()
 }
 
 // Pool thực thi các lượt probe với số lượng worker bị chặn (bounded concurrency).
@@ -47,6 +59,8 @@ type Pool struct {
 	client         *http.Client
 	concurrency    int
 	defaultTimeout time.Duration
+	observer       WorkerObserver
+	tracer         trace.Tracer
 }
 
 // PoolOption cho phép cấu hình tham số khởi tạo Pool.
@@ -79,6 +93,20 @@ func WithDefaultTimeout(d time.Duration) PoolOption {
 	}
 }
 
+// WithWorkerObserver đăng ký hook theo dõi số worker thực sự đang chạy.
+func WithWorkerObserver(obs WorkerObserver) PoolOption {
+	return func(p *Pool) {
+		p.observer = obs
+	}
+}
+
+// WithTracer gắn OpenTelemetry tracer để tạo child span cho từng probe.
+func WithTracer(tr trace.Tracer) PoolOption {
+	return func(p *Pool) {
+		p.tracer = tr
+	}
+}
+
 // NewPool khởi tạo một Pool với HTTP client tái sử dụng connection pool.
 func NewPool(opts ...PoolOption) *Pool {
 	transport := &http.Transport{
@@ -98,6 +126,10 @@ func NewPool(opts ...PoolOption) *Pool {
 	p := &Pool{
 		client: &http.Client{
 			Transport: transport,
+			// Chính sách redirect tường minh: Không tự động chuyển hướng ngầm để tránh SSRF và credential leakage
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
 		},
 		concurrency:    4,
 		defaultTimeout: 3 * time.Second,
@@ -110,12 +142,12 @@ func NewPool(opts ...PoolOption) *Pool {
 	return p
 }
 
-// ValidateTarget kiểm tra cấu trúc của Target trước khi thực thi.
+// ValidateTarget kiểm tra chặt chẽ cấu trúc và chính sách bảo mật của Target.
 func ValidateTarget(t Target) error {
-	if t.ID == "" {
+	if strings.TrimSpace(t.ID) == "" {
 		return errors.New("target id must not be empty")
 	}
-	if t.URL == "" {
+	if strings.TrimSpace(t.URL) == "" {
 		return errors.New("target url must not be empty")
 	}
 	parsed, err := url.ParseRequestURI(t.URL)
@@ -128,7 +160,53 @@ func ValidateTarget(t Target) error {
 	if parsed.Host == "" {
 		return errors.New("target url host must not be empty")
 	}
+	// Chặn credential/userinfo trong URL để phòng ngừa SSRF và rò rỉ secret
+	if parsed.User != nil {
+		return errors.New("target url must not contain userinfo/credentials")
+	}
+
+	// Chỉ cho phép GET hoặc HEAD cho diagnostic probe
+	if t.Method != "" {
+		upperMethod := strings.ToUpper(strings.TrimSpace(t.Method))
+		if upperMethod != http.MethodGet && upperMethod != http.MethodHead {
+			return fmt.Errorf("unsupported method %q: only GET and HEAD allowed", t.Method)
+		}
+	}
+
+	// Timeout giới hạn an toàn
+	if t.Timeout < 0 || t.Timeout > 60*time.Second {
+		return fmt.Errorf("timeout %s out of range: must be between 0 and 60s", t.Timeout)
+	}
+
+	// ExpectedStatus nếu được gán phải nằm trong dải mã HTTP chuẩn
+	if t.ExpectedStatus != 0 && (t.ExpectedStatus < 100 || t.ExpectedStatus > 599) {
+		return fmt.Errorf("invalid expected status %d: must be 100..599", t.ExpectedStatus)
+	}
+
 	return nil
+}
+
+// MaxDrainBytes là giới hạn tối đa số byte body được đọc để thử tái sử dụng TCP connection.
+const MaxDrainBytes = 16384 // 16 KiB
+
+// drainResponseBody đóng body và kiểm tra xem toàn bộ response đã được đọc cạn đến EOF chưa.
+// Trả về true nếu và chỉ nếu toàn bộ dữ liệu đã được tiêu thụ mà không vượt quá maxBytes.
+func drainResponseBody(body io.ReadCloser, maxBytes int64) (bool, error) {
+	defer body.Close()
+	if body == nil || maxBytes <= 0 {
+		return false, nil
+	}
+
+	// Giới hạn đọc maxBytes + 1 byte
+	lr := &io.LimitedReader{R: body, N: maxBytes + 1}
+	_, err := io.Copy(io.Discard, lr)
+	if err != nil {
+		return false, err
+	}
+
+	// Nếu lr.N > 0, chứng tỏ body đã trả về EOF trước khi chạm trần maxBytes + 1
+	drainedToEOF := lr.N > 0
+	return drainedToEOF, nil
 }
 
 // ProbeSingle thực hiện kiểm tra một target đơn lẻ với deadline và phân loại lỗi rõ ràng.
@@ -140,11 +218,31 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 		Timestamp: start,
 	}
 
-	// 1. Kiểm tra cấu trúc URL trước khi gửi request
+	// Tạo child span nếu có tracer
+	var span trace.Span
+	if p.tracer != nil {
+		ctx, span = p.tracer.Start(ctx, "opsprobe.probe",
+			trace.WithAttributes(
+				attribute.String("target.id", target.ID),
+				attribute.String("target.url", target.URL),
+			),
+		)
+		defer span.End()
+	}
+
+	// 1. Kiểm tra cấu trúc Target trước khi gửi request
 	if err := ValidateTarget(target); err != nil {
 		res.Outcome = OutcomeFailure
 		res.Error = err.Error()
-		res.Duration = time.Since(start)
+		duration := time.Since(start)
+		res.DurationNs = duration.Nanoseconds()
+		res.DurationMs = float64(duration.Microseconds()) / 1000.0
+		if span != nil {
+			span.SetAttributes(
+				attribute.String("outcome", string(res.Outcome)),
+				attribute.String("error", res.Error),
+			)
+		}
 		return res
 	}
 
@@ -159,51 +257,62 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 
 	method := http.MethodGet
 	if target.Method != "" {
-		method = target.Method
+		method = strings.ToUpper(strings.TrimSpace(target.Method))
 	}
 
 	req, err := http.NewRequestWithContext(probeCtx, method, target.URL, nil)
 	if err != nil {
 		res.Outcome = OutcomeFailure
 		res.Error = fmt.Sprintf("create request failed: %v", err)
-		res.Duration = time.Since(start)
+		duration := time.Since(start)
+		res.DurationNs = duration.Nanoseconds()
+		res.DurationMs = float64(duration.Microseconds()) / 1000.0
+		if span != nil {
+			span.SetAttributes(
+				attribute.String("outcome", string(res.Outcome)),
+				attribute.String("error", res.Error),
+			)
+		}
 		return res
 	}
 
 	// 3. Thực thi HTTP request
 	resp, err := p.client.Do(req)
 	duration := time.Since(start)
-	res.Duration = duration
+	res.DurationNs = duration.Nanoseconds()
+	res.DurationMs = float64(duration.Microseconds()) / 1000.0
 
 	if err != nil {
 		// Phân loại nguyên nhân failure theo contract context & network
 		if errors.Is(probeCtx.Err(), context.DeadlineExceeded) {
 			res.Outcome = OutcomeTimeout
 			res.Error = "probe deadline exceeded"
-			return res
-		}
-		if errors.Is(ctx.Err(), context.Canceled) || errors.Is(probeCtx.Err(), context.Canceled) {
+		} else if errors.Is(ctx.Err(), context.Canceled) || errors.Is(probeCtx.Err(), context.Canceled) {
 			res.Outcome = OutcomeCancel
 			res.Error = "probe context canceled"
-			return res
+		} else {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				res.Outcome = OutcomeTimeout
+				res.Error = fmt.Sprintf("network timeout: %v", err)
+			} else {
+				res.Outcome = OutcomeFailure
+				res.Error = err.Error()
+			}
 		}
 
-		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
-			res.Outcome = OutcomeTimeout
-			res.Error = fmt.Sprintf("network timeout: %v", err)
-			return res
+		if span != nil {
+			span.SetAttributes(
+				attribute.String("outcome", string(res.Outcome)),
+				attribute.String("error", res.Error),
+			)
 		}
-
-		res.Outcome = OutcomeFailure
-		res.Error = err.Error()
 		return res
 	}
 
-	// 4. Giải phóng và đọc cạn body để connection pool của Transport được tái sử dụng
-	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 8192))
-
+	// 4. Giải phóng và kiểm tra khả năng tái sử dụng kết nối có giới hạn
+	drainedToEOF, _ := drainResponseBody(resp.Body, MaxDrainBytes)
+	res.ReusedEligible = drainedToEOF
 	res.StatusCode = resp.StatusCode
 
 	// 5. Đánh giá trạng thái thành công/thất bại theo status code
@@ -222,6 +331,17 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 		} else {
 			res.Outcome = OutcomeFailure
 			res.Error = fmt.Sprintf("http status failure: code %d", resp.StatusCode)
+		}
+	}
+
+	if span != nil {
+		span.SetAttributes(
+			attribute.String("outcome", string(res.Outcome)),
+			attribute.Int("http.status_code", res.StatusCode),
+			attribute.Bool("reused_eligible", res.ReusedEligible),
+		)
+		if res.Error != "" {
+			span.SetAttributes(attribute.String("error", res.Error))
 		}
 	}
 
@@ -270,7 +390,13 @@ func (p *Pool) Execute(ctx context.Context, targets []Target) []Result {
 					continue
 				}
 
+				if p.observer != nil {
+					p.observer.WorkerStarted()
+				}
 				results[j.index] = p.ProbeSingle(ctx, j.target)
+				if p.observer != nil {
+					p.observer.WorkerStopped()
+				}
 			}
 		}()
 	}

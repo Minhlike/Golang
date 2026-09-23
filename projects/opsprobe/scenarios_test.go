@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -89,9 +90,14 @@ func TestFailureInjections(t *testing.T) {
 		// Chiếm slot duy nhất
 		apiRunPayload := []byte(`{"targets":[{"id":"t1","url":"http://127.0.0.1:1"}]}`)
 
-		// Tạo một kênh đồng bộ để giữ một run đang chạy
+		// Kênh đồng bộ xác nhận run 1 đã bắt đầu gửi request
 		holdCh := make(chan struct{})
+		reqStarted := make(chan struct{})
+		var once sync.Once
 		slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			once.Do(func() {
+				close(reqStarted)
+			})
 			select {
 			case <-holdCh:
 				w.WriteHeader(http.StatusOK)
@@ -119,7 +125,7 @@ func TestFailureInjections(t *testing.T) {
 			handler.ServeHTTP(rec, req)
 		}()
 
-		time.Sleep(20 * time.Millisecond) // Chờ run 1 chiếm semaphore
+		<-reqStarted // Chờ chắn chắn run 1 đã chiếm semaphore và đang thực thi trong slowSrv
 
 		// Run 2 gửi vào ngay lập tức -> phải bị từ chối với 429
 		rec2 := httptest.NewRecorder()
@@ -143,7 +149,8 @@ func TestFailureInjections(t *testing.T) {
 
 		run := store.RunRecord{
 			ID:           "run-tx-fail",
-			CreatedAt:    time.Now(),
+			StartedAt:    time.Now(),
+			CompletedAt:  time.Now(),
 			TargetCount:  2,
 			SuccessCount: 2,
 			FailureCount: 0,
@@ -169,7 +176,12 @@ func TestFailureInjections(t *testing.T) {
 	// Kịch bản 6: Mid-run cancellation
 	t.Run("Scenario6_MidRun_Cancellation", func(t *testing.T) {
 		blockCh := make(chan struct{})
+		srvStarted := make(chan struct{})
+		var srvOnce sync.Once
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srvOnce.Do(func() {
+				close(srvStarted)
+			})
 			select {
 			case <-blockCh:
 				w.WriteHeader(http.StatusOK)
@@ -196,8 +208,8 @@ func TestFailureInjections(t *testing.T) {
 		}
 
 		go func() {
-			time.Sleep(20 * time.Millisecond)
-			cancel() // Hủy ngang giữa chừng
+			<-srvStarted // Đợi ít nhất 1 worker chạm vào server trước khi hủy context
+			cancel()     // Hủy ngang giữa chừng
 		}()
 
 		results := p.Execute(ctx, targets)

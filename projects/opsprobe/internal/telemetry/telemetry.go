@@ -168,6 +168,16 @@ func (t *Telemetry) StartSpan(ctx context.Context, name string, attrs ...attribu
 	return ctx, span
 }
 
+// WorkerStarted tăng số lượng worker đang thực sự execute probe.
+func (t *Telemetry) WorkerStarted() {
+	t.ActiveWorkers.Inc()
+}
+
+// WorkerStopped giảm số lượng worker khi probe hoàn tất.
+func (t *Telemetry) WorkerStopped() {
+	t.ActiveWorkers.Dec()
+}
+
 // Shutdown đóng tracer provider và flush trace dữ liệu.
 func (t *Telemetry) Shutdown(ctx context.Context) error {
 	if t.TracerProvider != nil {

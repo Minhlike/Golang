@@ -7,12 +7,12 @@ metadata:
     app.kubernetes.io/name: opsprobe
     app.kubernetes.io/component: observer
 spec:
-  replicas: 2
+  # SQLite la embedded file-based database, khong ho tro multi-writer concurrent tu nhieu pod doc lap.
+  # Vi vay, deployment su dung replicas: 1 ket hop PersistentVolumeClaim (ReadWriteOnce).
+  # Neu can scale ngang (replicas > 1), can refactor store layer sang he quan tri C/S nhu PostgreSQL.
+  replicas: 1
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    type: Recreate # Recreate bao dam pod cu giai phong lock tren PVC truoc khi pod moi duoc mount
   selector:
     matchLabels:
       app.kubernetes.io/name: opsprobe
@@ -30,8 +30,9 @@ spec:
           type: RuntimeDefault
       containers:
         - name: opsprobe
-          # Sử dụng immutable manifest digest thay vì tag trôi nổi :latest
-          image: ghcr.io/minhlike/opsprobe@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          # Chu y: Trong production CI/CD, chuoi digest sha256 thuc te phai duoc pin sau khi build.
+          # Khong su dung fake digest. Khi review/deploy, thay the bang digest da verify.
+          image: ghcr.io/minhlike/opsprobe:v1.0.0 # REPLACE_WITH_VERIFIED_DIGEST_BEFORE_APPLY
           imagePullPolicy: IfNotPresent
           securityContext:
             readOnlyRootFilesystem: true
@@ -42,8 +43,27 @@ spec:
           args:
             - "--addr=:8080"
             - "--db=/data/opsprobe.db"
-            - "--concurrency=4"
-            - "--timeout=3s"
+          env:
+            - name: OPSPROBE_CONCURRENCY
+              valueFrom:
+                configMapKeyRef:
+                  name: opsprobe-config
+                  key: default_concurrency
+            - name: OPSPROBE_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: opsprobe-config
+                  key: default_timeout
+            - name: OPSPROBE_MAX_ACTIVE_RUNS
+              valueFrom:
+                configMapKeyRef:
+                  name: opsprobe-config
+                  key: max_active_runs
+            - name: OPSPROBE_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: opsprobe-config
+                  key: log_level
           ports:
             - name: http
               containerPort: 8080
@@ -76,4 +96,5 @@ spec:
               mountPath: /data
       volumes:
         - name: data-volume
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: opsprobe-data-pvc

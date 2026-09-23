@@ -1,111 +1,129 @@
-# Handoff — Milestone C (Capstone opsprobe & Đóng Sách Hoàn Tất)
+# Handoff — Milestone C (Capstone opsprobe Hardened & Hoàn Tất Toàn Bộ Dự Án)
 
-Tài liệu này bàn giao toàn bộ trạng thái sau khi hoàn tất **Milestone C: Capstone Project `projects/opsprobe/`** và 2 vi chỉnh kỹ thuật cuối cùng của Milestone B.
+Tài liệu này bàn giao toàn bộ trạng thái sau khi hoàn tất **Milestone C Capstone Hardening Pass** cho dự án `projects/opsprobe/`, Chương 20, và đường ống sách PDF.
 
-Toàn bộ công việc kế thừa `MASTER PROMPT.txt`, các chương từ 1 đến 20, toàn bộ `labs/`, và bản PDF hiện tại `Golang_Master.pdf` (220 trang). Giữ nguyên vẹn giọng văn tiếng Việt tự nhiên ("em" và "anh").
-
----
-
-## 1. Các hạng mục đã hoàn thành trong đợt làm việc
-
-### A. Đóng triệt để 2 lỗi kỹ thuật cuối của Milestone B
-
-1. **Xóa hoàn toàn Fake Manifest Digest Fallback:**
-   - Trong `labs/part18-workflow-delivery/workflows/delivery.yaml`, đã xóa sạch chuỗi digest giả lập `sha256:0123456789abcdef...`.
-   - Workflow trích xuất `containerimage.digest` từ metadata JSON của Buildx, kiểm tra định dạng regex `^sha256:[0-9a-f]{64}$`.
-   - Nếu không có digest hợp lệ, workflow dừng ngay lập tức với exit code 1, không fallback vào Image ID của daemon cục bộ hay bất kỳ chuỗi giả mạo nào.
-
-2. **Thực thi Fail-Closed Thực Sự trong Workflow Specimen:**
-   - Trong job `promote-production`, loại bỏ hoàn toàn `|| echo ...` và mọi cơ chế swallow error. Khi `--provenance-verified=false`, `promote-gate` trả về mã lỗi 1 và job dừng ngay lập tức.
-   - Bước deploy được chuyển sang dạng tài liệu mô tả (commented/documented), khẳng định nguyên tắc: ứng viên bị gate từ chối thì tuyệt đối không có bất kỳ lệnh deploy nào được thực thi.
-   - Cập nhật Chương 18 và `HANDOFF_MILESTONE_B.md` đồng bộ 100% với failure model này.
-
-### B. Hoàn thành Milestone C: Capstone Project (`projects/opsprobe/`)
-
-Xây dựng trọn vẹn hệ thống `opsprobe` theo đúng các nguyên tắc kỹ thuật chuẩn mực:
-
-1. **Gói Domain & Worker Pool (`internal/probe/`):**
-   - Phân loại kết quả rõ ràng: `OutcomeSuccess`, `OutcomeFailure`, `OutcomeTimeout`, `OutcomeCancel`.
-   - Worker pool với số lượng goroutine bị chặn (`--concurrency`), ngăn chặn bão goroutine.
-   - Gán `context.WithTimeout` riêng cho từng target, phân biệt giữa timeout mạng và hủy ngang của tiến trình.
-   - Đọc cạn dữ liệu thừa qua `io.Copy(io.Discard, ...)` trước khi `resp.Body.Close()`, bảo đảm kết nối TCP được tái sử dụng qua `http.Transport` connection pool.
-
-2. **Gói Lưu trữ Nguyên tử (`internal/store/`):**
-   - Cài đặt SQLite thuần Go qua `modernc.org/sqlite` và `database/sql` (zero CGO dependency).
-   - Thiết lập pool an toàn cho SQLite đơn luồng ghi: `SetMaxOpenConns(1)`.
-   - Ghi nhận `runs` và `probe_results` trong **một transaction nguyên tử duy nhất**. Kiểm chứng tính toàn vẹn: nếu lỗi hoặc hủy context giữa chừng, toàn bộ transaction được rollback sạch sẽ, không để lại bản ghi rác.
-
-3. **Gói Quan sát Hệ thống (`internal/telemetry/`):**
-   - Structured JSON logging qua thư viện chuẩn `log/slog`.
-   - Prometheus metrics cục bộ: `opsprobe_probes_total` (CounterVec theo outcome), `opsprobe_probe_duration_seconds` (HistogramVec), `opsprobe_active_workers` (Gauge), và `opsprobe_runs_total` (CounterVec). Khởi tạo trước các nhãn chuẩn để metric family luôn hiển thị khi scrape.
-   - OpenTelemetry spans gắn metadata phân tích đợt chạy và từng probe.
-
-4. **Gói HTTP API & Điều phối Vận hành (`internal/httpapi/`):**
-   - Go 1.22+ method-based pattern routing: `POST /runs`, `GET /runs/{id}`, `GET /readyz`, `GET /livez`, `GET /metrics`.
-   - Áp suất ngược (backpressure): sử dụng buffered channel semaphore để từ chối đợt chạy thứ `N+1` với mã `429 Too Many Requests` khi quá tải.
-   - Kiểm tra readiness thực thụ dựa trên kết nối SQLite (`store.Ping`).
-   - Middleware ghi log và phục hồi panic an toàn.
-
-5. **Gói Command & Vòng đời Vận hành (`cmd/opsprobe/`):**
-   - Chế độ CLI một lần duy nhất (`--oneshot-url`) in kết quả và trả exit code 0/1.
-   - Chế độ HTTP daemon với graceful shutdown: bắt `SIGINT`/`SIGTERM` qua `signal.NotifyContext`, đóng listener và chờ 10s để các request đang dở dang hoàn tất trước khi đóng database.
-
-6. **Kiểm thử 6 Kịch bản Sự cố Vận hành (`scenarios_test.go`):**
-   - Scenario 1: Target trả HTTP 5xx (`OutcomeFailure`).
-   - Scenario 2: Target timeout vượt quá deadline (`OutcomeTimeout`).
-   - Scenario 3: Target URL malformed (`OutcomeFailure`).
-   - Scenario 4: Áp suất ngược từ chối khi bão tải (`429 Too Many Requests`).
-   - Scenario 5: Transaction rollback bảo toàn trạng thái khi DB hủy context.
-   - Scenario 6: Mid-run cancellation khi tiến trình cha hủy ngang (`OutcomeCancel`).
-
-7. **Bài tập Chẩn đoán Sự cố Thực nghiệm (`incident/`):**
-   - Kịch bản: Bão cạn kiệt Socket TCP và Treo tầng ngầm do quên đóng response body.
-   - Bộ kiểm chứng `incident_test.go` với `net/http/httptrace`:
-     - `BuggyProbe`: 20 request tạo ra 20 kết nối mới (`NewConns=20, ReusedConns=0`).
-     - `FixedProbe`: 20 request chỉ tạo đúng 1 kết nối và tái sử dụng 19 lần (`NewConns=1, ReusedConns=19`).
-   - Tài liệu `incident/README.md` hướng dẫn điều tra qua 4 tầng bằng chứng và phần ĐÁP ÁN được giấu ở cuối trang.
-
-8. **Tài liệu Triển khai Mẫu (Reviewable Manifests trong `deploy/`):**
-   - `Dockerfile`: Multi-stage Distroless non-root (`gcr.io/distroless/static-debian12:nonroot`, UID 65532).
-   - Kubernetes: `deployment.yaml` (readOnlyRootFilesystem, liveness/readiness probes, volume `/data`), `service.yaml`, `configmap.yaml`.
-   - Terraform: `main.tf` với AWS OIDC IAM least privilege, khóa chặt claim `sub` và Account ID caller.
-   - **Ghi chú ranh giới:** Máy trạm hiện tại không có `docker`, `kubectl`, `terraform`, `aws`. Toàn bộ các artifact này là mã nguồn kiểm tra cú pháp và thiết kế, không tự ý cài đặt hay tạo tài nguyên đám mây.
-
-### C. Bản thảo Sách và Đường ống PDF
-
-- Biên soạn mới hoàn chỉnh **Chương 20: Dự án tổng kết: opsprobe từ mã nguồn đến vận hành** (`book/chapters/20-du-an-tong-ket-opsprobe.md`).
-- Cập nhật mục lục và bản đồ cuốn sách trong `book/README.md`.
-- Cập nhật `scripts/build_pdf.py` với cấu hình danh sách chương đầy đủ.
-- Biên dịch thành công PDF chính thức: **220 trang** `Golang_Master.pdf`.
-- Đã thực hiện Visual QA 100% bằng `pypdfium2` render toàn bộ các trang từ 211 đến 220 ở độ phân giải cao; toàn bộ bảng biểu, khối code và sơ đồ đều vừa vặn hoàn hảo trong lề trang.
+Toàn bộ công việc kế thừa `MASTER PROMPT.txt`, các chương từ 1 đến 20, toàn bộ `labs/`, và bản PDF chính thức `Golang_Master.pdf` (221 trang). Giữ nguyên vẹn giọng văn tiếng Việt tự nhiên ("em" và "anh").
 
 ---
 
-## 2. Báo cáo Kết quả Kiểm thử Toàn diện (QA)
+## 1. Chi tiết các hạng mục đã hoàn thành trong Capstone Hardening Pass
+
+### A. Tầng Domain & Resource Lifecycle (`internal/probe/`)
+
+1. **Chính sách Bounded Drain & Connection Reuse:**
+   - Thay thế ngộ nhận "đọc cạn" bằng chính sách đọc có kiểm soát: `io.LimitedReader{R: resp.Body, N: MaxDrainBytes + 1}` (`MaxDrainBytes = 16384` bytes / 16 KiB).
+   - Chỉ đánh dấu `ReusedEligible = true` khi luồng dữ liệu thực sự chạm `io.EOF` trong phạm vi 16 KiB (`lr.N > 0`).
+   - Body luôn được giải phóng an toàn qua `defer resp.Body.Close()`.
+   - Nếu body vượt quá 16 KiB, socket bị ngắt và đóng, chấp nhận hy sinh connection reuse để ưu tiên an toàn bộ nhớ trước các stream độc hại.
+
+2. **Ranh giới Bảo mật Target (Security Boundary):**
+   - Hàm `ValidateTarget` từ chối target chứa userinfo credentials (`user:pass@host`).
+   - Khóa chặt HTTP methods: chỉ chấp nhận `GET` và `HEAD`.
+   - Kiểm tra giới hạn timeout (tối đa 60s) và mã HTTP mong đợi (100–599).
+   - Thiết lập `CheckRedirect: http.ErrUseLastResponse` để ngăn chặn chuyển hướng tự động (SSRF pivot).
+
+3. **Chính xác hóa Ngữ nghĩa Thời gian (Time Semantics):**
+   - Kết quả `probe.Result` ghi nhận cả `DurationNs` (nano-giây) cho độ chính xác cao và `DurationMs` (mili-giây) phục vụ dashboard.
+
+### B. Tầng Đồng thời & Quan sát (`internal/telemetry/`, `internal/probe/`)
+
+4. **Đo lường Worker Thực Tế (Không Suy Đoán):**
+   - Thiết kế interface `WorkerObserver` (`WorkerStarted()`, `WorkerStopped()`) trong gói `probe`.
+   - `telemetry.Telemetry` cài đặt interface này để trực tiếp cập nhật gauge `opsprobe_active_workers` khi worker goroutine thực sự khởi chạy và kết thúc trong pool, thay vì gán giá trị danh nghĩa theo số lượng target.
+
+5. **OpenTelemetry Child Spans Chuẩn Mực:**
+   - `probe.Pool` tích hợp `WithTracer(tel.Tracer)`. Mỗi lần probe tạo một child span `"opsprobe.probe"` được gắn kết trực tiếp với parent run context.
+   - Thêm cờ `--trace-stdout` vào `cmd/opsprobe` phục vụ debug cục bộ.
+   - Bộ kiểm thử `TestPool_Execute_ChildSpans` xác thực khẳng định: `childSpan.Parent.SpanID() == parentSpan.SpanContext().SpanID()`.
+
+### C. Tầng Lưu trữ & Giao dịch Nguyên tử (`internal/store/`)
+
+6. **Bằng chứng Rollback Tất Định (Deterministic Transaction Rollback):**
+   - Schema SQLite bổ sung các ràng buộc toàn vẹn:
+     `CHECK (status_code >= 0)`,
+     `CHECK (status IN ('completed', 'failed', 'canceled'))`,
+     `CHECK (outcome IN ('success', 'failure', 'timeout', 'cancel'))`.
+   - Kiểm thử `TestStore_DeterministicRollbackAfterPartialMutation` cố tình truyền `status_code: -1` ở bản ghi thứ hai sau khi bản ghi cha đã chèn thành công. Transaction rollback toàn bộ; xác nhận `GetRun` trả `ErrNotFound` và số dòng trong cả hai bảng `runs` và `probe_results` bằng 0.
+
+7. **Phân định Thời điểm Run:**
+   - Struct `RunRecord` phân định rành mạch giữa `StartedAt` (bắt đầu thực thi) và `CompletedAt` (kết thúc toàn bộ worker), tránh nhầm lẫn giữa latency của một request với tổng thời gian xử lý cả lô.
+
+### D. Tầng HTTP API & Ranh giới Nhận diện (`internal/httpapi/`)
+
+8. **Ranh giới JSON Đầu Vào (HTTP JSON Boundary):**
+   - Giới hạn payload request tối đa 64 KiB qua `http.MaxBytesReader` (trả về `413 Request Entity Too Large` khi vượt ngưỡng).
+   - Kích hoạt `dec.DisallowUnknownFields()` để từ chối các trường lạ không thuộc contract.
+   - Kiểm tra `io.EOF` sau lượt decode đầu tiên để từ chối các chuỗi JSON nối đuôi (trailing / concatenated JSON).
+   - Kiểm tra trùng lặp `TargetID` và từ chối upfront với `400 Bad Request`.
+
+9. **Đồng bộ Hóa Tất Định Trong Test (`scenarios_test.go`):**
+   - Loại bỏ hoàn toàn các lệnh `time.Sleep` cảm tính trong `Scenario4_Backpressure_Rejection` và `Scenario6_MidRun_Cancellation`.
+   - Sử dụng barrier channel (`reqStarted`, `srvStarted`) để đồng bộ trạng thái chính xác 100%.
+
+### E. Tầng Triển khai Kubernetes & Cấu hình (`deploy/k8s/`, `cmd/opsprobe/`)
+
+10. **Số lượng Pod và Ranh giới Lưu trữ (Storage Boundary):**
+    - `deploy/k8s/deployment.yaml`: thiết lập `replicas: 1` kết hợp `strategy: Recreate` và `deploy/k8s/pvc.yaml` (`PersistentVolumeClaim`, `ReadWriteOnce`).
+    - Nêu rõ trong manifest: SQLite là file-based database cục bộ; việc mở rộng quy mô ngang (`replicas > 1`) đòi hỏi phải refactor tầng `store` sang hệ quản trị cơ sở dữ liệu client-server (PostgreSQL).
+
+11. **Xóa Fake Digest & Nạp Cấu hình Động:**
+    - Xóa hoàn toàn chuỗi fake digest; thay bằng placeholder có chỉ dẫn rõ ràng: `image: ghcr.io/minhlike/opsprobe:v1.0.0 # REPLACE_WITH_VERIFIED_DIGEST_BEFORE_APPLY`.
+    - `deployment.yaml` truyền các giá trị từ `configmap.yaml` vào biến môi trường (`OPSPROBE_*`).
+    - `cmd/opsprobe/main.go` hỗ trợ fallback từ biến môi trường (`OPSPROBE_ADDR`, `OPSPROBE_DB`, `OPSPROBE_CONCURRENCY`, `OPSPROBE_TIMEOUT`, `OPSPROBE_MAX_ACTIVE_RUNS`, `OPSPROBE_LOG_LEVEL`, `OPSPROBE_ENV`).
+
+### F. Bài tập Sự cố Thực nghiệm (`incident/`)
+
+12. **Phân định Rõ Kịch bản vs Bằng chứng Đo đạc:**
+    - `incident/README.md`: phân định rành mạch giữa kịch bản giả định sư phạm (Scenario Narrative) và số liệu đo đạc thực nghiệm từ code (Empirical Measurements).
+    - `incident.go` và `incident_test.go`: tích hợp `net/http/httptrace` đo lường chính xác `GotConnInfo.Reused`:
+      - `BuggyProbe`: 20 request -> 20 kết nối mới (`NewConns=20, ReusedConns=0`).
+      - `FixedProbe` (payload 10 KiB): 20 request -> 1 kết nối mới, 19 kết nối tái sử dụng (`NewConns=1, ReusedConns=19`).
+      - Thêm kiểm thử `TestIncident_BoundedDrainOversizedBody`: payload 32 KiB vượt giới hạn 16 KiB sẽ bị ngắt và đóng kết nối (`reusedEligible == false`), bảo vệ an toàn bộ nhớ.
+
+---
+
+## 2. Kết quả Biên dịch và Visual QA Bản thảo Sách
+
+1. **Chương 20 (`book/chapters/20-du-an-tong-ket-opsprobe.md`):**
+   - Cập nhật toàn bộ các bài học kỹ thuật: Bounded drain policy, WorkerObserver, deterministic rollback, single-replica SQLite, và incident reproducer.
+   - Tinh chỉnh định dạng khối code (tối đa 58 ký tự/dòng), không để lệnh dài chạm mép khung.
+
+2. **Biên dịch PDF (`Golang_Master.pdf`):**
+   - Biên dịch hoàn tất thành công qua `scripts/build_pdf.py`.
+   - Tổng số trang chính thức: **221 trang**.
+   - Toàn bộ 7 mục tham khảo (`@references`) nằm trọn vẹn ở cuối trang 221, không còn trang mồ côi 3 dòng.
+
+3. **Visual QA 100% bằng `pypdfium2`:**
+   - Render hình ảnh độ phân giải cao toàn bộ các trang từ 211 đến 221 trong thư mục `.tmp-editorial-pages/`.
+   - Kiểm tra trực quan xác nhận:
+     - 0 lỗi tràn khung code (code box overflow).
+     - 0 lỗi va chạm bảng (table collision).
+     - Bố cục trang mở đầu, bảng phân tách trách nhiệm, các khối lệnh PowerShell và curl đều thẳng hàng, sắc nét, đúng chuẩn xuất bản.
+
+---
+
+## 3. Báo cáo Kiểm thử Toàn diện (QA)
 
 Đã chạy kiểm tra thực tế trên Go toolchain cục bộ (Go 1.27.1 windows/amd64):
 
 1. **`projects/opsprobe`:**
-   - `go test -v ./...` -> PASS (toàn bộ các gói `probe`, `store`, `telemetry`, `httpapi`, `cmd/opsprobe`, `incident`, và `scenarios_test.go`).
-   - `go test -race ./...` -> PASS (100% sạch data race).
-   - `go vet ./...` -> PASS (không phát hiện bất kỳ cảnh báo tĩnh nào).
+   - `go test -v ./...` -> **PASS** (tất cả các gói: `cmd/opsprobe`, `incident`, `internal/httpapi`, `internal/probe`, `internal/store`, `internal/telemetry`, và `scenarios_test.go`).
+   - `go test -race ./...` -> **PASS** (100% sạch data race).
+   - `go vet ./...` -> **PASS** (0 cảnh báo tĩnh).
+   - `gofmt -l` -> **PASS** (100% chuẩn format).
 
 2. **`labs/part18-workflow-delivery`:**
-   - `go test -v ./...` -> PASS.
-   - `go test -race ./...` -> PASS.
-   - `go vet ./...` -> PASS.
+   - `go test -v ./...` -> **PASS**.
+   - `go test -race ./...` -> **PASS**.
+   - `go vet ./...` -> **PASS**.
 
-3. **`gofmt -l`:**
-   - Toàn bộ mã nguồn Go trong `projects/opsprobe` và các lab liên quan đều sạch định dạng 100%.
-
-4. **Bảo toàn Tuyệt đối Artifact Cục bộ:**
-   - Giữ nguyên vẹn, không sửa, không stage, không xóa:
-     - `.tmp-editorial-pages/`
-     - `labs/part10-measure-first/baseline-cpu.out`
-     - `labs/part10-measure-first/baseline.test.exe`
+3. **Bảo tồn Tuyệt đối Artifact Cục bộ:**
+   - `.tmp-editorial-pages/` (untracked, được bảo toàn).
+   - `labs/part10-measure-first/baseline-cpu.out` (untracked, được bảo toàn).
+   - `labs/part10-measure-first/baseline.test.exe` (untracked, được bảo toàn).
 
 ---
 
-## 3. Trạng thái Sẵn sàng
+## 4. Trạng thái Sẵn sàng
 
-Toàn bộ các mục tiêu của Milestone B (micro-repairs) và Milestone C (Capstone opsprobe, Chapter 20, PDF 220 trang) đã hoàn thành trọn vẹn và sẵn sàng đồng bộ lên remote `origin/main`.
+Toàn bộ các yêu cầu của Capstone Hardening Pass đã được giải quyết trọn vẹn trong một milestone duy nhất. Hệ thống mã nguồn, kịch bản sự cố, tài liệu kỹ thuật, và bản thảo sách PDF đều ở trạng thái hoàn thiện cao nhất, sẵn sàng commit và push lên remote `origin/main`.

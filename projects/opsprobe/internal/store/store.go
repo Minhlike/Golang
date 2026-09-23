@@ -14,10 +14,11 @@ import (
 // ErrNotFound được trả về khi không tìm thấy bản ghi yêu cầu.
 var ErrNotFound = errors.New("record not found")
 
-// RunRecord đại diện cho metadata tổng hợp của một đợt probe.
+// RunRecord đại diện cho metadata tổng hợp của một đợt probe với mốc thời gian chính xác.
 type RunRecord struct {
 	ID           string    `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
+	StartedAt    time.Time `json:"started_at"`
+	CompletedAt  time.Time `json:"completed_at"`
 	TargetCount  int       `json:"target_count"`
 	SuccessCount int       `json:"success_count"`
 	FailureCount int       `json:"failure_count"`
@@ -55,7 +56,7 @@ func NewSQLiteStore(dsn string) (*SQLiteStore, error) {
 	return &SQLiteStore{db: db}, nil
 }
 
-// Init tạo các bảng schema cần thiết với ràng buộc toàn vẹn khóa ngoại.
+// Init tạo các bảng schema cần thiết với ràng buộc toàn vẹn khóa ngoại và check constraints.
 func (s *SQLiteStore) Init(ctx context.Context) error {
 	// Bật foreign key enforcement trong SQLite
 	if _, err := s.db.ExecContext(ctx, "PRAGMA foreign_keys = ON;"); err != nil {
@@ -65,11 +66,12 @@ func (s *SQLiteStore) Init(ctx context.Context) error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS runs (
 		id TEXT PRIMARY KEY,
-		created_at TIMESTAMP NOT NULL,
+		started_at TIMESTAMP NOT NULL,
+		completed_at TIMESTAMP NOT NULL,
 		target_count INTEGER NOT NULL,
 		success_count INTEGER NOT NULL,
 		failure_count INTEGER NOT NULL,
-		status TEXT NOT NULL
+		status TEXT NOT NULL CHECK(status IN ('completed', 'failed', 'canceled'))
 	);
 
 	CREATE TABLE IF NOT EXISTS probe_results (
@@ -79,10 +81,12 @@ func (s *SQLiteStore) Init(ctx context.Context) error {
 		url TEXT NOT NULL,
 		status_code INTEGER NOT NULL,
 		duration_ns INTEGER NOT NULL,
-		outcome TEXT NOT NULL,
+		outcome TEXT NOT NULL CHECK(outcome IN ('success', 'failure', 'timeout', 'cancel')),
+		reused_eligible INTEGER NOT NULL DEFAULT 0,
 		error_msg TEXT,
 		timestamp TIMESTAMP NOT NULL,
-		FOREIGN KEY(run_id) REFERENCES runs(id) ON DELETE CASCADE
+		FOREIGN KEY(run_id) REFERENCES runs(id) ON DELETE CASCADE,
+		CONSTRAINT chk_status_code CHECK (status_code >= 0)
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_probe_results_run_id ON probe_results(run_id);
@@ -110,12 +114,13 @@ func (s *SQLiteStore) RecordRun(ctx context.Context, run RunRecord, results []pr
 
 	// 1. Chèn bản ghi đợt chạy
 	const insertRunQuery = `
-	INSERT INTO runs (id, created_at, target_count, success_count, failure_count, status)
-	VALUES (?, ?, ?, ?, ?, ?);
+	INSERT INTO runs (id, started_at, completed_at, target_count, success_count, failure_count, status)
+	VALUES (?, ?, ?, ?, ?, ?, ?);
 	`
 	_, err = tx.ExecContext(ctx, insertRunQuery,
 		run.ID,
-		run.CreatedAt.UTC(),
+		run.StartedAt.UTC(),
+		run.CompletedAt.UTC(),
 		run.TargetCount,
 		run.SuccessCount,
 		run.FailureCount,
@@ -128,8 +133,8 @@ func (s *SQLiteStore) RecordRun(ctx context.Context, run RunRecord, results []pr
 	// 2. Chèn từng kết quả probe bằng prepared statement
 	if len(results) > 0 {
 		const insertResultQuery = `
-		INSERT INTO probe_results (run_id, target_id, url, status_code, duration_ns, outcome, error_msg, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+		INSERT INTO probe_results (run_id, target_id, url, status_code, duration_ns, outcome, reused_eligible, error_msg, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 		`
 		stmt, err := tx.PrepareContext(ctx, insertResultQuery)
 		if err != nil {
@@ -138,13 +143,19 @@ func (s *SQLiteStore) RecordRun(ctx context.Context, run RunRecord, results []pr
 		defer stmt.Close()
 
 		for _, r := range results {
+			reusedInt := 0
+			if r.ReusedEligible {
+				reusedInt = 1
+			}
+
 			_, err = stmt.ExecContext(ctx,
 				run.ID,
 				r.TargetID,
 				r.URL,
 				r.StatusCode,
-				r.Duration.Nanoseconds(),
+				r.DurationNs,
 				string(r.Outcome),
+				reusedInt,
 				r.Error,
 				r.Timestamp.UTC(),
 			)
@@ -165,23 +176,24 @@ func (s *SQLiteStore) RecordRun(ctx context.Context, run RunRecord, results []pr
 // GetRun truy vấn bản ghi run và toàn bộ danh sách kết quả probe tương ứng.
 func (s *SQLiteStore) GetRun(ctx context.Context, runID string) (*RunRecord, []probe.Result, error) {
 	const selectRun = `
-	SELECT id, created_at, target_count, success_count, failure_count, status
+	SELECT id, started_at, completed_at, target_count, success_count, failure_count, status
 	FROM runs
 	WHERE id = ?;
 	`
 	row := s.db.QueryRowContext(ctx, selectRun, runID)
 	var run RunRecord
-	var createdAt time.Time
-	if err := row.Scan(&run.ID, &createdAt, &run.TargetCount, &run.SuccessCount, &run.FailureCount, &run.Status); err != nil {
+	var startedAt, completedAt time.Time
+	if err := row.Scan(&run.ID, &startedAt, &completedAt, &run.TargetCount, &run.SuccessCount, &run.FailureCount, &run.Status); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, ErrNotFound
 		}
 		return nil, nil, fmt.Errorf("query run: %w", err)
 	}
-	run.CreatedAt = createdAt
+	run.StartedAt = startedAt
+	run.CompletedAt = completedAt
 
 	const selectResults = `
-	SELECT target_id, url, status_code, duration_ns, outcome, error_msg, timestamp
+	SELECT target_id, url, status_code, duration_ns, outcome, reused_eligible, error_msg, timestamp
 	FROM probe_results
 	WHERE run_id = ?
 	ORDER BY id ASC;
@@ -197,15 +209,18 @@ func (s *SQLiteStore) GetRun(ctx context.Context, runID string) (*RunRecord, []p
 		var r probe.Result
 		var outcomeStr string
 		var durationNS int64
+		var reusedInt int
 		var ts time.Time
 		var errorMsg sql.NullString
 
-		if err := rows.Scan(&r.TargetID, &r.URL, &r.StatusCode, &durationNS, &outcomeStr, &errorMsg, &ts); err != nil {
+		if err := rows.Scan(&r.TargetID, &r.URL, &r.StatusCode, &durationNS, &outcomeStr, &reusedInt, &errorMsg, &ts); err != nil {
 			return nil, nil, fmt.Errorf("scan probe result: %w", err)
 		}
 
-		r.Duration = time.Duration(durationNS)
+		r.DurationNs = durationNS
+		r.DurationMs = float64(durationNS) / 1e6
 		r.Outcome = probe.Outcome(outcomeStr)
+		r.ReusedEligible = (reusedInt == 1)
 		r.Timestamp = ts
 		if errorMsg.Valid {
 			r.Error = errorMsg.String
@@ -227,9 +242,9 @@ func (s *SQLiteStore) ListRuns(ctx context.Context, limit int) ([]RunRecord, err
 		limit = 10
 	}
 	const query = `
-	SELECT id, created_at, target_count, success_count, failure_count, status
+	SELECT id, started_at, completed_at, target_count, success_count, failure_count, status
 	FROM runs
-	ORDER BY created_at DESC
+	ORDER BY started_at DESC
 	LIMIT ?;
 	`
 	rows, err := s.db.QueryContext(ctx, query, limit)
@@ -241,11 +256,12 @@ func (s *SQLiteStore) ListRuns(ctx context.Context, limit int) ([]RunRecord, err
 	var runs []RunRecord
 	for rows.Next() {
 		var r RunRecord
-		var ts time.Time
-		if err := rows.Scan(&r.ID, &ts, &r.TargetCount, &r.SuccessCount, &r.FailureCount, &r.Status); err != nil {
+		var startedAt, completedAt time.Time
+		if err := rows.Scan(&r.ID, &startedAt, &completedAt, &r.TargetCount, &r.SuccessCount, &r.FailureCount, &r.Status); err != nil {
 			return nil, fmt.Errorf("scan run item: %w", err)
 		}
-		r.CreatedAt = ts
+		r.StartedAt = startedAt
+		r.CompletedAt = completedAt
 		runs = append(runs, r)
 	}
 

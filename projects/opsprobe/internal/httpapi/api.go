@@ -10,7 +10,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	"example.com/golang-master/projects/opsprobe/internal/probe"
@@ -35,7 +34,6 @@ type API struct {
 	tel           *telemetry.Telemetry
 	maxActiveRuns int
 	runSem        chan struct{}
-	mu            sync.Mutex
 }
 
 // NewAPI khởi tạo instance API với các guardrail vận hành (concurrency limit, metrics).
@@ -90,17 +88,37 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Decode và validate input
+	// 2. Decode và validate JSON payload với MaxBytesReader và kiểm tra EOF chặt chẽ
+	const maxBodyBytes = 65536 // 64 KiB
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+
 	var req createRunRequest
-	dec := json.NewDecoder(io.LimitReader(r.Body, 65536))
+	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			a.writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{
+				"error": fmt.Sprintf("request body exceeds limit of %d bytes", maxBodyBytes),
+			})
+			return
+		}
 		a.writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": fmt.Sprintf("invalid json payload: %v", err),
 		})
 		return
 	}
 
+	// Yêu cầu EOF: từ chối nếu có trailing data hoặc document thứ hai (concatenated JSON)
+	var trailing json.RawMessage
+	if err := dec.Decode(&trailing); err != io.EOF {
+		a.writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "request body must contain only a single JSON document",
+		})
+		return
+	}
+
+	// 3. Upfront Input Contract Validation: Kiểm tra toàn bộ targets trước khi chạy
 	if len(req.Targets) == 0 {
 		a.writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "targets list must not be empty",
@@ -115,7 +133,24 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Khởi tạo Run ID ngẫu nhiên không xung đột
+	seenIDs := make(map[string]struct{}, len(req.Targets))
+	for i, target := range req.Targets {
+		if err := probe.ValidateTarget(target); err != nil {
+			a.writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": fmt.Sprintf("invalid target at index %d (%s): %v", i, target.ID, err),
+			})
+			return
+		}
+		if _, exists := seenIDs[target.ID]; exists {
+			a.writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": fmt.Sprintf("duplicate target id: %q", target.ID),
+			})
+			return
+		}
+		seenIDs[target.ID] = struct{}{}
+	}
+
+	// 4. Khởi tạo Run ID ngẫu nhiên không xung đột
 	runID := generateRunID()
 
 	// Khởi tạo span trace cho đợt chạy
@@ -125,13 +160,16 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	)
 	defer span.End()
 
-	a.tel.ActiveWorkers.Add(float64(len(req.Targets)))
-	defer a.tel.ActiveWorkers.Sub(float64(len(req.Targets)))
+	// Ghi nhận mốc thời gian bắt đầu thực thi
+	startedAt := time.Now().UTC()
 
-	// 4. Thực thi probe qua pool có giới hạn
+	// 5. Thực thi probe qua pool có giới hạn
 	results := a.pool.Execute(ctx, req.Targets)
 
-	// 5. Thống kê kết quả
+	// Ghi nhận mốc thời gian kết thúc
+	completedAt := time.Now().UTC()
+
+	// 6. Thống kê kết quả
 	successCount := 0
 	failureCount := 0
 	for _, res := range results {
@@ -140,18 +178,22 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		} else {
 			failureCount++
 		}
-		// Ghi nhận telemetry từng probe
-		a.tel.RecordProbe(res.TargetID, res.URL, string(res.Outcome), res.Duration.Seconds(), res.Error)
+		// Ghi nhận telemetry từng probe với thời gian chính xác
+		a.tel.RecordProbe(res.TargetID, res.URL, string(res.Outcome), float64(res.DurationNs)/1e9, res.Error)
 	}
 
 	status := "completed"
 	if failureCount > 0 && successCount == 0 {
 		status = "failed"
 	}
+	if ctx.Err() != nil {
+		status = "canceled"
+	}
 
 	run := store.RunRecord{
 		ID:           runID,
-		CreatedAt:    time.Now().UTC(),
+		StartedAt:    startedAt,
+		CompletedAt:  completedAt,
 		TargetCount:  len(req.Targets),
 		SuccessCount: successCount,
 		FailureCount: failureCount,

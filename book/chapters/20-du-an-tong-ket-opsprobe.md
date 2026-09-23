@@ -68,6 +68,8 @@ req, err := http.NewRequestWithContext(
 
 Sự phân biệt giữa `OutcomeTimeout` (hết thời gian chờ từ chối phục vụ) và `OutcomeCancel` (tiến trình cha chủ động hủy đợt kiểm tra) giúp đội ngũ SRE không bao giờ nhầm lẫn giữa sự cố quá tải mạng và hành vi shutdown bình thường của hệ thống.
 
+Mỗi kết quả probe ghi nhận đồng thời cả thời lượng tính bằng mili-giây (`DurationMs`) phục vụ dashboard và nano-giây (`DurationNs`) cho độ chính xác cao. Thời điểm ghi nhận run trong database phân định rành mạch giữa `StartedAt` (bắt đầu thực thi) và `CompletedAt` (kết thúc toàn bộ worker), tránh nhầm lẫn giữa độ trễ của từng request đơn lẻ với thời gian hoàn tất của cả lô công việc.
+
 ### 2. Đồng thời có kiểm soát (Bounded Concurrency) và Áp suất ngược
 
 Khi danh sách target tăng từ 10 lên 10.000, một chương trình ngây thơ sẽ chạy `go p.ProbeSingle(...)` cho từng target. Cách làm này sẽ tạo ra hàng chục nghìn goroutine, làm cạn kiệt socket và gây sập hệ điều hành.
@@ -99,6 +101,8 @@ for w := 0; w < numWorkers; w++ {
 }
 wg.Wait()
 ~~~
+
+Để phản ánh chính xác số worker đang thực sự xử lý công việc mà không suy đoán, `probe.Pool` tích hợp interface `WorkerObserver`. Khi một worker goroutine khởi động và thoát ra, nó thông báo trực tiếp cho hệ thống telemetry cập nhật gauge `opsprobe_active_workers`.
 
 Trên tầng HTTP API, ta áp dụng cơ chế áp suất ngược (backpressure) thông qua buffered channel semaphore. Khi số lượng đợt chạy đồng thời vượt quá ngưỡng an toàn, API lập tức từ chối nhận thêm việc với mã `429 Too Many Requests`:
 
@@ -152,69 +156,84 @@ for _, r := range results {
 return tx.Commit()
 ~~~
 
-Nhờ cơ chế `defer tx.Rollback()`, nếu có bất kỳ lỗi I/O nào xảy ra hoặc context bị hủy ngang trước khi `tx.Commit()` được gọi, cơ sở dữ liệu sẽ quay về trạng thái sạch ban đầu, không để lại bất kỳ bản ghi mồ côi nào.
+Để kiểm chứng tính toàn vẹn của transaction một cách tất định (deterministic) mà không dựa vào thời điểm ngẫu nhiên, schema cơ sở dữ liệu được trang bị ràng buộc `CHECK (status_code >= 0)`. Trong kiểm thử tự động, ta cố tình truyền một kết quả có `status_code = -1` ở bản ghi thứ hai sau khi bản ghi cha đã được chèn. Database lập tức từ chối, transaction rollback toàn bộ, và lệnh đếm số dòng xác nhận cả hai bảng đều không lưu lại bất kỳ dữ liệu rác nào.
 
-### 4. Vòng đời tài nguyên mạng: Bài học về việc tái sử dụng kết nối
+### 4. Vòng đời tài nguyên mạng: Bounded Drain và Điều kiện Tái sử dụng
 
-Một trong những cạm bẫy lớn nhất khi viết network client bằng Go là việc quản lý `http.Response.Body`. Nếu chỉ gọi `resp.Body.Close()` mà không đọc cạn dữ liệu còn thừa trên dây mạng, `http.Transport` không thể tái sử dụng kết nối TCP đó cho các request tiếp theo.
+Một trong những sai lầm phổ biến nhất khi viết network client trong Go là ngộ nhận rằng việc chỉ gọi `resp.Body.Close()` là đủ để socket TCP được tái sử dụng. Ngược lại, việc dùng `io.Copy(io.Discard, resp.Body)` mà không giới hạn độ dài lại mở ra nguy cơ bị tấn công cạn kiệt tài nguyên khi gặp target trả về stream vô hạn.
+
+`opsprobe` thiết lập chính sách bounded drain có kiểm soát:
 
 ~~~go
-resp, err := p.client.Do(req)
-if err != nil {
-	return res
-}
-defer resp.Body.Close()
+const MaxDrainBytes = 16384 // 16 KiB
 
-// Đọc cạn tối đa 8KB dữ liệu thừa để hoàn trả socket về pool
-_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 8192))
+func drainResponseBody(body io.ReadCloser) bool {
+	if body == nil {
+		return false
+	}
+	defer body.Close()
+
+	lr := &io.LimitedReader{R: body, N: MaxDrainBytes + 1}
+	_, err := io.Copy(io.Discard, lr)
+	// Chỉ đủ điều kiện tái sử dụng khi đã đọc cạn tới EOF
+	return err == nil && lr.N > 0
+}
 ~~~
 
-Đoạn mã ngắn trên tạo ra sự khác biệt giữa một service chạy ổn định quanh năm và một service bị sập sau 20 phút do cạn kiệt socket file descriptors.
+Quy tắc kỹ thuật ở đây rất rõ ràng:
+1. **Luôn đóng body (`defer body.Close()`):** Giải phóng file descriptor socket ngay cả khi xảy ra lỗi giữa chừng.
+2. **Đọc tối đa 16 KiB:** Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework.
+3. **Phát hiện cạn dòng (EOF):** Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`).
+4. **Đánh đổi có chủ đích:** Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Hệ thống phát hiện luồng bị cắt ngắn và chấp nhận rằng kết nối TCP này không thể tái sử dụng an toàn trên HTTP/1.1; socket sẽ bị đóng để ưu tiên an toàn bộ nhớ.
 
 ## Bài tập chẩn đoán sự cố: Bão cạn kiệt Socket
 
 Thư mục `projects/opsprobe/incident/` mô phỏng một sự cố kinh điển trong môi trường microservices.
 
-### Hiện tượng sự cố
+### Kịch bản mô phỏng sư phạm (Scenario Narrative)
 
-Hệ thống probe đang chạy bình thường thì Prometheus đồng loạt phát cảnh báo: tỷ lệ `OutcomeTimeout` tăng vọt lên 90%, thời gian phản hồi chạm ngưỡng kịch trần. Tuy nhiên, các kỹ sư phụ trách target service khẳng định dịch vụ của họ hoàn toàn khỏe mạnh; kiểm tra bằng cURL chỉ mất 2ms. Lệnh `netstat` trên máy chủ probe cho thấy hàng nghìn socket TCP ở trạng thái treo.
+> **Ghi chú phương pháp luận:** Đây là kịch bản giả định mô phỏng tình huống sự cố thực tế để đặt ra bài toán chẩn đoán cho kỹ sư.
+
+Hệ thống probe giả định được triển khai để kiểm tra sức khỏe 50 microservices nội bộ. Khi tải tăng cao, hệ thống giám sát ghi nhận tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ chạm trần deadline. Tuy nhiên, khi kỹ sư kiểm tra trực tiếp từ máy trạm bằng lệnh cURL độc lập, target service vẫn phản hồi trong 2ms. Kiểm tra trạng thái hệ điều hành cho thấy số lượng socket TCP mở tăng liên tục, tiệm cận giới hạn file descriptors (`ulimit -n`).
 
 ### Bốn tầng bằng chứng chẩn đoán
 
-1. **Tầng Hệ điều hành:** `ss -s` ghi nhận số lượng socket mở liên tục tăng tuyến tính và chạm ngưỡng `ulimit -n`.
-2. **Tầng Transport Pool:** `http.Transport` không có kết nối rảnh (idle connection) nào để tái sử dụng.
+1. **Tầng Hệ điều hành:** `ss -s` ghi nhận số lượng socket mở tăng liên tục theo số lượng request mà không được thu hồi.
+2. **Tầng Transport Pool:** `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi.
 3. **Tầng Runtime Trace:** Sử dụng `net/http/httptrace` với hook `GotConnInfo.Reused`. Kết quả cho thấy `info.Reused` luôn bằng `false`.
 4. **Tầng Mã nguồn:** Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
 
 ~~~go
 resp, err := client.Do(req)
 if err != nil {
-	return 0, err
+	return 0, false, err
 }
 // BUG: Quên gọi resp.Body.Close()!
-return resp.StatusCode, nil
+return resp.StatusCode, false, nil
 ~~~
 
-Lập trình viên đã return mà quên đóng body. Kết nối TCP bị giữ treo vĩnh viễn ở trạng thái "đang đọc dở", khiến pool bị phong tỏa và buộc mỗi request sau phải mở một socket mới cho đến khi hệ điều hành cạn kiệt tài nguyên.
+Lập trình viên đã return mà quên đóng body. Kết nối TCP bị giữ ở trạng thái "đang đọc dở", khiến connection pool bị phong tỏa và buộc mỗi request sau phải mở một socket mới.
 
-Chạy kịch bản kiểm chứng thực nghiệm tại `incident/`:
+### Bằng chứng đo đạc thực nghiệm (Empirical Measurements)
 
-~~~powershell
-cd projects/opsprobe
-go test -v ./incident
-~~~
+Khác với phần mô tả giả định ở trên, kiểm thử tự động tại `incident/incident_test.go` cung cấp số liệu thực nghiệm đo đạc chính xác qua `httptrace`:
 
-Kết quả cho thấy sự chênh lệch rõ rệt:
-- `BuggyProbe`: 20 request tạo ra 20 kết nối mới (`NewConns=20, ReusedConns=0`).
-- `FixedProbe`: 20 request chỉ tạo duy nhất 1 kết nối ban đầu và tái sử dụng 19 lần còn lại (`NewConns=1, ReusedConns=19`).
+| Chỉ số thực nghiệm | BuggyProbe (Bỏ quên Close) | FixedProbe (Close + Drain 16 KiB) |
+| --- | --- | --- |
+| **New Conns (`Reused == false`)** | **20** | **1** (chỉ kết nối đầu tiên) |
+| **Reused Conns (`Reused == true`)** | **0** | **19** (95% tái sử dụng) |
+| **Kết quả vận hành** | Mỗi request mở socket mới | Tái sử dụng socket trong pool |
+
+Kiểm thử `TestIncident_BoundedDrainOversizedBody` đồng thời chứng minh rằng khi payload trả về là 32 KiB (vượt giới hạn 16 KiB), hệ thống xác định chính xác `reusedEligible == false` và đóng kết nối, bảo vệ bộ nhớ tiến trình khỏi nguy cơ tràn đệm.
 
 ## Đóng gói, Điều phối và Delivery có trách nhiệm
 
 Để đưa `opsprobe` ra môi trường production, ta áp dụng toàn bộ các nguyên tắc đã học ở Chương 17 và 18:
 
 1. **Multi-Stage Dockerfile:** Biên dịch tĩnh hoàn toàn với `CGO_ENABLED=0` và sử dụng base image tối giản `gcr.io/distroless/static-debian12:nonroot`, chạy dưới tài khoản không đặc quyền (`USER 65532:65532`).
-2. **Kubernetes Desired State:** Manifest `deploy/k8s/deployment.yaml` kích hoạt `readOnlyRootFilesystem: true`, gán liveness probe tại `/livez` và readiness probe tại `/readyz`.
-3. **Fail-Closed Gate trong CI/CD:** Tuyệt đối không deploy bằng tag trôi nổi `:latest`. Mọi thay đổi phải đi qua promotion gate bằng Go kiểm tra tính toàn vẹn của OCI manifest digest và provenance chữ ký số. Nếu thiếu bằng chứng, pipeline lập tức dừng lại theo nguyên tắc fail-closed.
+2. **Ranh giới lưu trữ và số lượng Pod trong Kubernetes:** Manifest `deploy/k8s/deployment.yaml` thiết lập `replicas: 1` kết hợp PersistentVolumeClaim `opsprobe-data-pvc` (`ReadWriteOnce`). Do SQLite là cơ sở dữ liệu file cục bộ, việc chạy nhiều pod đồng thời trên cùng một file dữ liệu sẽ gây tranh chấp khóa và không nhất quán state. Chiến lược triển khai sử dụng `strategy: Recreate` để bảo đảm pod cũ nhả volume trước khi pod mới được gắn. Khi hệ thống có nhu cầu mở rộng quy mô ngang (`replicas > 1`), tầng `store` phải được chuyển sang hệ quản trị cơ sở dữ liệu máy khách - máy chủ (client-server) như PostgreSQL.
+3. **Cấu hình động qua ConfigMap:** Các tham số giới hạn như concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường của container (`OPSPROBE_*`).
+4. **Định danh bất biến trong CI/CD:** Trong manifest Kubernetes thực tế, image phải được gán digest bất biến sha256 (`image: ghcr.io/...@sha256:...`) đã được kiểm chứng bởi pipeline CI/CD, loại bỏ hoàn toàn các tag trôi nổi rủi ro như `:latest`.
 
 ## Lệnh kiểm thử và vận hành hệ thống
 
@@ -223,39 +242,39 @@ Anh có thể trực tiếp chạy và kiểm chứng toàn bộ năng lực c�
 ~~~powershell
 cd projects/opsprobe
 
-# 1. Chạy toàn bộ test suite và kiểm tra race condition
+# 1. Chạy test suite và kiểm tra race condition
 go test -v ./...
 go test -race ./...
 go vet ./...
 
 # 2. Chạy CLI kiểm tra một URL đơn lẻ
-go run ./cmd/opsprobe --oneshot-url=https://go.dev --timeout=2s
+go run ./cmd/opsprobe `
+  --oneshot-url=https://go.dev `
+  --timeout=2s
 
 # 3. Khởi chạy HTTP daemon server
-go run ./cmd/opsprobe --addr=:8080 --db=opsprobe.db --concurrency=4
+go run ./cmd/opsprobe `
+  --addr=127.0.0.1:8080 `
+  --db=opsprobe.db `
+  --concurrency=4
 ~~~
 
 Trong một cửa sổ terminal khác, gửi yêu cầu kiểm tra hàng loạt endpoint và xem metrics Prometheus:
 
 ~~~powershell
 # Gửi yêu cầu probe qua REST API
-curl -X POST http://localhost:8080/runs `
+$target = '{"id":"t1","url":"http://127.0.0.1:8080/livez"}'
+curl -X POST http://127.0.0.1:8080/runs `
   -H "Content-Type: application/json" `
-  -d '{"targets":[{"id":"t1","url":"http://localhost:8080/livez"}]}'
+  -d "{`"targets`":[$target]}"
 
 # Thu thập metrics Prometheus
-curl http://localhost:8080/metrics
+curl http://127.0.0.1:8080/metrics
 ~~~
 
 ## Điểm dừng: khi một kỹ sư nhìn một hệ thống Go
 
-Khi bắt đầu cuốn sách, một chương trình Go có thể chỉ là một tệp `main.go` với hàm `fmt.Println`. Khi kết thúc cuốn sách, ta nhìn thấy toàn bộ thế giới phía sau dòng chữ đó:
-- Một giá trị di chuyển qua bộ nhớ theo value hay pointer semantics.
-- Một goroutine được đánh thức bởi scheduler và phối hợp an toàn qua channel.
-- Một kết nối socket TCP được mượn từ pool, đọc cạn dữ liệu và trả về nguyên vẹn.
-- Một transaction bảo đảm cơ sở dữ liệu không bao giờ chứa trạng thái dở dang.
-- Một tín hiệu OS dừng tiến trình một cách êm ái mà không làm rơi rớt dữ liệu của người dùng.
-- Một artifact bất biến được định danh bằng digest nội dung và được kiểm soát bởi các chốt chặn tự động trước khi bước chân vào môi trường production.
+Khi bắt đầu cuốn sách, một chương trình Go có thể chỉ là một tệp `main.go` với hàm `fmt.Println`. Khi kết thúc cuốn sách, ta nhìn thấy toàn bộ chiều sâu phía sau dòng chữ đó: một giá trị di chuyển qua bộ nhớ theo value hay pointer semantics; một goroutine được đánh thức bởi scheduler và phối hợp an toàn qua channel; một kết nối TCP được mượn từ pool, đọc cạn dữ liệu và hoàn trả nguyên vẹn; một transaction bảo đảm cơ sở dữ liệu không bao giờ chứa trạng thái dở dang; một tín hiệu OS dừng tiến trình êm ái mà không làm rơi rớt dữ liệu; và một artifact bất biến được định danh bằng digest nội dung, kiểm soát bởi các chốt chặn tự động trước khi bước vào production.
 
 Đó chính là ranh giới giữa một người biết cú pháp ngôn ngữ và một kỹ sư phần mềm thực thụ: **hiểu rõ cái giá của từng quyết định thiết kế và chịu trách nhiệm đến cùng cho sự vận hành của hệ thống.**
 

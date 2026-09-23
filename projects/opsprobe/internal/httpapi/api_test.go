@@ -40,6 +40,8 @@ func setupTestAPI(t *testing.T, maxActiveRuns int) (*API, *store.SQLiteStore, *t
 	pool := probe.NewPool(
 		probe.WithConcurrency(2),
 		probe.WithDefaultTimeout(1*time.Second),
+		probe.WithWorkerObserver(tel),
+		probe.WithTracer(tel.Tracer),
 	)
 
 	api := NewAPI(Config{
@@ -236,5 +238,54 @@ func TestAPI_MalformedInput(t *testing.T) {
 	handler.ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for empty targets, got %d", rec2.Code)
+	}
+
+	// 3. Unknown field bị từ chối
+	rec3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte(`{"targets":[{"id":"t1","url":"http://example.com"}],"unknown":"field"}`)))
+	handler.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unknown fields, got %d", rec3.Code)
+	}
+
+	// 4. Concatenated JSON (hai document nối đuôi)
+	rec4 := httptest.NewRecorder()
+	req4 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte(`{"targets":[{"id":"t1","url":"http://example.com"}]}{"targets":[]}`)))
+	handler.ServeHTTP(rec4, req4)
+	if rec4.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for concatenated JSON documents, got %d", rec4.Code)
+	}
+
+	// 5. Body vượt quá giới hạn 64 KiB => 413 Request Entity Too Large
+	largePayload := bytes.Repeat([]byte(" "), 70000)
+	rec5 := httptest.NewRecorder()
+	req5 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(largePayload))
+	handler.ServeHTTP(rec5, req5)
+	if rec5.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413 for oversized body, got %d", rec5.Code)
+	}
+
+	// 6. Trùng lặp target ID => 400
+	rec6 := httptest.NewRecorder()
+	req6 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte(`{"targets":[{"id":"dup","url":"http://example.com/1"},{"id":"dup","url":"http://example.com/2"}]}`)))
+	handler.ServeHTTP(rec6, req6)
+	if rec6.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for duplicate target IDs, got %d", rec6.Code)
+	}
+
+	// 7. Target chứa credential / userinfo => 400
+	rec7 := httptest.NewRecorder()
+	req7 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte(`{"targets":[{"id":"sec","url":"http://admin:pass@example.com"}]}`)))
+	handler.ServeHTTP(rec7, req7)
+	if rec7.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for target with userinfo, got %d", rec7.Code)
+	}
+
+	// 8. Target có method không được hỗ trợ (chỉ GET/HEAD) => 400
+	rec8 := httptest.NewRecorder()
+	req8 := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte(`{"targets":[{"id":"method","url":"http://example.com","method":"DELETE"}]}`)))
+	handler.ServeHTTP(rec8, req8)
+	if rec8.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unsupported HTTP method, got %d", rec8.Code)
 	}
 }

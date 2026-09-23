@@ -81,3 +81,33 @@ func TestTelemetry_Spans(t *testing.T) {
 		t.Fatalf("telemetry shutdown failed: %v", err)
 	}
 }
+
+func TestTelemetry_ActiveWorkerObserver(t *testing.T) {
+	tel, err := New(Config{
+		ServiceName: "test-probe",
+		Environment: "test",
+		LogWriter:   bytes.NewBuffer(nil),
+	})
+	if err != nil {
+		t.Fatalf("failed to init telemetry: %v", err)
+	}
+
+	tel.WorkerStarted()
+	tel.WorkerStarted()
+	val := testutil.ToFloat64(tel.ActiveWorkers)
+	if val != 2.0 {
+		t.Fatalf("expected 2.0 active workers, got %f", val)
+	}
+
+	tel.WorkerStopped()
+	val = testutil.ToFloat64(tel.ActiveWorkers)
+	if val != 1.0 {
+		t.Fatalf("expected 1.0 active workers, got %f", val)
+	}
+
+	tel.WorkerStopped()
+	val = testutil.ToFloat64(tel.ActiveWorkers)
+	if val != 0.0 {
+		t.Fatalf("expected 0.0 active workers, got %f", val)
+	}
+}
