@@ -158,6 +158,210 @@ Hãy viết `NextAction` từ contract, không mở `fixed/` trước. Câu hỏ
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Validate cả hai count trước, vì `desired - current` với số âm có thể biến một configuration lỗi thành action hợp lệ giả. Sau đó trả `create` hay `delete` với `Count` đúng bằng độ chênh; equal trả `ActionNone` với `Count` zero. Không mutate input, không loop, không sleep và không cố “chờ ready”: mỗi thứ đó thuộc boundary khác.
 
+## Stage hai: đưa service thật vào container và cluster
+
+Vòng lặp `NextAction` ở trên giúp ta hiểu bản chất của reconciliation mà chưa
+cần tới cluster thật. Nhưng khi đưa một service Go vào vận hành, code không còn
+chạy trực tiếp trên máy lập trình. Nó phải được đóng gói vào một OCI image và
+giao phó cho một hệ điều phối. `labs/part17-container-kubernetes` dùng chính
+HTTP service `probe-api` từ `labs/part16-real-signals` để kiểm chứng trọn vẹn
+chuỗi ranh giới này trên môi trường cục bộ.
+
+~~~text
+Dockerfile (multi-stage, non-root)
+    |
+    v
+Image: probe-api:dev  --->  Container runtime (signal, port, read-only)
+                                  |
+                                  v
+                            Cluster (kind)
+                                  |
+            +---------------------+---------------------+
+            |                                           |
+            v                                           v
+      Deployment (desired)                       Service (traffic)
+       - readiness: /readyz                       - cluster IP
+       - liveness: /livez                         - port forwarding
+            |
+            v
+   client-go observer (read-only Get/Watch)
+~~~
+
+Trước khi bắt đầu, lab kiểm tra các công cụ bắt buộc bằng script
+`scripts/verify-prereqs.ps1`. Nó đòi hỏi `docker`, `kubectl` và `kind` có mặt
+trên máy local. Nếu môi trường hiện tại chưa cài đặt những công cụ này, script
+sẽ dừng lại với thông báo rõ ràng; khi đó, các lệnh dưới đây là đường dẫn thực
+thi minh họa được chuẩn hóa để anh tái lập khi có đủ công cụ, tuyệt đối không
+tự ý thay thế bằng một cluster cloud có phí.
+
+~~~powershell
+cd labs/part17-container-kubernetes
+./scripts/verify-prereqs.ps1
+~~~
+
+### Image là contract của process
+
+Dockerfile của lab áp dụng mô hình multi-stage build để tách biệt môi trường
+biên dịch với môi trường thực thi. Stage đầu tiên dùng image Go chính thức để tải
+module và biên dịch binary với `CGO_ENABLED=0` và cờ `-trimpath` nhằm loại bỏ
+đường dẫn file hệ thống cục bộ khỏi binary. Stage cuối cùng chỉ sao chép duy nhất
+file binary sang base image tối giản `distroless/static-debian12:nonroot`.
+
+~~~dockerfile
+FROM golang:1.27.1 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath \
+  -o /out/probe-api ./cmd/probe-api
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/probe-api /probe-api
+USER 65532:65532
+ENTRYPOINT ["/probe-api"]
+~~~
+
+Contract khởi động ở đây rất chặt chẽ: `ENTRYPOINT` ở exec form đảm bảo binary
+là PID 1 trong container. Cổng lắng nghe được cấu hình qua biến môi trường
+`PORT`, khớp hoàn toàn với contract của HTTP server ở Chương 12 và 16. Khi chạy
+container, ta áp dụng nguyên tắc đặc quyền tối thiểu: `--read-only` khóa toàn bộ
+root filesystem, `--cap-drop ALL` tước bỏ mọi Linux capability thừa, và `USER
+65532:65532` ngăn chặn việc chạy dưới quyền root.
+
+~~~powershell
+# Chạy từ thư mục gốc của repository (minh họa)
+docker build `
+  -f labs/part17-container-kubernetes/Dockerfile `
+  -t probe-api:dev `
+  labs/part16-real-signals
+
+docker run --rm --name probe-api `
+  --read-only --cap-drop ALL `
+  -p 18080:18080 -e PORT=18080 probe-api:dev
+~~~
+
+Ở một terminal khác, ta kiểm tra các contract vận hành:
+
+~~~powershell
+curl.exe -i http://localhost:18080/readyz
+curl.exe -i http://localhost:18080/probe?mode=slow
+docker inspect --format '{{.Config.User}}' probe-api
+docker stop -t 5 probe-api
+~~~
+
+Lệnh `docker stop -t 5` gửi tín hiệu `SIGTERM` tới process và cho phép 5 giây để
+server hoàn tất các request đang xử lý trước khi runtime gửi `SIGKILL`. Đây chính
+là phép thử cho contract graceful shutdown mà ta đã xây dựng. Đánh đổi của
+distroless và read-only filesystem là gì? Container sẽ không có shell (`/bin/sh`),
+không có trình quản lý gói, và binary không thể tùy tiện ghi file tạm nếu không
+được mount một thư mục riêng biệt. Sự bất tiện khi debug tại chỗ này đổi lại một
+bề mặt tấn công cực kỳ hẹp.
+
+Cần lưu ý: nhãn `probe-api:dev` chỉ là định danh cục bộ trên máy phát triển. Nó
+không phải là một định danh bất biến dùng cho môi trường production; Chương 18
+sẽ giải quyết bài toán định danh bằng digest.
+
+### Desired state và điều tra sự cố trong cluster
+
+Khi chuyển từ container đơn lẻ sang Kubernetes, ta không còn ra lệnh chạy một
+process mà khai báo desired state thông qua các manifest: `namespace.yaml`,
+`deployment.yaml` và `service.yaml`.
+
+~~~powershell
+kind create cluster --name go-book
+kind load docker-image probe-api:dev --name go-book
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl -n go-book rollout status deployment/probe-api
+kubectl -n go-book get deploy,pod,service
+kubectl -n go-book port-forward service/probe-api 18080:80
+~~~
+
+Trong `deployment.yaml`, hai probe phục vụ hai mục đích hoàn toàn khác biệt:
+
+1. **Readiness Probe (`/readyz`):** Trả lời câu hỏi "Pod này có sẵn sàng nhận
+   traffic từ Service ngay lúc này không?". Nếu readiness thất bại, endpoint
+   controller sẽ tạm thời gỡ Pod khỏi danh sách IP nhận tải của Service, nhưng
+   container **không** bị restart.
+2. **Liveness Probe (`/livez`):** Trả lời câu hỏi "Process này còn sống và hoạt
+   động bình thường không, hay đã bị deadlock hoàn toàn?". Nếu liveness thất
+   bại, kubelet sẽ tiêu diệt và restart container. Tuyệt đối không kiểm tra
+   database hay dependency từ xa trong liveness probe; một sự cố mạng thoáng qua
+   của dependency sẽ khiến toàn bộ cluster tự restart hàng loạt (cascading
+   failure).
+
+Phần tài nguyên cũng phân định rõ ràng giữa `requests` (con số scheduler dùng
+để tìm node phù hợp cho Pod) và `limits` (ngưỡng tối đa kernel cho phép; vượt CPU
+sẽ bị throttle, vượt memory sẽ bị OOM killer tiêu diệt).
+
+Để hiểu cách điều tra sự cố bằng bằng chứng thay vì suy đoán, lab cung cấp
+fixture `k8s/failure-wrong-image.yaml` với tên image không tồn tại:
+
+~~~powershell
+kubectl apply -f k8s/failure-wrong-image.yaml
+kubectl -n go-book rollout status `
+  deployment/probe-api --timeout=45s
+kubectl -n go-book get pods
+kubectl -n go-book get events --sort-by=.lastTimestamp
+kubectl -n go-book describe pod `
+  -l app.kubernetes.io/name=probe-api
+kubectl apply -f k8s/deployment.yaml
+kubectl -n go-book rollout status deployment/probe-api
+~~~
+
+Lệnh `rollout status` sẽ timeout sau 45 giây. Người mới thường vội kết luận
+"Kubernetes bị treo". Nhưng khi kiểm tra `get events` và `describe pod`, control
+plane cho ta bằng chứng cụ thể: `ErrImagePull` và `ImagePullBackOff`. Sau khi xác
+định đúng nguyên nhân, ta khôi phục bằng cách apply lại `deployment.yaml` gốc.
+Khi hoàn tất, ta dọn dẹp cluster cục bộ bằng lệnh:
+`kind delete cluster --name go-book`.
+
+### Quan sát API bằng client-go
+
+Thay vì phụ thuộc hoàn toàn vào lệnh CLI `kubectl`, các kỹ sư Go thường cần viết
+các công cụ chẩn đoán hoặc tự động hóa bằng chính ngôn ngữ Go. Thư mục
+`labs/part17-container-kubernetes/client-observer` minh họa một chương trình
+chẩn đoán chỉ đọc (read-only) dùng thư viện `k8s.io/client-go`.
+
+Chương trình nạp cấu hình cluster từ kubeconfig cục bộ, gọi API `Get` để lấy
+snapshot của Deployment `probe-api`, và mở một kênh `Watch` có giới hạn 15 giây
+để lắng nghe các thay đổi:
+
+~~~powershell
+cd labs/part17-container-kubernetes/client-observer
+go test ./...
+go vet ./...
+go test -race ./...
+go run ./cmd/observe-deployment `
+  --namespace go-book --name probe-api
+~~~
+
+Kết quả in ra tách biệt rõ giữa desired state và current observation:
+
+~~~text
+get: generation=1 observed=1 desired=1 updated=1 available=1
+~~~
+
+Chương trình này cố ý giữ phạm vi hẹp: nó không tạo, sửa hay xóa bất kỳ tài
+nguyên nào. Nó minh họa sự khác biệt giữa `Generation` (số phiên bản spec mà
+người dùng muốn) và `ObservedGeneration` (phiên bản spec mà controller đã xử lý).
+Nếu hai con số này lệch nhau, hệ thống đang trong quá trình chuyển trạng thái.
+
+@table Các lớp kiểm soát từ binary đến cluster
+
+| Tầng kiểm soát | Nhiệm vụ chính | Bằng chứng kiểm chứng | Giới hạn không được suy diễn |
+| --- | --- | --- | --- |
+| Binary | Xử lý request, signal, HTTP ports. | Unit/race test, JSON log. | Chưa biết môi trường filesystem hay cgroup. |
+| Container | Đóng gói filesystem, user, PID 1. | `docker inspect`, exit code. | Chạy được 1 container không đảm bảo tính sẵn sàng. |
+| Workload | Điều phối replica, rolling update, probe. | Rollout status, Pod events. | Pod Available không chứng minh logic app không lỗi. |
+| Client-go | Đọc và theo dõi trạng thái qua API. | Generation, ObservedGeneration. | Snapshot tại một thời điểm không thay thế controller. |
+
+**Dừng để dự đoán.** Nếu một Pod có liveness probe thành công nhưng readiness
+probe thất bại, Service có chuyển tiếp request vào Pod đó không? Kubelet có
+restart Pod không? Hãy đối chiếu câu trả lời với bảng trên trước khi xem tiếp.
+
 ## Khi nào phải dùng Docker, Kubernetes và client-go thật
 
 Khi requirement cần build/push image, chạy integration test trong container, deploy workload, đọc status cluster hoặc viết controller, lúc đó tool thật là bắt buộc. Docker CLI/BuildKit và Kubernetes API đều có version, quyền và cluster policy của chúng; client-go không phải một gói tiện ích để import chỉ vì cần parse YAML. Trước khi chạm API, hãy viết rõ resource nào là source of truth, identity nào được ownership, retry có thể lặp action nào, status nào caller được tin, và credential nào agent được phép dùng.
@@ -169,3 +373,5 @@ Khi requirement cần build/push image, chạy integration test trong container,
 2. Docker Authors. Dockerfile reference: `RUN`, `CMD`, `ENTRYPOINT`, exec form và shell form. docs.docker.com/reference/dockerfile/
 3. Kubernetes Authors. Controllers: desired state, current state và control loops. kubernetes.io/docs/concepts/architecture/controller/
 4. Kubernetes Authors. Pod lifecycle: Pod spec/status, restart policy, readiness và container lifecycle. kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+5. Kubernetes Authors. Package `client-go`: programmatic interface cho Kubernetes API. pkg.go.dev/k8s.io/client-go
+6. GoogleContainerTools. Distroless: language focused docker images, non-root user và minimal runtime footprint. github.com/GoogleContainerTools/distroless

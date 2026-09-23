@@ -136,6 +136,176 @@ Sau khi làm xong, thử viết một test mới: nếu `TestsPassed` là false 
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Validate digest rồi revision trước vì chúng là input contract. Sau đó kiểm tra từng gate và return decision từ chối không error; `error` dành cho candidate malformed. Chỉ decision allowed mới mang digest. `validDigest` chấp nhận đúng prefix `sha256:` và 64 chữ số hexadecimal thường; nó là validation định dạng, không phải xác thực content tồn tại hay chữ ký.
 
+## Stage hai: chuỗi delivery từ commit đến promotion gate
+
+Logic xét duyệt `Evaluate` ở trên cho ta thấy một quyết định promotion cần những
+bằng chứng gì. Nhưng trong thực tế, các bằng chứng ấy không xuất hiện cùng lúc
+trong một hàm Go đơn lẻ; chúng được tạo ra qua từng chặng của một pipeline phân
+tán. `labs/part18-workflow-delivery` kết nối lý thuyết này vào một quy trình
+hoàn chỉnh gồm ba phần: một workflow GitHub Actions bảo mật, một công cụ
+`promote-gate` bằng Go có thể chạy trong CI, và một cấu hình Terraform thiết lập
+cầu nối OIDC với hạ tầng đám mây.
+
+~~~text
+Source Commit (revision SHA)
+      |
+      v
+Job: verify (test, vet, race)
+      |
+      v
+Job: build-artifact (multi-stage build)
+      |  --> xuất ra digest bất biến: sha256:...
+      v
+Job: promote-production (environment: production)
+      |  --> cấp quyền id-token: write (OIDC)
+      |  --> chạy promote-gate CLI (kiểm tra candidate)
+      |  --> cập nhật desired state bằng chính digest ấy
+~~~
+
+### Workflow GitHub Actions và nguyên tắc đặc quyền tối thiểu
+
+Tệp `labs/part18-workflow-delivery/workflows/delivery.yaml` minh họa cách cấu
+hình một quy trình CI/CD có trách nhiệm. Ba nguyên tắc thiết kế được áp dụng
+chặt chẽ:
+
+1. **Quyền mặc định chỉ đọc:** Khai báo `permissions: { contents: read }` ở cấp
+   cao nhất của workflow. Điều này đảm bảo runner không thể tùy tiện ghi đè mã
+   nguồn hay tạo release nếu không được cấp quyền tường minh ở từng job.
+2. **Ghim action bằng commit SHA bất biến:** Thay vì dùng tag trôi nổi như
+   `uses: actions/checkout@v4`, workflow ghim mã băm commit đầy đủ:
+   `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2`.
+   Một tag phiên bản có thể bị tác giả hoặc kẻ tấn công trỏ sang một commit
+   khác trong tương lai; chỉ commit SHA mới là định danh bất biến bảo vệ chuỗi
+   cung ứng phần mềm.
+3. **Định danh bằng Digest thay vì Tag:** Job `build-artifact` biên dịch image
+   và trích xuất mã băm nội dung `sha256:...`. Digest này được truyền qua
+   `outputs` để job sau sử dụng. Job deploy tuyệt đối không dùng `:latest` hay
+   tên branch để deploy ra môi trường production.
+
+~~~yaml
+# Trích đoạn từ workflows/delivery.yaml
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      # Ghim commit SHA bất biến (v4.2.2 và v5.3.0)
+      - uses: actions/checkout@11bd719... # v4.2.2
+      - uses: actions/setup-go@3041d5d... # v5.3.0
+        with:
+          go-version: '1.27.1'
+      - run: |
+          go test -v ./...
+          go vet ./...
+          go test -race ./...
+~~~
+
+### Thực thi Promotion Gate bằng Go
+
+Để biến policy admission thành một chốt chặn tự động trong pipeline, thư mục
+`labs/part18-workflow-delivery/cmd/promote-gate` cung cấp một công cụ dòng lệnh
+nhỏ gọn viết bằng Go. Công cụ này nhận các tham số đầu vào và trả về mã thoát
+(exit code) chuẩn của hệ điều hành:
+
+~~~powershell
+cd labs/part18-workflow-delivery
+go test -v ./...
+go vet ./...
+go test -race ./...
+~~~
+
+Anh có thể chạy thử trực tiếp ba kịch bản vận hành để quan sát phản ứng của gate:
+
+~~~powershell
+# Định danh digest mẫu 64 ký tự hex
+$DIGEST = "sha256:0123456789abcdef0123456789abcdef" + `
+          "0123456789abcdef0123456789abcdef"
+
+# 1. Đạt chuẩn: trả về exit code 0
+go run ./cmd/promote-gate `
+  --digest $DIGEST `
+  --revision "e69965a" `
+  --tests-passed=true `
+  --provenance-verified=true
+
+# 2. Trượt test: trả về exit code 1
+go run ./cmd/promote-gate `
+  --digest $DIGEST `
+  --revision "e69965a" `
+  --tests-passed=false `
+  --provenance-verified=true
+
+# 3. Định danh trôi nổi: trả về exit code 2 (Lỗi đầu vào)
+go run ./cmd/promote-gate `
+  --digest ":latest" `
+  --revision "e69965a"
+~~~
+
+Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo:
+`invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2.
+Tính chất fail-closed này ngăn chặn hoàn toàn việc một lệnh deploy vô tình đưa
+một image chưa xác thực vào production.
+
+### Cầu nối AWS OIDC và Terraform: không lưu trữ khóa dài hạn
+
+Trong các hệ thống CI truyền thống, người ta thường sao chép `AWS_ACCESS_KEY_ID`
+và `AWS_SECRET_ACCESS_KEY` vào Secret của repository. Đây là một rủi ro vận hành
+rất lớn: khóa dài hạn có thể bị rò rỉ, khó xoay vòng tự động, và thường bị cấp
+quyền quá rộng.
+
+Mục `labs/part18-workflow-delivery/terraform/` cung cấp một cấu hình Terraform
+minh họa mô hình liên kết danh tính OpenID Connect (OIDC) giữa GitHub Actions và
+AWS IAM. Thay vì dùng secret tĩnh, GitHub Actions tạo ra một token JWT ngắn hạn
+được ký số; AWS STS xác thực chữ ký này và tạm thời cấp quyền cho job deploy.
+
+Quyền `id-token: write` chỉ được mở duy nhất ở job `promote-production`:
+
+~~~yaml
+  promote-production:
+    needs: build-artifact
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+~~~
+
+Trong Terraform, quan hệ tin cậy được khóa chặt bằng claim `sub`:
+
+~~~hcl
+# Trích đoạn từ terraform/main.tf
+condition {
+  test     = "StringEquals"
+  variable = "token.actions.githubusercontent.com:sub"
+  values   = ["repo:Minhlike/Golang:environment:production"]
+}
+~~~
+
+Ranh giới này có ý nghĩa sống còn: ngay cả khi ai đó fork repository của anh
+hoặc chạy workflow từ một pull request cá nhân, token do GitHub cấp phát sẽ mang
+claim `sub` của repo fork đó, và AWS STS sẽ từ chối cấp quyền ngay lập tức.
+Quyền IAM đính kèm cũng được giới hạn hẹp (chỉ thao tác trên đúng ECR repo và
+service chỉ định), không sử dụng ký tự đại diện `*` cho các hành động nguy hiểm.
+
+Lưu ý: cấu hình Terraform này được thiết kế ở dạng reviewable (để đọc, phân tích
+và kiểm tra cú pháp). Ta không tự ý chạy `terraform apply` hay tạo tài nguyên
+thật trên cloud khi chưa có sự phê duyệt cụ thể.
+
+@table Bốn chốt chặn bảo mật trong pipeline delivery
+
+| Chốt chặn | Cơ chế thực thi | Mối đe dọa ngăn chặn | Điều chưa giải quyết |
+| --- | --- | --- | --- |
+| Pinned Action SHA | Ghim mã băm commit của Action trong YAML. | Tấn công đầu độc mã nguồn qua việc sửa tag release. | Bug tiềm ẩn bên trong chính Action đó. |
+| Test & Vet Gate | `go test`, `go vet`, `go test -race` bắt buộc. | Đưa code có race condition hoặc cú pháp lỗi ra xa hơn. | Logic nghiệp vụ chưa được viết test. |
+| Promotion Gate | CLI Go kiểm tra digest và revision hợp lệ. | Dùng `:latest`, thiếu bằng chứng provenance hoặc test trượt. | Chất lượng của môi trường production thật. |
+| Scoped OIDC Role | Khóa claim `sub` theo repo và environment. | Rò rỉ credential dài hạn hoặc tấn công từ repo fork. | Lỗi cấu hình bên trong cloud service. |
+
+**Dừng để dự đoán.** Nếu một lập trình viên tạo branch mới và cấu hình workflow
+deploy lên môi trường staging, job đó có thể tự ý đóng vai role production ở AWS
+không? Tại sao claim `sub` lại bảo vệ được hệ thống trong tình huống này?
+
 ## Điểm dừng: evidence không thay thế trách nhiệm
 
 Pipeline, OIDC, attestation, Deployment và rollback không làm software tự an toàn. Chúng làm đường đi của một thay đổi có thể kiểm tra: source nào, artifact nào, gate nào, quyền nào, rollout nào và hành động nào khi xấu. Đó là nền để một Go service có thể được phát hành nhiều lần mà không biến mỗi lần phát hành thành một niềm tin mơ hồ.
@@ -147,3 +317,5 @@ Từ đây, sách có thể quay vào case study lớn hơn: một service nhậ
 2. GitHub Docs. OpenID Connect: token ngắn hạn, trust relationship và cloud authorization. docs.github.com/en/actions/concepts/security/openid-connect
 3. GitHub Docs. Security for GitHub Actions: artifact attestations và deployment hardening. docs.github.com/en/actions/how-tos/secure-your-work
 4. Kubernetes Authors. Deployments: rollout status, revision, rollback và giới hạn của revision history. kubernetes.io/docs/concepts/workloads/controllers/deployment/
+5. AWS Documentation. Creating OpenID Connect (OIDC) identity providers và IAM role trust policies. docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
+6. HashiCorp Terraform. AWS Provider: `aws_iam_openid_connect_provider` và `aws_iam_role`. registry.terraform.io/providers/hashicorp/aws/latest/docs

@@ -1,0 +1,115 @@
+name: Delivery Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Tối thiểu quyền ở cấp độ toàn workflow: mặc định chỉ đọc contents
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify Source & Tests
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned bằng immutable commit SHA thay vì mutable tag
+      - name: Checkout Source Revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@3041d5d36e89ee602123d24268e0ec2d978a6375 # v5.3.0
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+
+      - name: Code Verification
+        run: |
+          go test -v ./...
+          go vet ./...
+          go test -race ./...
+
+  build-artifact:
+    name: Build Immutable Artifact
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
+      source_revision: ${{ steps.vars.outputs.sha }}
+    steps:
+      - name: Checkout Source Revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Record Source Revision
+        id: vars
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build Image and Extract Digest
+        id: build
+        run: |
+          # Build image và ghi nhận content-addressed immutable digest
+          docker build \
+            --file labs/part17-container-kubernetes/Dockerfile \
+            --tag probe-api:build-${{ steps.vars.outputs.sha }} \
+            labs/part16-real-signals
+
+          # Trích xuất sha256 digest của image vừa build
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' probe-api:build-${{ steps.vars.outputs.sha }} 2>/dev/null || true)
+          if [ -z "$DIGEST" ]; then
+            DIGEST="sha256:$(docker inspect --format='{{.Id}}' probe-api:build-${{ steps.vars.outputs.sha }} | sed 's/sha256://')"
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Artifact built: $DIGEST for revision ${{ steps.vars.outputs.sha }}"
+
+  promote-production:
+    name: Promote to Production
+    needs: build-artifact
+    runs-on: ubuntu-latest
+    environment: production
+    # Chỉ job deploy mới được cấp quyền id-token: write để xác thực OIDC
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout Source Revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@3041d5d36e89ee602123d24268e0ec2d978a6375 # v5.3.0
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+
+      - name: Evaluate Promotion Gate
+        run: |
+          go run ./labs/part18-workflow-delivery/cmd/promote-gate \
+            --digest "${{ needs.build-artifact.outputs.image_digest }}" \
+            --revision "${{ needs.build-artifact.outputs.source_revision }}" \
+            --tests-passed=true \
+            --provenance-verified=true
+
+      # Minh họa bước đổi OIDC token lấy quyền IAM tạm thời (không dùng long-lived secret)
+      # - name: Assume AWS Role via OIDC
+      #   uses: aws-actions/configure-aws-credentials@e3ddf130cb0ab0da777f2e0085023d066bb25ce1 # v4.0.2
+      #   with:
+      #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy-production
+      #     aws-region: ap-southeast-1
+
+      - name: Deploy Desired State by Digest
+        run: |
+          echo "Promoting immutable artifact to production:"
+          echo "Image: ${{ needs.build-artifact.outputs.image_digest }}"
+          echo "Revision: ${{ needs.build-artifact.outputs.source_revision }}"
+          # Tuyệt đối không dùng :latest hoặc branch tag để deploy production
