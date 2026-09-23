@@ -182,9 +182,17 @@ func drainResponseBody(body io.ReadCloser) bool {
 
 Quy tắc kỹ thuật ở đây rất rõ ràng:
 1. **Luôn đóng body (`defer body.Close()`):** Giải phóng file descriptor socket ngay cả khi xảy ra lỗi giữa chừng.
-2. **Đọc tối đa 16 KiB:** Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework.
-3. **Phát hiện cạn dòng (EOF):** Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`).
+2. **Đọc tối đa 16 KiB:** Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework mà không nạp toàn bộ vào RAM.
+3. **Phát hiện cạn dòng (EOF):** Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`). Lưu ý rằng đây là điều kiện cần trên tầng stream HTTP/1.x, không phải bảo đảm tuyệt đối của mọi tầng Transport.
 4. **Đánh đổi có chủ đích:** Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Hệ thống phát hiện luồng bị cắt ngắn và chấp nhận rằng kết nối TCP này không thể tái sử dụng an toàn trên HTTP/1.1; socket sẽ bị đóng để ưu tiên an toàn bộ nhớ.
+5. **Thời lượng probe phản ánh toàn bộ lifecycle:** Đồng hồ đo thời lượng probe bắt đầu từ trước khi phát request tới sau khi quy trình cleanup/drain kết thúc. Nếu target trả về header 200 nhưng luồng body bị nghẽn (stall) vượt quá deadline, probe sẽ kết luận đúng là `OutcomeTimeout` thay vì báo nhầm `OutcomeSuccess`.
+
+### 5. Ranh giới Bảo mật, Hợp đồng JSON và Distributed Tracing
+
+Một công cụ vận hành chỉ an toàn khi các ranh giới ngoại vi được xác định rành mạch:
+- **Mô hình đe dọa (Threat Model):** `opsprobe` được thiết kế như công cụ chẩn đoán nội bộ (trusted-operator diagnostic tool). Việc kiểm tra URL trong mã nguồn là validation cú pháp cơ bản, **không thay thế được cơ chế chống SSRF toàn diện**. Khi triển khai nhận input từ ngoài, hệ thống bắt buộc phải có network policy chặn các dải Private IP hoặc đặt sau egress proxy.
+- **Hợp đồng JSON di động:** Trường `timeout_ms` trong request payload sử dụng kiểu số nguyên mili-giây (`0 <= timeout_ms <= 60000`), bảo đảm tương thích đa nền tảng thay vì parse cú pháp chuỗi duration của riêng Go.
+- **Phân tán ngữ cảnh (W3C TraceContext):** Outbound probe request tự động chèn header `traceparent` theo child span hiện tại, bảo đảm chuỗi quan sát phân tán không bị đứt gãy giữa các dịch vụ.
 
 ## Bài tập chẩn đoán sự cố: Bão cạn kiệt Socket
 
@@ -242,41 +250,35 @@ Anh có thể trực tiếp chạy và kiểm chứng toàn bộ năng lực c�
 ~~~powershell
 cd projects/opsprobe
 
-# 1. Chạy test suite và kiểm tra race condition
-go test -v ./...
+# 1. Chạy test suite có race detector
 go test -race ./...
-go vet ./...
 
-# 2. Chạy CLI kiểm tra một URL đơn lẻ
+# 2. Chạy CLI kiểm tra URL đơn lẻ
 go run ./cmd/opsprobe `
-  --oneshot-url=https://go.dev `
-  --timeout=2s
+  --oneshot-url=https://go.dev --timeout=2s
 
 # 3. Khởi chạy HTTP daemon server
-go run ./cmd/opsprobe `
-  --addr=127.0.0.1:8080 `
-  --db=opsprobe.db `
-  --concurrency=4
+go run ./cmd/opsprobe --addr=127.0.0.1:8080 `
+  --db=opsprobe.db --concurrency=4
 ~~~
 
-Trong một cửa sổ terminal khác, gửi yêu cầu kiểm tra hàng loạt endpoint và xem metrics Prometheus:
+Trong cửa sổ khác, gửi yêu cầu probe và thu thập metrics:
 
 ~~~powershell
-# Gửi yêu cầu probe qua REST API
 $target = '{"id":"t1","url":"http://127.0.0.1:8080/livez"}'
 curl -X POST http://127.0.0.1:8080/runs `
   -H "Content-Type: application/json" `
   -d "{`"targets`":[$target]}"
-
-# Thu thập metrics Prometheus
 curl http://127.0.0.1:8080/metrics
 ~~~
 
-## Điểm dừng: khi một kỹ sư nhìn một hệ thống Go
+## Cột mốc hoàn thành Capstone: Chốt baseline hệ thống
 
-Khi bắt đầu cuốn sách, một chương trình Go có thể chỉ là một tệp `main.go` với hàm `fmt.Println`. Khi kết thúc cuốn sách, ta nhìn thấy toàn bộ chiều sâu phía sau dòng chữ đó: một giá trị di chuyển qua bộ nhớ theo value hay pointer semantics; một goroutine được đánh thức bởi scheduler và phối hợp an toàn qua channel; một kết nối TCP được mượn từ pool, đọc cạn dữ liệu và hoàn trả nguyên vẹn; một transaction bảo đảm cơ sở dữ liệu không bao giờ chứa trạng thái dở dang; một tín hiệu OS dừng tiến trình êm ái mà không làm rơi rớt dữ liệu; và một artifact bất biến được định danh bằng digest nội dung, kiểm soát bởi các chốt chặn tự động trước khi bước vào production.
+Khi bước vào dự án Capstone, một chương trình Go không còn là những tệp mã nguồn rời rạc hay hàm `fmt.Println` đơn lẻ. Ta nhìn thấy toàn bộ chiều sâu kỹ thuật đan kết trong một hệ thống vận hành hoàn chỉnh: một giá trị di chuyển qua bộ nhớ theo value hay pointer semantics; một goroutine được đánh thức bởi scheduler và phối hợp an toàn qua channel; một kết nối TCP được mượn từ pool, đọc cạn dữ liệu và hoàn trả nguyên vẹn; một transaction bảo đảm cơ sở dữ liệu không bao giờ chứa trạng thái dở dang; một tín hiệu OS dừng tiến trình êm ái mà không làm rơi rớt dữ liệu; và một artifact bất biến được định danh bằng digest nội dung, kiểm soát bởi các chốt chặn tự động trước khi bước vào production.
 
 Đó chính là ranh giới giữa một người biết cú pháp ngôn ngữ và một kỹ sư phần mềm thực thụ: **hiểu rõ cái giá của từng quyết định thiết kế và chịu trách nhiệm đến cùng cho sự vận hành của hệ thống.**
+
+Việc hoàn thành dự án `opsprobe` chốt lại baseline vững chắc của cuốn sách sống (*living textbook*), đồng thời mở ra những bài toán hệ thống ở quy mô hạ tầng cao hơn: khi hệ thống không chỉ thăm dò thụ động mà cần liên tục tự điều hòa, dung hòa sai lệch giữa trạng thái mong muốn và thực tế để tự phục hồi.
 
 @references
 1. Go Team. The Go Programming Language Specification: memory model, concurrency semantics, channels và types. go.dev/ref/spec

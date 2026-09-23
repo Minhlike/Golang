@@ -1,8 +1,8 @@
-# Handoff — Milestone C (Capstone opsprobe Hardened & Hoàn Tất Toàn Bộ Dự Án)
+# Handoff — Milestone C (Capstone opsprobe Hardened & Chốt Baseline Hệ Thống)
 
-Tài liệu này bàn giao toàn bộ trạng thái sau khi hoàn tất **Milestone C Capstone Hardening Pass** cho dự án `projects/opsprobe/`, Chương 20, và đường ống sách PDF.
+Tài liệu này bàn giao toàn bộ trạng thái sau khi hoàn tất **Milestone C Capstone Hardening Pass** cho dự án `projects/opsprobe/`, Chương 20, và đường ống sách PDF. Milestone C hoàn thành, current baseline đã chốt. Sách tiếp tục phát triển tiến về phía trước theo quy tắc Living Textbook.
 
-Toàn bộ công việc kế thừa `MASTER PROMPT.txt`, các chương từ 1 đến 20, toàn bộ `labs/`, và bản PDF chính thức `Golang_Master.pdf` (221 trang). Giữ nguyên vẹn giọng văn tiếng Việt tự nhiên ("em" và "anh").
+Toàn bộ công việc kế thừa `MASTER PROMPT.txt`, các chương từ 1 đến 20, toàn bộ `labs/`, và bản PDF chính thức `Golang_Master.pdf`. Giữ nguyên vẹn giọng văn tiếng Việt tự nhiên ("em" và "anh").
 
 ---
 

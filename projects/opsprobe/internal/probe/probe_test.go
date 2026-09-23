@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -189,5 +190,115 @@ func TestPool_Execute_ChildSpans(t *testing.T) {
 	}
 	if childCount != 2 {
 		t.Fatalf("expected 2 child spans, got %d", childCount)
+	}
+}
+
+func TestProbeSingle_BodyStallTimeout(t *testing.T) {
+	// Server gửi headers 200 OK ngay lập tức, nhưng stall stream không gửi body
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		// Stall lâu hơn deadline của probe
+		select {
+		case <-r.Context().Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}))
+	defer srv.Close()
+
+	pool := NewPool(WithDefaultTimeout(50 * time.Millisecond))
+	res := pool.ProbeSingle(context.Background(), Target{
+		ID:      "stall-target",
+		URL:     srv.URL,
+		Timeout: 50 * time.Millisecond,
+	})
+
+	// Không được nhận 200 headers, body treo tới timeout, rồi vẫn báo success!
+	if res.Outcome != OutcomeTimeout {
+		t.Fatalf("expected OutcomeTimeout on stalled body, got %s (err=%q, status=%d)", res.Outcome, res.Error, res.StatusCode)
+	}
+	if !strings.Contains(res.Error, "timeout") {
+		t.Errorf("expected error message to mention timeout, got %q", res.Error)
+	}
+}
+
+func TestProbeSingle_TraceparentPropagation(t *testing.T) {
+	var receivedTraceparent string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedTraceparent = r.Header.Get("traceparent")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	tracer := tp.Tracer("test-propagation")
+
+	pool := NewPool(WithTracer(tracer))
+
+	ctx, parentSpan := tracer.Start(context.Background(), "opsprobe.run")
+	res := pool.ProbeSingle(ctx, Target{ID: "trace-target", URL: srv.URL})
+	parentSpan.End()
+
+	if res.Outcome != OutcomeSuccess {
+		t.Fatalf("probe failed: %v", res.Error)
+	}
+
+	if receivedTraceparent == "" {
+		t.Fatalf("expected outbound request to carry W3C traceparent header, got empty")
+	}
+
+	// traceparent có định dạng: 00-{trace_id}-{span_id}-{trace_flags}
+	parts := strings.Split(receivedTraceparent, "-")
+	if len(parts) != 4 || parts[0] != "00" {
+		t.Fatalf("malformed traceparent header: %q", receivedTraceparent)
+	}
+
+	expectedTraceID := parentSpan.SpanContext().TraceID().String()
+	if parts[1] != expectedTraceID {
+		t.Errorf("traceparent trace ID %q does not match parent trace ID %q", parts[1], expectedTraceID)
+	}
+}
+
+func TestProbeSingle_URLSanitizationAndSecretRedaction(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	tracer := tp.Tracer("test-redaction")
+
+	pool := NewPool(WithTracer(tracer))
+
+	secretToken := "supersecret123"
+	secretQueryURL := srv.URL + "/health?token=" + secretToken + "&api_key=mysecretpass#fragment"
+	target := Target{ID: "secret-target", URL: secretQueryURL}
+
+	res := pool.ProbeSingle(context.Background(), target)
+	if res.Outcome != OutcomeSuccess {
+		t.Fatalf("probe failed: %v", res.Error)
+	}
+
+	// 1. Kiểm tra Result URL đã được sanitize
+	if strings.Contains(res.URL, secretToken) || strings.Contains(res.URL, "mysecretpass") {
+		t.Fatalf("secret leaked into Result.URL: %q", res.URL)
+	}
+	if strings.Contains(res.URL, "?") {
+		t.Errorf("Result.URL still contains query string: %q", res.URL)
+	}
+
+	// 2. Kiểm tra Span attributes không chứa secret
+	spans := exporter.GetSpans()
+	for _, s := range spans {
+		for _, attr := range s.Attributes {
+			valStr := attr.Value.AsString()
+			if strings.Contains(valStr, secretToken) || strings.Contains(valStr, "mysecretpass") {
+				t.Fatalf("secret leaked into span attribute %s: %s", attr.Key, valStr)
+			}
+		}
 	}
 }

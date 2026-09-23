@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -109,5 +110,30 @@ func TestTelemetry_ActiveWorkerObserver(t *testing.T) {
 	val = testutil.ToFloat64(tel.ActiveWorkers)
 	if val != 0.0 {
 		t.Fatalf("expected 0.0 active workers, got %f", val)
+	}
+}
+
+func TestTelemetry_SecretRedactionInLogs(t *testing.T) {
+	var logBuf bytes.Buffer
+	tel, err := New(Config{
+		ServiceName: "test-probe",
+		Environment: "test",
+		LogWriter:   &logBuf,
+		LogLevel:    slog.LevelInfo,
+	})
+	if err != nil {
+		t.Fatalf("failed to init telemetry: %v", err)
+	}
+
+	secretToken := "secret_api_token_12345"
+	rawURL := "https://example.com/health?token=" + secretToken + "&private=true"
+	tel.RecordProbe("target-sec", rawURL, "success", 0.05, "")
+
+	loggedOutput := logBuf.String()
+	if strings.Contains(loggedOutput, secretToken) {
+		t.Fatalf("secret leaked into log output: %s", loggedOutput)
+	}
+	if strings.Contains(loggedOutput, "private=true") {
+		t.Fatalf("query string leaked into log output: %s", loggedOutput)
 	}
 }

@@ -65,8 +65,17 @@ func (a *API) Routes() http.Handler {
 	return a.recoveryMiddleware(a.loggingMiddleware(mux))
 }
 
+// TargetDTO đại diện cho dữ liệu đầu vào của target trong request JSON qua HTTP API.
+type TargetDTO struct {
+	ID             string `json:"id"`
+	URL            string `json:"url"`
+	Method         string `json:"method,omitempty"`
+	ExpectedStatus int    `json:"expected_status,omitempty"`
+	TimeoutMs      *int64 `json:"timeout_ms,omitempty"`
+}
+
 type createRunRequest struct {
-	Targets []probe.Target `json:"targets"`
+	Targets []TargetDTO `json:"targets"`
 }
 
 type runDetailResponse struct {
@@ -76,19 +85,7 @@ type runDetailResponse struct {
 
 // handleCreateRun nhận danh sách target, thực thi qua pool, cập nhật metric và lưu DB.
 func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
-	// 1. Áp dụng backpressure: kiểm tra giới hạn đợt chạy đồng thời
-	select {
-	case a.runSem <- struct{}{}:
-		defer func() { <-a.runSem }()
-	default:
-		a.tel.RunsTotal.WithLabelValues("rejected_backpressure").Inc()
-		a.writeJSON(w, http.StatusTooManyRequests, map[string]string{
-			"error": "too many concurrent runs, backpressure applied",
-		})
-		return
-	}
-
-	// 2. Decode và validate JSON payload với MaxBytesReader và kiểm tra EOF chặt chẽ
+	// 1. Decode và validate JSON payload với MaxBytesReader và kiểm tra EOF chặt chẽ
 	const maxBodyBytes = 65536 // 64 KiB
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 
@@ -118,7 +115,7 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Upfront Input Contract Validation: Kiểm tra toàn bộ targets trước khi chạy
+	// 2. Upfront Input Contract Validation: Kiểm tra toàn bộ targets trước khi nhận slot
 	if len(req.Targets) == 0 {
 		a.writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "targets list must not be empty",
@@ -133,8 +130,34 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	domainTargets := make([]probe.Target, len(req.Targets))
 	seenIDs := make(map[string]struct{}, len(req.Targets))
-	for i, target := range req.Targets {
+	for i, dto := range req.Targets {
+		var timeout time.Duration
+		if dto.TimeoutMs != nil {
+			if *dto.TimeoutMs < 0 {
+				a.writeJSON(w, http.StatusBadRequest, map[string]string{
+					"error": fmt.Sprintf("target at index %d (%s): timeout_ms cannot be negative", i, dto.ID),
+				})
+				return
+			}
+			if *dto.TimeoutMs > 60000 {
+				a.writeJSON(w, http.StatusBadRequest, map[string]string{
+					"error": fmt.Sprintf("target at index %d (%s): timeout_ms cannot exceed 60000ms (60s)", i, dto.ID),
+				})
+				return
+			}
+			timeout = time.Duration(*dto.TimeoutMs) * time.Millisecond
+		}
+
+		target := probe.Target{
+			ID:             dto.ID,
+			URL:            dto.URL,
+			Method:         dto.Method,
+			ExpectedStatus: dto.ExpectedStatus,
+			Timeout:        timeout,
+		}
+
 		if err := probe.ValidateTarget(target); err != nil {
 			a.writeJSON(w, http.StatusBadRequest, map[string]string{
 				"error": fmt.Sprintf("invalid target at index %d (%s): %v", i, target.ID, err),
@@ -148,15 +171,35 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		seenIDs[target.ID] = struct{}{}
+		domainTargets[i] = target
 	}
 
-	// 4. Khởi tạo Run ID ngẫu nhiên không xung đột
-	runID := generateRunID()
+	// 3. Áp dụng backpressure: Chỉ cấp slot semaphore SAU KHI payload và target đã hợp lệ
+	// Điều này ngăn ngừa request rác hoặc malformed chiếm capacity của hệ thống.
+	select {
+	case a.runSem <- struct{}{}:
+		defer func() { <-a.runSem }()
+	default:
+		a.tel.RunsTotal.WithLabelValues("rejected_backpressure").Inc()
+		a.writeJSON(w, http.StatusTooManyRequests, map[string]string{
+			"error": "too many concurrent runs, backpressure applied",
+		})
+		return
+	}
+
+	// 4. Khởi tạo Run ID ngẫu nhiên an toàn (kiểm tra lỗi crypto/rand)
+	runID, err := generateRunID()
+	if err != nil {
+		a.writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "failed to generate run id",
+		})
+		return
+	}
 
 	// Khởi tạo span trace cho đợt chạy
 	ctx, span := a.tel.StartSpan(r.Context(), "opsprobe.run",
 		attribute.String("run.id", runID),
-		attribute.Int("target.count", len(req.Targets)),
+		attribute.Int("target.count", len(domainTargets)),
 	)
 	defer span.End()
 
@@ -164,7 +207,7 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	startedAt := time.Now().UTC()
 
 	// 5. Thực thi probe qua pool có giới hạn
-	results := a.pool.Execute(ctx, req.Targets)
+	results := a.pool.Execute(ctx, domainTargets)
 
 	// Ghi nhận mốc thời gian kết thúc
 	completedAt := time.Now().UTC()
@@ -194,14 +237,20 @@ func (a *API) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		ID:           runID,
 		StartedAt:    startedAt,
 		CompletedAt:  completedAt,
-		TargetCount:  len(req.Targets),
+		TargetCount:  len(domainTargets),
 		SuccessCount: successCount,
 		FailureCount: failureCount,
 		Status:       status,
 	}
 
-	// 6. Ghi nhận atomic transaction vào store
-	if err := a.store.RecordRun(ctx, run, results); err != nil {
+	// 7. Ghi nhận atomic transaction vào store bằng bounded finalization context:
+	// Lifecycle policy: Khi client hủy request context, probe dừng ngay lập tức.
+	// Tuy nhiên, việc ghi nhận trạng thái đã hủy (status="canceled") vào sổ cái store
+	// là bước dọn dẹp vận hành thiết yếu; thực thi trong một context độc lập có timeout 5s.
+	persistCtx, persistCancel := context.WithTimeout(context.WithoutCancel(r.Context()), 5*time.Second)
+	defer persistCancel()
+
+	if err := a.store.RecordRun(persistCtx, run, results); err != nil {
 		a.tel.RunsTotal.WithLabelValues("db_error").Inc()
 		a.tel.Logger.Error("failed to record run in store",
 			slog.String("run_id", runID),
@@ -326,8 +375,10 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-func generateRunID() string {
+func generateRunID() (string, error) {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("run-%x", hex.EncodeToString(b))
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("crypto rand: %w", err)
+	}
+	return fmt.Sprintf("run-%s", hex.EncodeToString(b)), nil
 }

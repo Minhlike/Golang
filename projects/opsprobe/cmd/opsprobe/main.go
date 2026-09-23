@@ -18,29 +18,36 @@ import (
 	"example.com/golang-master/projects/opsprobe/internal/telemetry"
 )
 
-func envOrDefault(key, fallback string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
+func getEnvString(key string) (string, bool) {
+	val, ok := os.LookupEnv(key)
+	if !ok || val == "" {
+		return "", false
 	}
-	return fallback
+	return val, true
 }
 
-func envOrDefaultInt(key string, fallback int) int {
-	if val := os.Getenv(key); val != "" {
-		if n, err := strconv.Atoi(val); err == nil {
-			return n
-		}
+func getEnvInt(key string) (int, bool, error) {
+	val, ok := os.LookupEnv(key)
+	if !ok || val == "" {
+		return 0, false, nil
 	}
-	return fallback
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, true, fmt.Errorf("invalid integer for %s=%q: %w", key, val, err)
+	}
+	return n, true, nil
 }
 
-func envOrDefaultDuration(key string, fallback time.Duration) time.Duration {
-	if val := os.Getenv(key); val != "" {
-		if d, err := time.ParseDuration(val); err == nil {
-			return d
-		}
+func getEnvDuration(key string) (time.Duration, bool, error) {
+	val, ok := os.LookupEnv(key)
+	if !ok || val == "" {
+		return 0, false, nil
 	}
-	return fallback
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return 0, true, fmt.Errorf("invalid duration for %s=%q: %w", key, val, err)
+	}
+	return d, true, nil
 }
 
 func main() {
@@ -51,15 +58,56 @@ func main() {
 }
 
 func run(args []string) error {
+	defaultConcurrency := 4
+	if val, set, err := getEnvInt("OPSPROBE_CONCURRENCY"); err != nil {
+		return fmt.Errorf("config error: %w", err)
+	} else if set {
+		defaultConcurrency = val
+	}
+
+	defaultTimeout := 3 * time.Second
+	if val, set, err := getEnvDuration("OPSPROBE_TIMEOUT"); err != nil {
+		return fmt.Errorf("config error: %w", err)
+	} else if set {
+		defaultTimeout = val
+	}
+
+	defaultMaxActiveRuns := 10
+	if val, set, err := getEnvInt("OPSPROBE_MAX_ACTIVE_RUNS"); err != nil {
+		return fmt.Errorf("config error: %w", err)
+	} else if set {
+		defaultMaxActiveRuns = val
+	}
+
+	defaultAddr := "127.0.0.1:8080"
+	if val, set := getEnvString("OPSPROBE_ADDR"); set {
+		defaultAddr = val
+	}
+
+	defaultDB := "opsprobe.db"
+	if val, set := getEnvString("OPSPROBE_DB"); set {
+		defaultDB = val
+	}
+
+	defaultLogLevel := "info"
+	if val, set := getEnvString("OPSPROBE_LOG_LEVEL"); set {
+		defaultLogLevel = val
+	}
+
+	defaultEnv := "development"
+	if val, set := getEnvString("OPSPROBE_ENV"); set {
+		defaultEnv = val
+	}
+
 	fs := flag.NewFlagSet("opsprobe", flag.ContinueOnError)
 
-	addr := fs.String("addr", envOrDefault("OPSPROBE_ADDR", "127.0.0.1:8080"), "Dia chi TCP lang nghe cua HTTP server (mac dinh 127.0.0.1:8080 de tranh open exposure)")
-	dbPath := fs.String("db", envOrDefault("OPSPROBE_DB", "opsprobe.db"), "Duong dan tep SQLite luu tru (vd opsprobe.db hoac :memory:)")
-	concurrency := fs.Int("concurrency", envOrDefaultInt("OPSPROBE_CONCURRENCY", 4), "So worker goroutine thuc thi probe dong thoi")
-	timeout := fs.Duration("timeout", envOrDefaultDuration("OPSPROBE_TIMEOUT", 3*time.Second), "Timeout mac dinh cho moi luot probe target")
-	maxActiveRuns := fs.Int("max-active-runs", envOrDefaultInt("OPSPROBE_MAX_ACTIVE_RUNS", 10), "So luot run dong thoi toi da truoc khi ap dung backpressure")
-	logLevelStr := fs.String("log-level", envOrDefault("OPSPROBE_LOG_LEVEL", "info"), "Cap do log: debug, info, warn, error")
-	envStr := fs.String("env", envOrDefault("OPSPROBE_ENV", "development"), "Moi truong chay: development, staging, production")
+	addr := fs.String("addr", defaultAddr, "Dia chi TCP lang nghe cua HTTP server (mac dinh 127.0.0.1:8080 de tranh open exposure)")
+	dbPath := fs.String("db", defaultDB, "Duong dan tep SQLite luu tru (vd opsprobe.db hoac :memory:)")
+	concurrency := fs.Int("concurrency", defaultConcurrency, "So worker goroutine thuc thi probe dong thoi")
+	timeout := fs.Duration("timeout", defaultTimeout, "Timeout mac dinh cho moi luot probe target (0 < t <= 60s)")
+	maxActiveRuns := fs.Int("max-active-runs", defaultMaxActiveRuns, "So luot run dong thoi toi da truoc khi ap dung backpressure")
+	logLevelStr := fs.String("log-level", defaultLogLevel, "Cap do log: debug, info, warn, error")
+	envStr := fs.String("env", defaultEnv, "Moi truong chay: development, staging, production")
 	traceStdout := fs.Bool("trace-stdout", false, "In OpenTelemetry traces truc tiep ra stdout de debug cuc bo")
 	oneshotURL := fs.String("oneshot-url", "", "Neu duoc chi dinh, chay kiem tra mot URL don le qua CLI roi thoat")
 
@@ -67,17 +115,29 @@ func run(args []string) error {
 		return err
 	}
 
-	// 1. Parse log level
+	// 1. Validation cac rang buoc tham so
+	if *concurrency <= 0 {
+		return fmt.Errorf("invalid concurrency: %d (must be > 0)", *concurrency)
+	}
+	if *maxActiveRuns <= 0 {
+		return fmt.Errorf("invalid max-active-runs: %d (must be > 0)", *maxActiveRuns)
+	}
+	if *timeout <= 0 || *timeout > 60*time.Second {
+		return fmt.Errorf("invalid timeout: %v (must be > 0 and <= 60s)", *timeout)
+	}
+
 	var logLevel slog.Level
 	switch *logLevelStr {
 	case "debug":
 		logLevel = slog.LevelDebug
+	case "info":
+		logLevel = slog.LevelInfo
 	case "warn":
 		logLevel = slog.LevelWarn
 	case "error":
 		logLevel = slog.LevelError
 	default:
-		logLevel = slog.LevelInfo
+		return fmt.Errorf("invalid log-level %q: must be one of debug, info, warn, error", *logLevelStr)
 	}
 
 	// 2. Khoi tao Telemetry (Logger, Metrics, Tracing)

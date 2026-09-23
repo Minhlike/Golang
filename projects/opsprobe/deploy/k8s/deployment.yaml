@@ -30,9 +30,10 @@ spec:
           type: RuntimeDefault
       containers:
         - name: opsprobe
-          # Chu y: Trong production CI/CD, chuoi digest sha256 thuc te phai duoc pin sau khi build.
-          # Khong su dung fake digest. Khi review/deploy, thay the bang digest da verify.
-          image: ghcr.io/minhlike/opsprobe:v1.0.0 # REPLACE_WITH_VERIFIED_DIGEST_BEFORE_APPLY
+          # Luu y: Day la manifest mau san xuat, da validate cu phap/schema; trien khai live yeu cau cluster k8s that.
+          # Image duoi day la placeholder; CI/CD pipeline phai build va pin digest da verify truoc khi apply:
+          # vi du: ghcr.io/minhlike/opsprobe@sha256:REPLACE_WITH_VERIFIED_MANIFEST_DIGEST
+          image: ghcr.io/minhlike/opsprobe:v1.0.0 # REPLACE_WITH_VERIFIED_MANIFEST_DIGEST_BEFORE_APPLY
           imagePullPolicy: IfNotPresent
           securityContext:
             readOnlyRootFilesystem: true

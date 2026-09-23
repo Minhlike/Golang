@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -136,22 +137,36 @@ func New(cfg Config) (*Telemetry, error) {
 	}, nil
 }
 
+// sanitizeURL loại bỏ query parameters và credentials để bảo vệ an toàn log.
+func sanitizeURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	u.User = nil
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String()
+}
+
 // RecordProbe ghi nhận kết quả của một probe vào metrics và logger.
-func (t *Telemetry) RecordProbe(targetID, url string, outcome string, durationSeconds float64, err string) {
+func (t *Telemetry) RecordProbe(targetID, rawURL string, outcome string, durationSeconds float64, err string) {
 	t.ProbesTotal.WithLabelValues(outcome).Inc()
 	t.ProbeDurationSecs.WithLabelValues(outcome).Observe(durationSeconds)
+
+	cleanURL := sanitizeURL(rawURL)
 
 	if outcome == "success" {
 		t.Logger.Info("probe completed",
 			slog.String("target_id", targetID),
-			slog.String("url", url),
+			slog.String("url", cleanURL),
 			slog.String("outcome", outcome),
 			slog.Float64("duration_s", durationSeconds),
 		)
 	} else {
 		t.Logger.Warn("probe failed",
 			slog.String("target_id", targetID),
-			slog.String("url", url),
+			slog.String("url", cleanURL),
 			slog.String("outcome", outcome),
 			slog.Float64("duration_s", durationSeconds),
 			slog.String("error", err),

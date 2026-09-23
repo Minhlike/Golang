@@ -77,7 +77,7 @@ func TestAPI_CreateAndGetRun(t *testing.T) {
 
 	// 1. Gửi request POST /runs
 	reqPayload := createRunRequest{
-		Targets: []probe.Target{
+		Targets: []TargetDTO{
 			{ID: "api-good", URL: target1.URL},
 			{ID: "api-bad", URL: target2.URL},
 		},
@@ -202,7 +202,7 @@ func TestAPI_Backpressure(t *testing.T) {
 
 	handler := api.Routes()
 	reqPayload := createRunRequest{
-		Targets: []probe.Target{
+		Targets: []TargetDTO{
 			{ID: "t1", URL: "http://127.0.0.1:12345"},
 		},
 	}
@@ -287,5 +287,129 @@ func TestAPI_MalformedInput(t *testing.T) {
 	handler.ServeHTTP(rec8, req8)
 	if rec8.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for unsupported HTTP method, got %d", rec8.Code)
+	}
+}
+
+func TestAPI_TimeoutMsContract(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer target.Close()
+
+	api, _, _ := setupTestAPI(t, 5)
+	handler := api.Routes()
+
+	// 1. Valid timeout_ms
+	validTimeout := int64(500)
+	reqPayload := createRunRequest{
+		Targets: []TargetDTO{
+			{ID: "t-valid", URL: target.URL, TimeoutMs: &validTimeout},
+		},
+	}
+	payloadBytes, _ := json.Marshal(reqPayload)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(payloadBytes))
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for valid timeout_ms, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 2. Negative timeout_ms -> 400
+	negTimeout := int64(-5)
+	badPayload1, _ := json.Marshal(createRunRequest{
+		Targets: []TargetDTO{
+			{ID: "t-neg", URL: target.URL, TimeoutMs: &negTimeout},
+		},
+	})
+	recNeg := httptest.NewRecorder()
+	reqNeg := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(badPayload1))
+	handler.ServeHTTP(recNeg, reqNeg)
+	if recNeg.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for negative timeout_ms, got %d", recNeg.Code)
+	}
+
+	// 3. Excessive timeout_ms (>60000) -> 400
+	excessTimeout := int64(60001)
+	badPayload2, _ := json.Marshal(createRunRequest{
+		Targets: []TargetDTO{
+			{ID: "t-excess", URL: target.URL, TimeoutMs: &excessTimeout},
+		},
+	})
+	recExcess := httptest.NewRecorder()
+	reqExcess := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(badPayload2))
+	handler.ServeHTTP(recExcess, reqExcess)
+	if recExcess.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for excessive timeout_ms (>60s), got %d", recExcess.Code)
+	}
+}
+
+func TestAPI_Backpressure_NotConsumedOnMalformedRequest(t *testing.T) {
+	// Giới hạn maxActiveRuns = 1
+	api, _, _ := setupTestAPI(t, 1)
+	handler := api.Routes()
+
+	// Gửi request malformed (JSON lỗi)
+	recBad := httptest.NewRecorder()
+	reqBad := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader([]byte("{invalid-json")))
+	handler.ServeHTTP(recBad, reqBad)
+	if recBad.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad JSON, got %d", recBad.Code)
+	}
+
+	// Xác minh slot semaphore không hề bị tiêu thụ sai:
+	// Nếu slot bị tiêu thụ sai, request hợp lệ tiếp theo sẽ bị 429
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer target.Close()
+
+	payloadBytes, _ := json.Marshal(createRunRequest{
+		Targets: []TargetDTO{
+			{ID: "t-ok", URL: target.URL},
+		},
+	})
+	recGood := httptest.NewRecorder()
+	reqGood := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(payloadBytes))
+	handler.ServeHTTP(recGood, reqGood)
+	if recGood.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created for subsequent valid request, got %d", recGood.Code)
+	}
+}
+
+func TestAPI_CanceledRun_PersistedInStore(t *testing.T) {
+	// Mock server chậm
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer target.Close()
+
+	api, storeInstance, _ := setupTestAPI(t, 5)
+	handler := api.Routes()
+
+	// Tạo request context bị cancel sau 50ms
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	payloadBytes, _ := json.Marshal(createRunRequest{
+		Targets: []TargetDTO{
+			{ID: "t-slow", URL: target.URL},
+		},
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/runs", bytes.NewReader(payloadBytes)).WithContext(ctx)
+	handler.ServeHTTP(rec, req)
+
+	// Đảm bảo run được lưu trong store với status "canceled"
+	runs, err := storeInstance.ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("failed to list runs from store: %v", err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("expected 1 run in store, found %d", len(runs))
+	}
+	if runs[0].Status != "canceled" {
+		t.Errorf("expected run status 'canceled', got '%s'", runs[0].Status)
 	}
 }

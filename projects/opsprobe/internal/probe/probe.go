@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -54,6 +55,18 @@ type WorkerObserver interface {
 	WorkerStopped()
 }
 
+// SanitizeURL loại bỏ query parameters và credentials để bảo vệ thông tin nhạy cảm khỏi logs và traces.
+func SanitizeURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	u.User = nil
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String()
+}
+
 // Pool thực thi các lượt probe với số lượng worker bị chặn (bounded concurrency).
 type Pool struct {
 	client         *http.Client
@@ -61,6 +74,7 @@ type Pool struct {
 	defaultTimeout time.Duration
 	observer       WorkerObserver
 	tracer         trace.Tracer
+	propagator     propagation.TextMapPropagator
 }
 
 // PoolOption cho phép cấu hình tham số khởi tạo Pool.
@@ -107,6 +121,15 @@ func WithTracer(tr trace.Tracer) PoolOption {
 	}
 }
 
+// WithPropagator cấu hình TextMapPropagator cho việc inject distributed trace context vào outbound HTTP headers.
+func WithPropagator(prop propagation.TextMapPropagator) PoolOption {
+	return func(p *Pool) {
+		if prop != nil {
+			p.propagator = prop
+		}
+	}
+}
+
 // NewPool khởi tạo một Pool với HTTP client tái sử dụng connection pool.
 func NewPool(opts ...PoolOption) *Pool {
 	transport := &http.Transport{
@@ -133,6 +156,7 @@ func NewPool(opts ...PoolOption) *Pool {
 		},
 		concurrency:    4,
 		defaultTimeout: 3 * time.Second,
+		propagator:     propagation.TraceContext{},
 	}
 
 	for _, opt := range opts {
@@ -212,9 +236,10 @@ func drainResponseBody(body io.ReadCloser, maxBytes int64) (bool, error) {
 // ProbeSingle thực hiện kiểm tra một target đơn lẻ với deadline và phân loại lỗi rõ ràng.
 func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 	start := time.Now()
+	sanitizedURL := SanitizeURL(target.URL)
 	res := Result{
 		TargetID:  target.ID,
-		URL:       target.URL,
+		URL:       sanitizedURL,
 		Timestamp: start,
 	}
 
@@ -224,7 +249,7 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 		ctx, span = p.tracer.Start(ctx, "opsprobe.probe",
 			trace.WithAttributes(
 				attribute.String("target.id", target.ID),
-				attribute.String("target.url", target.URL),
+				attribute.String("target.url", sanitizedURL),
 			),
 		)
 		defer span.End()
@@ -276,13 +301,18 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 		return res
 	}
 
+	// Inject W3C Trace Context (traceparent) vào outbound HTTP header
+	if p.propagator != nil {
+		p.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+	}
+
 	// 3. Thực thi HTTP request
 	resp, err := p.client.Do(req)
-	duration := time.Since(start)
-	res.DurationNs = duration.Nanoseconds()
-	res.DurationMs = float64(duration.Microseconds()) / 1000.0
-
 	if err != nil {
+		duration := time.Since(start)
+		res.DurationNs = duration.Nanoseconds()
+		res.DurationMs = float64(duration.Microseconds()) / 1000.0
+
 		// Phân loại nguyên nhân failure theo contract context & network
 		if errors.Is(probeCtx.Err(), context.DeadlineExceeded) {
 			res.Outcome = OutcomeTimeout
@@ -310,10 +340,40 @@ func (p *Pool) ProbeSingle(ctx context.Context, target Target) Result {
 		return res
 	}
 
-	// 4. Giải phóng và kiểm tra khả năng tái sử dụng kết nối có giới hạn
-	drainedToEOF, _ := drainResponseBody(resp.Body, MaxDrainBytes)
-	res.ReusedEligible = drainedToEOF
+	// 4. Giải phóng và kiểm tra khả năng tái sử dụng kết nối có giới hạn (bounded drain).
+	// Bounded drain giới hạn lượng dữ liệu và thời gian đọc từ peer nhằm chống cạn kiệt I/O.
+	// ReusedEligible chỉ xác nhận body đạt tiêu chí drain đến EOF trong giới hạn cho phép,
+	// không phải là bảo đảm tuyệt đối rằng http.Transport chắc chắn tái sử dụng socket.
+	drainedToEOF, drainErr := drainResponseBody(resp.Body, MaxDrainBytes)
+	duration := time.Since(start) // Đo toàn bộ lifecycle đến khi hoàn tất cleanup/drain
+	res.DurationNs = duration.Nanoseconds()
+	res.DurationMs = float64(duration.Microseconds()) / 1000.0
 	res.StatusCode = resp.StatusCode
+	res.ReusedEligible = drainedToEOF
+
+	// Nếu xảy ra lỗi trong quá trình drain body (ví dụ server stall stream tới khi hết timeout):
+	if drainErr != nil {
+		if errors.Is(probeCtx.Err(), context.DeadlineExceeded) || errors.Is(drainErr, context.DeadlineExceeded) {
+			res.Outcome = OutcomeTimeout
+			res.Error = fmt.Sprintf("timeout draining response body: %v", drainErr)
+		} else if errors.Is(ctx.Err(), context.Canceled) || errors.Is(probeCtx.Err(), context.Canceled) || errors.Is(drainErr, context.Canceled) {
+			res.Outcome = OutcomeCancel
+			res.Error = fmt.Sprintf("probe canceled during body drain: %v", drainErr)
+		} else {
+			res.Outcome = OutcomeFailure
+			res.Error = fmt.Sprintf("error draining response body: %v", drainErr)
+		}
+
+		if span != nil {
+			span.SetAttributes(
+				attribute.String("outcome", string(res.Outcome)),
+				attribute.Int("http.status_code", res.StatusCode),
+				attribute.Bool("reused_eligible", res.ReusedEligible),
+				attribute.String("error", res.Error),
+			)
+		}
+		return res
+	}
 
 	// 5. Đánh giá trạng thái thành công/thất bại theo status code
 	expected := target.ExpectedStatus
@@ -382,7 +442,7 @@ func (p *Pool) Execute(ctx context.Context, targets []Target) []Result {
 				if ctx.Err() != nil {
 					results[j.index] = Result{
 						TargetID:  j.target.ID,
-						URL:       j.target.URL,
+						URL:       SanitizeURL(j.target.URL),
 						Outcome:   OutcomeCancel,
 						Error:     ctx.Err().Error(),
 						Timestamp: time.Now(),
