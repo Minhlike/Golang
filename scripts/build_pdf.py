@@ -1,27 +1,28 @@
-"""Render the current Markdown edition into a checked, replace-safe PDF.
+"""Render the current Markdown edition into a checked, replace-safe print-ready PDF.
 
-This is deliberately a small local renderer, not a general Markdown engine.
-It supports the book constructs currently used (headings, paragraphs, lists,
-code, horizontal rules, and local diagrams) and fails loudly on missing assets.
+This is a local publishing renderer, supporting the book constructs
+(headings, paragraphs, lists, code, horizontal rules, local diagrams,
+tables, mirrored margins, and the living Error Atlas).
 """
 
 from __future__ import annotations
 
 import html
+from pathlib import Path
 import re
 import shutil
-from pathlib import Path
+import sys
+
+# Ensure scripts directory is in path for book_style
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    BaseDocTemplate,
     Image,
     KeepTogether,
     NextPageTemplate,
@@ -32,10 +33,48 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.platypus.doctemplate import PageTemplate
 from reportlab.platypus.flowables import HRFlowable
 from reportlab.platypus.frames import Frame
-from reportlab.platypus.doctemplate import PageTemplate
 
+from book_style import (
+    ATLAS_COL_WIDTH,
+    ATLAS_GUTTER,
+    COLOR_BG_CALLOUT,
+    COLOR_BG_HEADER,
+    COLOR_BG_LIGHT,
+    COLOR_BLACK,
+    COLOR_BORDER_HAIRLINE,
+    COLOR_BORDER_LIGHT,
+    COLOR_BORDER_MEDIUM,
+    COLOR_BORDER_STRONG,
+    COLOR_BORDER_SUBTLE,
+    FONT_MONO,
+    FONT_SANS,
+    FONT_SANS_BOLD,
+    FONT_SERIF,
+    FONT_SERIF_BOLD,
+    LINE_WEIGHT_BORDER,
+    LINE_WEIGHT_RULE,
+    LINE_WEIGHT_TABLE_GRID,
+    MARGIN_BOTTOM,
+    MARGIN_INSIDE,
+    MARGIN_OUTSIDE,
+    MARGIN_TOP,
+    PAGE_HEIGHT,
+    PAGE_SIZE,
+    PAGE_WIDTH,
+    PRINTABLE_HEIGHT,
+    PRINTABLE_WIDTH,
+    MirroredDocTemplate,
+    build_cover_artwork,
+    cover_canvas,
+    footer_atlas_recto,
+    footer_atlas_verso,
+    footer_recto,
+    footer_verso,
+    get_book_styles,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 ERROR_ATLAS = ROOT / "book/appendices/error-atlas.md"
@@ -121,123 +160,27 @@ def inline(text: str, mono: str) -> str:
 
 def styles(body: str, body_bold: str, heading: str, heading_bold: str,
            mono: str) -> dict[str, ParagraphStyle]:
-    base = getSampleStyleSheet()
-    return {
-        "title": ParagraphStyle(
-            "BookTitle", parent=base["Title"], fontName=heading_bold, fontSize=30,
-            leading=36, alignment=TA_CENTER, textColor=colors.black,
-            spaceAfter=18,
-        ),
-        "subtitle": ParagraphStyle(
-            "Subtitle", parent=base["BodyText"], fontName=heading, fontSize=13,
-            leading=19, alignment=TA_CENTER, textColor=colors.HexColor("#333333"),
-        ),
-        "h1": ParagraphStyle(
-            "H1", parent=base["Heading1"], fontName=heading_bold, fontSize=23,
-            leading=29, textColor=colors.black, spaceBefore=5,
-            spaceAfter=15, keepWithNext=True,
-        ),
-        "h2": ParagraphStyle(
-            "H2", parent=base["Heading2"], fontName=heading_bold, fontSize=16.5,
-            leading=22, textColor=colors.black, spaceBefore=17,
-            spaceAfter=8, keepWithNext=True,
-        ),
-        "h3": ParagraphStyle(
-            "H3", parent=base["Heading3"], fontName=heading_bold, fontSize=14,
-            leading=19, textColor=colors.black, spaceBefore=13,
-            spaceAfter=6, keepWithNext=True,
-        ),
-        "body": ParagraphStyle(
-            "Body", parent=base["BodyText"], fontName=body, fontSize=14,
-            leading=21.4, alignment=TA_LEFT, textColor=colors.black, spaceAfter=9,
-        ),
-        "bullet": ParagraphStyle(
-            "Bullet", parent=base["BodyText"], fontName=body, fontSize=14,
-            leading=21, textColor=colors.black, leftIndent=18, firstLineIndent=-10,
-            spaceAfter=4, bulletFontName=body,
-        ),
-        "toc": ParagraphStyle(
-            "TOC", parent=base["BodyText"], fontName=body, fontSize=11.5,
-            leading=16.0, textColor=colors.black, leftIndent=7, spaceAfter=2.5,
-        ),
-        "code": ParagraphStyle(
-            "Code", fontName=mono, fontSize=12, leading=16.5,
-            textColor=colors.black, spaceBefore=0, spaceAfter=0,
-        ),
-        "table": ParagraphStyle(
-            "Table", parent=base["BodyText"], fontName=body, fontSize=11.2,
-            leading=14.8, textColor=colors.black,
-        ),
-        "table_header": ParagraphStyle(
-            "TableHeader", parent=base["BodyText"], fontName=body_bold,
-            fontSize=11.2, leading=14.8, textColor=colors.black,
-        ),
-        "caption": ParagraphStyle(
-            "Caption", parent=base["BodyText"], fontName=body, fontSize=10.8,
-            leading=14.2, textColor=colors.HexColor("#333333"), spaceAfter=10,
-        ),
-        "reference": ParagraphStyle(
-            "Reference", parent=base["BodyText"], fontName=heading, fontSize=9.7,
-            leading=13.0, textColor=colors.HexColor("#333333"), leftIndent=14,
-            firstLineIndent=-12, spaceAfter=4,
-        ),
-        # Error Atlas 2-column styles (Grayscale-first technical handbook typography)
-        "atlas_h1": ParagraphStyle(
-            "AtlasH1", parent=base["Heading1"], fontName=heading_bold, fontSize=23,
-            leading=29, textColor=colors.black, spaceBefore=4, spaceAfter=8, keepWithNext=True,
-        ),
-        "atlas_subtitle": ParagraphStyle(
-            "AtlasSubtitle", parent=base["BodyText"], fontName=heading, fontSize=12,
-            leading=16, textColor=colors.HexColor("#333333"), spaceBefore=0, spaceAfter=10, keepWithNext=True,
-        ),
-        "atlas_group": ParagraphStyle(
-            "AtlasGroup", fontName=heading_bold, fontSize=11.2,
-            leading=14.5, textColor=colors.black, spaceBefore=4, spaceAfter=1, keepWithNext=True,
-        ),
-        "atlas_id": ParagraphStyle(
-            "AtlasID", fontName=heading_bold, fontSize=9.5, leading=12.5,
-            textColor=colors.black, keepWithNext=True,
-        ),
-        "atlas_bullet": ParagraphStyle(
-            "AtlasBullet", fontName=mono, fontSize=9.0, leading=11.6,
-            textColor=colors.HexColor("#222222"), leftIndent=8, firstLineIndent=-6, keepWithNext=True,
-        ),
-        "atlas_desc": ParagraphStyle(
-            "AtlasDesc", parent=base["BodyText"], fontName=body, fontSize=9.6,
-            leading=12.8, textColor=colors.HexColor("#1A1A1A"), spaceAfter=1.0, keepWithNext=True,
-        ),
-        "atlas_alert": ParagraphStyle(
-            "AtlasAlert", parent=base["BodyText"], fontName=body, fontSize=9.0,
-            leading=12.0, textColor=colors.HexColor("#333333"), leftIndent=6, spaceAfter=1.0, keepWithNext=True,
-        ),
-        "atlas_action": ParagraphStyle(
-            "AtlasAction", parent=base["BodyText"], fontName=heading, fontSize=9.2,
-            leading=12.2, textColor=colors.black, spaceAfter=1.5,
-        ),
-        "atlas_table": ParagraphStyle(
-            "AtlasTable", parent=base["BodyText"], fontName=body, fontSize=9.2,
-            leading=12.5, textColor=colors.black,
-        ),
-        "atlas_table_header": ParagraphStyle(
-            "AtlasTableHeader", parent=base["BodyText"], fontName=heading_bold,
-            fontSize=9.2, leading=12.5, textColor=colors.black,
-        ),
-    }
+    """Return centralized styles from book_style module."""
+    return get_book_styles()
 
 
 def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
+    """Generate the official title page with geometric vector modular grid artwork.
+    Completely eliminates build metadata, fake publishing fields, and project slogans.
+    """
     story.extend([
-        Spacer(1, 5.4 * cm),
+        Spacer(1, 2.2 * cm),
         Paragraph("GOLANG", s["title"]),
-        Paragraph("Living Textbook cho Software Engineering và DevOps/SRE", s["subtitle"]),
-        Spacer(1, 1.1 * cm),
-        HRFlowable(width="64%", thickness=1.0, color=colors.black,
-                   hAlign="CENTER"),
-        Spacer(1, 1.1 * cm),
-        Paragraph("Edition nền móng", s["subtitle"]),
-        Paragraph("Được kiểm chứng với Go 1.27.1 - 22-09-2026", s["subtitle"]),
-        Spacer(1, 4.8 * cm),
-        Paragraph("Markdown là nguồn gốc. PDF là bản đọc được, có thể tái tạo cục bộ.", s["subtitle"]),
+        Spacer(1, 0.4 * cm),
+        Paragraph(
+            "Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
+            s["subtitle"],
+        ),
+        Spacer(1, 1.8 * cm),
+        build_cover_artwork(w=PRINTABLE_WIDTH, h=260),
+        Spacer(1, 2.6 * cm),
+        Paragraph("Đoàn Ngọc Hoàng Minh", s["author"]),
+        NextPageTemplate("book_verso"),
         PageBreak(),
     ])
 
@@ -267,7 +210,7 @@ def chapter_pages(reader: PdfReader, titles: list[str]) -> dict[str, int]:
     manuscript_start_idx = 2
     for idx, page in enumerate(reader.pages[2:], start=2):
         text = " ".join((page.extract_text() or "").split())
-        if first_norm in text and "Mục lục của edition này" not in text:
+        if first_norm in text and "MỤC LỤC" not in text:
             manuscript_start_idx = idx
             break
 
@@ -283,12 +226,17 @@ def chapter_pages(reader: PdfReader, titles: list[str]) -> dict[str, int]:
 
 
 def add_outline(candidate: Path, titles: list[str]) -> PdfReader:
-    """Add reader navigation after pagination has settled."""
+    """Add reader navigation and publication metadata after pagination has settled."""
     reader = PdfReader(str(candidate))
     pages = chapter_pages(reader, titles)
     writer = PdfWriter()
     writer.clone_document_from_reader(reader)
-    writer.add_outline_item("Mục lục", 1)
+    writer.add_metadata({
+        "/Title": "GOLANG",
+        "/Author": "Đoàn Ngọc Hoàng Minh",
+        "/Subject": "Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
+    })
+    writer.add_outline_item("MỤC LỤC", 1)
     for title in titles:
         writer.add_outline_item(title, pages[title] - 1)
     outlined = candidate.with_name("Golang_Master.outlined.pdf")
@@ -333,8 +281,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             style = s["table_header"] if row_index == 0 else s["table"]
             data.append([Paragraph(inline(cell, mono), style) for cell in row])
 
-        # Compute proportional column widths based on maximum cell lengths
-        avail_width = 16.8 * cm
+        avail_width = PRINTABLE_WIDTH
         col_max_lens = [max(len(row[c]) for row in [rows[0], *rows[2:]]) for c in range(columns)]
         total_len = sum(col_max_lens) or 1
         if columns > 2 and total_len > 0:
@@ -346,8 +293,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
 
         table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
-            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
+            ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
+            ("GRID", (0, 0), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_MEDIUM),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 6),
             ("RIGHTPADDING", (0, 0), (-1, -1), 6),
@@ -375,10 +322,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         """Make tabs deterministic and keep code distinct in light mode."""
         nonlocal code_lines
         code = Preformatted("\n".join(code_lines).expandtabs(4), s["code"])
-        box = Table([[code]], colWidths=[16.8 * cm], hAlign="LEFT")
+        box = Table([[code]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
         box.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F3F1")),
-            ("BOX", (0, 0), (-1, -1), 0.65, colors.HexColor("#777777")),
+            ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_LIGHT),
+            ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
             ("LEFTPADDING", (0, 0), (-1, -1), 10),
             ("RIGHTPADDING", (0, 0), (-1, -1), 10),
             ("TOPPADDING", (0, 0), (-1, -1), 9),
@@ -444,7 +391,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             if not asset.exists():
                 raise FileNotFoundError(f"Thiếu diagram: {asset}")
             drawing = Image(str(asset))
-            drawing._restrictSize(16.8 * cm, 12.8 * cm)
+            drawing._restrictSize(PRINTABLE_WIDTH, 12.8 * cm)
             drawing.hAlign = "CENTER"
             pending_image = drawing
             continue
@@ -452,10 +399,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         if quote:
             flush_paragraph()
             note = Table([[Paragraph(inline(quote.group(1), mono), s["body"])]],
-                         colWidths=[16.8 * cm], hAlign="LEFT")
+                         colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
             note.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F5F5F2")),
-                ("LINEBEFORE", (0, 0), (0, -1), 2.0, colors.black),
+                ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_CALLOUT),
+                ("LINEBEFORE", (0, 0), (0, -1), 2.0, COLOR_BLACK),
                 ("LEFTPADDING", (0, 0), (-1, -1), 12),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
                 ("TOPPADDING", (0, 0), (-1, -1), 7),
@@ -475,8 +422,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         if line.strip() == "---":
             flush_paragraph()
-            story.extend([Spacer(1, 3), HRFlowable(width="100%", thickness=0.55,
-                         color=colors.HexColor("#999999")), Spacer(1, 5)])
+            story.extend([Spacer(1, 3), HRFlowable(width="100%", thickness=LINE_WEIGHT_BORDER,
+                         color=COLOR_BORDER_LIGHT), Spacer(1, 5)])
             continue
         bullet = re.match(r"^[-*]\s+(.+)$", line)
         numbered = re.match(r"^(\d+)\.\s+(.+)$", line)
@@ -493,28 +440,6 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
     flush_image()
     flush_table()
     flush_paragraph()
-
-
-def footer(canvas, doc) -> None:
-    canvas.saveState()
-    canvas.setStrokeColor(colors.HexColor("#B5B5B5"))
-    canvas.line(2.0 * cm, 1.55 * cm, A4[0] - 2.0 * cm, 1.55 * cm)
-    canvas.setFont("BookSans", 9.5)
-    canvas.setFillColor(colors.HexColor("#333333"))
-    canvas.drawString(2.0 * cm, 1.08 * cm, "Golang Living Textbook - Edition nền móng")
-    canvas.drawRightString(A4[0] - 2.0 * cm, 1.08 * cm, str(doc.page))
-    canvas.restoreState()
-
-
-def footer_2col(canvas, doc) -> None:
-    footer(canvas, doc)
-    # Subtle hairline column divider between column 1 and column 2
-    canvas.saveState()
-    canvas.setStrokeColor(colors.HexColor("#D8D8D8"))
-    canvas.setLineWidth(0.4)
-    gx = 2.1 * cm + 8.0 * cm + 0.4 * cm
-    canvas.line(gx, 1.8 * cm, gx, A4[1] - 1.9 * cm)
-    canvas.restoreState()
 
 
 def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono: str) -> None:
@@ -562,8 +487,8 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                 col_widths = [6.3 * cm, 2.1 * cm, 6.3 * cm, 2.1 * cm]
             t = Table(data, colWidths=col_widths, hAlign="LEFT")
             t.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
-                ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
+                ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
+                ("GRID", (0, 0), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_MEDIUM),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -574,7 +499,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             table_lines = []
 
         if ls.startswith("---"):
-            story.extend([Spacer(1, 2), HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#999999")), Spacer(1, 4)])
+            story.extend([Spacer(1, 2), HRFlowable(width="100%", thickness=0.5, color=COLOR_BORDER_LIGHT), Spacer(1, 4)])
             continue
         if ls:
             story.append(Paragraph(inline(ls, mono), s["body"]))
@@ -591,8 +516,8 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             col_widths = [6.3 * cm, 2.1 * cm, 6.3 * cm, 2.1 * cm]
         t = Table(data, colWidths=col_widths, hAlign="LEFT")
         t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
-            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
+            ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
+            ("GRID", (0, 0), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_MEDIUM),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -602,8 +527,8 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
         story.extend([Spacer(1, 2), t, Spacer(1, 6)])
         table_lines = []
 
-    # Switch to 2 columns for Error Entries
-    story.append(NextPageTemplate("atlas_2col"))
+    # Switch to 2 columns for Error Entries (MirroredDocTemplate auto-selects recto/verso)
+    story.append(NextPageTemplate("atlas_recto"))
     story.append(PageBreak())
 
     # 2. Error entries (2 columns)
@@ -618,7 +543,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             story.append(KeepTogether([
                 Spacer(1, 4),
                 Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
-                HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#333333")),
+                HRFlowable(width="100%", thickness=0.5, color=COLOR_BORDER_STRONG),
                 Spacer(1, 2),
             ]))
             continue
@@ -676,36 +601,107 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
 def build_document(story: list, body: str, body_bold: str, heading: str,
                    heading_bold: str, mono: str, toc_pages: dict[str, int] | None) -> None:
     s = styles(body, body_bold, heading, heading_bold, mono)
-    margin = 2.1 * cm
-    printable_w = A4[0] - 4.2 * cm
-    frame_book = Frame(margin, 2.0 * cm, printable_w, A4[1] - 3.9 * cm,
-                       id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-    gutter = 0.8 * cm
-    col_w = (printable_w - gutter) / 2
-    frame_col1 = Frame(margin, 1.85 * cm, col_w, A4[1] - 3.65 * cm,
-                       id="atlas_col1", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-    frame_col2 = Frame(margin + col_w + gutter, 1.85 * cm, col_w, A4[1] - 3.65 * cm,
-                       id="atlas_col2", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
 
-    doc = BaseDocTemplate(str(CANDIDATE), pagesize=A4, title="Golang Master",
-                          author="Golang Living Textbook", leftMargin=margin,
-                          rightMargin=margin, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
+    # 1. Title/Cover page template (centered, no footer/page number)
+    frame_cover = Frame(
+        MARGIN_INSIDE, MARGIN_BOTTOM, PRINTABLE_WIDTH, PRINTABLE_HEIGHT,
+        id="frame_cover", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    template_cover = PageTemplate(id="cover", frames=[frame_cover], onPage=cover_canvas)
+
+    # 2. Mirrored 1-column body templates
+    # Recto (Odd page): inside margin on LEFT (2.4cm), outside margin on RIGHT (1.8cm)
+    frame_recto = Frame(
+        MARGIN_INSIDE, MARGIN_BOTTOM, PRINTABLE_WIDTH, PRINTABLE_HEIGHT,
+        id="frame_book_recto", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    template_recto = PageTemplate(id="book_recto", frames=[frame_recto], onPage=footer_recto)
+
+    # Verso (Even page): inside margin on RIGHT (2.4cm), outside margin on LEFT (1.8cm)
+    frame_verso = Frame(
+        MARGIN_OUTSIDE, MARGIN_BOTTOM, PRINTABLE_WIDTH, PRINTABLE_HEIGHT,
+        id="frame_book_verso", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    template_verso = PageTemplate(id="book_verso", frames=[frame_verso], onPage=footer_verso)
+
+    # 3. Mirrored 2-column Error Atlas templates
+    col1_recto = Frame(
+        MARGIN_INSIDE, 1.85 * cm, ATLAS_COL_WIDTH, PAGE_HEIGHT - 3.65 * cm,
+        id="atlas_col1_recto", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    col2_recto = Frame(
+        MARGIN_INSIDE + ATLAS_COL_WIDTH + ATLAS_GUTTER, 1.85 * cm, ATLAS_COL_WIDTH, PAGE_HEIGHT - 3.65 * cm,
+        id="atlas_col2_recto", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    template_atlas_recto = PageTemplate(id="atlas_recto", frames=[col1_recto, col2_recto], onPage=footer_atlas_recto)
+
+    col1_verso = Frame(
+        MARGIN_OUTSIDE, 1.85 * cm, ATLAS_COL_WIDTH, PAGE_HEIGHT - 3.65 * cm,
+        id="atlas_col1_verso", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    col2_verso = Frame(
+        MARGIN_OUTSIDE + ATLAS_COL_WIDTH + ATLAS_GUTTER, 1.85 * cm, ATLAS_COL_WIDTH, PAGE_HEIGHT - 3.65 * cm,
+        id="atlas_col2_verso", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    template_atlas_verso = PageTemplate(id="atlas_verso", frames=[col1_verso, col2_verso], onPage=footer_atlas_verso)
+
+    doc = MirroredDocTemplate(
+        str(CANDIDATE),
+        pagesize=PAGE_SIZE,
+        title="GOLANG",
+        author="Đoàn Ngọc Hoàng Minh",
+        subject="Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
+        leftMargin=MARGIN_INSIDE,
+        rightMargin=MARGIN_OUTSIDE,
+        topMargin=MARGIN_TOP,
+        bottomMargin=MARGIN_BOTTOM,
+    )
     doc.addPageTemplates([
-        PageTemplate(id="book", frames=[frame_book], onPage=footer),
-        PageTemplate(id="atlas_2col", frames=[frame_col1, frame_col2], onPage=footer_2col),
+        template_cover,
+        template_recto,
+        template_verso,
+        template_atlas_recto,
+        template_atlas_verso,
     ])
+
+    # Build Front Matter
     cover(story, s)
-    story.append(Paragraph("Mục lục của edition này", s["h1"]))
-    story.append(Paragraph(
-        "Đây là edition nền móng. Mục lục tổng thể và thứ tự các phần tiếp theo "
-        "được giữ trong `book/README.md` để có thể mở rộng mà không giả vờ rằng "
-        "chúng đã được viết xong.", s["body"]))
+
+    # Professional Table of Contents (MỤC LỤC)
+    story.append(Spacer(1, 0.4 * cm))
+    story.append(Paragraph("MỤC LỤC", s["toc_h1"]))
+    story.append(Spacer(1, 0.4 * cm))
+
     chapters, appendices = get_manuscript()
     titles = manuscript_titles(chapters, appendices)
+
+    toc_data = []
     for title in titles:
-        suffix = f" — trang {toc_pages[title]}" if toc_pages else ""
-        story.append(Paragraph(inline(title + suffix, mono), s["toc"], bulletText="•"))
+        is_major = "BACK MATTER" in title or "PHỤ LỤC" in title
+        st = s["toc_entry_bold"] if is_major else s["toc_entry"]
+        pg_str = str(toc_pages[title]) if toc_pages else ""
+        toc_data.append([
+            Paragraph(title, st),
+            Paragraph(pg_str, s["toc_page"]),
+        ])
+
+    toc_table = Table(
+        toc_data,
+        colWidths=[PRINTABLE_WIDTH - 1.6 * cm, 1.6 * cm],
+        hAlign="LEFT",
+    )
+    toc_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.35, COLOR_BORDER_SUBTLE),
+    ]))
+    story.append(toc_table)
     story.append(PageBreak())
+
+    # Build Chapters and Appendices
     numbering = {"figure": 0, "table": 0}
     for index, chapter in enumerate(chapters):
         add_markdown(story, chapter, s, mono, page_break_before=index > 0, numbering=numbering)
@@ -714,6 +710,7 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
             add_error_atlas(story, appendix, s, mono)
         else:
             add_markdown(story, appendix, s, mono, page_break_before=True, numbering=numbering)
+
     doc.build(story)
 
 
@@ -725,14 +722,40 @@ def build() -> None:
     body, body_bold, heading, heading_bold, mono = register_fonts()
     TMP.mkdir(parents=True, exist_ok=True)
     titles = manuscript_titles(chapters, appendices)
+
+    # First pass: calculate page numbers
     build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=None)
     toc_pages = chapter_pages(PdfReader(str(CANDIDATE)), titles)
+
+    # Second pass: generate final document with populated TOC page numbers
     build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=toc_pages)
     reader = add_outline(CANDIDATE, titles)
     extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
-    if (len(reader.pages) < 6 or "GOLANG" not in extracted or "Chương 1" not in extracted
-            or "ATLAS LỖI GO" not in extracted):
-        raise RuntimeError("Candidate PDF failed semantic validation.")
+
+    # Semantic assertions preventing regressions
+    forbidden = [
+        "Edition nền móng",
+        "Được kiểm chứng với Go 1.27.1 - 22-09-2026",
+        "Markdown là nguồn gốc. PDF là bản đọc được, có thể tái tạo cục bộ.",
+        "Golang Living Textbook - Edition nền móng",
+        "Chương đầu không có mục tiêu “biết hết Go”",
+    ]
+    required = [
+        "GOLANG",
+        "Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
+        "Đoàn Ngọc Hoàng Minh",
+        "MỤC LỤC",
+        "ATLAS LỖI GO",
+    ]
+    for phrase in forbidden:
+        if phrase in extracted:
+            raise RuntimeError(f"Candidate PDF contains forbidden text: {phrase}")
+    for phrase in required:
+        if phrase not in extracted:
+            raise RuntimeError(f"Candidate PDF missing required text: {phrase}")
+
+    if len(reader.pages) < 200 or "Chương 1" not in extracted:
+        raise RuntimeError("Candidate PDF failed structural page count validation.")
 
     if CURRENT.exists():
         shutil.copy2(CURRENT, PREVIOUS)
