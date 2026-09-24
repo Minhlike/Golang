@@ -18,17 +18,17 @@ skinparam note {
   FontName "Source Sans 3"
   FontSize 15
 }
-frame "main block" as main {
-  rectangle "status" as status
-  frame "if block" as ifblock {
-    rectangle "label" as label
+frame "Khối lệnh main (phạm vi hàm)" as main {
+  rectangle "status\n(sống trong main)" as status
+  frame "Khối lệnh if (phạm vi con)" as ifblock {
+    rectangle "label\n(sống trong if)" as label
   }
 }
 note right of label
-  label có thể được dùng
-  ở trong if block
+  label chỉ hợp lệ
+  ở trong khối if
 end note
 note bottom of main
-  Sau dấu }, label đã ra ngoài scope.
+  Sau dấu ngoặc đóng }, label hoàn toàn biến mất khỏi scope.
 end note
 @enduml

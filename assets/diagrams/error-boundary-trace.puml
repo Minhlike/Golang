@@ -18,14 +18,14 @@ top to bottom direction
 
 rectangle "ProbeFunc\ntrả nguyên nhân gốc" as run
 rectangle "ProbeFailure\nservice + endpoint + nguyên nhân" as failure
-rectangle "applyProbe\ncontext operation với %w" as boundary
-rectangle "caller\nerrors.Is / errors.As" as caller
+rectangle "applyProbe\nbối cảnh operation với %w" as boundary
+rectangle "bên gọi (caller)\nerrors.Is / errors.As" as caller
 
 run -down-> failure : nguyên nhân
-failure -down-> boundary : error được wrap
-boundary -down-> caller : error trả về
+failure -down-> boundary : lỗi được bọc (%w)
+boundary -down-> caller : lỗi trả về
 note bottom of caller
-Is: chọn xử lý theo loại
-As: đọc context probe có cấu trúc
+errors.Is: nhận diện theo loại lỗi sentinel
+errors.As: trích xuất bối cảnh probe có cấu trúc
 end note
 @enduml

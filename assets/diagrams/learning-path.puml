@@ -1,21 +1,55 @@
-@startuml
-title Bản đồ khái niệm của cuốn sách
-skinparam backgroundColor #FEFEFE
-skinparam rectangle {
-  RoundCorner 12
-  BorderColor #176B87
-  BackgroundColor #EAF6F6
+@startmindmap
+skinparam backgroundColor white
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 14
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #F4F4F2
+    LineColor #000000
+    LineThickness 1.2
+    FontColor #000000
+    FontSize 13
+    RoundCorner 8
+    Padding 8
+  }
+  :depth(0) {
+    BackgroundColor #2E2E2E
+    FontColor #FFFFFF
+    FontSize 16
+    LineThickness 2.5
+    RoundCorner 12
+    Padding 12
+  }
+  :depth(1) {
+    BackgroundColor #E5E5E0
+    FontColor #000000
+    FontSize 14
+    LineThickness 1.8
+    RoundCorner 8
+    Padding 10
+  }
 }
-rectangle "Ngôn ngữ và dữ liệu\npackage, type, error, slice" as language
-rectangle "Đồng thời và runtime\ncontext, race, scheduler" as runtime
-rectangle "Service và dữ liệu\nHTTP, TLS, SQL, persistence" as service
-rectangle "DevOps/SRE\nCLI, observability, Docker, K8s, AWS" as sre
-language --> runtime : ownership và cancellation
-runtime --> service : timeout và resource
-service --> sre : vận hành và đo đạc
-note bottom
-Conceptual diagram:
-đường học, không phải kiến trúc runtime.
-end note
-@enduml
-
+</style>
+* **LỘ TRÌNH\nHỌC GOLANG**
+** NỀN TẢNG & DỮ LIỆU
+*** Cú pháp & Kiểu nguyên tử
+*** Mảng & Lát cắt (Slice)
+*** Con trỏ & Cấu trúc (Struct)
+*** Bọc lỗi có cấu trúc
+** ĐỒNG THỜI & RUNTIME
+*** Goroutine & Kênh truyền (Channel)
+*** Bối cảnh Context & Hủy thực thi
+*** Bộ điều phối G/M/P Scheduler
+*** Phát hiện xung đột Race Detector
+** DỊCH VỤ & MẠNG
+*** HTTP Client & Máy chủ Server
+*** Bắt tay mã hóa TLS Handshake
+*** Vòng đời tắt dịch vụ an toàn
+*** Cơ sở dữ liệu Transaction SQL
+** HỆ THỐNG & DEVOPS
+*** Công cụ dòng lệnh CLI
+*** Bộ tứ Quan sát Observability
+*** Đóng gói Container & Phối hợp
+*** Vòng lặp điều hòa Controller K8s
+@endmindmap

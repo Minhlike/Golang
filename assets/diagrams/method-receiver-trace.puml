@@ -19,11 +19,11 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "billing variable\nService\nHealthy: true\nRetries: 0" as billing
-rectangle "Summary receiver\nService value" as summary
-rectangle "Record receiver\n*Service pointer value" as record
+rectangle "biến billing\nService\nHealthy: true\nRetries: 0" as billing
+rectangle "Bộ tiếp nhận Summary\n(bản sao Service value)" as summary
+rectangle "Bộ tiếp nhận Record\n(con trỏ *Service)" as record
 billing --> summary : billing.Summary()
-billing --> record : billing.Record(false)\naddressable → &billing
-note bottom of summary : receiver value dùng để đọc
-note bottom of record : Record sửa pointee\nHealthy=false, Retries=1
+billing --> record : billing.Record(false)\nđịa chỉ &billing
+note bottom of summary : value receiver nhận bản sao\nchỉ dùng để đọc an toàn
+note bottom of record : pointer receiver sửa ô nhớ gốc\nHealthy=false, Retries=1
 @enduml

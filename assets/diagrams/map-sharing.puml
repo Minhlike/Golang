@@ -21,9 +21,12 @@ skinparam note {
 left to right direction
 rectangle "registry\nmap[string]int" as registry
 rectangle "alias\nmap[string]int" as alias
-rectangle "map data\nbilling → 2" as data
+rectangle "dữ liệu map (bảng băm)\nbilling → 2" as data
 registry --> data
 alias --> data
-note bottom of alias : alias := registry\ncopy map value
-note bottom of data : alias[\"billing\"]++\nhiện ra khi đọc registry
+note bottom of alias : alias := registry\nsao chép con trỏ header map
+note bottom of data
+  alias["billing"]++
+  hiển thị ngay khi đọc registry
+end note
 @enduml

@@ -19,10 +19,10 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "caller\nbalance: int\n100" as caller
-rectangle "parameter\nx: int\n100" as parameter
+rectangle "bên gọi (caller)\nbalance: int\n100" as caller
+rectangle "tham số hàm\nx: int\n100" as parameter
 rectangle "sau x += 20\nx: int\n120" as changed
-caller --> parameter : copy value 100
-parameter --> changed : gán lại x
-note bottom of caller : balance vẫn là 100
+caller --> parameter : sao chép giá trị 100
+parameter --> changed : gán cục bộ x
+note bottom of caller : biến balance gốc vẫn giữ nguyên 100
 @enduml

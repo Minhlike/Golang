@@ -20,12 +20,26 @@ skinparam note {
 skinparam arrowColor #000000
 left to right direction
 
-rectangle "package main\n\nimport \"fmt\"\n\nconst service = \"checkout\"\n\nfunc classify(status int) string { ... }\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as source
+rectangle source [
+package main
+
+import "fmt"
+
+const service = "checkout"
+
+func classify(status int) string { ... }
+
+func main() {
+    status := 503
+    label := classify(status)
+    fmt.Println(service, label)
+}
+]
 note right of source
-  package main: package name
-  import: tên từ package khác
-  const và func: declaration cấp tệp
-  main: entry function của executable
-  status, label: tên sống trong main block
+  package main: khai báo tên gói (package)
+  import: nạp thư viện từ gói khác
+  const và func: khai báo cấp tệp nguồn
+  main: hàm khởi điểm của chương trình thực thi
+  status, label: biến cục bộ trong khối lệnh main
 end note
 @enduml

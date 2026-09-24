@@ -21,19 +21,19 @@ skinparam note {
 }
 top to bottom direction
 
-rectangle "Tệp .go\nchữ bạn viết" as source
-rectangle "Token\npackage · tên · số · dấu" as tokens
-rectangle "Cấu trúc\nkhai báo · biểu thức · block" as syntax
-rectangle "Kiểm tra kiểu\nint, string, bool, lời gọi" as types
-rectangle "Chương trình\nđược chạy" as run
+rectangle "Mã nguồn .go\ntệp văn bản bạn viết" as source
+rectangle "Token từ vựng\npackage · định danh · số · toán tử" as tokens
+rectangle "Cú pháp ngữ pháp (AST)\nkhai báo · biểu thức · khối lệnh" as syntax
+rectangle "Kiểm tra kiểu (Type Check)\nint, string, bool, chữ ký hàm" as types
+rectangle "Mã máy thực thi\nchương trình khởi chạy" as run
 
-source -right-> tokens : tách
-tokens -down-> syntax : ghép
-syntax -left-> types : hiểu nghĩa
-types -down-> run : hợp lệ
+source -right-> tokens : tách từ vựng
+tokens -down-> syntax : dựng cây cú pháp
+syntax -left-> types : phân tích ngữ nghĩa
+types -down-> run : hợp lệ thực thi
 
 note bottom of types
-  Mô hình đọc khái niệm.
-  Compiler thật có nhiều bước hơn.
+  Mô hình tinh thần trừu tượng.
+  Compiler thực tế có thêm SSA, inlining và tối ưu mã.
 end note
 @enduml

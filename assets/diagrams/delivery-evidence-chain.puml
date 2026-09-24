@@ -13,12 +13,12 @@ skinparam note {
   BorderColor #777777
 }
 
-rectangle "source revision\ncommit đã chọn" as source
-rectangle "build\nartifact digest" as build
-rectangle "evidence\ntest + provenance" as evidence
-rectangle "promotion policy\nquyền + gate" as policy
-rectangle "desired state\ndigest được deploy" as deploy
-rectangle "rollout observation\nstatus + signal" as observe
+rectangle "phiên bản nguồn\ncommit đã chọn" as source
+rectangle "biên dịch\nmã định danh gói (digest)" as build
+rectangle "bằng chứng\nkiểm thử + nguồn gốc" as evidence
+rectangle "chính sách phê duyệt\nquyền hạn + cổng kiểm tra" as policy
+rectangle "trạng thái mong muốn\ngói được triển khai" as deploy
+rectangle "quan sát phát hành\ntrạng thái + tín hiệu" as observe
 
 source --> build
 build --> evidence
@@ -28,6 +28,6 @@ deploy --> observe
 
 note bottom of policy
   Mỗi bước chỉ chứng minh
-  contract của chính nó.
+  cam kết (contract) của chính nó.
 end note
 @enduml

@@ -12,20 +12,20 @@ skinparam rectangle {
 skinparam arrowColor #333333
 top to bottom direction
 
-rectangle "BEGIN\ntransaction" as begin
-rectangle "UPDATE\nchecks.enabled = false" as update
-rectangle "INSERT\ncheck_events: disabled" as audit
-rectangle "COMMIT\nstate mới được thấy" as committed
-rectangle "ROLLBACK\nstate cũ được giữ" as rolled
+rectangle "BẮT ĐẦU (BEGIN)\nkhởi tạo giao dịch" as begin
+rectangle "CẬP NHẬT\nchecks.enabled = false" as update
+rectangle "GHI NHẬT KÝ\ncheck_events: disabled" as audit
+rectangle "XÁC NHẬN (COMMIT)\ntrạng thái mới có hiệu lực" as committed
+rectangle "HOÀN NGUYÊN (ROLLBACK)\nbảo toàn trạng thái cũ" as rolled
 
 begin --> update
 update --> audit
-audit --> committed : mọi statement\nthành công
+audit --> committed : mọi câu lệnh\nthành công
 begin ..> rolled : lỗi ở bất kỳ bước nào
 
 note bottom of audit
-  Sơ đồ khái niệm về atomicity.
-  Isolation cụ thể còn do database
-  và TxOptions quyết định.
+  Sơ đồ khái niệm về tính nguyên tử (Atomicity).
+  Mức cô lập (Isolation) cụ thể do cơ sở dữ liệu
+  và cấu hình TxOptions quyết định.
 end note
 @enduml

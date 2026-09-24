@@ -1,31 +1,55 @@
-@startuml
-skinparam backgroundColor #FFFFFF
-skinparam shadowing false
+@startmindmap
+skinparam backgroundColor white
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 20
-skinparam rectangle {
-  BackgroundColor #F5F5F2
-  BorderColor #333333
-  FontColor #000000
-  RoundCorner 8
+skinparam defaultFontSize 14
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #F4F4F2
+    LineColor #000000
+    LineThickness 1.2
+    FontColor #000000
+    FontSize 13
+    RoundCorner 8
+    Padding 8
+  }
+  :depth(0) {
+    BackgroundColor #2E2E2E
+    FontColor #FFFFFF
+    FontSize 16
+    LineThickness 2.5
+    RoundCorner 12
+    Padding 12
+  }
+  :depth(1) {
+    BackgroundColor #E5E5E0
+    FontColor #000000
+    FontSize 14
+    LineThickness 1.8
+    RoundCorner 8
+    Padding 10
+  }
 }
-skinparam arrowColor #333333
-left to right direction
-
-rectangle "một lần probe\noutcome + duration" as event
-rectangle "log\nidentity và chi tiết" as log
-rectangle "metric\nđếm/đo đã aggregate" as metric
-rectangle "trace\nđường đi của một lần chạy" as trace
-rectangle "trạng thái instance\nở thời điểm hiện tại" as state
-rectangle "health\nliveness / readiness" as health
-
-event --> log
-event --> metric
-event --> trace
-state --> health
-
-note bottom of metric
-  Target, URL, trace ID không phải
-  label metric mặc định.
-end note
-@enduml
+</style>
+* **SỰ KIỆN HỆ THỐNG\n(Event / Probe)**
+** NHẬT KÝ (LOGS)
+*** Định danh chi tiết
+*** Dữ liệu có cấu trúc (JSON)
+*** Bối cảnh lỗi nguyên nhân
+** CHỈ SỐ (METRICS)
+*** Số liệu thống kê tổng hợp
+*** Bộ đếm Counter & Thước đo Gauge
+*** Phân bố thời gian Histogram
+** DẤU VẾT (TRACES)
+*** Đường đi yêu cầu phân tán
+*** Mã vết TraceID & SpanID
+*** Điểm nghẽn độ trễ mạng
+** TRẠNG THÁI (STATE)
+*** Hiện trạng tài nguyên bộ nhớ
+*** Số lượng Goroutine hoạt động
+*** Tải CPU & Tần suất GC
+** SỨC KHỎE (HEALTH)
+*** Kiểm tra sống (Liveness)
+*** Sẵn sàng nhận việc (Readiness)
+*** Báo hiệu cho Orchestrator
+@endmindmap

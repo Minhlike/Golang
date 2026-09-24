@@ -21,7 +21,7 @@ skinparam note {
 left to right direction
 rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 0" as original
 rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 0" as copy
-original --> copy : candidate := billing\ncopy fields
-note bottom of original : billing.Healthy vẫn true
-note bottom of copy : candidate.Healthy = false
+original --> copy : candidate := billing\nsao chép toàn bộ các trường
+note bottom of original : billing.Healthy vẫn giữ true
+note bottom of copy : candidate.Healthy đổi thành false
 @enduml

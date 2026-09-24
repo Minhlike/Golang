@@ -11,20 +11,20 @@ skinparam rectangle {
 skinparam arrowColor #333333
 left to right direction
 
-rectangle "Triệu chứng\nchậm hoặc phình" as symptom
-rectangle "Câu hỏi + workload\nđại diện" as question
-rectangle "Test giữ contract\nBenchmark đo operation" as measure
-rectangle "Profile hoặc trace\nthu hẹp giả thuyết" as evidence
-rectangle "Một thay đổi nhỏ\nđược đo lại" as change
+rectangle "Triệu chứng\nchậm hoặc phình bộ nhớ" as symptom
+rectangle "Câu hỏi + tải thử nghiệm\nđại diện thực tế" as question
+rectangle "Kiểm thử giữ cam kết\nBenchmark đo từng thao tác" as measure
+rectangle "Dữ liệu profile / trace\nthu hẹp phạm vi giả thuyết" as evidence
+rectangle "Một thay đổi nhỏ\nđược đo đạc lại" as change
 
 symptom --> question
 question --> measure
 measure --> evidence
 evidence --> change
-change --> measure : cùng contract
+change --> measure : cùng cam kết hợp đồng
 
 note bottom of evidence
-  Không đoán từ tên API
-  hay từ vẻ ngoài source.
+  Không võ đoán từ tên API
+  hay từ cảm tính mã nguồn.
 end note
 @enduml

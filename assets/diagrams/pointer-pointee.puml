@@ -19,9 +19,9 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "caller variable\namount: int\n100" as amount
-rectangle "parameter\nbalance: *int\npointer value" as pointer
-pointer --> amount : trỏ tới amount
-note bottom of pointer : *balance chọn variable này\nđể đọc hoặc gán
-note bottom of amount : *balance += 20\nđổi amount thành 120
+rectangle "biến của bên gọi\namount: int\n100" as amount
+rectangle "tham số hàm\nbalance: *int\n(giá trị con trỏ)" as pointer
+pointer --> amount : lưu địa chỉ ô nhớ
+note bottom of pointer : *balance giải tham chiếu ô nhớ này\nđể đọc hoặc gán giá trị
+note bottom of amount : *balance += 20\nbiến đổi amount gốc thành 120
 @enduml

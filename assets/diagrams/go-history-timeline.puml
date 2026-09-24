@@ -17,13 +17,13 @@ skinparam ranksep 38
 top to bottom direction
 
 rectangle "2007\nMục tiêu được phác thảo\nTên Go được đề xuất" as y2007
-rectangle "2008\nCompiler thử nghiệm\nGCC front end và tooling" as y2008
-rectangle "2009\nMở mã nguồn\n10 tháng 11" as y2009
-rectangle "2012\nGo 1\nCompatibility Promise" as y2012
-rectangle "2015\nGo 1.5\nToolchain/runtime bằng Go\nGC concurrent, GOMAXPROCS" as y2015
-rectangle "2018\nGo 1.11\nModules bắt đầu" as y2018
-rectangle "2022\nGo 1.18\nType parameters" as y2022
-rectangle "2026\nGo 1.27\nGeneric methods" as y2026
+rectangle "2008\nTrình biên dịch thử nghiệm\nBộ tiền xử lý GCC và bộ công cụ" as y2008
+rectangle "2009\nMở mã nguồn chính thức\nNgày 10 tháng 11" as y2009
+rectangle "2012\nGo 1 phát hành\nCam kết tương thích dài hạn" as y2012
+rectangle "2015\nGo 1.5 tự thân\nToolchain/runtime thuần Go\nBộ gom rác GC đồng thời" as y2015
+rectangle "2018\nGo 1.11\nKhởi đầu quản lý Go Modules" as y2018
+rectangle "2022\nGo 1.18\nTham số kiểu (Generics)" as y2022
+rectangle "2026\nGo 1.27\nPhương thức tổng quát (Generic methods)" as y2026
 
 y2007 --> y2008
 y2008 --> y2009

@@ -19,12 +19,12 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "renderSummary\nconsumer" as consumer
-rectangle "SummarySource\nSummary() string" as contract
+rectangle "renderSummary\n(bên sử dụng / consumer)" as consumer
+rectangle "interface SummarySource\nSummary() string\n(cam kết hợp đồng)" as contract
 rectangle "Service\nSummary() string" as service
 rectangle "StaticTarget\nSummary() string" as static
-consumer --> contract : cần contract
-service --> contract : method set thỏa
-static --> contract : method set thỏa
-note bottom of contract : không có extends\nkhông có implements
+consumer --> contract : phụ thuộc hợp đồng
+service --> contract : tập method thỏa mãn
+static --> contract : tập method thỏa mãn
+note bottom of contract : không cần từ khóa implements\nthỏa mãn ngầm định (implicit)
 @enduml

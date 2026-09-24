@@ -1,31 +1,52 @@
-@startuml
+@startmindmap
 skinparam backgroundColor white
-skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F4F4F1
-  BorderColor #000000
-  FontColor #000000
-  RoundCorner 6
+skinparam defaultFontSize 14
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #F4F4F2
+    LineColor #000000
+    LineThickness 1.2
+    FontColor #000000
+    FontSize 13
+    RoundCorner 8
+    Padding 8
+  }
+  :depth(0) {
+    BackgroundColor #2E2E2E
+    FontColor #FFFFFF
+    FontSize 16
+    LineThickness 2.5
+    RoundCorner 12
+    Padding 12
+  }
+  :depth(1) {
+    BackgroundColor #E5E5E0
+    FontColor #000000
+    FontSize 14
+    LineThickness 1.8
+    RoundCorner 8
+    Padding 10
+  }
 }
-skinparam arrowColor #000000
-skinparam ArrowThickness 1.2
-left to right direction
-
-rectangle "C family\ncú pháp cơ bản" as c
-rectangle "Pascal / Modula / Oberon\ndeclaration và package" as pmo
-rectangle "CSP\nTony Hoare" as csp
-rectangle "Newsqueak" as news
-rectangle "Alef" as alef
-rectangle "Limbo" as limbo
-rectangle "Go\nthiết kế mới cho\nsoftware engineering" as go
-
-c --> go
-pmo --> go
-csp --> news
-news --> alef
-alef --> limbo
-limbo --> go
-@enduml
+</style>
+* **GOLANG\n(Hội tụ ý tưởng)**
+** DÒNG DÕI C
+*** Cú pháp biểu thức
+*** Quản lý con trỏ ô nhớ
+*** Tốc độ thực thi mã máy
+** DÒNG DÕI PASCAL
+*** Modula-2
+**** Khai báo module
+*** Oberon-2
+**** Khai báo tên trước kiểu
+**** Hệ thống package gọn nhẹ
+** TIẾN TRÌNH CSP
+*** Tony Hoare (1978)
+**** Tiến trình tuần tự giao tiếp
+*** Newsqueak & Alef
+**** Thử nghiệm channel & select
+*** Limbo (Hệ điều hành Inferno)
+**** Kênh truyền channel kiểu mạnh
+@endmindmap

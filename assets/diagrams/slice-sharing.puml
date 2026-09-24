@@ -21,9 +21,9 @@ skinparam note {
 left to right direction
 rectangle "a: []int\nlen 3 · cap 3" as a
 rectangle "b: []int\nlen 3 · cap 3" as b
-rectangle "mảng nền\n[99] [20] [30]" as store
+rectangle "mảng nền (backing array)\n[99] [20] [30]" as store
 a --> store
 b --> store
-note bottom of b : b := a sao chép descriptor
-note bottom of store : thay đổi được dùng chung
+note bottom of b : b := a sao chép slice header (con trỏ, len, cap)
+note bottom of store : thay đổi qua b[0] phản ánh trực tiếp sang a[0]
 @enduml

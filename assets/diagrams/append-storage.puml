@@ -12,7 +12,7 @@ skinparam rectangle {
 }
 skinparam arrowColor #222222
 top to bottom direction
-rectangle "A. cap còn chỗ\nold, s --> storage A\nold: [99 20] · s: [99 20 30]" as reuse
-rectangle "B. cap đã chạm giới hạn\nold --> storage A [10 20]\ngrown --> storage B [99 20 30]" as allocate
-reuse -down-> allocate : kết quả append phụ thuộc capacity
+rectangle "A. Dung lượng (cap) còn đủ\nold, s cùng trỏ mảng nền A\nold: [99 20] · s: [99 20 30]" as reuse
+rectangle "B. Dung lượng (cap) đã hết\nold trỏ mảng nền cũ A [10 20]\ngrown cấp phát mảng nền mới B [99 20 30]" as allocate
+reuse -down-> allocate : kết quả append phụ thuộc dung lượng còn lại
 @enduml

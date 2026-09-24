@@ -13,16 +13,17 @@ skinparam note {
   BorderColor #777777
 }
 
-rectangle "trạng thái mong muốn\ndigest artefact, replicas, policy" as desired
-rectangle "controller\nquan sát -> quyết định -> hành động" as controller
-rectangle "trạng thái hiện tại\nPod, process, readiness, status" as current
+rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao, chính sách" as desired
+rectangle "bộ điều khiển (Controller)\nquan sát -> phán đoán -> hành động" as controller
+rectangle "trạng thái thực tế (Status)\nPod, tiến trình, độ sẵn sàng" as current
 
-desired --> controller : spec
-current --> controller : trạng thái đã quan sát
-controller --> current : tạo / dừng / thay
+desired --> controller : cấu hình khai báo (Spec)
+current --> controller : dữ liệu quan trắc thực tế
+controller --> current : tác động điều chỉnh
 
 note bottom of controller
-  Một vòng không hứa trạng thái
-  cuối cùng ngay lập tức.
+  Một vòng lặp không cam kết đưa hệ thống về
+  trạng thái cuối cùng ngay tức thì.
+  Nó là quá trình hội tụ liên tục qua thời gian.
 end note
 @enduml

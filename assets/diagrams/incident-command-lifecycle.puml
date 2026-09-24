@@ -14,20 +14,20 @@ skinparam sequence {
 }
 
 actor "người vận hành" as operator
-participant "incident command\nvalidate + ghi nhận" as command
-participant "runner\nstart + wait + classify" as runner
-participant "process con\nstdout / stderr / exit" as child
+participant "lệnh sự cố\nkiểm tra + ghi nhận" as command
+participant "bộ điều phối runner\nkhởi chạy + chờ + phân loại" as runner
+participant "tiến trình con\nstdout / stderr / mã thoát" as child
 
-operator -> command : target + deadline
-command -> runner : Spec + parent context
-runner -> child : executable + arguments
-child --> runner : output + exit status
-runner --> command : Result + error class
-command --> operator : diagnosis record
+operator -> command : mục tiêu + thời hạn deadline
+command -> runner : đặc tả Spec + bối cảnh cha
+runner -> child : tệp thực thi + đối số
+child --> runner : kết quả xuất + mã thoát
+runner --> command : kết quả Result + lớp lỗi
+command --> operator : bản ghi chẩn đoán
 
 note over runner
   Context bị cancel sẽ ngắt
-  command process theo mặc định.
-  Policy cho process tree là việc riêng.
+  tiến trình con theo mặc định.
+  Chính sách cho cây tiến trình (process tree) là cơ chế riêng.
 end note
 @enduml

@@ -2,7 +2,7 @@
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 20
+skinparam defaultFontSize 18
 skinparam rectangle {
   BackgroundColor #F5F5F2
   BorderColor #333333
@@ -12,15 +12,16 @@ skinparam rectangle {
 skinparam arrowColor #333333
 left to right direction
 
-rectangle "ACCEPTING\nlistener mở\nnhận request mới" as accepting
-rectangle "DRAINING\nlistener đóng\nrequest đang chạy được drain" as draining
-rectangle "STOPPED\nkhông nhận\nrequest mới" as stopped
+rectangle "TIẾP NHẬN (ACCEPTING)\nlistener mở\nnhận yêu cầu mới" as accepting
+rectangle "GIẢI TỎA (DRAINING)\nlistener đóng\nxử lý nốt yêu cầu đang chạy" as draining
+rectangle "DỪNG HẲN (STOPPED)\nđóng kết nối\ngiải phóng tài nguyên" as stopped
 
-accepting --> draining : cancel / deploy stop
-draining --> stopped : request hoàn tất\nhoặc deadline policy
+accepting --> draining : tín hiệu dừng / deploy
+draining --> stopped : yêu cầu hoàn tất\nhoặc hết thời hạn deadline
 
 note bottom of draining
-  Hijacked connection (ví dụ WebSocket)
-  cần lifecycle riêng.
+  Draining tách biệt với việc đóng listener:
+  không nhận thêm việc mới nhưng
+  hoàn tất công việc đang dang dở.
 end note
 @enduml

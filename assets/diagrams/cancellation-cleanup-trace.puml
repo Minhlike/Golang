@@ -11,23 +11,23 @@ skinparam activity {
 skinparam ArrowColor #222222
 
 start
-if (ctx đã bị cancel?) then (có)
-  :trả ctx.Err();
-  note right: chưa acquire session
+if (ctx đã bị hủy (cancel)?) then (có)
+  :trả về ctx.Err();
+  note right: chưa chiếm dụng tài nguyên session
   stop
 else (không)
-  :open endpoint;
-  if (open thành công?) then (có)
+  :mở kết nối endpoint;
+  if (kết nối thành công?) then (có)
     :defer session.Close();
     :run(ctx, endpoint, session);
-    :Close chạy trước return;
-    if (run đã lỗi?) then (có)
-      :giữ primary error;
+    :Close() luôn chạy trước khi return;
+    if (run() phát sinh lỗi?) then (có)
+      :bảo toàn lỗi chính (primary error);
     else (không)
-      :trả close error nếu có;
+      :trả lỗi đóng kết nối nếu có;
     endif
   else (không)
-    :trả open error;
+    :trả lỗi mở kết nối;
   endif
 endif
 stop

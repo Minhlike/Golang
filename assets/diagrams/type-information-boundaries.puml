@@ -1,27 +1,50 @@
-@startuml
-!theme plain
+@startmindmap
 skinparam backgroundColor white
-skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontColor #000000
-skinparam defaultFontSize 18
-skinparam rectangle {
-  BackgroundColor #F4F4F1
-  BorderColor #3F3F3F
-  RoundCorner 8
+skinparam defaultFontSize 14
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #F4F4F2
+    LineColor #000000
+    LineThickness 1.2
+    FontColor #000000
+    FontSize 13
+    RoundCorner 8
+    Padding 8
+  }
+  :depth(0) {
+    BackgroundColor #2E2E2E
+    FontColor #FFFFFF
+    FontSize 16
+    LineThickness 2.5
+    RoundCorner 12
+    Padding 12
+  }
+  :depth(1) {
+    BackgroundColor #E5E5E0
+    FontColor #000000
+    FontSize 14
+    LineThickness 1.8
+    RoundCorner 8
+    Padding 10
+  }
 }
-
-rectangle "Một operation cần abstraction" as operation
-rectangle "Generic\nCùng một operation trên nhiều type.\nConstraint quyết định phép hợp lệ." as generic
-rectangle "Interface nhỏ\nCaller cần behavior có thể thay thế.\nMethod contract được compiler kiểm tra." as iface
-rectangle "Reflection\nShape hoặc metadata là input runtime." as reflect
-
-operation --> generic : giữ type information
-operation --> iface : thay thế theo behavior
-operation --> reflect : inspect khi cần
-
-note bottom of generic
-`any` không phải bước giữa bắt buộc.
-Nó chỉ phù hợp ở boundary nhận nhiều shape.
-end note
-@enduml
+</style>
+* **TRỪU TƯỢNG HÓA\nKIỂU DỮ LIỆU**
+** GENERICS
+*** Cùng thao tác trên nhiều kiểu
+*** Bảo toàn thông tin kiểu compile-time
+*** Ràng buộc hợp lệ qua Constraint
+*** Loại bỏ chi phí ép kiểu lặp lại
+** GIAO DIỆN (INTERFACE)
+*** Thay thế linh hoạt theo hành vi
+*** Thỏa mãn ngầm định (Implicit)
+*** Thu nhỏ tối đa cam kết (Contract)
+*** Dễ dàng viết giả lập kiểm thử (Mock)
+** PHẢN CHIẾU (REFLECTION)
+*** Khám phá kiểu tại thời điểm runtime
+*** Nhận diện cấu trúc động bất định
+*** Cần kiểm soát vì chi phí phụ trội cao
+*** Sử dụng gói thư viện chuẩn reflect
+@endmindmap
