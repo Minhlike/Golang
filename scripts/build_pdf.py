@@ -191,28 +191,28 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
             leading=16, textColor=colors.HexColor("#333333"), spaceBefore=0, spaceAfter=10, keepWithNext=True,
         ),
         "atlas_group": ParagraphStyle(
-            "AtlasGroup", fontName=heading_bold, fontSize=10.8,
-            leading=14, textColor=colors.black, spaceBefore=6, spaceAfter=2, keepWithNext=True,
+            "AtlasGroup", fontName=heading_bold, fontSize=11.2,
+            leading=14.5, textColor=colors.black, spaceBefore=4, spaceAfter=1, keepWithNext=True,
         ),
         "atlas_id": ParagraphStyle(
-            "AtlasID", fontName=mono, fontSize=8.8, leading=11.2,
+            "AtlasID", fontName=heading_bold, fontSize=9.5, leading=12.5,
             textColor=colors.black, keepWithNext=True,
         ),
         "atlas_bullet": ParagraphStyle(
-            "AtlasBullet", fontName=mono, fontSize=8.0, leading=10.2,
+            "AtlasBullet", fontName=mono, fontSize=9.0, leading=11.6,
             textColor=colors.HexColor("#222222"), leftIndent=8, firstLineIndent=-6, keepWithNext=True,
         ),
         "atlas_desc": ParagraphStyle(
-            "AtlasDesc", parent=base["BodyText"], fontName=body, fontSize=9.2,
-            leading=12.2, textColor=colors.HexColor("#1A1A1A"), spaceAfter=1, keepWithNext=True,
+            "AtlasDesc", parent=base["BodyText"], fontName=body, fontSize=9.6,
+            leading=12.8, textColor=colors.HexColor("#1A1A1A"), spaceAfter=1.0, keepWithNext=True,
         ),
         "atlas_alert": ParagraphStyle(
-            "AtlasAlert", parent=base["BodyText"], fontName=body, fontSize=8.6,
-            leading=11.4, textColor=colors.HexColor("#333333"), leftIndent=6, spaceAfter=1, keepWithNext=True,
+            "AtlasAlert", parent=base["BodyText"], fontName=body, fontSize=9.0,
+            leading=12.0, textColor=colors.HexColor("#333333"), leftIndent=6, spaceAfter=1.0, keepWithNext=True,
         ),
         "atlas_action": ParagraphStyle(
-            "AtlasAction", parent=base["BodyText"], fontName=heading, fontSize=8.6,
-            leading=11.4, textColor=colors.black, spaceAfter=3,
+            "AtlasAction", parent=base["BodyText"], fontName=heading, fontSize=9.2,
+            leading=12.2, textColor=colors.black, spaceAfter=1.5,
         ),
         "atlas_table": ParagraphStyle(
             "AtlasTable", parent=base["BodyText"], fontName=body, fontSize=9.2,
@@ -495,7 +495,7 @@ def footer_2col(canvas, doc) -> None:
     canvas.setStrokeColor(colors.HexColor("#D8D8D8"))
     canvas.setLineWidth(0.4)
     gx = 2.1 * cm + 8.0 * cm + 0.4 * cm
-    canvas.line(gx, 1.9 * cm, gx, A4[1] - 2.1 * cm)
+    canvas.line(gx, 1.8 * cm, gx, A4[1] - 1.9 * cm)
     canvas.restoreState()
 
 
@@ -598,10 +598,10 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                 current_entry = []
             g_title = ls[3:].upper()
             story.append(KeepTogether([
-                Spacer(1, 8),
-                Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
-                HRFlowable(width="100%", thickness=0.6, color=colors.HexColor("#333333")),
                 Spacer(1, 4),
+                Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
+                HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#333333")),
+                Spacer(1, 2),
             ]))
             continue
 
@@ -609,16 +609,24 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             if current_entry:
                 story.append(KeepTogether(current_entry))
                 current_entry = []
-            m = re.match(r"^###\s+([A-J]\d{2})\s+`?([^`]+)`?$", ls)
+            m = re.match(r"^###\s+([A-J]\d{2})\s+(.+)$", ls)
             if m:
-                eid, title = m.group(1), m.group(2)
-                p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font name=\"{mono}\" color=\"#111111\"><b>{html.escape(title)}</b></font>", s["atlas_id"])
+                eid, raw_title = m.group(1), m.group(2).strip()
+                if raw_title.startswith("`") and raw_title.endswith("`"):
+                    clean_title = raw_title.strip("`")
+                    p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font name=\"{mono}\" color=\"#111111\"><b>{html.escape(clean_title)}</b></font>", s["atlas_id"])
+                else:
+                    p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font color=\"#111111\"><b>{html.escape(raw_title)}</b></font>", s["atlas_id"])
                 current_entry.extend([p, Spacer(1, 1)])
             continue
 
-        if ls.startswith(("* `", "- `")):
-            bullet_txt = ls[2:].strip().strip("`")
-            current_entry.append(Paragraph(f"• <font name=\"{mono}\">{html.escape(bullet_txt)}</font>", s["atlas_bullet"]))
+        if ls.startswith(("* ", "- ")):
+            bullet_raw = ls[2:].strip()
+            if bullet_raw.startswith("`") and bullet_raw.endswith("`"):
+                bullet_txt = bullet_raw.strip("`")
+                current_entry.append(Paragraph(f"• <font name=\"{mono}\">{html.escape(bullet_txt)}</font>", s["atlas_bullet"]))
+            else:
+                current_entry.append(Paragraph(f"• {inline(bullet_raw, mono)}", s["atlas_bullet"]))
             continue
 
         if ls.startswith("!"):
@@ -636,7 +644,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                 full_html = inline(ls, mono)
             current_entry.extend([
                 Paragraph(full_html, s["atlas_action"]),
-                Spacer(1, 2.5),
+                Spacer(1, 1.2),
             ])
             continue
 
@@ -656,9 +664,9 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
                        id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     gutter = 0.8 * cm
     col_w = (printable_w - gutter) / 2
-    frame_col1 = Frame(margin, 2.0 * cm, col_w, A4[1] - 3.9 * cm,
+    frame_col1 = Frame(margin, 1.85 * cm, col_w, A4[1] - 3.65 * cm,
                        id="atlas_col1", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-    frame_col2 = Frame(margin + col_w + gutter, 2.0 * cm, col_w, A4[1] - 3.9 * cm,
+    frame_col2 = Frame(margin + col_w + gutter, 1.85 * cm, col_w, A4[1] - 3.65 * cm,
                        id="atlas_col2", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
 
     doc = BaseDocTemplate(str(CANDIDATE), pagesize=A4, title="Golang Master",
