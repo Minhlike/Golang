@@ -373,6 +373,12 @@ Tất cả các file mã nguồn Go trong thư mục đều bị loại trừ b�
 Toàn bộ suite kiểm thử hoặc một test cụ thể chạy vượt quá giới hạn thời gian cho phép (mặc định 10 phút hoặc cờ `-timeout`).
 → Điều tra các test bị treo do deadlock, rò rỉ goroutine hoặc sleep quá lâu; chạy `go test -v -timeout=30s` để cô lập test lỗi. [Ch6,8,20]
 
+### I08 `API rate limit exceeded`
+* `API rate limit exceeded for user ID <id>`
+Lỗi từ chối (`GitHub API HTTP 403 Forbidden`) khi số lượng request gửi tới máy chủ GitHub vượt quá định mức cho phép (5.000 requests/giờ cho authenticated token hoặc 60 requests/giờ cho IP nặc danh), hoặc vi phạm chính sách chống lạm dụng Secondary Rate Limit (`Retry-After`).
+! Thường gặp khi các bot tự động hóa hoặc CI/CD pipeline gửi yêu cầu liên tục trong vòng lặp mà không kiểm tra hạn mức còn lại.
+→ Bóc tách header `X-RateLimit-Reset` hoặc `Retry-After` để tạm dừng tiến trình (sleep with jitter) cho đến khi quota được khôi phục trước khi gửi yêu cầu tiếp theo. [Ch25]
+
 ---
 
 ## J — Container / Kubernetes / CI-CD
