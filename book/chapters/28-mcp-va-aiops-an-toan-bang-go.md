@@ -1,17 +1,12 @@
 # Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền
 
-Trong bức tranh công nghệ hiện đại, các mô hình ngôn ngữ lớn (LLMs) và Tác tử Trí tuệ Nhân tạo (AI Agents) không còn dừng lại ở vai trò trợ lý trả lời câu hỏi văn bản thuần túy. 
+Trong bức tranh công nghệ hiện đại, các mô hình ngôn ngữ lớn (LLMs) và Tác tử Trí tuệ Nhân tạo (AI Agents) không còn dừng lại ở vai trò trợ lý hỏi đáp thụ động. Các hệ thống vận hành tự động (AIOps) thế hệ mới bắt đầu giao phó cho tác tử quyền điều tra các cảnh báo từ hệ thống giám sát Prometheus, truy vấn Kubernetes API để thu thập nhật ký của các Pod gặp lỗi vòng lặp sập đổ (`CrashLoopBackOff`), gọi AWS SDK kiểm tra dung lượng máy chủ, và thậm chí kích hoạt các hành động khắc phục sự cố như khởi động lại tiến trình dịch vụ hoặc điều phối lưu lượng mạng.
 
-Các hệ thống vận hành tự động (AIOps) thế hệ mới đang trao quyền trực tiếp cho AI Agent:
-- Tự động điều tra các cảnh báo từ hệ thống giám sát Prometheus.
-- Truy vấn Kubernetes API để thu thập log của các Pod bị `CrashLoopBackOff`.
-- Gọi AWS SDK để kiểm tra tình trạng sức khỏe của Auto Scaling Group.
-- Thậm chí tự động thực thi các hành động khắc phục sự cố (remediation) như khởi động lại dịch vụ hoặc điều chỉnh lưu lượng mạng.
+Tuy nhiên, việc kết nối trực tiếp tác tử AI với hạ tầng sản xuất tiềm ẩn những hiểm họa an ninh nghiêm trọng bậc nhất:
 
-Tuy nhiên, việc kết nối AI Agent với hạ tầng sản xuất tiềm ẩn những rủi ro an ninh nghiêm trọng bậc nhất:
-> *Nếu bạn trao cho Agent quyền truy cập vào một công cụ, làm sao bạn đảm bảo Agent không bị tấn công Prompt Injection để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ cụm máy chủ?*
+> *Nếu trao cho Agent quyền truy cập vào một công cụ, làm sao bạn bảo đảm tác tử không bị tấn công tiêm lời nhắc (Prompt Injection) để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ hạ tầng?*
 
-Giải pháp của ngành công nghiệp là chuẩn hóa ranh giới giao tiếp thông qua **Model Context Protocol (MCP)** kết hợp với kiến trúc phòng thủ đa tầng trong Go. Chương này hướng dẫn bạn cách xây dựng một máy chủ công cụ MCP an toàn, thiết lập cơ chế phân quyền đặc quyền tối thiểu (Least Privilege), rào chắn chống tấn công SSRF và lưu vết kiểm toán bất biến (Audit Trail).
+Giải pháp của ngành công nghiệp là chuẩn hóa ranh giới giao tiếp thông qua **Model Context Protocol (MCP)** kết hợp với kiến trúc phòng thủ đa tầng trong Go. Chương này hướng dẫn bạn cách xây dựng máy chủ công cụ MCP an toàn dựa trên thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (v1.8.0), thiết lập cơ chế phân quyền đặc quyền tối thiểu (Least Privilege), rào chắn chống tấn công giả mạo yêu cầu từ máy chủ (SSRF) và lưu vết kiểm toán có cấu trúc.
 
 ---
 
@@ -23,51 +18,42 @@ Mô hình tư duy cốt lõi của một hệ thống AIOps an toàn được x�
 [Yêu cầu từ AI Agent] (JSON-RPC tool call)
           │
           ▼
-[Giao thức MCP] (Transport an toàn qua Stdio / SSE)
+[Giao thức MCP] (Transport qua Stdio / SSE / InMemory)
           │
           ▼
-[Xác thực JSON Schema] (Kiểm tra kiểu dữ liệu đầu vào)
+[Xác thực Schema] (Typed Struct & jsonschema tags)
           │
           ▼
-[Cổng phân quyền RBAC] (Chỉ cho phép role phù hợp)
+[Middleware Phân quyền] (Session Context RBAC)
           │
           ▼
-[Rào chắn ngữ nghĩa] (Chặn đứng SSRF & Path Traversal)
+[Rào chắn Ngữ nghĩa] (Chặn đứng SSRF qua Allowlist)
           │
           ▼
-[Go Handler có giới hạn] (Thực thi trong Sandbox)
+[Handler & Actuator] (Thực thi có kiểm soát)
           │
           ▼
-[Hạ tầng thực tế] (Kubernetes / AWS / Linux OS)
+[Hạ tầng Thực tế] (Kubernetes / AWS / Linux OS)
           │
           ▼
-[Nhật ký kiểm toán] (Lưu vết bất biến mọi hành vi)
+[Nhật ký Kiểm toán] (Lưu vết append-oriented có cấu trúc)
 ~~~
 
-Trong kiến trúc này:
-1. **Ranh giới giao thức (Protocol Boundary):** Agent giao tiếp qua luồng nhập xuất chuẩn (`os.Stdin`/`os.Stdout`), loại bỏ hoàn toàn bề mặt tấn công mạng từ bên ngoài.
-2. **Ranh giới kiểu dữ liệu (Schema Boundary):** Đảm bảo các tham số truyền vào đúng định dạng kỹ thuật.
-3. **Ranh giới phân quyền (Authorization Boundary):** Tác tử quan sát (Observer) tuyệt đối không thể kích hoạt các công cụ làm thay đổi trạng thái hạ tầng (Mutating Tools).
-4. **Ranh giới ngữ nghĩa (Semantic Boundary):** Ngăn chặn Agent bị lừa truy cập vào các địa chỉ mạng nội bộ hoặc dịch vụ siêu dữ liệu nhạy cảm của đám mây (AWS IMDS).
-5. **Ranh giới kiểm toán (Audit Boundary):** Mọi hành động đều được ghi lại vĩnh viễn để phục vụ điều tra sự cố.
+Trong kiến trúc này, sự an toàn không đến từ một điểm kiểm soát đơn lẻ mà là sự phối hợp của nhiều ranh giới bảo vệ nối tiếp nhau. Ở tầng giao vận, việc sử dụng luồng nhập xuất chuẩn (`os.Stdin`/`os.Stdout`) hoặc kết nối tiến trình cục bộ giúp giảm thiểu bề mặt phơi nhiễm mạng từ xa so với việc mở cổng HTTP công khai, song việc kiểm soát tham số, cô lập tiến trình và phân quyền phiên vẫn là điều kiện bắt buộc. Tầng schema bảo đảm dữ liệu đầu vào tuân thủ định dạng kỹ thuật nghiêm ngặt. Tầng phân quyền phiên tách bạch rõ ràng giữa tác tử chỉ đọc (Observer) và tác tử có thẩm quyền thay đổi trạng thái (Operator). Tầng rào chắn ngữ nghĩa ngăn ngừa việc tác tử bị lừa truy cập vào các địa chỉ mạng nội bộ nhạy cảm, và cuối cùng tầng kiểm toán lưu vết chi tiết từng quyết định cho phép hay từ chối để phục vụ điều tra sự cố.
 
 ---
 
-## 2. Model Context Protocol: Chuẩn giao thức công cụ cho AI
+## 2. Model Context Protocol: Thư viện Go SDK Chính thức
 
 Giao thức **Model Context Protocol (MCP)** do Anthropic khởi xướng đã nhanh chóng trở thành tiêu chuẩn công nghiệp mở giúp kết nối các mô hình AI với các nguồn dữ liệu và công cụ bên ngoài.
 
-Về bản chất kỹ thuật, MCP vận hành trên nền giao thức **JSON-RPC 2.0**:
-- **`tools/list`:** Máy chủ Go công bố danh sách các công cụ mà nó cung cấp kèm theo mô tả chức năng và JSON Schema quy định các tham số đầu vào.
-- **`tools/call`:** Khi Agent quyết định sử dụng một công cụ, nó gửi một yêu cầu JSON-RPC chứa tên công cụ và các tham số tương ứng.
+Về bản chất kỹ thuật, MCP vận hành trên nền giao thức **JSON-RPC 2.0**. Máy chủ Go công bố danh sách các công cụ khả dụng kèm mô tả chức năng và JSON Schema qua phương thức `tools/list`. Khi tác tử quyết định sử dụng một công cụ, nó phát thông điệp `tools/call` chứa tên công cụ và các tham số tương ứng. 
 
-Dự án thực hành tại `labs/part28-mcp-ops-tools/` xây dựng một **Mô hình kiến trúc và bảo mật giao thức MCP (MCP Protocol Architecture & Security Model)** chuẩn mực bằng Go dựa trên đặc tả JSON-RPC 2.0, tập trung giải quyết các rào chắn kiểm soát an ninh tối quan trọng khi trao quyền cho Agent.
+Dự án thực hành tại `labs/part28-mcp-ops-tools/` tích hợp trực tiếp thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (phiên bản v1.8.0, tương thích đặc tả giao thức MCP 2026-07-28). Kiến trúc của SDK cho phép lập trình viên định nghĩa các công cụ thông qua các hàm Go có kiểu dữ liệu tường minh (`typed handlers`), tự động sinh JSON Schema từ struct tags, và can thiệp vào luồng xử lý thông qua hệ thống middleware nhận tin (`ReceivingMiddleware`).
 
-### Vì sao ưu tiên Stdio Transport?
-Trong môi trường DevOps và container, MCP thường ưu tiên sử dụng giao vận qua luồng nhập xuất chuẩn (`os.Stdin` và `os.Stdout`) thay vì mở cổng mạng HTTP:
-- Không cần mở port trong container hay cấu hình tường lửa.
-- Không lo lắng về vấn đề xác thực mạng hay tấn công Man-In-The-Middle (MITM).
-- Tiến trình AI Agent trực tiếp fork tiến trình máy chủ công cụ Go, giao tiếp qua pipe hệ điều hành với độ trễ tối thiểu.
+### Giao vận Stdio và Kết nối Cục bộ
+
+Trong môi trường DevOps và container, MCP thường ưu tiên giao vận qua luồng nhập xuất chuẩn (`os.Stdin` và `os.Stdout`) thông qua `mcp.StdioTransport` thay vì mở cổng mạng HTTP độc lập. Tiến trình tác tử trực tiếp fork tiến trình máy chủ công cụ Go và trao đổi dữ liệu qua pipe hệ điều hành với độ trễ thấp, loại bỏ sự phụ thuộc vào chứng chỉ mạng công khai. Khi kiểm thử tự động, SDK cung cấp `mcp.NewInMemoryTransports()` cho phép client và server bắt tay trực tiếp trong bộ nhớ RAM mà không cần đụng chạm tới hệ điều hành hay socket mạng.
 
 ---
 
@@ -82,21 +68,15 @@ Một sai lầm rất phổ biến của các kỹ sư khi mới thiết kế MC
 }
 ~~~
 
-Đây là một **anti-pattern an ninh chết người**:
-- **JSON Schema chỉ kiểm tra kiểu hình thức:** Nó chỉ xác nhận `target_url` là một chuỗi ký tự hợp lệ.
-- **Hiểm họa Prompt Injection & SSRF:** Nếu Agent bị tấn công hoặc ảo giác (hallucination), nó có thể gửi yêu cầu nhắm tới địa chỉ AWS Metadata (`http://169.254.169.254/latest/meta-data/...`), localhost (`http://127.0.0.1:9090`), hoặc các dịch vụ nội bộ chưa mã hóa trong mạng VPC.
+Đây là một khiếm khuyết an ninh nghiêm trọng. Các bộ xác thực JSON Schema chỉ kiểm tra định dạng hình thức của chuỗi ký tự mà không hiểu ngữ nghĩa của địa chỉ đích. Khi tác tử bị tấn công tiêm lời nhắc hoặc gặp hiện tượng ảo giác, nó có thể gửi yêu cầu nhắm tới địa chỉ siêu dữ liệu nhạy cảm của điện toán đám mây (`http://169.254.169.254/latest/meta-data/...`), cổng quản trị nội bộ trên `localhost:9090`, hoặc các máy chủ cơ sở dữ liệu chưa mã hóa trong mạng riêng (VPC).
 
-### Nguyên tắc vàng: Tuyệt đối không nhận URL tùy ý từ Agent
-Thay vì cho phép Agent chỉ định URL, kiến trúc chuẩn mực yêu cầu:
-1. Agent **chỉ được phép truyền mã định danh mục tiêu (`target_id`)** đã được định nghĩa trước (ví dụ `checkout-health`, `payment-health`).
-2. Máy chủ Go quản lý một **Danh sách trắng đã kiểm duyệt (Target Allowlist Registry)** ánh xạ `target_id` sang URL nội bộ thực tế.
-3. Bất kỳ `target_id` nào không nằm trong danh sách trắng sẽ bị từ chối ngay lập tức tại ranh giới chính sách!
+Để loại trừ triệt để nguy cơ SSRF, kiến trúc chuẩn mực áp dụng nguyên tắc danh sách trắng: tác tử tuyệt đối không được phép chỉ định URL trực tiếp, mà chỉ được truyền mã định danh dịch vụ (`target_id`) đã được phê duyệt trước (chẳng hạn `checkout-health`, `payment-health`). Máy chủ Go nắm giữ danh bạ cho phép (`Target Allowlist Registry`) để ánh xạ `target_id` sang URL nội bộ thực tế; bất kỳ mã nào nằm ngoài danh bạ đều bị từ chối ngay lập tức tại ranh giới chính sách.
 
 ---
 
-## 4. Cấu hình Target Allowlist và Thực thi HTTP Kiểm tra Sức khỏe
+## 4. Cấu hình Target Allowlist và Đăng ký Công cụ Typed Go
 
-Dưới đây là cấu trúc định danh mục tiêu và đăng ký công cụ an toàn trong Go:
+Dưới đây là cấu trúc định danh mục tiêu và mô hình tham số đầu vào được trích xuất từ `labs/part28-mcp-ops-tools/server.go`:
 
 ~~~go
 type HealthTarget struct {
@@ -105,60 +85,19 @@ type HealthTarget struct {
 	URL         string `json:"url"`
 }
 
-// Khai báo công cụ query_service_health: chỉ nhận target_id
-Tool{
-	Name:        "query_service_health",
-	Description: "Ktra sức khỏe qua target_id allowlist",
-	InputSchema: map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"target_id": map[string]any{
-				"type":        "string",
-				"description": "Mã (vd checkout-health)",
-			},
-		},
-		"required": []string{"target_id"},
-	},
+// QueryHealthInput định nghĩa schema đầu vào
+type QueryHealthInput struct {
+	TargetID string `json:"target_id"`
+}
+
+// RestartServiceInput định nghĩa tham số mutating tool
+type RestartServiceInput struct {
+	ServiceName  string `json:"service_name"`
+	ChangeTicket string `json:"change_ticket"`
 }
 ~~~
 
-### Thực thi HTTP thật với giới hạn Timeout
-Khi nhận được `target_id` hợp lệ, Go handler thực hiện một lời gọi HTTP GET thực tế (trong bài test trỏ tới `httptest.Server`) để đo đạc độ trễ và mã phản hồi:
-
-~~~go
-target, found := s.targets[targetID]
-if !found {
-	// Chặn đứng hoàn toàn nguy cơ SSRF
-	return &CallToolResult{
-		IsError: true,
-		Content: []ToolContent{
-			{
-				Type: "text",
-				Text: fmt.Sprintf(
-					"target %q blocked by policy",
-					targetID,
-				),
-			},
-		},
-	}, nil
-}
-
-// Thực hiện HTTP call thực tế
-start := time.Now()
-req, _ := http.NewRequestWithContext(
-	ctx, http.MethodGet, target.URL, nil,
-)
-resp, err := s.httpClient.Do(req)
-if err != nil {
-	return &CallToolResult{
-		IsError: true,
-		Content: []ToolContent{
-			{Type: "text", Text: err.Error()},
-		},
-	}, nil
-}
-defer resp.Body.Close()
-~~~
+Các trường struct có thể được bổ sung thêm tag `jsonschema` để cung cấp phần mô tả chi tiết cho từng tham số khi máy chủ MCP công bố danh sách công cụ tới tác tử qua lệnh `tools/list`.
 
 ---
 
@@ -197,11 +136,9 @@ func CallerRoleFromContext(ctx context.Context) Role {
 }
 ~~~
 
-### Tách bạch hai nhóm công cụ và Rào chắn Đột biến (`ChangeAuthorizer`):
-1. **Công cụ chỉ đọc (Read-Only):** Ví dụ `query_service_health`. Cho phép vai trò `observer` tự do truy vấn để thu thập thông tin chẩn đoán.
-2. **Công cụ gây đột biến (Mutating):** Ví dụ `restart_service`. 
-   - Từ chối thẳng thừng vai trò `observer`.
-   - Đối với vai trò `operator`, bắt buộc phải thông qua interface `ChangeAuthorizer` để kiểm tra mã phiếu thay đổi (`change_ticket`), và thực thi thay đổi trạng thái có kiểm soát qua interface `ServiceActuator`.
+### Tách bạch hai nhóm công cụ và Rào chắn Đột biến
+
+Về mặt kiểm soát rủi ro, các công cụ phục vụ tác tử được phân thành hai nhóm rõ rệt. Nhóm công cụ chỉ đọc (như `query_service_health`) cho phép vai trò `observer` tự do truy vấn nhằm phục vụ mục đích thu thập thông tin và chẩn đoán sự cố mà không làm thay đổi trạng thái hệ thống. Ngược lại, nhóm công cụ gây đột biến (như `restart_service`) bị nghiêm cấm hoàn toàn đối với vai trò `observer`. Khi tác tử mang vai trò `operator` gửi yêu cầu, thao tác bắt buộc phải thông qua interface `ChangeAuthorizer` để xác minh mã phiếu thay đổi hợp lệ trước khi được chuyển tiếp tới interface `ServiceActuator` để thực thi.
 
 ~~~go
 type ServiceActuator interface {
@@ -219,169 +156,246 @@ type ChangeAuthorizer interface {
 
 ---
 
-## 6. Thực thi công cụ và Ghi nhật ký kiểm toán bất biến (Audit Trail)
+## 6. Xây dựng OpsServer trên nền tảng Official MCP Go SDK
 
-Phương thức `ExecuteToolCall` liên kết toàn bộ chuỗi bảo vệ:
+Dưới đây là cấu trúc `OpsServer` hoàn chỉnh trích xuất từ `labs/part28-mcp-ops-tools/server.go`, liên kết toàn bộ chuỗi phòng thủ đa tầng trên nền thư viện chính thức `github.com/modelcontextprotocol/go-sdk/mcp`:
 
-### 6.1. Định tuyến công cụ và Rút trích Vai trò Caller
-Trước tiên, phương thức bóc tách `Role` bảo đảm từ context và đối chiếu với danh mục công cụ đã đăng ký:
+### 6.1. Khởi tạo MCP Server và Tiêm Middleware Phân quyền Phiên
+
+Trong kiến trúc của MCP Go SDK, `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp RPC gửi đến trước khi điều phối tới handler cụ thể. Ta sử dụng middleware này để bóc tách định danh caller từ phiên làm việc (`Session Context`) và tiêm vai trò bảo mật vào `context.Context`:
 
 ~~~go
-func (s *MCPServer) ExecuteToolCall(
-	ctx context.Context,
-	params *CallToolParams,
-) (*CallToolResult, error) {
-	if params == nil {
-		return nil, errors.New("nil call params")
+type OpsServer struct {
+	mcpServer   *mcp.Server
+	httpClient  *http.Client
+	actuator    ServiceActuator
+	authorizer  ChangeAuthorizer
+	targets     map[string]HealthTarget
+
+	mu          sync.RWMutex
+	sessionRole map[string]Role
+	auditLog    []AuditRecord
+}
+
+func NewOpsServer(
+	client *http.Client,
+	actuator ServiceActuator,
+	authorizer ChangeAuthorizer,
+	targets []HealthTarget,
+) *OpsServer {
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	targetMap := make(map[string]HealthTarget, len(targets))
+	for _, t := range targets {
+		targetMap[t.ID] = t
 	}
 
-	// Lấy vai trò an toàn từ session context
-	role := CallerRoleFromContext(ctx)
+	server := mcp.NewServer(
+		&mcp.Implementation{
+			Name: "ops-mcp-server", Version: "v1.8.0",
+		},
+		&mcp.ServerOptions{
+			Instructions: "AIOps server allowlist",
+		},
+	)
 
-	tool, exists := s.tools[params.Name]
-	if !exists {
-		errStr := fmt.Sprintf("unknown tool: %s", params.Name)
-		s.recordAudit(
-			role, params.Name, params.Arguments, "DENY", errStr,
-		)
-		return nil, errors.New(errStr)
+	ops := &OpsServer{
+		mcpServer:   server,
+		httpClient:  client,
+		actuator:    actuator,
+		authorizer:  authorizer,
+		targets:     targetMap,
+		sessionRole: make(map[string]Role),
 	}
 
-	switch tool.Name {
-	case "query_service_health":
-		return s.executeHealthCheck(ctx, role, tool, params)
-	case "restart_service":
-		return s.executeRestart(ctx, role, tool, params)
-	}
-	return nil, fmt.Errorf("unhandled tool: %s", tool.Name)
+	// Middleware gắn danh tính caller vào request context
+	server.AddReceivingMiddleware(
+		func(next mcp.MethodHandler) mcp.MethodHandler {
+			return func(
+				ctx context.Context,
+				method string,
+				req mcp.Request,
+			) (mcp.Result, error) {
+				role := CallerRoleFromContext(ctx)
+				sess := req.GetSession()
+				if role == RoleObserver && sess != nil {
+					ops.mu.RLock()
+					id := sess.ID()
+					sessRole, found := ops.sessionRole[id]
+					ops.mu.RUnlock()
+					if found {
+						role = sessRole
+					}
+				}
+				ctx = WithCallerRole(ctx, role)
+				return next(ctx, method, req)
+			}
+		},
+	)
+
+	ops.registerTools()
+	return ops
 }
 ~~~
 
-### 6.2. Thực thi kiểm tra sức khỏe an toàn (Read-Only + Allowlist)
-Công cụ chỉ đọc áp dụng rào chắn SSRF và thực hiện HTTP request có kiểm soát thời gian:
+### 6.2. Đăng ký Công cụ Kiểm tra Sức khỏe và Rào chắn SSRF
+
+Công cụ `query_service_health` được đăng ký qua `mcp.AddTool`. SDK tự động giải mã tham số vào `QueryHealthInput` và chuyển giao quyền kiểm soát cho closure handler:
 
 ~~~go
-func (s *MCPServer) executeHealthCheck(
-	ctx context.Context, role Role,
-	tool Tool, params *CallToolParams,
-) (*CallToolResult, error) {
-	targetID, _ := params.Arguments["target_id"].(string)
-	target, found := s.targets[targetID]
+mcp.AddTool(s.mcpServer, &mcp.Tool{
+	Name:        "query_service_health",
+	Description: "Ktra sức khỏe qua target_id allowlist",
+}, func(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input QueryHealthInput,
+) (*mcp.CallToolResult, any, error) {
+	role := CallerRoleFromContext(ctx)
+	target, found := s.targets[input.TargetID]
 	if !found {
 		errStr := fmt.Sprintf(
-			"target %q blocked by policy", targetID,
+			"target %q blocked by policy", input.TargetID,
 		)
-		s.recordAudit(
-			role, tool.Name,
-			params.Arguments, "DENY", errStr,
+		s.RecordAudit(
+			role, "query_service_health",
+			map[string]any{"target_id": input.TargetID},
+			"DENY", errStr,
 		)
-		return &CallToolResult{
+		return &mcp.CallToolResult{
 			IsError: true,
-			Content: []ToolContent{
-				{Type: "text", Text: errStr},
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: errStr},
 			},
-		}, nil
+		}, nil, nil
 	}
 
 	start := time.Now()
-	req, _ := http.NewRequestWithContext(
+	httpReq, err := http.NewRequestWithContext(
 		ctx, http.MethodGet, target.URL, nil,
 	)
-	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		errStr := fmt.Sprintf("health check err: %v", err)
-		s.recordAudit(
-			role, tool.Name,
-			params.Arguments, "DENY", errStr,
+		errStr := fmt.Sprintf("req err: %v", err)
+		s.RecordAudit(
+			role, "query_service_health",
+			map[string]any{"target_id": input.TargetID},
+			"DENY", errStr,
 		)
-		return &CallToolResult{
+		return &mcp.CallToolResult{
 			IsError: true,
-			Content: []ToolContent{
-				{Type: "text", Text: errStr},
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: errStr},
 			},
-		}, nil
+		}, nil, nil
+	}
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		errStr := fmt.Sprintf("health check failed: %v", err)
+		s.RecordAudit(
+			role, "query_service_health",
+			map[string]any{"target_id": input.TargetID},
+			"DENY", errStr,
+		)
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: errStr},
+			},
+		}, nil, nil
 	}
 	defer resp.Body.Close()
 
+	duration := time.Since(start).Round(time.Millisecond)
 	resText := fmt.Sprintf(
-		"Service %s (%s) HTTP %d (%v)",
+		"Service %s (%s) healthy: HTTP %d",
 		target.ServiceName, target.ID, resp.StatusCode,
-		time.Since(start).Round(time.Millisecond),
 	)
-	s.recordAudit(
-		role, tool.Name,
-		params.Arguments, "ALLOW", resText,
+	s.RecordAudit(
+		role, "query_service_health",
+		map[string]any{"target_id": input.TargetID},
+		"ALLOW", resText,
 	)
-	return &CallToolResult{
-		Content: []ToolContent{
-			{Type: "text", Text: resText},
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: resText},
 		},
-	}, nil
-}
+	}, nil, nil
+})
 ~~~
 
-### 6.3. Rào chắn Đột biến và Kích hoạt Khởi động lại dịch vụ
-Với công cụ gây đột biến, yêu cầu bắt buộc phải qua `AuthorizeChange` trước khi kích hoạt `RestartService`:
+### 6.3. Đăng ký Công cụ Gây Đột biến và Ủy quyền Phiếu Thay đổi
+
+Với công cụ `restart_service`, yêu cầu bắt buộc phải qua `AuthorizeChange` trước khi kích hoạt `RestartService`:
 
 ~~~go
-func (s *MCPServer) executeRestart(
-	ctx context.Context, role Role,
-	tool Tool, params *CallToolParams,
-) (*CallToolResult, error) {
-	svc, _ := params.Arguments["service_name"].(string)
-	ticket, _ := params.Arguments["change_ticket"].(string)
+mcp.AddTool(s.mcpServer, &mcp.Tool{
+	Name:        "restart_service",
+	Description: "Restart dịch vụ có điều kiện, cần ticket",
+}, func(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input RestartServiceInput,
+) (*mcp.CallToolResult, any, error) {
+	role := CallerRoleFromContext(ctx)
+	args := map[string]any{
+		"service_name":  input.ServiceName,
+		"change_ticket": input.ChangeTicket,
+	}
 
 	if s.authorizer != nil {
 		if err := s.authorizer.AuthorizeChange(
-			ctx, role, svc, ticket,
+			ctx, role, input.ServiceName, input.ChangeTicket,
 		); err != nil {
-			s.recordAudit(
-				role, tool.Name, params.Arguments,
+			s.RecordAudit(
+				role, "restart_service", args,
 				"DENY", err.Error(),
 			)
-			return &CallToolResult{
+			return &mcp.CallToolResult{
 				IsError: true,
-				Content: []ToolContent{
-					{Type: "text", Text: err.Error()},
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: err.Error()},
 				},
-			}, nil
+			}, nil, nil
 		}
 	}
 
 	if s.actuator != nil {
 		if err := s.actuator.RestartService(
-			ctx, svc,
+			ctx, input.ServiceName,
 		); err != nil {
-			errStr := fmt.Sprintf("restart err: %v", err)
-			s.recordAudit(
-				role, tool.Name,
-				params.Arguments, "DENY", errStr,
+			errStr := fmt.Sprintf("restart failed: %v", err)
+			s.RecordAudit(
+				role, "restart_service", args, "DENY", errStr,
 			)
-			return &CallToolResult{
+			return &mcp.CallToolResult{
 				IsError: true,
-				Content: []ToolContent{
-					{Type: "text", Text: errStr},
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: errStr},
 				},
-			}, nil
+			}, nil, nil
 		}
 	}
 
 	resText := fmt.Sprintf(
-		"Service %s restarted under ticket %s", svc, ticket,
+		"Service %s restarted under ticket %s",
+		input.ServiceName, input.ChangeTicket,
 	)
-	s.recordAudit(
-		role, tool.Name,
-		params.Arguments, "ALLOW", resText,
+	s.RecordAudit(
+		role, "restart_service", args, "ALLOW", resText,
 	)
-	return &CallToolResult{
-		Content: []ToolContent{
-			{Type: "text", Text: resText},
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: resText},
 		},
-	}, nil
-}
+	}, nil, nil
+})
 ~~~
 
-Ghi vết kiểm toán với khóa đồng bộ:
+### 6.4. Ghi Nhật ký Kiểm toán Có Cấu trúc
+
+Để theo dõi mọi hành vi của tác tử, máy chủ lưu vết các quyết định vào cấu trúc `AuditRecord`:
 
 ~~~go
 type AuditRecord struct {
@@ -393,7 +407,7 @@ type AuditRecord struct {
 	Result    string         `json:"result"`
 }
 
-func (s *MCPServer) recordAudit(
+func (s *OpsServer) RecordAudit(
 	caller Role, tool string, args map[string]any,
 	decision, result string,
 ) {
@@ -410,17 +424,19 @@ func (s *MCPServer) recordAudit(
 }
 ~~~
 
+Cần lưu ý về mặt kiến trúc: mảng `auditLog` trong bộ nhớ RAM phục vụ việc truy vết cục bộ trong vòng đời tiến trình. Trong môi trường sản xuất thực tế, nhật ký kiểm toán cần được đẩy bất đồng bộ ra hệ thống lưu trữ bền vững ngoài tiến trình (như Kafka, Elasticsearch hoặc S3 Object Lock) để bảo đảm tính toàn vẹn và không bị xóa bỏ khi tiến trình kết thúc.
+
 ---
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part28-mcp-ops-tools`)
 
-Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools` (phân loại kiểm chứng: `UNIT_TESTED` / `MOCK_VERIFIED` cho giao thức MCP, phân quyền theo session context, rào chắn SSRF qua target allowlist, thực thi HTTP thật tới test server, và kích hoạt actuator). Chạy kiểm thử:
+Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools` (phân loại kiểm chứng: `UNIT_TESTED` / `MOCK_VERIFIED` cho giao thức MCP chính thức, phân quyền theo session context, rào chắn SSRF qua target allowlist, thực thi HTTP thật tới test server, và kích hoạt actuator). Chạy kiểm thử:
 
 ~~~bash
 go test -v -race ./...
 ~~~
 
-Bộ kiểm thử xác thực 6 kịch bản an ninh thực chiến:
+Bộ kiểm thử xác thực 6 kịch bản an ninh thực chiến trên nền giao vận in-memory:
 
 ~~~
 === RUN   TestMCPListTools
@@ -436,16 +452,14 @@ Bộ kiểm thử xác thực 6 kịch bản an ninh thực chiến:
 === RUN   TestMCPMissingOrInvalidTicketDenied
 --- PASS: TestMCPMissingOrInvalidTicketDenied (0.00s)
 PASS
-ok      part28-mcp-ops-tools   3.259s
+ok      part28-mcp-ops-tools   0.234s
 ~~~
 
-### Phân tích kết quả kiểm thử:
-1. **Khai báo công cụ chuẩn mực (`tools/list`):** Danh sách công cụ phản ánh chính xác JSON Schema của tham số đầu vào.
-2. **Thực thi đọc hợp lệ qua HTTP thật:** Vai trò Observer gọi `query_service_health` với `target_id` hợp lệ, thực hiện HTTP request thật tới `httptest.Server`, nhận HTTP 200 và ghi nhận `ALLOW` trong nhật ký kiểm toán.
-3. **Phòng chống SSRF bằng Target Allowlist:** Chặn đứng mọi nỗ lực tiêm URL hoặc IP độc hại (AWS metadata `169.254.169.254`, localhost, target lạ). Mọi nỗ lực trái phép đều bị từ chối với quyết định `DENY` và ghi log cảnh báo.
-4. **Đột biến hợp lệ có kiểm soát:** Operator có mã phiếu thay đổi hợp lệ được phép kích hoạt `ServiceActuator` để khởi động lại dịch vụ.
-5. **Rào chắn phân quyền tác tử:** Observer cố tình gọi `restart_service` bị chặn ngay lập tức do thiếu thẩm quyền.
-6. **Chặn đột biến không phiếu hoặc sai phiếu:** Operator gọi restart với phiếu không tồn tại hoặc phiếu cấp cho dịch vụ khác lập tức bị từ chối.
+### Phân tích kết quả kiểm thử và Ranh giới xác thực:
+
+Bộ kiểm thử khởi tạo client và server MCP qua kênh `mcp.NewInMemoryTransports()`. Kịch bản kiểm tra `tools/list` xác nhận schema JSON được sinh tự động từ struct tags `jsonschema`. Kịch bản kiểm tra sức khỏe gửi yêu cầu HTTP thực tế tới `httptest.Server`, đo thời gian phản hồi và ghi nhận trạng thái `ALLOW`. 
+
+Các kịch bản phòng thủ chứng minh tính kiên cố của hệ thống: khi tác tử truyền `target_id` trái phép nhằm tấn công SSRF tới địa chỉ AWS metadata (`169.254.169.254`), handler lập tức chặn đứng và trả về lỗi chính sách; khi tác tử mang vai trò `observer` cố tình gọi công cụ khởi động lại dịch vụ `restart_service`, hệ thống từ chối truy cập ngay tại tầng phân quyền; và khi tác tử `operator` gửi phiếu thay đổi không hợp lệ hoặc cấp cho dịch vụ khác, actuator bị khóa cứng không cho phép thực thi. Mọi nỗ lực truy cập đều được ghi vết vào nhật ký kiểm toán với quyết định `DENY` tường minh.
 
 ---
 

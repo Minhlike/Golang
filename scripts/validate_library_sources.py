@@ -65,28 +65,45 @@ VALID_SYNC_STATUSES = {
     "UNSTABLE_HEAD_UPDATED",
 }
 
+IMPLEMENTATION_CLAIMED_LIBRARIES = {
+    "k8s-client-go",
+    "controller-runtime",
+    "aws-sdk-go-v2",
+    "go-git",
+    "go-github",
+    "cilium-ebpf",
+    "mcp-go-sdk",
+}
+
 HEX_40_REGEX = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 HEX_64_REGEX = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
 
 
 def compute_tree_fingerprint(repo_path: Path) -> str:
     """Compute deterministic SHA-256 over all git-tracked files: sorted path + null + sha256(content)."""
+    from concurrent.futures import ThreadPoolExecutor
     cmd = ["git", "-C", str(repo_path), "ls-files"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     tracked_files = sorted(res.stdout.splitlines())
     
-    h = hashlib.sha256()
-    for rel_path in tracked_files:
-        full_path = repo_path / rel_path
+    def _hash_file(rel):
+        full_path = repo_path / rel
         if not full_path.is_file():
-            continue
+            return rel, None
         try:
             with open(full_path, "rb") as f:
-                content = f.read()
+                return rel, hashlib.sha256(f.read()).digest()
         except OSError:
-            continue
-        file_sha = hashlib.sha256(content).digest()
-        h.update(rel_path.encode("utf-8") + b"\x00" + file_sha)
+            return rel, None
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        file_hashes = dict(ex.map(_hash_file, tracked_files))
+
+    h = hashlib.sha256()
+    for rel_path in tracked_files:
+        file_sha = file_hashes.get(rel_path)
+        if file_sha is not None:
+            h.update(rel_path.encode("utf-8") + b"\x00" + file_sha)
     return h.hexdigest()
 
 
@@ -189,8 +206,13 @@ def validate_lock(catalog_map: dict) -> tuple[list[str], dict[str, dict]]:
                 errors.append(f"Library '{lib_id}' has invalid 40-char commit SHA '{commit}' in lock.json")
                 
             fingerprint = l_entry.get("source_tree_sha256")
-            if fingerprint and not HEX_64_REGEX.match(fingerprint):
-                errors.append(f"Library '{lib_id}' invalid 64-char source_tree_sha256 '{fingerprint}'")
+            if fingerprint:
+                if not HEX_64_REGEX.match(fingerprint):
+                    errors.append(f"Library '{lib_id}' invalid 64-char source_tree_sha256 '{fingerprint}'")
+                elif fingerprint == "0" * 64 and lib_id in IMPLEMENTATION_CLAIMED_LIBRARIES:
+                    errors.append(f"Library '{lib_id}' is claimed for implementation but has all-zero fingerprint in lock.json")
+            elif lib_id in IMPLEMENTATION_CLAIMED_LIBRARIES:
+                errors.append(f"Library '{lib_id}' is claimed for implementation but lacks source_tree_sha256 in lock.json")
                 
     return errors, libs
 
@@ -257,10 +279,17 @@ def validate_provenance_and_sourcemaps(catalog_map: dict) -> list[str]:
     return errors
 
 
-def validate_local_repos(lock_libs: dict) -> list[str]:
+def validate_local_repos(catalog_map: dict, lock_libs: dict) -> list[str]:
     errors = []
     if not REPOS_DIR.exists():
+        errors.append(f"Missing repos directory at {REPOS_DIR}")
         return errors
+
+    # Enforce mandatory checkout presence for all implementation-claimed libraries
+    for lib_id in sorted(IMPLEMENTATION_CLAIMED_LIBRARIES):
+        repo_dir = REPOS_DIR / lib_id
+        if not repo_dir.exists() or not (repo_dir / ".git").exists():
+            errors.append(f"SOURCE_UNVERIFIED_BLOCKER: Required implementation library '{lib_id}' missing from {REPOS_DIR}")
         
     for lib_id, l_entry in lock_libs.items():
         repo_dir = REPOS_DIR / lib_id
@@ -271,6 +300,20 @@ def validate_local_repos(lock_libs: dict) -> list[str]:
         if not expected_commit:
             continue
             
+        cat_entry = catalog_map.get(lib_id, {})
+        expected_remote = cat_entry.get("official_remote")
+        if expected_remote:
+            res = subprocess.run(["git", "-C", str(repo_dir), "remote", "get-url", "origin"], capture_output=True, text=True)
+            if res.returncode == 0:
+                actual_remote = res.stdout.strip()
+                if actual_remote.lower() != expected_remote.lower() and not actual_remote.lower().endswith(expected_remote.lower()):
+                    errors.append(f"Repo '{lib_id}' origin remote mismatch: expected {expected_remote}, got {actual_remote}")
+
+        # Check detached HEAD state
+        res = subprocess.run(["git", "-C", str(repo_dir), "symbolic-ref", "-q", "HEAD"], capture_output=True, text=True)
+        if res.returncode == 0:
+            errors.append(f"Repo '{lib_id}' is on branch '{res.stdout.strip()}', expected detached HEAD")
+
         # Check current HEAD commit
         res = subprocess.run(["git", "-C", str(repo_dir), "rev-parse", "HEAD"], capture_output=True, text=True)
         if res.returncode != 0:
@@ -287,7 +330,10 @@ def validate_local_repos(lock_libs: dict) -> list[str]:
             
         # Check source tree fingerprint if recorded in lock
         expected_sha = l_entry.get("source_tree_sha256")
-        if expected_sha:
+        if not expected_sha or expected_sha == "0" * 64:
+            if lib_id in IMPLEMENTATION_CLAIMED_LIBRARIES:
+                errors.append(f"Repo '{lib_id}' has all-zero or missing fingerprint in lock.json")
+        else:
             computed_sha = compute_tree_fingerprint(repo_dir)
             if computed_sha.lower() != expected_sha.lower():
                 errors.append(f"Repo '{lib_id}' source_tree_sha256 mismatch: expected {expected_sha}, computed {computed_sha}")
@@ -345,7 +391,7 @@ def main():
             print(f"    ... and {len(ps_errors) - 10} more")
             
     # 5. Local Repos (if checked out)
-    repo_errors = validate_local_repos(lock_libs)
+    repo_errors = validate_local_repos(catalog_map, lock_libs)
     all_errors.extend(repo_errors)
     if not repo_errors:
         print(f"[*] repos/ checkouts: PASS (commits, clean status, fingerprints)")

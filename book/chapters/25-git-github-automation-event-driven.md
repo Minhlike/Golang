@@ -31,17 +31,11 @@ Câu hỏi trung tâm của chương này là:
    └── Webhooks, Permission RBAC, Rate Limits
 ~~~
 
-### So sánh hai mô hình dữ liệu:
+### Hai mô hình dữ liệu song hành
 
-1. **Trạng thái Git cục bộ (`go-git/v5`):**
-   - Vận hành trên cấu trúc dữ liệu đồ thị có hướng không chu trình (DAG). Mỗi commit trỏ tới một cây thư mục (Tree) chứa các tệp tin (Blob).
-   - Được định danh hoàn toàn bằng mã băm nội dung (**Content-Addressed Storage**). Nếu nội dung file không đổi, mã băm vĩnh viễn không đổi.
-   - Hoạt động offline, độ trễ microsecond, không tốn chi phí mạng.
-2. **Trạng thái GitHub (`google/go-github/v68`):**
-   - Là tầng ứng dụng quản trị tập trung (Hosted Metadata). Các khái niệm như "Pull Request", "Reviewers", hay "Issue Labels" hoàn toàn không tồn tại trong cấu trúc dữ liệu gốc của Git.
-   - Giao tiếp qua REST hoặc GraphQL API, phụ thuộc hoàn toàn vào đường truyền mạng và giới hạn số lượt gọi (Rate Limit).
+Trạng thái Git cục bộ và trạng thái dịch vụ GitHub đại diện cho hai triết lý lưu trữ hoàn toàn khác biệt. Ở tầng cục bộ thông qua thư viện `go-git/v5`, dữ liệu vận hành trên cấu trúc đồ thị có hướng không chu trình (DAG). Mỗi commit trỏ tới một cây thư mục (Tree) và các khối dữ liệu nhị phân (Blob), được định danh chặt chẽ bằng mã băm nội dung (Content-Addressed Storage). Khi nội dung tệp tin không thay đổi, mã định danh của nó vĩnh viễn bất biến. Toàn bộ thao tác đọc ghi này diễn ra trong không gian tiến trình hoặc trên bộ nhớ RAM với độ trễ micro-giây, hoàn toàn độc lập với kết nối mạng bên ngoài.
 
-Một bot tự động hóa chuyên nghiệp luôn biết kết hợp cả hai: dùng `go-git` để thao tác cây thư mục trên bộ nhớ với tốc độ cao, và dùng `go-github` để tương tác với người dùng và quy trình làm việc.
+Ngược lại, trạng thái lưu trữ trên GitHub thông qua thư viện chính thức `google/go-github/v68` là tầng siêu dữ liệu quản trị tập trung (Hosted Metadata). Các thực thể như Pull Request, nhãn phân loại, đánh giá mã nguồn hay lượt duyệt đều không tồn tại trong cấu trúc cây nhị phân thuần túy của Git. Mọi giao tiếp với tầng này đều thực hiện qua REST hoặc GraphQL API, đòi hỏi kết nối mạng và chịu sự ràng buộc nghiêm ngặt của hạn ngạch tần suất gọi (Rate Limit). Một hệ thống tự động hóa hoàn chỉnh luôn biết kết hợp cả hai mô hình: sử dụng `go-git` để phân tích và chuẩn bị cây commit tốc độ cao trên bộ đệm, đồng thời sử dụng `go-github` để cập nhật trạng thái kiểm thử và phản hồi với lập trình viên.
 
 ---
 
@@ -68,18 +62,16 @@ Header: sha256=a1b2c3...          Expected: sha256=a1b2c3...
                                     subtle.ConstantTimeCompare
 ~~~
 
-### Cạm bẫy tấn công thời gian (Timing Attack)
+### Rủi ro rò rỉ thông tin qua thời gian thực thi (Timing Side-Channel)
 
 Nếu bạn dùng toán tử thông thường để so sánh chữ ký:
 
 ~~~go
-// CẢNH BÁO TỬ HUYỆT: Rò rỉ thông tin qua thời gian thực thi!
+// CẢNH BÁO: Rò rỉ thông tin qua thời gian thực thi!
 if actualSig == expectedSig { ... }
 ~~~
 
-Toán tử `==` trong Go so sánh từng byte từ trái qua phải và trả về `false` ngay khi gặp byte sai lệch đầu tiên. 
-
-Kẻ tấn công có thể gửi hàng ngàn request với các byte đoán trước và đo thời gian phản hồi ở mức nano-giây. Thời gian phản hồi càng lâu chứng tỏ càng nhiều byte đầu tiên khớp đúng. Bằng cách này, kẻ xấu có thể giải mã từng ký tự của chữ ký mà không cần biết khóa bí mật!
+Toán tử so sánh chuỗi hoặc mảng byte mặc định trong hầu hết ngôn ngữ lập trình thường kết thúc sớm (early exit) ngay khi phát hiện byte không trùng khớp đầu tiên. Sự chênh lệch thời gian xử lý này vô tình tạo ra một kênh phụ (side-channel). Dù độ trễ biến thiên trên mạng Internet công cộng có thể làm nhiễu tín hiệu đo đạc, trong các môi trường nội bộ, mạng cục bộ tốc độ cao hoặc qua phương pháp phân tích thống kê trên lượng mẫu thử lớn, việc so sánh không hằng số thời gian vẫn có thể cung cấp manh mối để kẻ tấn công thu hẹp không gian tìm kiếm mã xác thực.
 
 ### Giải pháp bắt buộc: crypto/hmac.Equal hoặc crypto/subtle
 
@@ -102,26 +94,20 @@ func VerifyHMACSHA256(
 	mac.Write(payload)
 	expectedSig := mac.Sum(nil)
 
-	// So sánh thời gian cố định, triệt tiêu timing attack
+	// So sánh hằng số thời gian (constant-time)
 	return hmac.Equal(actualSig, expectedSig)
 }
 ~~~
 
-Hàm `hmac.Equal` (hoặc `subtle.ConstantTimeCompare(a, b) == 1`) luôn duyệt qua toàn bộ chuỗi byte với thời gian thực thi không phụ thuộc vào vị trí hay số lượng byte sai lệch, loại bỏ hoàn toàn khả năng giải mã chữ ký qua kênh phụ (side-channel).
+Hàm `hmac.Equal` (hoặc `subtle.ConstantTimeCompare(a, b) == 1`) luôn duyệt qua toàn bộ chuỗi byte với thời gian thực thi không phụ thuộc vào vị trí hay số lượng byte sai lệch, ngăn chặn nguy cơ trích xuất thông tin qua chênh lệch thời gian xử lý.
 
 ---
 
 ## 3. Khế ước phân tán: Delivery ID và Tính Lũy Đẳng
 
-Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho rằng GitHub sẽ tự động thử lại (auto-retry) vô điều kiện mỗi khi máy chủ nhận trả về mã lỗi 5xx hoặc bị timeout. Trên thực tế, trong hầu hết các cấu hình webhook tiêu chuẩn, GitHub **không tự động gửi lại** các lần phát thất bại.
+Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho rằng GitHub sẽ tự động thử lại (auto-retry) vô điều kiện mỗi khi máy chủ nhận trả về mã lỗi 5xx hoặc bị timeout. Trên thực tế, trong các cấu hình webhook tiêu chuẩn, GitHub không tự động gửi lại các lần phát thất bại. Việc một webhook xuất hiện nhiều lần với cùng mã định danh thường bắt nguồn từ hành động kích hoạt lại thủ công (manual redelivery) của quản trị viên qua giao diện hoặc API, các quy trình thử lại có cấu hình của GitHub App, hiện tượng trùng lặp gói tin ở tầng truyền dẫn mạng, hoặc cơ chế retry từ hàng đợi nội bộ downstream.
 
-Việc một webhook được gửi lại (redelivery) với cùng mã sự kiện thường bắt nguồn từ 4 nguyên nhân cụ thể:
-1. Quản trị viên hoặc kỹ sư kích hoạt tính năng **Redeliver** thủ công trên giao diện quản trị GitHub hoặc qua REST API.
-2. Các luồng xử lý chuyên biệt có cấu hình retry định kỳ (scheduled redelivery) của GitHub Apps trong một số trường hợp giới hạn.
-3. Sự cố nhân bản gói tin ở tầng mạng truyền tải (network duplicate packets).
-4. Hệ thống hàng đợi hạ tầng nội bộ của bạn (downstream queue worker) retry lại sự kiện sau khi nhận thành công từ webhook receiver.
-
-Mỗi lần gửi, GitHub đính kèm một mã UUID duy nhất tại header:
+Mỗi lần phát sự kiện, GitHub đính kèm một mã UUID duy nhất tại header:
 `X-GitHub-Delivery: 7a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d`
 
 ~~~
@@ -134,9 +120,7 @@ GitHub / Mạng / Quản trị viên      Máy chủ Webhook (Go)
       │  <── HTTP 200 OK (duplicate) ──────┴─ BỎ QUA!
 ~~~
 
-Mục đích sống còn của việc kiểm tra tính lũy đẳng dựa trên `X-GitHub-Delivery` là:
-- Triệt tiêu hoàn toàn rủi ro nhân bản hành vi khi có duplicate delivery hoặc manual redelivery (tránh việc bot tạo 2 bản release, bình luận 2 lần trên PR, hay triển khai 2 lần).
-- Bảo vệ hàng đợi nội bộ khỏi các cuộc tấn công phát lại (replay attack) nếu khóa bí mật không bị xâm phạm.
+Việc kiểm soát chặt chẽ tính lũy đẳng dựa trên `X-GitHub-Delivery` bảo đảm an toàn tuyệt đối cho các tác vụ thay đổi trạng thái hạ tầng. Khi xuất hiện gói tin gửi lặp hoặc quản trị viên kích hoạt lại sự kiện, hệ thống tự động nhận diện ID đã qua xử lý để bỏ qua một cách an toàn, ngăn chặn việc bot phát hành nhiều bản release trùng lặp, gửi bình luận lặp trên Pull Request hoặc kích hoạt triển khai hạ tầng ngoài ý muốn.
 
 Thiết kế bộ tiếp nhận có kiểm tra trùng lặp:
 
@@ -229,13 +213,56 @@ func ParseRateLimit(
 
 ---
 
-## 5. Thao tác Git trên bộ nhớ (In-memory Git) với go-git
+## 5. Tương tác GitHub API (`go-github/v68`) và Git trên bộ nhớ (`go-git/v5`)
 
-Khi viết bot tự động tạo commit hoặc cập nhật file cấu hình (GitOps bot), việc gọi lệnh `exec.Command("git", ...)` ra ngoài hệ điều hành mang lại nhiều phiền toái:
-- Phải cài đặt binary `git` trong Docker container.
-- Phải quản lý thư mục tạm trên ổ đĩa, dễ bị xung đột file hoặc rò rỉ dữ liệu khi container crash.
+Một công cụ tự động hóa toàn diện cần tương tác đồng thời với cả hai thế giới: giao tiếp với GitHub API thông qua thư viện chính thức `google/go-github/v68` để truy xuất siêu dữ liệu, và thao tác cây thư mục Git cục bộ thông qua `go-git/v5`.
 
-Thư viện `github.com/go-git/go-git/v5` cho phép bạn khởi tạo một kho lưu trữ Git hoàn toàn trên bộ nhớ RAM (**In-memory Repository**) bằng cách kết hợp `memory.NewStorage()` và `memfs.New()`:
+### Tích hợp GitHub Client chính thức
+
+Trong gói `labs/part25-github-automation/github_client.go`, ta đóng gói `github.Client` để hỗ trợ cấu hình linh hoạt endpoint mạng (cho phép trỏ tới máy chủ kiểm thử cục bộ `httptest.Server` hoặc máy chủ GitHub Enterprise):
+
+~~~go
+type GitHubClient struct {
+	client *github.Client
+}
+
+func NewGitHubClient(
+	httpClient *http.Client, baseURL string,
+) (*GitHubClient, error) {
+	gh := github.NewClient(httpClient)
+	if baseURL != "" {
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return nil, fmt.Errorf("bad url: %w", err)
+		}
+		gh.BaseURL = u
+	}
+	return &GitHubClient{client: gh}, nil
+}
+
+func (c *GitHubClient) GetRepository(
+	ctx context.Context, owner, repo string,
+) (*github.Repository, *github.Rate, error) {
+	repository, resp, err := c.client.Repositories.Get(
+		ctx, owner, repo,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	var rate *github.Rate
+	if resp != nil {
+		rate = &resp.Rate
+	}
+	return repository, rate, nil
+}
+~~~
+
+### Thao tác Git trên bộ nhớ (In-memory Git) với go-git
+
+Khi viết bot tự động tạo commit hoặc cập nhật file cấu hình (GitOps bot), việc gọi trực tiếp lệnh CLI `git` ra ngoài hệ điều hành đòi hỏi phụ thuộc vào môi trường máy chủ và phát sinh các thư mục tạm dễ xung đột. Thư viện `github.com/go-git/go-git/v5` cho phép khởi tạo một kho lưu trữ Git hoàn toàn trên bộ nhớ RAM (`In-memory Repository`) bằng cách kết hợp `memory.NewStorage()` và `memfs.New()`:
 
 ~~~go
 func NewInMemGitRepository() (*InMemGitRepository, error) {
@@ -287,13 +314,13 @@ func (r *InMemGitRepository) WriteFileAndCommit(
 }
 ~~~
 
-Toàn bộ quá trình tạo commit, tính hash SHA, và cập nhật HEAD diễn ra ở tốc độ bộ nhớ RAM mà không ghi dù chỉ 1 byte xuống đĩa cứng vật lý!
+Toàn bộ quá trình tạo commit, tính hash SHA, và cập nhật HEAD diễn ra ở tốc độ bộ nhớ RAM mà không ghi dù chỉ 1 byte xuống đĩa cứng vật lý.
 
 ---
 
-## 6. Bằng chứng kiểm thử: Chứng minh 4 quy luật tự động hóa
+## 6. Bằng chứng kiểm thử: Chứng minh 5 quy luật tự động hóa
 
-Bộ kiểm thử tại `labs/part25-github-automation/automation_test.go` vận hành độc lập (phân loại kiểm chứng: `UNIT_TESTED` cho toàn bộ các thành phần webhook receiver, HMAC validation, idempotency filter, rate-limit parser, và in-memory Git DAG), chứng minh tính đúng đắn ở các ranh giới bảo mật và khế ước dữ liệu:
+Bộ kiểm thử tại `labs/part25-github-automation/` vận hành độc lập (phân loại kiểm chứng: `UNIT_TESTED` cho toàn bộ các thành phần webhook receiver, HMAC validation, idempotency filter, rate-limit parser, in-memory Git DAG, và `MOCK_VERIFIED` cho lời gọi `go-github` qua `httptest.Server`), chứng minh tính đúng đắn ở các ranh giới bảo mật và khế ước dữ liệu:
 
 ~~~
 === RUN   TestWebhookHMACVerification
@@ -304,27 +331,26 @@ Bộ kiểm thử tại `labs/part25-github-automation/automation_test.go` vận
 --- PASS: TestRateLimitParsingPrimaryAndSecondary (0.00s)
 === RUN   TestInMemGitCommitAndHead
 --- PASS: TestInMemGitCommitAndHead (0.00s)
+=== RUN   TestGitHubClientIntegrationWithMockServer
+--- PASS: TestGitHubClientIntegrationWithMockServer (0.00s)
 PASS
-ok      part25-github-automation   3.653s
+ok      part25-github-automation   0.263s
 ~~~
 
 ### 1. Xác thực chữ ký an toàn (TestWebhookHMACVerification)
-Kiểm chứng 4 ca biên:
-- Chữ ký đúng định dạng `sha256=` và secret hợp lệ: **PASS**.
-- Sửa đổi 1 byte trong payload: **TỪ CHỐI**.
-- Dùng sai Webhook Secret: **TỪ CHỐI**.
-- Header sai định dạng: **TỪ CHỐI**.
+Kiểm chứng 4 ca biên: chữ ký đúng định dạng `sha256=` với secret hợp lệ; từ chối khi sửa đổi 1 byte trong payload; từ chối khi dùng sai Webhook Secret; và từ chối khi header sai định dạng.
 
 ### 2. Khử trùng lặp sự kiện (TestWebhookDeliveryIdempotency)
-Bắn 2 webhook mang cùng một `X-GitHub-Delivery`. Lần đầu tiên xử lý thành công (`isDuplicate = false`). Lần thứ hai được nhận diện chính xác là sự kiện gửi lặp (`isDuplicate = true`), bảo vệ hệ thống không bị kích hoạt kép khi có manual redelivery hoặc duplicate packet.
+Gửi 2 webhook mang cùng một `X-GitHub-Delivery`. Lần đầu tiên xử lý thành công (`isDuplicate = false`). Lần thứ hai được nhận diện chính xác là sự kiện gửi lặp (`isDuplicate = true`), bảo vệ hệ thống không bị kích hoạt kép khi có manual redelivery hoặc duplicate packet.
 
 ### 3. Bóc tách Rate Limit hai tầng (TestRateLimitParsing)
-Kiểm chứng cả hai tình huống:
-- Khi chạm trần Primary Quota (`Remaining: 0`), tính đúng thời gian cần chờ đến mốc `ResetAt`.
-- Khi chạm trần Secondary Quota (`Retry-After: 120`), chuyển đổi chính xác thành khoảng chờ 120 giây.
+Kiểm chứng cả hai tình huống: khi chạm trần Primary Quota (`Remaining: 0`), tính đúng thời gian cần chờ đến mốc `ResetAt`; khi chạm trần Secondary Quota (`Retry-After: 120`), chuyển đổi chính xác thành khoảng chờ 120 giây.
 
 ### 4. Vận hành Git trên RAM (TestInMemGitCommitAndHead)
 Tạo liên tiếp 2 commit trong bộ nhớ RAM, kiểm tra mã băm SHA của commit thứ nhất và thứ hai, xác nhận con trỏ HEAD dịch chuyển chuẩn xác theo đồ thị DAG.
+
+### 5. Tương tác Client chính thức (TestGitHubClientIntegrationWithMockServer)
+Kiểm chứng việc khởi tạo client `google/go-github/v68`, định tuyến qua máy chủ giả lập `httptest.Server`, trích xuất chính xác cấu trúc repository và thông tin hạn mức `Rate` từ tiêu đề phản hồi.
 
 ---
 

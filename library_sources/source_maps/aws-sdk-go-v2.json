@@ -4,8 +4,8 @@
   "rank": 3,
   "tier": "TIER_S",
   "module_path": "github.com/aws/aws-sdk-go-v2",
-  "resolved_version": "v1.47.0",
-  "resolved_commit": "b189f382f4924bc6c948c9942e17c547553faf0d",
+  "resolved_version": "v1.47.1",
+  "resolved_commit": "52ba2565aefa81106ba8aca112e7c42176cc28a7",
   "important_paths": [
     "aws",
     "aws/middleware",

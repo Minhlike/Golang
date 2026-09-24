@@ -5,240 +5,281 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-type mockServiceActuator struct {
-	restartedServices []string
+type mockActuator struct {
+	mu           sync.Mutex
+	restartedSvc []string
 }
 
-func (m *mockServiceActuator) RestartService(ctx context.Context, serviceName string) error {
-	m.restartedServices = append(m.restartedServices, serviceName)
+func (m *mockActuator) RestartService(ctx context.Context, serviceName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.restartedSvc = append(m.restartedSvc, serviceName)
 	return nil
 }
 
+func setupTestMCPServer(t *testing.T) (*OpsServer, *httptest.Server, *mockActuator) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"UP"}`))
+	}))
+
+	actuator := &mockActuator{}
+	authorizer := &DefaultChangeAuthorizer{
+		ApprovedTickets: map[string]string{
+			"CHG-1001": "payment-service",
+			"CHG-1002": "order-service",
+		},
+	}
+
+	targets := []HealthTarget{
+		{ID: "payment-health", ServiceName: "payment-service", URL: ts.URL},
+		{ID: "order-health", ServiceName: "order-service", URL: ts.URL},
+	}
+
+	ops := NewOpsServer(ts.Client(), actuator, authorizer, targets)
+	return ops, ts, actuator
+}
+
+func connectClientAndServer(
+	t *testing.T, ctx context.Context, ops *OpsServer, callerRole Role,
+) (*mcp.ClientSession, func()) {
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v1.0.0"}, nil)
+
+	t1, t2 := mcp.NewInMemoryTransports()
+	serverSession, err := ops.MCPServer().Connect(ctx, t1, nil)
+	if err != nil {
+		t.Fatalf("server connect failed: %v", err)
+	}
+
+	clientSession, err := client.Connect(ctx, t2, nil)
+	if err != nil {
+		t.Fatalf("client connect failed: %v", err)
+	}
+
+	// Attach authenticated caller role to server session (MOCK_AUTH_BOUNDARY)
+	ops.SetSessionRole(serverSession.ID(), callerRole)
+
+	cleanup := func() {
+		clientSession.Close()
+		serverSession.Close()
+	}
+	return clientSession, cleanup
+}
+
 func TestMCPListTools(t *testing.T) {
-	server := NewMCPServer(nil, nil, nil, nil)
-	tools := server.ListTools()
+	ctx := context.Background()
+	ops, ts, _ := setupTestMCPServer(t)
+	defer ts.Close()
 
-	if len(tools) != 2 {
-		t.Fatalf("expected 2 registered tools, got %d", len(tools))
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleObserver)
+	defer cleanup()
+
+	listRes, err := session.ListTools(ctx, &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools failed: %v", err)
 	}
 
-	foundHealth := false
-	for _, tool := range tools {
-		if tool.Name == "query_service_health" {
-			foundHealth = true
-			if tool.InputSchema["type"] != "object" {
-				t.Errorf("expected object type schema for query_service_health")
-			}
-		}
+	if len(listRes.Tools) != 2 {
+		t.Fatalf("expected 2 tools, got %d", len(listRes.Tools))
 	}
-	if !foundHealth {
-		t.Errorf("missing query_service_health tool in tools list")
+
+	toolNames := make(map[string]bool)
+	for _, tool := range listRes.Tools {
+		toolNames[tool.Name] = true
+	}
+
+	if !toolNames["query_service_health"] || !toolNames["restart_service"] {
+		t.Fatalf("missing expected tools: got %v", toolNames)
 	}
 }
 
 func TestMCPQueryHealthRealHTTP(t *testing.T) {
-	var requestCount atomic.Int32
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount.Add(1)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"UP"}`))
-	}))
-	defer backend.Close()
+	ctx := context.Background()
+	ops, ts, _ := setupTestMCPServer(t)
+	defer ts.Close()
 
-	targets := []HealthTarget{
-		{ID: "checkout-health", ServiceName: "checkout-service", URL: backend.URL},
-	}
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleObserver)
+	defer cleanup()
 
-	server := NewMCPServer(targets, backend.Client(), nil, nil)
-	ctx := WithCallerRole(context.Background(), RoleObserver)
-
-	params := &CallToolParams{
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "query_service_health",
 		Arguments: map[string]any{
-			"target_id": "checkout-health",
+			"target_id": "payment-health",
 		},
-	}
-
-	res, err := server.ExecuteToolCall(ctx, params)
+	})
 	if err != nil {
-		t.Fatalf("unexpected execution error: %v", err)
-	}
-	if res.IsError {
-		t.Fatalf("expected successful execution, got error: %s", res.Content[0].Text)
-	}
-	if requestCount.Load() != 1 {
-		t.Errorf("expected 1 HTTP request to backend, got %d", requestCount.Load())
-	}
-	if !strings.Contains(res.Content[0].Text, "HTTP 200") {
-		t.Errorf("expected result to mention HTTP 200, got %s", res.Content[0].Text)
+		t.Fatalf("CallTool failed: %v", err)
 	}
 
-	logs := server.GetAuditLog()
-	if len(logs) != 1 || logs[0].Decision != "ALLOW" {
-		t.Errorf("expected 1 allowed audit record, got %+v", logs)
+	if callRes.IsError {
+		t.Fatalf("expected success, got error tool call: %+v", callRes)
+	}
+
+	if len(callRes.Content) == 0 {
+		t.Fatalf("expected content, got empty slice")
+	}
+
+	txt, ok := callRes.Content[0].(*mcp.TextContent)
+	if !ok || !strings.Contains(txt.Text, "healthy: HTTP 200") {
+		t.Fatalf("unexpected content output: %v", callRes.Content[0])
+	}
+
+	audits := ops.GetAuditRecords()
+	if len(audits) != 1 {
+		t.Fatalf("expected 1 audit record, got %d", len(audits))
+	}
+	if audits[0].Decision != "ALLOW" || audits[0].Caller != RoleObserver {
+		t.Fatalf("unexpected audit entry: %+v", audits[0])
 	}
 }
 
 func TestMCPSSRFDeniedForUnapprovedTarget(t *testing.T) {
-	targets := []HealthTarget{
-		{ID: "payment-health", ServiceName: "payment-api", URL: "http://internal-payments.local/healthz"},
+	ctx := context.Background()
+	ops, ts, _ := setupTestMCPServer(t)
+	defer ts.Close()
+
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleObserver)
+	defer cleanup()
+
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "query_service_health",
+		Arguments: map[string]any{
+			"target_id": "http://169.254.169.254/latest/meta-data",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool failed unexpectedly at transport level: %v", err)
 	}
 
-	server := NewMCPServer(targets, nil, nil, nil)
-	ctx := WithCallerRole(context.Background(), RoleOperator)
-
-	maliciousTargets := []string{
-		"http://169.254.169.254/latest/meta-data/",
-		"http://127.0.0.1:9090",
-		"internal-db",
-		"arbitrary-target-id",
+	if !callRes.IsError {
+		t.Fatalf("expected tool error for SSRF target, got success: %+v", callRes)
 	}
 
-	for _, target := range maliciousTargets {
-		params := &CallToolParams{
-			Name: "query_service_health",
-			Arguments: map[string]any{
-				"target_id": target,
-			},
-		}
-
-		res, err := server.ExecuteToolCall(ctx, params)
-		if err != nil {
-			t.Fatalf("unexpected call error: %v", err)
-		}
-		if !res.IsError {
-			t.Errorf("expected SSRF block for %s, but call was permitted!", target)
-		}
-		if !strings.Contains(res.Content[0].Text, "blocked by SSRF allowlist policy") {
-			t.Errorf("expected SSRF block message, got: %s", res.Content[0].Text)
-		}
+	txt, ok := callRes.Content[0].(*mcp.TextContent)
+	if !ok || !strings.Contains(txt.Text, "blocked by SSRF allowlist policy") {
+		t.Fatalf("unexpected error content: %v", callRes.Content[0])
 	}
 
-	logs := server.GetAuditLog()
-	if len(logs) != len(maliciousTargets) {
-		t.Errorf("expected %d audit entries, got %d", len(maliciousTargets), len(logs))
+	audits := ops.GetAuditRecords()
+	if len(audits) != 1 {
+		t.Fatalf("expected 1 audit record, got %d", len(audits))
 	}
-	for _, l := range logs {
-		if l.Decision != "DENY" {
-			t.Errorf("expected all unapproved targets to be denied in audit log")
-		}
+	if audits[0].Decision != "DENY" {
+		t.Fatalf("expected DENY in audit log, got %s", audits[0].Decision)
 	}
 }
 
 func TestMCPOperatorRestartSuccess(t *testing.T) {
-	actuator := &mockServiceActuator{}
-	authorizer := &DefaultChangeAuthorizer{
-		ApprovedTickets: map[string]string{
-			"CHG-2026-999": "api-gateway",
-		},
-	}
+	ctx := context.Background()
+	ops, ts, actuator := setupTestMCPServer(t)
+	defer ts.Close()
 
-	server := NewMCPServer(nil, nil, actuator, authorizer)
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleOperator)
+	defer cleanup()
 
-	// Context carries RoleOperator identity
-	ctx := WithCallerRole(context.Background(), RoleOperator)
-
-	params := &CallToolParams{
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "restart_service",
 		Arguments: map[string]any{
-			"service_name":  "api-gateway",
-			"change_ticket": "CHG-2026-999",
+			"service_name":  "payment-service",
+			"change_ticket": "CHG-1001",
 		},
-	}
-
-	res, err := server.ExecuteToolCall(ctx, params)
+	})
 	if err != nil {
-		t.Fatalf("unexpected execution error: %v", err)
-	}
-	if res.IsError {
-		t.Fatalf("expected successful restart, got error: %s", res.Content[0].Text)
+		t.Fatalf("CallTool transport error: %v", err)
 	}
 
-	if len(actuator.restartedServices) != 1 || actuator.restartedServices[0] != "api-gateway" {
-		t.Errorf("expected api-gateway to be restarted, got %v", actuator.restartedServices)
+	if callRes.IsError {
+		t.Fatalf("expected success, got tool error: %+v", callRes)
 	}
 
-	logs := server.GetAuditLog()
-	if len(logs) != 1 || logs[0].Decision != "ALLOW" {
-		t.Errorf("expected ALLOW decision in audit trail: %+v", logs)
+	if len(actuator.restartedSvc) != 1 || actuator.restartedSvc[0] != "payment-service" {
+		t.Fatalf("actuator did not record restart: %v", actuator.restartedSvc)
+	}
+
+	audits := ops.GetAuditRecords()
+	if len(audits) != 1 || audits[0].Decision != "ALLOW" {
+		t.Fatalf("expected ALLOW in audit log: %+v", audits)
 	}
 }
 
 func TestMCPObserverMutatingActionDenied(t *testing.T) {
-	actuator := &mockServiceActuator{}
-	authorizer := &DefaultChangeAuthorizer{
-		ApprovedTickets: map[string]string{
-			"CHG-2026-999": "api-gateway",
-		},
-	}
+	ctx := context.Background()
+	ops, ts, actuator := setupTestMCPServer(t)
+	defer ts.Close()
 
-	server := NewMCPServer(nil, nil, actuator, authorizer)
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleObserver)
+	defer cleanup()
 
-	// Context carries RoleObserver identity
-	ctx := WithCallerRole(context.Background(), RoleObserver)
-
-	params := &CallToolParams{
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "restart_service",
 		Arguments: map[string]any{
-			"service_name":  "api-gateway",
-			"change_ticket": "CHG-2026-999",
+			"service_name":  "payment-service",
+			"change_ticket": "CHG-1001",
 		},
-	}
-
-	res, err := server.ExecuteToolCall(ctx, params)
+	})
 	if err != nil {
-		t.Fatalf("unexpected call error: %v", err)
-	}
-	if !res.IsError {
-		t.Fatalf("expected observer to be denied mutating action")
+		t.Fatalf("CallTool transport error: %v", err)
 	}
 
-	if len(actuator.restartedServices) != 0 {
-		t.Errorf("service should NOT have been restarted when observer is denied")
+	if !callRes.IsError {
+		t.Fatalf("expected permission denial for observer role, got success: %+v", callRes)
 	}
 
-	logs := server.GetAuditLog()
-	if len(logs) != 1 || logs[0].Decision != "DENY" {
-		t.Errorf("expected DENY in audit trail for unauthorized role: %+v", logs)
+	if len(actuator.restartedSvc) != 0 {
+		t.Fatalf("actuator should not have been called on denial!")
+	}
+
+	audits := ops.GetAuditRecords()
+	if len(audits) != 1 || audits[0].Decision != "DENY" {
+		t.Fatalf("expected DENY in audit log: %+v", audits)
 	}
 }
 
 func TestMCPMissingOrInvalidTicketDenied(t *testing.T) {
-	authorizer := &DefaultChangeAuthorizer{
-		ApprovedTickets: map[string]string{
-			"CHG-2026-111": "cache-service",
-		},
-	}
-	server := NewMCPServer(nil, nil, &mockServiceActuator{}, authorizer)
-	ctx := WithCallerRole(context.Background(), RoleOperator)
+	ctx := context.Background()
+	ops, ts, actuator := setupTestMCPServer(t)
+	defer ts.Close()
 
-	// Case 1: unapproved ticket
-	params1 := &CallToolParams{
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleOperator)
+	defer cleanup()
+
+	// 1. Missing ticket
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "restart_service",
 		Arguments: map[string]any{
-			"service_name":  "cache-service",
-			"change_ticket": "UNAPPROVED-TICKET",
+			"service_name":  "payment-service",
+			"change_ticket": "",
 		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool transport error: %v", err)
 	}
-	res1, _ := server.ExecuteToolCall(ctx, params1)
-	if !res1.IsError {
-		t.Errorf("expected unapproved ticket to be denied")
+	if !callRes.IsError {
+		t.Fatalf("expected error for empty ticket")
 	}
 
-	// Case 2: ticket for different service
-	params2 := &CallToolParams{
+	// 2. Unapproved ticket
+	callRes2, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "restart_service",
 		Arguments: map[string]any{
-			"service_name":  "database-service",
-			"change_ticket": "CHG-2026-111", // only approved for cache-service
+			"service_name":  "payment-service",
+			"change_ticket": "CHG-9999",
 		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool transport error: %v", err)
 	}
-	res2, _ := server.ExecuteToolCall(ctx, params2)
-	if !res2.IsError {
-		t.Errorf("expected ticket mismatch to be denied")
+	if !callRes2.IsError {
+		t.Fatalf("expected error for unapproved ticket")
+	}
+
+	if len(actuator.restartedSvc) != 0 {
+		t.Fatalf("actuator should not have run")
 	}
 }

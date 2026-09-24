@@ -6,15 +6,15 @@
   "official_remote": "https://github.com/aws/aws-sdk-go-v2.git",
   "module_path": "github.com/aws/aws-sdk-go-v2",
   "version_strategy": "MULTI_MODULE",
-  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolved_at_utc": "2026-09-24T19:37:29Z",
   "resolution_method": "go_list+git_ls_remote",
-  "resolved_version": "v1.47.0",
-  "resolved_tag": "v1.47.0",
-  "resolved_commit": "b189f382f4924bc6c948c9942e17c547553faf0d",
+  "resolved_version": "v1.47.1",
+  "resolved_tag": "v1.47.1",
+  "resolved_commit": "52ba2565aefa81106ba8aca112e7c42176cc28a7",
   "release_status": "OFFICIAL_STABLE",
   "tag_protection_verified": true,
   "remote_evidence": {
-    "fetch_ref": "v1.47.0",
+    "fetch_ref": "v1.47.1",
     "is_branch": false
   }
 }

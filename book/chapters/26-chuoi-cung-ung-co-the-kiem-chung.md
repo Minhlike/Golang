@@ -43,12 +43,7 @@ Mô hình tư duy cốt lõi của một chuỗi cung ứng có thể kiểm ch�
 [Quyết định Triển khai] (ALLOW hoặc DENY)
 ~~~
 
-Trong mô hình này, mỗi mắt xích phía sau đều phải có bằng chứng toán học hoặc mật mã học để chứng minh tính hợp lệ của mắt xích phía trước:
-- `go.sum` bảo chứng tính toàn vẹn của mã nguồn bên thứ ba.
-- SLSA Provenance bảo chứng máy chủ và quy trình build nào đã tạo ra file nhị phân.
-- OCI Digest bảo chứng nội dung container image không bị thay đổi dù chỉ 1 bit.
-- Chữ ký mật mã Cosign bảo chứng danh tính của thực thể phát hành.
-- Cổng chính sách (Policy Engine) đóng vai trò thẩm phán tối cao: **Mặc định từ chối (Deny by default)** trừ khi tất cả các bảo chứng đều hợp lệ.
+Trong mô hình này, mỗi mắt xích phía sau đều đòi hỏi bằng chứng toán học hoặc mật mã học để chứng minh tính hợp lệ của mắt xích phía trước. Tệp `go.sum` bảo chứng tính toàn vẹn của mã nguồn bên thứ ba khi tải về máy chủ phát triển. Bản chứng thực SLSA Provenance xác nhận chính xác hạ tầng và quy trình build nào đã tạo ra tệp nhị phân. Mã băm OCI Digest bảo đảm nội dung container image không bị sai lệch dù chỉ một bit. Cùng với đó, chữ ký mật mã Cosign xác nhận danh tính của thực thể phát hành, cho phép cổng chính sách (Policy Engine) hoạt động như một chốt chặn đóng kín (fail-closed) với nguyên tắc mặc định từ chối (deny by default) trừ khi mọi bằng chứng đều được kiểm chứng trọn vẹn.
 
 ---
 
@@ -57,20 +52,17 @@ Trong mô hình này, mỗi mắt xích phía sau đều phải có bằng chứ
 Trước khi container image được build, chuỗi cung ứng bắt đầu ngay tại thời điểm Go tải các gói phụ thuộc về máy.
 
 ### Bản chất kỹ thuật của `go.sum`
-Một ngộ nhận kinh điển là coi `go.sum` như một "lock file" quyết định phiên bản (như `package-lock.json` hay `yarn.lock`). Trên thực tế:
-- **`go.mod`** mới là nơi quyết định phiên bản module thông qua giải thuật **Minimal Version Selection (MVS)**.
-- **`go.sum`** là **cơ sở dữ liệu xác thực nội dung mật mã (Content Validation Database)**. Nó lưu trữ các mã băm SHA-256 mật mã của mã nguồn module và tệp `go.mod` để phát hiện mọi hành vi can thiệp trái phép (tampering) hoặc thay đổi nội dung sau khi phát hành.
 
-Mỗi bản ghi trong `go.sum` có dạng:
+Một ngộ nhận kinh điển trong cộng đồng là coi `go.sum` như một tệp khóa phiên bản tương tự `package-lock.json` hay `yarn.lock`. Về mặt bản chất, tệp `go.mod` mới là nơi quyết định phiên bản module thông qua giải thuật lựa chọn phiên bản tối thiểu (Minimal Version Selection - MVS). Ngược lại, `go.sum` là cơ sở dữ liệu xác thực nội dung mật mã (Content Validation Database). Nó lưu trữ các mã băm SHA-256 của toàn bộ mã nguồn module và tệp `go.mod` tương ứng nhằm phát hiện mọi hành vi can thiệp trái phép hoặc thay đổi nội dung sau thời điểm phát hành chính thức.
+
+Mỗi bản ghi trong `go.sum` được cấu trúc thành hai dòng thông tin bổ trợ:
 
 ~~~
 github.com/gin-gonic/gin v1.9.1 h1:4A06lVSJ...
 github.com/gin-gonic/gin v1.9.1/go.mod h1:h1hp...
 ~~~
 
-Ý nghĩa của các thành phần:
-- `h1:<base64-hash>`: Chuỗi băm SHA-256 được tính toán trên toàn bộ cây thư mục mã nguồn của module sau khi giải nén.
-- Bản ghi có đuôi `/go.mod`: Mã băm chỉ tính riêng trên nội dung tệp `go.mod` của module đó. Điều này cho phép Go kiểm tra sự phụ thuộc mà không cần tải toàn bộ source code của thư viện về.
+Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm SHA-256 được tính toán trên toàn bộ cây thư mục mã nguồn sau khi giải nén. Dòng có hậu tố `/go.mod` lưu trữ mã băm chỉ tính riêng trên nội dung tệp khai báo phụ thuộc của module đó, cho phép công cụ Go kiểm tra cây phụ thuộc một cách nhanh chóng mà không bắt buộc phải tải toàn bộ mã nguồn của các module gián tiếp về máy.
 
 ### Go Checksum Database (`sum.golang.org`)
 Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư viện bên thứ ba và tráo đổi nội dung của release tag `v1.2.0`, điều gì sẽ xảy ra?
@@ -92,9 +84,7 @@ Go giải quyết triệt để vấn đề này thông qua **Go Checksum Databa
 
 Trong các pipeline CI/CD truyền thống, các công cụ quét container (như Trivy, Grype, Snyk) thường đối chiếu danh sách gói phần mềm với cơ sở dữ liệu CVE. Cách tiếp cận này tạo ra một vấn nạn nghiêm trọng trong vận hành: **Hội chứng mệt mỏi vì cảnh báo (Alert Fatigue)**.
 
-Một dự án Go có thể sử dụng thư viện `golang.org/x/crypto`. Giả sử thư viện này có một lỗ hổng nghiêm trọng trong hàm xử lý khóa SSH: `ssh.ParsePrivateKey`.
-- **Máy quét tĩnh truyền thống:** Thấy `golang.org/x/crypto` trong `go.mod` $\rightarrow$ Báo động đỏ $\rightarrow$ Chặn pipeline.
-- **Thực tế ứng dụng:** Ứng dụng của bạn chỉ dùng hàm `bcrypt.GenerateFromPassword` để băm mật khẩu, hoàn toàn không dính dáng đến SSH!
+Một dự án Go có thể sử dụng thư viện `golang.org/x/crypto`. Giả sử thư viện này có một lỗ hổng nghiêm trọng trong hàm xử lý khóa SSH: `ssh.ParsePrivateKey`. Máy quét tĩnh truyền thống chỉ nhìn vào sự xuất hiện của `golang.org/x/crypto` trong `go.mod` và lập tức kích hoạt cảnh báo chặn đứng pipeline phát hành, dù trên thực tế ứng dụng của bạn chỉ gọi hàm `bcrypt.GenerateFromPassword` để băm mật khẩu và hoàn toàn không bao giờ chạm tới module SSH.
 
 ### Cơ chế phân tích đồ thị cuộc gọi của `govulncheck`
 Công cụ chính thức của Go team — `govulncheck` — hoạt động theo một nguyên lý hoàn toàn khác biệt: **Phân tích khả năng vươn tới của ký hiệu (Symbol Reachability Analysis)**.
@@ -113,16 +103,12 @@ Bản chất dữ liệu đầu ra của `govulncheck`:
 3. Thuộc tính `Reachable: true` trong mô hình chính sách là kết quả tổng hợp sau khi duyệt qua mảng `Traces`: nếu tồn tại ít nhất một đường dẫn hợp lệ từ `main` tới hàm chứa lỗi, lỗ hổng được xác định là thực sự có thể kích hoạt (`Reachable`).
 
 ### Giới hạn phân tích cần lưu ý
-Cần hiểu rõ phạm vi phân tích tĩnh của `govulncheck`:
-- Chỉ phân tích mã nguồn Go thuần túy.
-- **Không** phân tích các phụ thuộc CGO runtime (thư viện C/C++ liên kết động).
-- **Không** phát hiện lỗ hổng trong các plugin tải động (`plugin.Open`).
-- **Không** quét các tầng nhị phân bên ngoài của hệ điều hành container (như OpenSSL hay glibc trong base image — phần này vẫn cần scanner container như Trivy).
+
+Cần lưu ý rằng khả năng phân tích tĩnh của `govulncheck` tập trung hoàn toàn vào mã nguồn Go thuần túy. Công cụ không phân tích các phụ thuộc liên kết động qua CGO runtime, không tự động lần vết mã độc trong các plugin tải động tại thời điểm chạy (`plugin.Open`), và không quét các thư viện hệ thống nhị phân trong base image container (như OpenSSL hay glibc — những thành phần này vẫn cần các công cụ quét container chuyên dụng bổ trợ).
 
 ### Thiết kế chính sách thông minh
-Từ góc độ kỹ thuật cổng kiểm soát (Gate Policy), chúng ta phân chia hai mức độ phản hồi:
-- **`Reachable = true`:** Lỗ hổng nằm trực tiếp trên đường thực thi của ứng dụng $\rightarrow$ **TỪ CHỐI TRIỂN KHAI (DENY)**.
-- **`Reachable = false`:** Thư viện chứa lỗ hổng nhưng ứng dụng không bao giờ gọi tới hàm lỗi $\rightarrow$ **GHI NHẬN CẢNH BÁO (WARN / AUDIT)** nhưng không làm đứt gãy quy trình phát hành.
+
+Từ góc độ cổng kiểm soát chính sách (Gate Policy), hệ thống chia tách hành vi dựa trên kết quả phân tích khả năng vươn tới. Khi một lỗ hổng nghiêm trọng được xác định nằm trực tiếp trên đường thực thi của ứng dụng (`Reachable = true`), cổng lập tức ra quyết định từ chối triển khai (`DENY`). Ngược lại, nếu một thư viện phụ thuộc chứa lỗ hổng nhưng hàm bị tổn thương hoàn toàn không bao giờ được mã nguồn gọi tới (`Reachable = false`), hệ thống ghi nhận cảnh báo kiểm toán (`WARN`) để đội ngũ kỹ sư lên kế hoạch nâng cấp mà không làm đứt gãy tiến độ phát hành sản phẩm.
 
 ---
 
@@ -141,9 +127,7 @@ Digest: sha256:7f83b1657ff1... (Mã băm bất biến)
         (Định danh duy nhất theo nội dung)
 ~~~
 
-Nếu bạn cấu hình Kubernetes Deployment dùng `image: my-app:v1.2.0`:
-- Kẻ tấn công có quyền ghi vào registry có thể đẩy một image độc hại đè lên tag `v1.2.0`.
-- Khi Pod khởi động lại hoặc scale up trên node mới, kubelet sẽ tải image độc hại về chạy mà hệ thống giám sát không hề hay biết.
+Nếu bạn cấu hình Kubernetes Deployment dùng `image: my-app:v1.2.0`, kẻ tấn công có quyền ghi vào registry có thể đẩy một image độc hại đè lên tag này. Khi Pod khởi động lại hoặc mở rộng quy mô trên máy chủ mới, kubelet sẽ tự động tải image độc hại về thực thi mà hệ thống kiểm soát không nhận diện được bất kỳ sự thay đổi cấu hình nào.
 
 Vì vậy, Cổng kiểm soát chuỗi cung ứng chuẩn mực luôn thực thi quy tắc đầu tiên:
 **Từ chối mọi image không được định danh tường minh bằng mã băm SHA-256 dạng `sha256:<64_hex_chars>`.**

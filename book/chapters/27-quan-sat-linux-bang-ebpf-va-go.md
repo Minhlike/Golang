@@ -4,16 +4,9 @@ Cho đến thời điểm này của cuốn sách, chúng ta đã xây dựng c�
 
 Tuy nhiên, tất cả các phương pháp đó đều chia sẻ một điểm yếu cốt tử: **Chúng hoàn toàn phụ thuộc vào việc ứng dụng ở tầng người dùng (Userspace) có hợp tác hay không**.
 
-Hãy tưởng tượng một tình huống thực chiến trong vận hành:
-- Một container Nginx bị khai thác lỗ hổng Remote Code Execution (RCE). Kẻ tấn công mở một shell ngầm `/bin/sh`, tải mã độc đào tiền ảo về thư mục `/tmp` và thực thi nó.
-- Mã độc này không hề gọi OpenTelemetry SDK, không xuất metric Prometheus và đã xóa sạch lịch sử lệnh.
-- Các công cụ APM truyền thống hoàn toàn "mù lòa" trước tiến trình lạ này.
+Hãy hình dung một kịch bản thực chiến trong vận hành cụm container: một tiến trình máy chủ web bị khai thác lỗ hổng thực thi mã từ xa (RCE). Kẻ tấn công mở một phiên shell ngầm `/bin/sh`, tải mã độc về thư mục `/tmp` rồi thực thi trực tiếp. Tiến trình độc hại này hoàn toàn không tích hợp OpenTelemetry SDK, không công bố metric Prometheus và xóa sạch dấu vết tệp tin cấu hình. Khi ấy, các công cụ giám sát APM truyền thống ở tầng người dùng hoàn toàn bất lực vì chúng phụ thuộc vào sự hợp tác tự nguyện của ứng dụng.
 
-Nếu muốn bắt quả tang kẻ tấn công, bạn không thể đứng ở tầng Userspace để quan sát. Bạn phải đứng ở tầng sâu nhất, nơi không một tiến trình nào có thể che giấu hành vi của mình: **Tầng nhân hệ điều hành (Linux Kernel)**.
-
-Trước đây, can thiệp vào kernel đồng nghĩa với việc viết Linux Kernel Module (LKM) bằng ngôn ngữ C — một sai lầm nhỏ về con trỏ có thể làm sập toàn bộ máy chủ vật lý (Kernel Panic).
-
-Công nghệ **eBPF (Extended Berkeley Packet Filter)** kết hợp với thư viện thuần Go **`cilium/ebpf`** đã thay đổi hoàn toàn cục diện đó. Chương này hướng dẫn bạn cách viết chương trình eBPF để móc vào các điểm then chốt của kernel, truyền dữ liệu tốc độ cao qua Ring Buffer và xây dựng một hệ thống quan sát tiến trình thời gian thực bằng Go mà không cần CGO.
+Để phát hiện kịp thời các hành vi bất thường, hệ thống giám sát phải đặt trạm quan sát tại tầng nhân hệ điều hành (Linux Kernel) — nơi mọi tiến trình bắt buộc phải đi qua khi yêu cầu tài nguyên phần cứng hoặc cấp phát bộ nhớ. Trước đây, can thiệp vào kernel đồng nghĩa với việc viết Linux Kernel Module (LKM) bằng ngôn ngữ C, tiềm ẩn rủi ro nghiêm trọng làm sập toàn bộ máy chủ (Kernel Panic) nếu xuất hiện lỗi con trỏ. Công nghệ eBPF (Extended Berkeley Packet Filter) kết hợp với thư viện thuần Go `cilium/ebpf` đã mở ra một phương thức tiếp cận an toàn, cho phép nạp mã giám sát có kiểm định vào nhân để thu thập dữ liệu với hiệu năng vượt trội.
 
 ---
 
@@ -102,12 +95,9 @@ go run github.com/cilium/ebpf/cmd/bpf2go \
 
 ## 4. Kênh truyền dữ liệu tốc độ cao: BPF Ring Buffer
 
-Để đưa dữ liệu từ Kernel lên Go Userspace, eBPF cung cấp cấu trúc dữ liệu **BPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)**.
+Để đưa dữ liệu từ Kernel lên Go Userspace, eBPF cung cấp cấu trúc dữ liệu **BPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)**. Khác với cơ chế Perf Event Array trước đây vốn cấp phát bộ đệm riêng biệt cho từng lõi CPU gây lãng phí bộ nhớ và dễ làm xáo trộn thứ tự thời gian của sự kiện, Ring Buffer sử dụng một vùng nhớ vòng dùng chung toàn cục cho tất cả các lõi CPU, bảo đảm tính tuần tự nghiêm ngặt của dòng dữ liệu.
 
-So với công nghệ cũ Perf Event Array (vốn cấp phát bộ đệm riêng cho từng CPU core, gây lãng phí RAM và làm đảo lộn thứ tự sự kiện), Ring Buffer sở hữu các ưu điểm vượt trội:
-- **Bộ đệm vòng chia sẻ toàn cục:** Tất cả các CPU core cùng ghi vào một vùng nhớ vòng duy nhất, bảo đảm tính tuần tự theo thời gian của sự kiện.
-- **Ánh xạ bộ nhớ (mmap):** Ứng dụng Go ánh xạ trực tiếp vùng nhớ của Ring Buffer vào không gian địa chỉ người dùng qua `mmap`, cho phép đọc sự kiện liên tục mà không cần gọi syscall riêng lẻ cho từng gói tin.
-- **Cơ chế Reserve & Submit:** Thay vì cấp phát trên stack 512 bytes bị hạn chế, mã eBPF gọi `bpf_ringbuf_reserve` để giữ chỗ trực tiếp trong ring buffer, ghi dữ liệu vào vùng nhớ đó, rồi gọi `bpf_ringbuf_submit`. Nếu buffer đầy, hàm trả về NULL giúp kernel xử lý an toàn mà không bị crash.
+Ở tầng người dùng, ứng dụng Go ánh xạ trực tiếp vùng nhớ này vào không gian địa chỉ tiến trình thông qua cơ chế `mmap`, cho phép đọc liên tục các sự kiện mà không phải trả chi phí chuyển ngữ cảnh (context switch) cho từng gói tin. Về phía kernel, thay vì cấp phát biến trên ngăn xếp 512 byte hạn hẹp, mã eBPF áp dụng mô hình Reserve & Submit: gọi `bpf_ringbuf_reserve` để giữ chỗ bộ nhớ trực tiếp trong ring buffer, ghi dữ liệu vào vùng đã cấp, rồi kết thúc bằng `bpf_ringbuf_submit`. Nếu hàng đợi đầy, hàm trả về con trỏ rỗng giúp kernel bỏ qua gói tin một cách an toàn mà không làm gián đoạn hệ thống.
 
 ---
 
@@ -176,11 +166,11 @@ int trace_execve(struct trace_event_raw_sys_enter *ctx) {
 }
 ~~~
 
-### Điểm kỹ thuật mấu chốt trong mã C:
-- **Ý định thực thi (`sys_enter_execve`):** Tracepoint này được kích hoạt ngay tại cửa vào của syscall. Nó đại diện cho **ý định thực thi (execution attempt)**, không phải sự tạo tiến trình đã hoàn thành. Nếu tệp không tồn tại (`ENOENT`) hoặc không có quyền execute (`EACCES`), syscall sẽ thất bại, nhưng sự kiện tracepoint vẫn đã được ghi nhận.
-- **Bản chất của `bpf_get_current_comm`:** Tại `sys_enter_execve`, hàm này trả về tên của **tiến trình đang gọi** (calling task, ví dụ `bash`, `containerd`, `python`), **không phải** tên binary mới đang được nạp. Tên binary đích nằm ở tham số thứ nhất `ctx->args[0]`.
-- **Phân giải PID chính xác (`pid_tgid >> 32`):** Trong Linux kernel, `bpf_get_current_pid_tgid()` trả về 64-bit số nguyên (`tgid << 32 | pid`). Trong không gian người dùng, PID thông thường chính là TGID (32 bit cao).
-- **Đọc an toàn qua `bpf_probe_read_user_str`:** Con trỏ `ctx->args[0]` trỏ vào bộ nhớ userspace. Kernel Verifier cấm dereference trực tiếp mà bắt buộc phải qua helper an toàn này để chống lỗi truy cập trang nhớ (page fault).
+### Đặc điểm kỹ thuật trong mã nguồn C eBPF
+
+Các chi tiết kỹ thuật trong đoạn mã C trên chứa đựng những quy ước quan trọng của nhân Linux. Trước hết, điểm móc tracepoint `sys_enter_execve` được kích hoạt ngay tại lối vào của lời gọi hệ thống, do đó nó đại diện cho ý định thực thi (execution attempt) chứ chưa khẳng định tiến trình đích đã khởi tạo thành công. Nếu tệp tin không tồn tại (`ENOENT`) hoặc người dùng thiếu quyền thực thi (`EACCES`), syscall sẽ trả về lỗi, song sự kiện tracepoint vẫn được ghi nhận trọn vẹn.
+
+Bên cạnh đó, hàm `bpf_get_current_comm` tại thời điểm này phản ánh tên của tiến trình đang phát lệnh gọi (calling task như `bash`, `python` hoặc `containerd`), trong khi đường dẫn tệp nhị phân đích phải được trích xuất từ tham số `ctx->args[0]`. Để phân giải PID tương thích với không gian người dùng, mã nguồn dịch bit phải 32 bit từ giá trị 64-bit của `bpf_get_current_pid_tgid()`, bởi trong nhân Linux định danh Thread Group ID (TGID) mới tương ứng với PID của tiến trình. Cuối cùng, việc đọc đường dẫn chuỗi người dùng bắt buộc phải thông qua hàm trợ giúp `bpf_probe_read_user_str` nhằm ngăn ngừa lỗi vi phạm trang nhớ (page fault) khi con trỏ trỏ tới vùng địa chỉ chưa hợp lệ.
 
 ---
 
@@ -424,19 +414,17 @@ Kết quả xác thực 6 kịch bản thực chiến:
 --- PASS: TestObserverContextCancellation (0.00s)
 === RUN   TestDetectSecurityAnomalies
 --- PASS: TestDetectSecurityAnomalies (0.00s)
-=== RUN   TestCiliumEbpfSpecLoading
---- PASS: TestCiliumEbpfSpecLoading (0.00s)
+=== RUN   TestModeledCollectionSpec
+--- PASS: TestModeledCollectionSpec (0.00s)
 PASS
-ok      part27-ebpf-observer   2.211s
+ok      part27-ebpf-observer   0.742s
 ~~~
 
-### Phân tích kết quả kiểm thử:
-1. **Serialization & Deserialization:** Đóng gói và giải mã chính xác 156 byte C ABI, bảo đảm các trường PID, UID, GID, Comm và Filename toàn vẹn.
-2. **Xử lý gói tin lỗi (Truncated):** Xử lý an toàn khi payload bị cắt ngắn mà không gây hoảng loạn (panic).
-3. **Luồng sự kiện liên tục (Streaming Pipeline):** Vận chuyển sự kiện bất đồng bộ qua Go channel, không xảy ra rò rỉ goroutine hay data race.
-4. **Hủy bỏ tác vụ (Context Cancellation):** Dừng sạch sẽ vòng lặp đọc khi context bị hủy.
-5. **Quy tắc An ninh Heuristic:** Nhận diện chính xác 3 kịch bản tấn công điển hình (mã độc trong `/tmp`, RCE từ Nginx, Netcat root) và bỏ qua tiến trình hợp lệ (`/usr/bin/go`).
-6. **Khởi tạo eBPF Spec:** Khởi tạo thành công `CollectionSpec` của `cilium/ebpf` với Map loại `RingBuf` và Program loại `TracePoint`.
+### Phân tích kết quả kiểm thử và Ranh giới kiểm chứng:
+
+Bộ kiểm thử được phân loại ở cấp độ `UNIT_TESTED` kết hợp `MODEL_ONLY`. Việc biên dịch tệp nhị phân ELF và móc trực tiếp vào tracepoint nhân Linux đòi hỏi môi trường hệ điều hành Linux cùng đặc quyền nhân (`CAP_BPF` hoặc root). Trên các máy trạm phát triển không có Linux kernel headers, thao tác nạp trực tiếp vào kernel được tạm dừng có chủ đích (`SKIPPED_WITH_REASON`). 
+
+Tuy nhiên, toàn bộ logic cốt lõi vẫn được bảo đảm thông qua 6 kịch bản thực chiến: giải mã nhị phân little-endian 156 byte C ABI; xử lý phòng vệ khi gói tin bị cắt ngắn (`Truncated`); điều phối kênh truyền bất đồng bộ không rò rỉ goroutine hay data race; ngắt luồng đọc an toàn qua Context; phát hiện bất thường an ninh theo heuristic; và nạp mô hình cấu trúc `CollectionSpec` từ `cilium/ebpf` với Map loại `RingBuf` và Program loại `TracePoint`.
 
 ---
 

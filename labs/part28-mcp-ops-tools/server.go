@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type Role string
@@ -22,7 +24,9 @@ type contextKey string
 const roleContextKey contextKey = "mcp_caller_role"
 
 // WithCallerRole binds authenticated caller identity to session context.
-// Agents cannot self-assert elevated roles via JSON arguments.
+// MOCK_AUTH_BOUNDARY: In production systems, identity is established during
+// transport/session handshake (e.g. mutual TLS, OIDC, or signed process credentials).
+// Agents must never be allowed to self-assert elevated roles via JSON arguments.
 func WithCallerRole(ctx context.Context, role Role) context.Context {
 	return context.WithValue(ctx, roleContextKey, role)
 }
@@ -50,7 +54,9 @@ type DefaultChangeAuthorizer struct {
 	ApprovedTickets map[string]string // ticket -> serviceName
 }
 
-func (a *DefaultChangeAuthorizer) AuthorizeChange(ctx context.Context, role Role, serviceName, ticket string) error {
+func (a *DefaultChangeAuthorizer) AuthorizeChange(
+	ctx context.Context, role Role, serviceName, ticket string,
+) error {
 	if role == RoleObserver {
 		return fmt.Errorf("mcp: role %s not authorized for mutating tool restart_service", role)
 	}
@@ -74,218 +80,107 @@ type HealthTarget struct {
 	URL         string `json:"url"`
 }
 
-type Tool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
-}
-
-type CallToolParams struct {
-	Name      string         `json:"name"`
-	Arguments map[string]any `json:"arguments"`
-}
-
-type ToolContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
-type CallToolResult struct {
-	Content []ToolContent `json:"content"`
-	IsError bool          `json:"isError,omitempty"`
-}
-
+// AuditRecord stores process-local, append-oriented audit records.
+// Note: This in-memory slice is process-local and NOT durable or tamper-proof across restarts.
 type AuditRecord struct {
 	Timestamp time.Time      `json:"timestamp"`
 	Caller    Role           `json:"caller"`
 	ToolName  string         `json:"toolName"`
 	Arguments map[string]any `json:"arguments"`
-	Decision  string         `json:"decision"` // "ALLOW" or "DENY"
+	Decision  string         `json:"decision"` // ALLOW or DENY
 	Result    string         `json:"result"`
 }
 
-// MCPServer implements an MCP Protocol Architecture & Security Model.
-type MCPServer struct {
-	mu         sync.Mutex
-	tools      map[string]Tool
-	targets    map[string]HealthTarget
+// QueryHealthInput defines typed input schema for query_service_health.
+type QueryHealthInput struct {
+	TargetID string `json:"target_id" jsonschema:"Mã định danh dịch vụ trong allowlist (vd: checkout-health)"`
+}
+
+// RestartServiceInput defines typed input schema for restart_service.
+type RestartServiceInput struct {
+	ServiceName  string `json:"service_name" jsonschema:"Tên dịch vụ cần khởi động lại"`
+	ChangeTicket string `json:"change_ticket" jsonschema:"Mã phiếu thay đổi đã phê duyệt (vd: CHG-12345)"`
+}
+
+// OpsServer integrates domain policies, authorization, and audit tracking on top of official mcp.Server.
+type OpsServer struct {
+	mcpServer  *mcp.Server
 	httpClient *http.Client
 	actuator   ServiceActuator
 	authorizer ChangeAuthorizer
-	auditLog   []AuditRecord
+	targets    map[string]HealthTarget
+
+	mu          sync.RWMutex
+	sessionRole map[string]Role
+	auditLog    []AuditRecord
 }
 
-// NewMCPServer instantiates an MCP tools server with target allowlist and policy gates.
-func NewMCPServer(
-	targets []HealthTarget,
-	httpClient *http.Client,
+func NewOpsServer(
+	client *http.Client,
 	actuator ServiceActuator,
 	authorizer ChangeAuthorizer,
-) *MCPServer {
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 3 * time.Second}
+	targets []HealthTarget,
+) *OpsServer {
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
 	}
-	targetMap := make(map[string]HealthTarget)
+	targetMap := make(map[string]HealthTarget, len(targets))
 	for _, t := range targets {
 		targetMap[t.ID] = t
 	}
 
-	s := &MCPServer{
-		tools:      make(map[string]Tool),
-		targets:    targetMap,
-		httpClient: httpClient,
-		actuator:   actuator,
-		authorizer: authorizer,
-	}
-	s.registerDefaultTools()
-	return s
-}
-
-func (s *MCPServer) registerDefaultTools() {
-	s.tools["query_service_health"] = Tool{
-		Name:        "query_service_health",
-		Description: "Inspects health status of an approved service via target_id allowlist (SSRF-safe)",
-		InputSchema: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"target_id": map[string]any{
-					"type":        "string",
-					"description": "Approved service identifier (e.g. checkout-health, payment-health)",
-				},
-			},
-			"required": []string{"target_id"},
+	server := mcp.NewServer(
+		&mcp.Implementation{Name: "ops-mcp-server", Version: "v1.8.0"},
+		&mcp.ServerOptions{
+			Instructions: "AIOps operations server enforcing target allowlist and change-ticket authorization.",
 		},
+	)
+
+	ops := &OpsServer{
+		mcpServer:   server,
+		httpClient:  client,
+		actuator:    actuator,
+		authorizer:  authorizer,
+		targets:     targetMap,
+		sessionRole: make(map[string]Role),
 	}
 
-	s.tools["restart_service"] = Tool{
-		Name:        "restart_service",
-		Description: "Restarts an infrastructure service. Requires authorized operator role and change ticket.",
-		InputSchema: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"service_name":  map[string]any{"type": "string"},
-				"change_ticket": map[string]any{"type": "string", "description": "Approved change ticket ID"},
-			},
-			"required": []string{"service_name", "change_ticket"},
-		},
-	}
+	// Register receiving middleware to attach authenticated caller role to context.
+	server.AddReceivingMiddleware(func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			// If already set on ctx, preserve it; otherwise check session mapping.
+			role := CallerRoleFromContext(ctx)
+			if role == RoleObserver && req != nil && req.GetSession() != nil {
+				ops.mu.RLock()
+				sessRole, found := ops.sessionRole[req.GetSession().ID()]
+				ops.mu.RUnlock()
+				if found {
+					role = sessRole
+				}
+			}
+			ctx = WithCallerRole(ctx, role)
+			return next(ctx, method, req)
+		}
+	})
+
+	ops.registerTools()
+	return ops
 }
 
-// ExecuteToolCall validates arguments, checks session authorization, performs execution, and audits.
-func (s *MCPServer) ExecuteToolCall(
-	ctx context.Context,
-	params *CallToolParams,
-) (*CallToolResult, error) {
-	if params == nil {
-		return nil, errors.New("nil call params")
-	}
-
-	role := CallerRoleFromContext(ctx)
-
-	tool, exists := s.tools[params.Name]
-	if !exists {
-		errStr := fmt.Sprintf("unknown tool: %s", params.Name)
-		s.recordAudit(role, params.Name, params.Arguments, "DENY", errStr)
-		return nil, errors.New(errStr)
-	}
-
-	switch tool.Name {
-	case "query_service_health":
-		targetID, ok := params.Arguments["target_id"].(string)
-		if !ok || targetID == "" {
-			errStr := "missing or invalid target_id"
-			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
-			return &CallToolResult{
-				IsError: true,
-				Content: []ToolContent{{Type: "text", Text: errStr}},
-			}, nil
-		}
-
-		target, found := s.targets[targetID]
-		if !found {
-			// SSRF Guard: reject any unapproved target_id immediately
-			errStr := fmt.Sprintf("unapproved target_id %q: blocked by SSRF allowlist policy", targetID)
-			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
-			return &CallToolResult{
-				IsError: true,
-				Content: []ToolContent{{Type: "text", Text: errStr}},
-			}, nil
-		}
-
-		// Real HTTP execution to target URL
-		start := time.Now()
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.URL, nil)
-		if err != nil {
-			errStr := fmt.Sprintf("failed to create health check request: %v", err)
-			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
-			return &CallToolResult{
-				IsError: true,
-				Content: []ToolContent{{Type: "text", Text: errStr}},
-			}, nil
-		}
-
-		resp, err := s.httpClient.Do(req)
-		latency := time.Since(start)
-		if err != nil {
-			errStr := fmt.Sprintf("service %s (%s) health check error: %v", target.ServiceName, target.ID, err)
-			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
-			return &CallToolResult{
-				IsError: true,
-				Content: []ToolContent{{Type: "text", Text: errStr}},
-			}, nil
-		}
-		defer resp.Body.Close()
-
-		resultText := fmt.Sprintf(
-			"Service %s (%s) health check returned HTTP %d in %v",
-			target.ServiceName, target.ID, resp.StatusCode, latency.Round(time.Millisecond),
-		)
-		s.recordAudit(role, tool.Name, params.Arguments, "ALLOW", resultText)
-		return &CallToolResult{
-			IsError: false,
-			Content: []ToolContent{{Type: "text", Text: resultText}},
-		}, nil
-
-	case "restart_service":
-		svc, _ := params.Arguments["service_name"].(string)
-		ticket, _ := params.Arguments["change_ticket"].(string)
-
-		// Authorization policy check via authorizer
-		if s.authorizer != nil {
-			if err := s.authorizer.AuthorizeChange(ctx, role, svc, ticket); err != nil {
-				s.recordAudit(role, tool.Name, params.Arguments, "DENY", err.Error())
-				return &CallToolResult{
-					IsError: true,
-					Content: []ToolContent{{Type: "text", Text: err.Error()}},
-				}, nil
-			}
-		}
-
-		// Stateful execution via ServiceActuator
-		if s.actuator != nil {
-			if err := s.actuator.RestartService(ctx, svc); err != nil {
-				errStr := fmt.Sprintf("service %s restart failed: %v", svc, err)
-				s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
-				return &CallToolResult{
-					IsError: true,
-					Content: []ToolContent{{Type: "text", Text: errStr}},
-				}, nil
-			}
-		}
-
-		resultText := fmt.Sprintf("Service %s successfully restarted under ticket %s", svc, ticket)
-		s.recordAudit(role, tool.Name, params.Arguments, "ALLOW", resultText)
-		return &CallToolResult{
-			IsError: false,
-			Content: []ToolContent{{Type: "text", Text: resultText}},
-		}, nil
-
-	default:
-		return nil, fmt.Errorf("unhandled tool: %s", tool.Name)
-	}
+// SetSessionRole configures authenticated role for a given session ID (MOCK_AUTH_BOUNDARY).
+func (s *OpsServer) SetSessionRole(sessionID string, role Role) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sessionRole[sessionID] = role
 }
 
-func (s *MCPServer) recordAudit(caller Role, tool string, args map[string]any, decision, result string) {
+// MCPServer exposes the official mcp.Server instance.
+func (s *OpsServer) MCPServer() *mcp.Server {
+	return s.mcpServer
+}
+
+// RecordAudit safely appends an audit event to the process-local record slice.
+func (s *OpsServer) RecordAudit(caller Role, tool string, args map[string]any, decision, result string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.auditLog = append(s.auditLog, AuditRecord{
@@ -298,20 +193,100 @@ func (s *MCPServer) recordAudit(caller Role, tool string, args map[string]any, d
 	})
 }
 
-// GetAuditLog returns a thread-safe snapshot of audit records.
-func (s *MCPServer) GetAuditLog() []AuditRecord {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	copied := make([]AuditRecord, len(s.auditLog))
-	copy(copied, s.auditLog)
-	return copied
+// GetAuditRecords returns a copy of the current audit trail.
+func (s *OpsServer) GetAuditRecords() []AuditRecord {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	records := make([]AuditRecord, len(s.auditLog))
+	copy(records, s.auditLog)
+	return records
 }
 
-// ListTools returns registered tools following the tools/list MCP protocol definition.
-func (s *MCPServer) ListTools() []Tool {
-	var list []Tool
-	for _, t := range s.tools {
-		list = append(list, t)
-	}
-	return list
+func (s *OpsServer) registerTools() {
+	// 1. Tool: query_service_health (Read-Only, SSRF-safe via target_id allowlist)
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "query_service_health",
+		Description: "Kiểm tra tình trạng sức khỏe dịch vụ qua target_id trong danh sách trắng đã kiểm duyệt.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input QueryHealthInput) (*mcp.CallToolResult, any, error) {
+		role := CallerRoleFromContext(ctx)
+		target, found := s.targets[input.TargetID]
+		if !found {
+			errStr := fmt.Sprintf("unapproved target_id %q: blocked by SSRF allowlist policy", input.TargetID)
+			s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "DENY", errStr)
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: errStr}},
+			}, nil, nil
+		}
+
+		start := time.Now()
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, target.URL, nil)
+		if err != nil {
+			errStr := fmt.Sprintf("failed to create http request: %v", err)
+			s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "DENY", errStr)
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: errStr}},
+			}, nil, nil
+		}
+
+		resp, err := s.httpClient.Do(httpReq)
+		if err != nil {
+			errStr := fmt.Sprintf("health check request failed: %v", err)
+			s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "DENY", errStr)
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: errStr}},
+			}, nil, nil
+		}
+		defer resp.Body.Close()
+
+		duration := time.Since(start).Round(time.Millisecond)
+		resText := fmt.Sprintf("Service %s (%s) healthy: HTTP %d in %v", target.ServiceName, target.ID, resp.StatusCode, duration)
+		s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "ALLOW", resText)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: resText}},
+		}, nil, nil
+	})
+
+	// 2. Tool: restart_service (Mutating, requires change ticket and authorization)
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "restart_service",
+		Description: "Khởi động lại dịch vụ sản xuất có điều kiện, yêu cầu mã phiếu thay đổi hợp lệ.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input RestartServiceInput) (*mcp.CallToolResult, any, error) {
+		role := CallerRoleFromContext(ctx)
+		args := map[string]any{"service_name": input.ServiceName, "change_ticket": input.ChangeTicket}
+
+		if s.authorizer != nil {
+			if err := s.authorizer.AuthorizeChange(ctx, role, input.ServiceName, input.ChangeTicket); err != nil {
+				s.RecordAudit(role, "restart_service", args, "DENY", err.Error())
+				return &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+				}, nil, nil
+			}
+		}
+
+		if s.actuator != nil {
+			if err := s.actuator.RestartService(ctx, input.ServiceName); err != nil {
+				errStr := fmt.Sprintf("actuator restart failed: %v", err)
+				s.RecordAudit(role, "restart_service", args, "DENY", errStr)
+				return &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{&mcp.TextContent{Text: errStr}},
+				}, nil, nil
+			}
+		}
+
+		resText := fmt.Sprintf("Service %s successfully restarted under ticket %s", input.ServiceName, input.ChangeTicket)
+		s.RecordAudit(role, "restart_service", args, "ALLOW", resText)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: resText}},
+		}, nil, nil
+	})
+}
+
+// RunStdio launches the server over stdin/stdout transport.
+func (s *OpsServer) RunStdio(ctx context.Context) error {
+	return s.mcpServer.Run(ctx, &mcp.StdioTransport{})
 }

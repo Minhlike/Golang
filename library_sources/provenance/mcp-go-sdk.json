@@ -6,7 +6,7 @@
   "official_remote": "https://github.com/modelcontextprotocol/go-sdk.git",
   "module_path": "github.com/modelcontextprotocol/go-sdk",
   "version_strategy": "PRE_RELEASE_ALLOWED",
-  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolved_at_utc": "2026-09-24T19:36:52Z",
   "resolution_method": "go_list+git_ls_remote",
   "resolved_version": "v1.8.0",
   "resolved_tag": "v1.8.0",

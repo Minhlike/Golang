@@ -21,11 +21,10 @@ Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời l
                    │
                    ▼
     [Default Credential Provider Chain]
-    ├── 1. Biến môi trường (AWS_ACCESS_KEY_ID, SECRET...)
-    ├── 2. Tệp cấu hình (~/.aws/config, credentials)
-    ├── 3. Web Identity Token (EKS Pod Identity / IRSA)
-    ├── 4. ECS Task Role (Container Credentials)
-    └── 5. EC2 Instance Metadata Service (IMDSv2 / IMDSv1)
+    ├── 1. Biến môi trường (AWS_ACCESS_KEY_ID, Web Identity)
+    ├── 2. Tệp cấu hình (~/.aws/config, credentials, SSO)
+    ├── 3. Container credentials (ECS Task Role / Pod ID)
+    └── 4. EC2 Instance Metadata Service (IMDSv2 / IMDSv1)
                    │
                    ▼
      [aws.Credentials struct]
@@ -36,12 +35,11 @@ Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời l
      - Expires:         2026-09-24T13:00:00Z
 ~~~
 
-### Cơ chế bộ đệm và tự động làm mới của SDK (`aws.CredentialsCache`)
+### Cơ chế bộ đệm và xác thực đồng bộ của SDK (`aws.CredentialsCache`)
 
-Khi bạn nạp cấu hình qua hàm `config.LoadDefaultConfig(ctx)`:
-1. SDK không đọc một chuỗi khóa cố định vào bộ nhớ rồi giữ nguyên suốt vòng đời ứng dụng. Nó khởi tạo chuỗi tìm kiếm định danh mặc định theo thứ tự ưu tiên 5 cấp độ như trên.
-2. Khi chạy trên Kubernetes (EKS), SDK tự động phát hiện tệp token do Kubernetes gắn vào Pod và trao đổi với AWS STS qua `AssumeRoleWithWebIdentity` để lấy quyền IAM Role (IRSA).
-3. Để tối ưu hiệu năng và tránh gọi STS liên tục trước mỗi HTTP request, SDK v2 bọc provider bằng cấu trúc `aws.CredentialsCache`. Cache này lưu giữ credentials trong bộ nhớ và kiểm tra trường `CanExpire` cùng mốc thời gian `Expires`. Khi credentials tiến gần đến thời điểm hết hạn (nằm trong cửa sổ làm mới - refresh window), `CredentialsCache` tự động gọi hàm `Retrieve(ctx)` của underlying provider để lấy bộ khóa mới trong nền mà tiến trình của bạn không hề bị gián đoạn hay phát sinh lỗi 403 do khóa hết hạn.
+Khi ứng dụng gọi `config.LoadDefaultConfig(ctx)`, SDK không chỉ nạp một chuỗi khóa tĩnh duy nhất vào bộ nhớ. Nó thiết lập chuỗi tìm kiếm định danh theo thứ tự ưu tiên chuẩn mực: bắt đầu từ các biến môi trường trực tiếp (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, hoặc đường dẫn token liên kết web identity), chuyển tiếp qua tệp cấu hình chia sẻ cục bộ (`~/.aws/config`), định danh gán cho container (ECS Task Role), và sau cùng là dịch vụ siêu dữ liệu máy chủ ảo EC2 (IMDSv2).
+
+Trên các cụm Kubernetes hoặc ECS, SDK phát hiện tệp token do hệ thống cung cấp và gửi yêu cầu `AssumeRoleWithWebIdentity` tới AWS STS để nhận quyền IAM Role. Nhằm giảm thiểu số lượt gọi mạng lặp lại trước mỗi HTTP request, SDK v2 bọc provider bên trong cấu trúc `aws.CredentialsCache`. Cần lưu ý rằng `CredentialsCache` không vận hành một goroutine chạy ngầm trong nền để quét chu kỳ làm mới. Thay vào đó, mỗi khi mã nguồn gọi `Retrieve(ctx)`, bộ đệm kiểm tra trực tiếp thời điểm hết hạn của khóa hiện tại. Nếu khóa còn hiệu lực và nằm ngoài ngưỡng cửa sổ làm mới (`ExpiryWindow`), cache trả về giá trị đã lưu ngay lập tức. Nếu khóa đã hết hạn hoặc bước vào cửa sổ an toàn, chính lượt gọi `Retrieve(ctx)` đó sẽ kích hoạt provider nền tảng lấy bộ khóa mới một cách đồng bộ, bảo đảm mọi phiên làm việc duy trì tính liên tục mà không gây nghẽn tài nguyên.
 
 ---
 
@@ -68,12 +66,9 @@ Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra m�
 
 ### Chữ ký số SigV4 (Signature Version 4)
 
-Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật toán **SigV4**:
-1. Chuẩn hóa toàn bộ HTTP method, path, query params và headers thành một chuỗi văn bản duy nhất (**Canonical Request**).
-2. Băm chuỗi này bằng thuật toán SHA-256 để tạo mã đại diện.
-3. Dùng Secret Access Key kết hợp ngày tháng, khu vực (Region) và tên dịch vụ để tính toán khóa ký HMAC (**Signing Key**).
-4. Tạo mã băm HMAC cuối cùng và gắn vào HTTP Header:
-   `Authorization: AWS4-HMAC-SHA256 Credential=ASIA.../20260924/...`
+Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật toán ký số SigV4 để bảo đảm tính toàn vẹn và nguồn gốc của gói tin. Quá trình này bắt đầu bằng việc chuẩn hóa phương thức HTTP, đường dẫn tài nguyên, tham số truy vấn và các header thành một chuỗi đại diện duy nhất (Canonical Request). Chuỗi này được băm bằng thuật toán SHA-256 để tạo mã tóm lược nội dung.
+
+Tiếp đó, SDK sử dụng Secret Access Key kết hợp cùng thông tin ngày tháng, phân vùng địa lý (Region) và tên dịch vụ đích để tính toán khóa ký tạm thời (Signing Key) thông qua hàm băm HMAC. Khóa ký này được dùng để tạo mã băm xác thực cuối cùng, đưa trực tiếp vào HTTP Header dưới định dạng `Authorization: AWS4-HMAC-SHA256 Credential=ASIA...`. Bất kỳ thay đổi trái phép nào đối với gói tin trên đường truyền, dù chỉ một byte trong payload hoặc tiêu đề, đều khiến chữ ký tại máy chủ dịch vụ AWS không khớp và bị từ chối ngay lập tức với mã lỗi `403 SignatureDoesNotMatch`.
 
 Bất kỳ kẻ xấu nào chặn bắt gói tin trên đường truyền và sửa đổi dù chỉ 1 byte trong payload hoặc header, chữ ký số sẽ không khớp và máy chủ dịch vụ AWS (AWS service endpoint như S3, DynamoDB, STS) lập tức từ chối với mã lỗi `403 SignatureDoesNotMatch`.
 
@@ -125,9 +120,7 @@ Paginator chỉ giữ đúng 1 trang dữ liệu trong RAM tại một thời đ
 
 Khi một lệnh gọi AWS thất bại, bạn không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
 
-Phân loại lỗi chính xác là yếu tố quyết định để phân biệt:
-- **Lỗi nghiệp vụ không nên thử lại:** `NoSuchKey` (file không tồn tại), `AccessDenied` (thiếu quyền IAM). Thử lại chỉ làm nghẽn hệ thống vô ích.
-- **Lỗi quá tải có thể thử lại:** `SlowDown` (S3 bị quá tải tần suất request), `ThrottlingException`, `RequestTimeout`, `ServiceUnavailable`. Cần áp dụng thuật toán lùi lũy thừa (Exponential Backoff).
+Phân loại lỗi chính xác là điều kiện tiên quyết để chương trình đưa ra phản ứng phù hợp. Các lỗi nghiệp vụ như `NoSuchKey` (đối tượng không tồn tại) hoặc `AccessDenied` (thiếu quyền hạn IAM) phản ánh vi phạm logic hoặc rào chắn phân quyền; việc gửi lại yêu cầu trong tình huống này chỉ gây lãng phí băng thông và làm tắc nghẽn hàng đợi. Ngược lại, các mã lỗi chỉ thị quá tải tạm thời như `SlowDown`, `ThrottlingException`, `RequestTimeout` hay `ServiceUnavailable` đòi hỏi cơ chế thử lại có kiểm soát, áp dụng thuật toán lùi lũy thừa (exponential backoff) kết hợp dao động ngẫu nhiên (jitter) để bảo vệ dịch vụ hạ tầng.
 
 ~~~go
 func ClassifyError(err error) (bool, string) {

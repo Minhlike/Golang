@@ -189,7 +189,10 @@ func TestDetectSecurityAnomalies(t *testing.T) {
 	}
 }
 
-func TestCiliumEbpfSpecLoading(t *testing.T) {
+// TestModeledCollectionSpec tests the in-memory cilium/ebpf specification model.
+// Classification: MODEL_ONLY. Live ELF bytecode loading and kernel attach are SKIPPED_WITH_REASON
+// because Windows development environment lacks Linux kernel BPF subsystem and CAP_BPF capability.
+func TestModeledCollectionSpec(t *testing.T) {
 	spec := &ebpf.CollectionSpec{
 		Maps: map[string]*ebpf.MapSpec{
 			"events": {

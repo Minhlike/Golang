@@ -2124,9 +2124,47 @@ KẾ HOẠCH KHÓA CHÍNH XÁC 7 CHƯƠNG (CH22 → CH28):
 
 BÀI HỌC VỀ TÍNH CHÍNH XÁC VÀ KIỂM CHỨNG (VERIFICATION LESSONS LEARNED):
 - A passing mock test MUST NOT be described as external integration verification.
-- A custom protocol model MUST NOT be described as using an official SDK.
+- A custom protocol implementation MUST NOT be described as use of an official SDK.
+- Existence/version claims about libraries MUST be checked against library catalog + lock + official upstream.
+- Explanatory prose SHOULD NOT default to bullet lists.
+- Lists are chosen because the semantic structure is a list, not because lists are easier for the Agent to generate.
 - Security claims require adversarial boundary tests, not only happy-path unit tests.
 
+==================================================
+40. LUẬT BIÊN TẬP VĨNH VIỄN: PROSE-FIRST TECHNICAL WRITING
+==================================================
+
+1. PROSE-FIRST TECHNICAL WRITING:
+   - Trong phần giải thích kiến thức, đoạn văn (prose paragraph) là cấu trúc mặc định.
+   - Bullet point KHÔNG phải cấu trúc mặc định.
+   - Không liệt kê khái niệm thành chuỗi 5–10 bullets chỉ vì dễ sinh nội dung. Nếu các ý tạo thành một chuỗi lập luận, hãy viết thành 1–3 đoạn văn có liên kết logic.
+   - Cấu trúc đoạn văn tự nhiên: câu chủ đề → cơ chế / nguyên nhân → ví dụ hoặc bằng chứng → hệ quả kỹ thuật.
+
+2. BULLET-BY-EXCEPTION:
+   - Bullet chỉ được giữ khi các item thực sự độc lập, không có thứ tự, ngắn, cần quét nhanh, và đọc từng item riêng lẻ vẫn có đầy đủ ý nghĩa (checklist, short taxonomy, flags, acceptance criteria, Error Atlas).
+   - Nếu mỗi item cần 3–5 câu giải thích, tuyệt đối không dùng bullet dài: chuyển thành prose paragraphs hoặc subsection.
+
+3. SHORT COHERENT PARAGRAPHS:
+   - Đoạn văn kỹ thuật thông thường ngắn, khoảng 3–7 dòng ở layout sách. Mỗi đoạn tập trung vào một ý trung tâm duy nhất, không tạo ra "bức tường chữ".
+   - Khi chứa nhiều cơ chế độc lập, rẽ nhánh hoặc quy trình tuần tự: tách đoạn, dùng bảng, sơ đồ hoặc danh sách có thứ tự.
+
+4. REPRESENTATION-MATCHES-SEMANTICS:
+   - So sánh khác biệt (A vs B) → dùng bảng so sánh hoặc contrast prose.
+   - Diễn giải cơ chế vận hành → dùng prose + conceptual diagram.
+   - Quy trình, trình tự thời gian, thứ tự ưu tiên → dùng numbered list (1, 2, 3...) hoặc sequence diagram.
+   - Phân loại danh mục tĩnh → dùng bảng nhỏ hoặc bullet ngắn.
+   - Giải thích nguyên nhân ("Tại sao?") → bắt buộc dùng prose, tuyệt đối không dùng bullet cho quan hệ nhân quả.
+
+5. KHÔNG LẠM DỤNG BOLD VÀ COLON LABEL:
+   - Không biến văn viết thành thẻ giao diện bằng cách lặp lại liên tục `**Khái niệm:**`, `**Cơ chế:**`, `**Hệ quả:**`, hay `Nguyên nhân:`, `Giải pháp:`. Viết thành câu văn có liên kết tự nhiên (Vì..., Tuy nhiên..., Điều này dẫn tới..., Hệ quả là...).
+   - Đậm (Bold) chỉ dành cho thuật ngữ xuất hiện lần đầu hoặc điểm thực sự cần nhấn mạnh.
+
+6. GIỮ TONE KỸ THUẬT ĐIỀM TĨNH, CHUẨN XÁC:
+   - Loại bỏ hoàn toàn các đại từ giật gân, quảng cáo: "sống còn", "tử huyệt", "triệt tiêu hoàn toàn", "kiên cố", "tối thượng", "nghiêm trọng bậc nhất", "chuẩn mực tuyệt đối", "đập tan ngộ nhận", "làm chủ hoàn toàn", "cấp doanh nghiệp".
+   - Mở đầu chương bằng vấn đề thật, câu hỏi trung tâm và mental model (không mở bằng bullet "Bạn sẽ học").
+   - Kết thúc chương bằng đúc kết kỹ thuật điềm đạm và giới hạn thực tế (không kết bằng "Bạn đã chinh phục").
+
 QUY TẮC DỪNG:
-Sau khi hoàn thành Chương 28, DỪNG LẠI. Không tự ý viết Chương 29.
+Sau khi hoàn thành Chương 28, DỪNG LẠI. Tuyệt đối không tự ý viết Chương 29.
+
 
