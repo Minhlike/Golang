@@ -166,7 +166,9 @@ type batchSpanProcessor struct {
 Hãy nhìn vào cách processor tiếp nhận một Span khi người dùng gọi `span.End()` thông qua phương thức `enqueueDrop()`:
 
 ```go
-func (bsp *batchSpanProcessor) enqueueDrop(sd ReadOnlySpan) bool {
+func (bsp *batchSpanProcessor) enqueueDrop(
+    sd ReadOnlySpan,
+) bool {
     select {
     case bsp.queue <- sd:
         return true
@@ -478,9 +480,19 @@ ORAS (OCI Registry As Storage) hiện thực hóa tầm nhìn đó thông qua m�
 
 ```go
 type Target interface {
-    Push(ctx context.Context, expected ocispec.Descriptor, content io.Reader) error
-    Fetch(ctx context.Context, target ocispec.Descriptor) (io.ReadCloser, error)
-    Resolve(ctx context.Context, reference string) (ocispec.Descriptor, error)
+    Push(
+        ctx context.Context,
+        expected ocispec.Descriptor,
+        content io.Reader,
+    ) error
+    Fetch(
+        ctx context.Context,
+        target ocispec.Descriptor,
+    ) (io.ReadCloser, error)
+    Resolve(
+        ctx context.Context,
+        reference string,
+    ) (ocispec.Descriptor, error)
 }
 ```
 
@@ -531,7 +543,9 @@ Khi một kỹ sư tự động hóa mạng viết script Bash, họ thường g
 Thư viện mở một raw socket đặc biệt của kernel:
 
 ```go
-fd, err := unix.Socket(unix.AF_NETLINK, unix.SOCK_RAW, unix.NETLINK_ROUTE)
+fd, err := unix.Socket(
+    unix.AF_NETLINK, unix.SOCK_RAW, unix.NETLINK_ROUTE,
+)
 ```
 
 Giao thức `NETLINK_ROUTE` là huyết mạch điều khiển toàn bộ ngăn xếp mạng của nhân Linux. Khi bạn gọi hàm `netlink.LinkAdd(&netlink.Veth{...})`, thư viện không chạy lệnh shell nào cả. Nó tuần tự hóa cấu hình card mạng thành một cấu trúc nhị phân chuẩn của kernel mang tên `nlmsghdr` (Netlink Message Header) kết hợp với các thuộc tính lồng nhau `RtAttr` (Route Attributes), rồi bắn mảng byte này qua socket vào thẳng kernel thông qua lời gọi `unix.Sendto`.
@@ -550,9 +564,15 @@ Làm thế nào để biến một API REST bất đồng bộ của AWS thành 
 
 ```go
 type ExternalClient interface {
-    Observe(ctx context.Context, mg resource.Managed) (ExternalObservation, error)
-    Create(ctx context.Context, mg resource.Managed) (ExternalCreation, error)
-    Update(ctx context.Context, mg resource.Managed) (ExternalUpdate, error)
+    Observe(
+        ctx context.Context, mg resource.Managed,
+    ) (ExternalObservation, error)
+    Create(
+        ctx context.Context, mg resource.Managed,
+    ) (ExternalCreation, error)
+    Update(
+        ctx context.Context, mg resource.Managed,
+    ) (ExternalUpdate, error)
     Delete(ctx context.Context, mg resource.Managed) error
 }
 ```
@@ -576,13 +596,21 @@ Flux CD chuẩn hóa trải nghiệm vận hành GitOps bằng cách biến mọ
 Thư viện tuân thủ nghiêm ngặt đặc tả `kstatus` của Kubernetes. Mọi Custom Resource (như `GitRepository` hay `Kustomization`) đều sở hữu trường `.status.conditions`:
 
 ```go
-conditions.MarkTrue(obj, meta.ReadyCondition, "ReconciliationSucceeded", "Applied revision: %s", revision)
+conditions.MarkTrue(
+    obj, meta.ReadyCondition,
+    "ReconciliationSucceeded",
+    "Applied revision: %s", revision,
+)
 ```
 
 Nếu việc đồng bộ gặp sự cố (ví dụ lỗi xác thực SSH với GitHub), controller không chỉ ghi log ra màn hình console, mà gọi:
 
 ```go
-conditions.MarkFalse(obj, meta.ReadyCondition, "AuthenticationFailed", "Invalid SSH private key")
+conditions.MarkFalse(
+    obj, meta.ReadyCondition,
+    "AuthenticationFailed",
+    "Invalid SSH private key",
+)
 ```
 
 Hành động này cập nhật trực tiếp condition `Ready=False` vào etcd kèm theo lý do súc tích (`Reason`) và thông điệp chi tiết (`Message`). Người vận hành chỉ cần gõ `kubectl get gitrepositories` là nhìn thấy ngay cột `READY=False` kèm theo lỗi chính xác mà không cần chạm vào log máy chủ.
@@ -604,7 +632,9 @@ opt := &github.PullRequestListOptions{
     ListOptions: github.ListOptions{PerPage: 100},
 }
 for {
-    prs, resp, err := client.PullRequests.List(ctx, "my-org", "my-repo", opt)
+    prs, resp, err := client.PullRequests.List(
+        ctx, "my-org", "my-repo", opt,
+    )
     if err != nil {
         return err
     }
@@ -633,7 +663,8 @@ Cobra tổ chức toàn bộ ứng dụng CLI dưới dạng một **Cây Lệnh
 Chu kỳ thực thi của một lệnh khi người dùng gõ phím được kiểm soát chặt chẽ qua 5 giai đoạn nối tiếp:
 
 ```
-[PersistentPreRun] ──► [PreRun] ──► [Run / RunE] ──► [PostRun] ──► [PersistentPostRun]
+[PersistentPreRun] ──► [PreRun] ──► [Run / RunE]
+  └──► [PostRun] ──► [PersistentPostRun]
 ```
 
 Điểm sáng kiến trúc của Cobra là sự phân biệt giữa cờ cục bộ (`Flags()`) và cờ kế thừa xuyên suốt (`PersistentFlags()`). Khi bạn khai báo cờ `--kubeconfig` hoặc `--verbose` trên lệnh gốc (Root Command) bằng `PersistentFlags()`, cờ đó tự động được truyền xuống và có hiệu lực trên toàn bộ hàng trăm lệnh con cháu bên dưới cây lệnh.
@@ -699,7 +730,10 @@ if event.Op&fsnotify.Write == fsnotify.Write { ... }
 Nếu ứng dụng của bạn là một hệ thống giao dịch tài chính hoặc cổng thanh toán xử lý 500.000 giao dịch/giây, việc ghi lại log cho mỗi giao dịch có thể trở thành thủ phạm số một đánh sập hệ thống. Nếu sử dụng thư viện log thông thường dựa trên `fmt.Printf` hoặc các thư viện dùng `interface{}`:
 
 ```go
-log.Printf("User %d transferred %f to user %d", fromID, amount, toID)
+log.Printf(
+    "User %d transferred %f to user %d",
+    fromID, amount, toID,
+)
 ```
 
 Mỗi lần ghi log, các biến số nguyên và số thực bị đóng gói vào `interface{}` (boxing), khiến chúng thoát ra bộ nhớ heap (heap escape). Năm trăm nghìn log entries mỗi giây đồng nghĩa với hàng triệu đối tượng rác bị vứt vào heap, buộc Go Garbage Collector phải dừng thế giới (Stop-The-World) liên tục để quét dọn, làm latency của ứng dụng tăng vọt không kiểm soát.
@@ -773,7 +807,8 @@ Kết nối TCP bên dưới vẫn còn dữ liệu chưa đọc. `net/http.Tran
 ```go
 func drainBody(resp *http.Response) {
     if resp.Body != nil {
-        io.Copy(io.Discard, io.LimitReader(resp.Body, respReadLimit))
+        reader := io.LimitReader(resp.Body, respReadLimit)
+        io.Copy(io.Discard, reader)
         resp.Body.Close()
     }
 }
@@ -1047,7 +1082,7 @@ Khi xây dựng các hệ thống mô phỏng xã hội hoặc giải quyết c�
 `agentscope-go` giải quyết triệt để bài toán này tại `agents/agent.go` và `message/message.go` bằng cách áp dụng **Mô Hình Hướng Tác Tử (Actor Model Pattern)**:
 
 ```
-[Agent A (Actor)] ──(Gửi Message qua Mailbox)──► [Agent B (Actor)]
+[Agent A] ──(Gửi Message qua Mailbox)──► [Agent B]
 ```
 
 Mỗi Agent trong hệ thống là một Actor hoàn toàn độc lập, sở hữu một hàng đợi tin nhắn riêng gọi là **Mailbox**. Các Agent tuyệt đối không gọi hàm trực tiếp của nhau và không chia sẻ con trỏ dữ liệu trong bộ nhớ. Thay vào đó, chúng tương tác với nhau 100% bằng cách gửi và nhận các thông điệp có cấu trúc bất đồng bộ (Asynchronous Message Passing).

@@ -2,25 +2,26 @@
 
 Tài liệu này xác lập bảng thuật ngữ chuẩn mực thống nhất xuyên suốt toàn bộ cuốn sách Go Living Textbook.
 
-Nguyên tắc cốt lõi: **TARGET PROSE ≈ 99% TIẾNG VIỆT** — Văn xuôi, lời dẫn, chú thích sơ đồ, tiêu đề bảng biểu phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm; loại bỏ triệt để thói quen chêm từ tiếng Anh tùy tiện ("AI slop", "loanword clutter").
+Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍNH SƯ PHẠM (VIETNAMESE-FIRST)** — Văn xuôi, lời dẫn, chú thích sơ đồ, tiêu đề bảng biểu phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên; loại bỏ triệt để thói quen chêm từ tiếng Anh tùy tiện ("AI slop", "loanword clutter"), đồng thời KHÔNG áp dụng quota số học cơ học dẫn đến việc dịch thô bạo các thuật ngữ cốt lõi thành từ ghép vô nghĩa hay dịch nhầm mã nguồn.
 
 ---
 
 ## 1. NGUYÊN TẮC ÁP DỤNG VÀ QUY TẮC LẦN ĐẦU XUẤT HIỆN
 
 1. **Quy tắc lần đầu xuất hiện (First Encounter Rule):**
-   Khi một khái niệm hoặc thuật ngữ kỹ thuật trừu tượng xuất hiện lần đầu tiên trong một chương, sử dụng mẫu định dạng:
-   $$\text{Thuật ngữ tiếng Việt } (\text{English term})$$
-   *Ví dụ:* `áp suất ngược (backpressure)`, `rò rỉ goroutine (goroutine leak)`, `điều hòa trạng thái (reconciliation)`.
-   Từ các lần xuất hiện tiếp theo trong chương đó, **bắt buộc ưu tiên sử dụng hoàn toàn thuật ngữ tiếng Việt**.
+   Khi một khái niệm hoặc thuật ngữ kỹ thuật trừu tượng xuất hiện lần đầu tiên trong một chương, có thể sử dụng mẫu định dạng chú giải tự nhiên:
+   `thuật ngữ tiếng Việt (English term)`
+   *Ví dụ:* `áp suất ngược (backpressure)`, `rò rỉ goroutine (goroutine leak)`, `điều hòa trạng thái (reconciliation)`, `biến nhận (receiver)`.
+   Từ các lần xuất hiện tiếp theo trong chương đó, **sử dụng nhất quán một tên gọi duy nhất**, tuyệt đối không lặp lại dấu ngoặc đơn song ngữ ở mọi câu văn gây rối mắt ("machine-translation bilingual parentheses").
 
 2. **Nguyên tắc không dịch máy móc (Idiomatic Translation):**
    Dịch dựa trên bản chất cơ chế hoạt động kỹ thuật, không dịch từng chữ (word-by-word) ngô nghê.
-   *Ví dụ:* `deadlock` dịch là `bế tắc đồng thời`, không dịch là "khóa chết"; `work-stealing` dịch là `cơ chế trộm việc`, không dịch là "đánh cắp công việc".
+   *Ví dụ:* `deadlock` dịch là `bế tắc đồng thời` hoặc giữ `deadlock`; `work-stealing` dịch là `cơ chế trộm việc`, không dịch là "đánh cắp công việc"; `idempotency` dịch chuẩn xác là `tính lũy đẳng`, không bịa từ "tính lũy thỏa".
 
 3. **Chính sách bảo tồn định danh (Strict Whitelist):**
    Giữ nguyên dạng tiếng Anh gốc đối với:
    - Các từ khóa (keywords) của ngôn ngữ Go: `package`, `import`, `func`, `var`, `const`, `type`, `struct`, `interface`, `chan`, `go`, `select`, `defer`, `for`, `range`, `if`, `else`, `switch`, `case`, `default`, `return`, `make`, `new`, `len`, `cap`, `append`, `copy`, `panic`, `recover`.
+   - Các danh từ kỹ thuật giữ nguyên bản sắc để tránh tối nghĩa: `interface`, `slice`, `goroutine`, `channel`, `runtime`, `compiler`.
    - Các định danh mã nguồn (identifiers), tên hàm, tên kiểu, tên trường, tên package: `context.Context`, `sync.Mutex`, `io.Reader`, `http.Client`, `Reconcile()`, `WorkQueue`.
    - Tên giao thức, tiêu chuẩn quốc tế: `HTTP/1.1`, `HTTP/2`, `TCP/IP`, `TLS`, `DNS`, `gRPC`, `POSIX`, `REST`.
    - Tên công nghệ, công cụ, hệ điều hành: `Linux`, `Kubernetes`, `Docker`, `Prometheus`, `OpenTelemetry`, `Git`.
@@ -82,12 +83,12 @@ Nguyên tắc cốt lõi: **TARGET PROSE ≈ 99% TIẾNG VIỆT** — Văn xuôi
 | **value semantics** | **ngữ nghĩa giá trị** | Sao chép toàn bộ dữ liệu khi truyền tham số hoặc gán |
 | **pointer semantics** | **ngữ nghĩa con trỏ** | Chia sẻ địa chỉ bộ nhớ, các bên cùng thao tác trên 1 ô nhớ |
 | **method** | **phương thức** | Hàm được gắn liền với một kiểu dữ liệu thông qua receiver |
-| **receiver** | **bộ tiếp nhận** / **đối tượng nhận** | Biến đại diện cho instance mà method được triệu gọi |
+| **receiver** | **biến nhận (receiver)** / **biến nhận** | Biến đại diện cho instance mà method được triệu gọi (tuyệt đối không dùng "bộ tiếp nhận") |
 | **interface** | **giao diện** / **interface** | Tập hợp các chữ ký phương thức mô tả hành vi |
 | **implicit satisfaction** | **thỏa mãn ngầm định** | Type tự động thỏa mãn interface mà không cần từ khóa `implements` |
 | **composition** | **cấu thành** / **hợp thành** | Xây dựng type phức tạp từ các type đơn giản |
 | **embedding** | **nhúng kiểu** | Đặt struct hoặc interface vô danh vào struct khác |
-| **memory aliasing** | **chồng lấn địa chỉ ô nhớ** | Hiện tượng hai biến/con trỏ cùng trỏ vào một vùng nhớ |
+| **memory aliasing** | **nhiều tham chiếu cùng truy cập một vùng dữ liệu (memory aliasing)** | Hiện tượng hai hoặc nhiều biến/slice/con trỏ cùng trỏ vào một vùng dữ liệu mảng nền (không dịch là "chồng lấn ô nhớ") |
 | **escape analysis** | **phân tích thoát** | Cơ chế compiler xác định biến nằm trên Stack hay Heap |
 | **stack allocation** | **cấp phát trên stack** | Cấp phát vùng nhớ nhanh, tự thu hồi khi hàm kết thúc |
 | **heap allocation** | **cấp phát trên heap** | Cấp phát trên vùng nhớ chung, do Garbage Collector thu hồi |
@@ -105,7 +106,7 @@ Nguyên tắc cốt lõi: **TARGET PROSE ≈ 99% TIẾNG VIỆT** — Văn xuôi
 | **unbuffered channel** | **kênh không đệm** | Kênh yêu cầu bên gửi và bên nhận phải gặp nhau cùng lúc |
 | **buffered channel** | **kênh có đệm** | Kênh có hàng đợi lưu trữ tạm thời các phần tử |
 | **deadlock** | **bế tắc đồng thời** / **deadlock** | Trạng thái các goroutine cùng chờ nhau vô tận mà không giải phóng |
-| **data race** | **xung đột dữ liệu** / **race condition** | Hai goroutine cùng truy cập một ô nhớ mà có ít nhất một bên ghi |
+| **data race** | **tranh chấp dữ liệu / data race** | Hiện tượng hai goroutine cùng truy cập một ô nhớ mà có ít nhất một bên ghi, không có đồng bộ hóa (phân biệt với race condition: cuộc đua logic giữa các tiến trình) |
 | **race detector** | **bộ phát hiện xung đột (`-race`)** | Công cụ runtime phân tích và cảnh báo xung đột dữ liệu |
 | **starvation** | **đói tài nguyên** | Tiến trình bị các luồng khác chiếm dụng tài nguyên quá lâu |
 | **goroutine leak** | **rò rỉ goroutine** | Goroutine bị treo vô hạn, không bao giờ kết thúc giải phóng |
@@ -129,9 +130,10 @@ Nguyên tắc cốt lõi: **TARGET PROSE ≈ 99% TIẾNG VIỆT** — Văn xuôi
 | **actual state** | **trạng thái thực tế** | Hiện trạng đo đạc được từ hạ tầng thực tế (Status) |
 | **rate-limiting** | **giới hạn tốc độ** | Khống chế số lượng yêu cầu trong một đơn vị thời gian |
 | **workqueue** | **hàng đợi công việc** | Hàng đợi chứa các khóa đối tượng cần reconcile |
-| **exponential backoff** | **lùi bước số mũ** | Thuật toán tăng thời gian chờ sau mỗi lần thử lại thất bại |
+| **exponential backoff** | **giãn thời gian thử lại theo hàm mũ (exponential backoff)** / **khoảng chờ thử lại tăng dần** | Thuật toán tăng thời gian chờ sau mỗi lần thử lại thất bại (tuyệt đối không dịch là "lùi bước") |
 | **retry** | **thử lại** | Thực hiện lại tác vụ khi gặp sự cố tạm thời (transient error) |
-| **idempotency** | **tính lũy thỏa** / **tính bảo toàn kết quả** | Thực hiện lặp lại nhiều lần cho cùng một kết quả như một lần |
+| **idempotency** | **tính lũy đẳng (idempotency)** / **tính lũy đẳng** | Đặc tính thực hiện lặp lại nhiều lần vẫn cho cùng một kết quả như một lần (tuyệt đối không dùng "tính lũy thỏa") |
+| **artifact** | **tạo tác build / gói phát hành / artifact** | Sản phẩm sinh ra từ quá trình build (binary, image, OCI blob, package) — tuyệt đối không dịch là "hiện vật" |
 | **health check** | **kiểm tra sức khỏe** | Cơ chế kiểm tra liveness và readiness của dịch vụ |
 | **circuit breaker** | **cầu dao ngắt mạch** | Cơ chế tự động ngắt kết nối đến dịch vụ hỏng để bảo vệ hệ thống |
 | **observability** | **năng lực quan sát** | Khả năng suy luận trạng thái nội tại qua dữ liệu phát ra |

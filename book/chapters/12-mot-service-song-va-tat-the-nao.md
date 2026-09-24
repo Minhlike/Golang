@@ -1,17 +1,17 @@
 # Chương 12 — Một service sống và tắt thế nào
 
-Một service nhỏ thường bắt đầu bằng `http.ListenAndServe(":8080", handler)`. Dòng đó đủ để mở cổng, nhưng chưa đủ để nói service đang hứa điều gì với người gọi, với triển khai system, hay với người vận hành. Khi tiến trình nhận tín hiệu dừng, nếu `main` kết thúc ngay thì yêu cầu đang xử lý bị cắt. Khi một client gửi header chậm, nếu server không có policy đọc header thì connection có thể giữ tài nguyên lâu hơn dự kiến. Khi handler nhận JSON lạ và cứ cố đoán, boundary giữa input không tin cậy và state nội bộ đã biến mất.
+Một service nhỏ thường bắt đầu bằng `http.ListenAndServe(":8080", handler)`. Dòng đó đủ để mở port, nhưng chưa đủ để nói service đang hứa điều gì với người gọi, với deploy system, hay với người vận hành. Khi process nhận tín hiệu dừng, nếu `main` kết thúc ngay thì request đang xử lý bị cắt. Khi một client gửi header chậm, nếu server không có policy đọc header thì connection có thể giữ tài nguyên lâu hơn dự kiến. Khi handler nhận JSON lạ và cứ cố đoán, boundary giữa input không tin cậy và state nội bộ đã biến mất.
 
-Mô hình tinh thần của chương này là: **service là một boundary biến input không tin cậy thành công việc có giới hạn, rồi rút lui theo một vòng đời có thể quan sát**. Routing, middleware, validation và shutdown chỉ đáng đưa vào khi chúng làm boundary này rõ hơn. Chúng không phải danh sách framework feature.
+Mô hình tinh thần của chương này là: **service là một boundary biến input không tin cậy thành công việc có giới hạn, rồi rút lui theo một lifecycle có thể quan sát**. Routing, middleware, validation và shutdown chỉ đáng đưa vào khi chúng làm boundary này rõ hơn. Chúng không phải danh sách framework feature.
 
-## Một triển khai bị cắt ngang cho thấy thiếu contract nào
+## Một deploy bị cắt ngang cho thấy thiếu contract nào
 
-Hãy tưởng tượng `/v1/checks` nhận một target, lưu một yêu cầu kiểm tra, rồi trả `201`. Trong một lần triển khai, load balancer chuyển traffic đi nhưng tiến trình cũ nhận tín hiệu dừng ngay giữa lúc đang ghi phản hồi. Có ba trạng thái cần phân biệt: service còn nhận connection mới, đang để yêu cầu đã nhận đi tới chỗ kết thúc, hay đã dừng. `Server.Shutdown` của `net/http` đóng listener, đóng idle connection, rồi chờ active connection trở về idle và đóng. Nó không tự cancel context của handler đang active. `r.Context()` của incoming yêu cầu có vòng đời riêng: nó bị cancel khi client disconnect, yêu cầu HTTP/2 bị hủy, hoặc khi `ServeHTTP` trả về — không phải chỉ vì `Shutdown` vừa được gọi. Nó không tự chờ connection bị hijack, như WebSocket; những connection dài hạn cần vòng đời riêng.
+Hãy tưởng tượng `/v1/checks` nhận một target, lưu một yêu cầu kiểm tra, rồi trả `201`. Trong một lần deploy, load balancer chuyển traffic đi nhưng process cũ nhận tín hiệu dừng ngay giữa lúc đang ghi response. Có ba trạng thái cần phân biệt: service còn nhận connection mới, đang để request đã nhận đi tới chỗ kết thúc, hay đã dừng. `Server.Shutdown` của `net/http` đóng listener, đóng idle connection, rồi chờ active connection trở về idle và đóng. Nó không tự cancel context của handler đang active. `r.Context()` của incoming request có lifecycle riêng: nó bị cancel khi client disconnect, request HTTP/2 bị hủy, hoặc khi `ServeHTTP` trả về — không phải chỉ vì `Shutdown` vừa được gọi. Nó không tự chờ connection bị hijack, như WebSocket; những connection dài hạn cần lifecycle riêng.
 
 ![Vòng đời phục vụ và rút lui của service](../../assets/diagrams/http-service-lifecycle.png)
-@figure vòng đời khái niệm khi service tắt an toàn (graceful shutdown). thời hạn xử lý (deadline) của shutdown là policy vận hành: nó giới hạn thời gian chờ, không biến mọi yêu cầu thành thành công.
+@figure Lifecycle khái niệm khi service graceful shutdown. Deadline của shutdown là policy vận hành: nó giới hạn thời gian chờ, không biến mọi request thành thành công.
 
-Một hàm chạy server có thể giữ contract ấy trong một nơi thay vì để `main` thoát vì mọi error đều trông giống nhau. Hãy đọc phần đầu và phần shutdown dưới đây như hai đoạn liên tiếp của cùng một hàm; tách chúng ra cũng giúp vòng đời hiện rõ hơn trên trang:
+Một hàm chạy server có thể giữ contract ấy trong một nơi thay vì để `main` thoát vì mọi error đều trông giống nhau. Hãy đọc phần đầu và phần shutdown dưới đây như hai đoạn liên tiếp của cùng một function; tách chúng ra cũng giúp lifecycle hiện rõ hơn trên trang:
 
 ~~~go
 func ServeUntilStopped(
@@ -43,7 +43,7 @@ func ServeUntilStopped(
 	}
 ~~~
 
-Đến đây server đã nhận yêu cầu dừng, nhưng `ctx` không nên bị dùng trực tiếp làm shutdown context: nó đã canceled. Ta tạo một ngân sách thời gian mới để `Shutdown` có cơ hội drain yêu cầu đang chạy:
+Đến đây server đã nhận yêu cầu dừng, nhưng `ctx` không nên bị dùng trực tiếp làm shutdown context: nó đã canceled. Ta tạo một ngân sách thời gian mới để `Shutdown` có cơ hội drain request đang chạy:
 
 ~~~go
 	base := context.Background()
@@ -63,11 +63,11 @@ func ServeUntilStopped(
 }
 ~~~
 
-Ba guard đầu không phải defensive programming vô định. `srv`, `ln` và `grace` là ba điều kiện đầu vào của vòng đời helper; nếu một trong chúng thiếu, chạy `Serve` chỉ để nhận panic hoặc treo không giúp bên gọi sửa cấu hình. `shutdownCtx` được tạo từ `context.Background()` có chủ đích. Root context đã bị cancel để yêu cầu dừng; nếu lấy thời hạn xử lý (deadline) shutdown trực tiếp từ nó, thời hạn xử lý (deadline) sẽ bị cancel ngay trước khi `Shutdown` có cơ hội drain. `grace` phải đến từ SLO, thời gian triển khai và loại yêu cầu của service, không phải một con số copy từ ví dụ. Sau thời hạn xử lý (deadline), `Shutdown` trả error; quyết định tiếp theo - log, alarm, force close hay để supervisor xử lý - là policy cần được viết rõ ở boundary vận hành.
+Ba guard đầu không phải defensive programming vô định. `srv`, `ln` và `grace` là ba điều kiện đầu vào của lifecycle helper; nếu một trong chúng thiếu, chạy `Serve` chỉ để nhận panic hoặc treo không giúp caller sửa cấu hình. `shutdownCtx` được tạo từ `context.Background()` có chủ đích. Root context đã bị cancel để yêu cầu dừng; nếu lấy deadline shutdown trực tiếp từ nó, deadline sẽ bị cancel ngay trước khi `Shutdown` có cơ hội drain. `grace` phải đến từ SLO, thời gian deploy và loại request của service, không phải một con số copy từ ví dụ. Sau deadline, `Shutdown` trả error; quyết định tiếp theo - log, alarm, force close hay để supervisor xử lý - là policy cần được viết rõ ở boundary vận hành.
 
-### Từ signal của tiến trình sang context của server
+### Từ signal của process sang context của server
 
-`ServeUntilStopped` đã nhận một `context.Context`, nên `main` chỉ cần nối tiến trình vòng đời vào input đó. Trên Unix-like host, `signal.NotifyContext` biến `SIGINT` hoặc `SIGTERM` thành hủy thực thi; `defer stop()` hủy đăng ký signal handling khi `main` rời đi. Cho đến khi `stop()` được gọi, signal vẫn bị chuyển hướng theo policy này; nếu hệ thống muốn interrupt thứ hai quay lại default hoặc force-exit, đó phải là một quyết định thiết kế có chủ đích. Sau signal đầu tiên, `ServeUntilStopped` đi vào `Shutdown` với `grace` đã chọn thay vì cắt yêu cầu ngay.
+`ServeUntilStopped` đã nhận một `context.Context`, nên `main` chỉ cần nối process lifecycle vào input đó. Trên Unix-like host, `signal.NotifyContext` biến `SIGINT` hoặc `SIGTERM` thành cancellation; `defer stop()` hủy đăng ký signal handling khi `main` rời đi. Cho đến khi `stop()` được gọi, signal vẫn bị chuyển hướng theo policy này; nếu hệ thống muốn interrupt thứ hai quay lại default hoặc force-exit, đó phải là một quyết định thiết kế có chủ đích. Sau signal đầu tiên, `ServeUntilStopped` đi vào `Shutdown` với `grace` đã chọn thay vì cắt request ngay.
 
 ~~~go
 ctx, stop := signal.NotifyContext(
@@ -87,7 +87,7 @@ if err := ServeUntilStopped(
 }
 ~~~
 
-Đây là bridge ở tiến trình boundary, không phải permission cho handler bỏ qua `r.Context()`: `Shutdown` chỉ ngừng nhận yêu cầu mới và chờ yêu cầu đang chạy; nó không tự cancel `r.Context()` của những handler đó. Handler vẫn phải truyền `r.Context()` vào database hay outbound HTTP để phản ứng với vòng đời riêng của incoming yêu cầu.
+Đây là bridge ở process boundary, không phải permission cho handler bỏ qua `r.Context()`: `Shutdown` chỉ ngừng nhận request mới và chờ request đang chạy; nó không tự cancel `r.Context()` của những handler đó. Handler vẫn phải truyền `r.Context()` vào database hay outbound HTTP để phản ứng với lifecycle riêng của incoming request.
 
 Nếu policy của service là signal cũng phải cancel handler đang chạy, việc đó cần được nối một cách tường minh, chẳng hạn bằng application context làm `Server.BaseContext` rồi cancel context ấy khi nhận signal:
 
@@ -100,18 +100,18 @@ srv.BaseContext = func(net.Listener) context.Context {
 cancelApp()
 ~~~
 
-Đó là một policy khác với graceful drain thuần túy: handler nào quan sát context có thể dừng trước khi hoàn tất công việc đang phục vụ. Chọn nó khi bounded shutdown đáng giá hơn việc để yêu cầu đang chạy hoàn thành. Trên Windows, `os.Interrupt` là signal portable; service host và tiến trình supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
+Đó là một policy khác với graceful drain thuần túy: handler nào quan sát context có thể dừng trước khi hoàn tất công việc đang phục vụ. Chọn nó khi bounded shutdown đáng giá hơn việc để request đang chạy hoàn thành. Trên Windows, `os.Interrupt` là signal portable; service host và process supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
 
 ## Handler là cửa kiểm tra, không phải nơi “cố hiểu” input
 
-Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển giá trị hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
+Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
 
-> **Dừng để dự đoán:** yêu cầu có document đầu hợp lệ rồi nối thêm `{"debug":true}` có được gọi `Store` không? Nếu câu trả lời là không, mã nguồn phải có một bước chứng minh stream đã kết thúc; `Decode` thành công một lần chưa đủ bằng chứng.
+> **Dừng để dự đoán:** request có document đầu hợp lệ rồi nối thêm `{"debug":true}` có được gọi `Store` không? Nếu câu trả lời là không, code phải có một bước chứng minh stream đã kết thúc; `Decode` thành công một lần chưa đủ bằng chứng.
 
 ~~~go
 func (a app) createCheck(
 	w http.ResponseWriter,
-	r *http.yêu cầu,
+	r *http.Request,
 ) {
 	if r.Method != http.MethodPost {
 		methodNotAllowed(w)
@@ -142,14 +142,14 @@ func (a app) createCheck(
 }
 ~~~
 
-Lần `Decode` thứ hai không lấy một check khác. Nó chỉ chứng minh sau giá trị đầu tiên còn whitespace và `io.EOF`; nếu còn JSON giá trị, yêu cầu bị từ chối trước khi chạm `Store`. Đoạn mã nguồn vẫn không phải decoder hoàn chỉnh cho mọi API: điểm cuối nhận upload chẳng hạn không thể dùng một giới hạn 4 KiB như vậy. Ý chính là limit, schema và validation phải xuất hiện trước khi input trở thành công việc nội bộ; đừng parse vô hạn rồi mới hỏi yêu cầu có hợp lệ hay không.
+Lần `Decode` thứ hai không lấy một check khác. Nó chỉ chứng minh sau value đầu tiên còn whitespace và `io.EOF`; nếu còn JSON value, request bị từ chối trước khi chạm `Store`. Đoạn code vẫn không phải decoder hoàn chỉnh cho mọi API: endpoint nhận upload chẳng hạn không thể dùng một giới hạn 4 KiB như vậy. Ý chính là limit, schema và validation phải xuất hiện trước khi input trở thành công việc nội bộ; đừng parse vô hạn rồi mới hỏi request có hợp lệ hay không.
 
 `http.MaxBytesReader` là một quota ở boundary body. `Decoder.DisallowUnknownFields` chọn strict schema, hữu ích khi client gửi JSON nhầm field mà ta không muốn lặng lẽ bỏ qua. Strictness là lựa chọn compatibility: một API mở rộng có thể cần versioning hoặc field policy khác. Nhưng “bỏ qua mọi field lạ” không được là phản xạ vô thức khi input điều khiển hành vi có chi phí.
 
-Lab bắt đầu bằng các test đỏ cho yêu cầu hợp lệ, method sai, JSON chứa field lạ, document thứ hai và target sai. Tự viết handler trước khi mở `fixed/`:
+Lab bắt đầu bằng các test đỏ cho request hợp lệ, method sai, JSON chứa field lạ, document thứ hai và target sai. Tự viết handler trước khi mở `fixed/`:
 
 ~~~powershell
-cd labs/part12-service-vòng đời
+cd labs/part12-service-lifecycle
 go test -tags exercise ./exercise
 go test -race -tags exercise ./exercise
 go test -tags lifecycleexercise ./exercise
@@ -157,35 +157,35 @@ go test -race -tags lifecycleexercise ./exercise
 go test ./fixed
 ~~~
 
-Test handler còn đặt hai JSON giá trị nối nhau để tách hai failure dễ lẫn: document đầu hợp lệ không cho phép phần còn lại trở thành input bí mật bị bỏ qua. Sau khi handler xanh, test `lifecycleexercise` đưa listener cục bộ và context cancel vào `ServeUntilStopped`; contract là listener phục vụ được yêu cầu trước hủy thực thi, server return sau shutdown, và precondition sai bị trả thành error thay vì biến thành panic. Test dùng `httptest` hoặc listener cục bộ, nên kiểm chứng được contract HTTP mà không mở cổng ra mạng. `ResponseRecorder.Result()` là snapshot phản hồi sau khi handler đã chạy; đừng `DeepEqual` cả `http.Response`, chỉ assert status, header và body mà API đã hứa.
+Test handler còn đặt hai JSON value nối nhau để tách hai failure dễ lẫn: document đầu hợp lệ không cho phép phần còn lại trở thành input bí mật bị bỏ qua. Sau khi handler xanh, test `lifecycleexercise` đưa listener cục bộ và context cancel vào `ServeUntilStopped`; contract là listener phục vụ được request trước cancellation, server return sau shutdown, và precondition sai bị trả thành error thay vì biến thành panic. Test dùng `httptest` hoặc listener cục bộ, nên kiểm chứng được contract HTTP mà không mở port ra mạng. `ResponseRecorder.Result()` là snapshot response sau khi handler đã chạy; đừng `DeepEqual` cả `http.Response`, chỉ assert status, header và body mà API đã hứa.
 
 ## Routing và middleware là cách đặt luật ở đúng biên
 
-Một router nhỏ có giá trị khi nhìn vào route table ta biết method nào vào handler nào. Với service còn ít điểm cuối, `http.ServeMux` và kiểm tra method rõ ràng thường tốt hơn một phụ thuộc lớn. Route pattern, authentication requirement và giới hạn body nên đọc được từ boundary; business hàm phía trong chỉ nhận giá trị đã được kiểm tra và context của yêu cầu.
+Một router nhỏ có giá trị khi nhìn vào route table ta biết method nào vào handler nào. Với service còn ít endpoint, `http.ServeMux` và kiểm tra method rõ ràng thường tốt hơn một dependency lớn. Route pattern, authentication requirement và giới hạn body nên đọc được từ boundary; business function phía trong chỉ nhận value đã được kiểm tra và context của request.
 
-Middleware hợp lý là luật áp dụng cho nhiều yêu cầu: gắn yêu cầu ID đã được server tạo, log outcome, tracing, authentication hoặc giới hạn rate. Nó không phải nơi để nhét business branching. Nếu middleware cần ghi status và số byte, wrapper `ResponseWriter` phải tôn trọng contract của `net/http`; một wrapper cẩu thả có thể làm hỏng optional interface hoặc ghi header sau body. Bắt đầu bằng middleware nhỏ mà anh có thể test, thay vì sao chép một “stack chuẩn” không ai còn đọc được.
+Middleware hợp lý là luật áp dụng cho nhiều request: gắn request ID đã được server tạo, log outcome, tracing, authentication hoặc giới hạn rate. Nó không phải nơi để nhét business branching. Nếu middleware cần ghi status và số byte, wrapper `ResponseWriter` phải tôn trọng contract của `net/http`; một wrapper cẩu thả có thể làm hỏng optional interface hoặc ghi header sau body. Bắt đầu bằng middleware nhỏ mà anh có thể test, thay vì sao chép một “stack chuẩn” không ai còn đọc được.
 
-Logging nên trả lời được câu hỏi vận hành: yêu cầu ID, route/method, status, duration, outcome và lỗi đã phân loại. Nó không nên ghi password, bearer token, cookie hoặc toàn bộ body mặc định. Một error trả cho client là contract public; log nội bộ có thể giữ cause kỹ thuật với mức truy cập phù hợp. Hai thứ có cùng text thường là dấu hiệu boundary chưa rõ.
+Logging nên trả lời được câu hỏi vận hành: request ID, route/method, status, duration, outcome và lỗi đã phân loại. Nó không nên ghi password, bearer token, cookie hoặc toàn bộ body mặc định. Một error trả cho client là contract public; log nội bộ có thể giữ cause kỹ thuật với mức truy cập phù hợp. Hai thứ có cùng text thường là dấu hiệu boundary chưa rõ.
 
-## hết thời hạn (timeout) server phòng một kiểu áp suất khác
+## Timeout server phòng một kiểu áp suất khác
 
-hết thời hạn (timeout) client ở chương trước bảo vệ người *gọi*. Server còn phải chọn giới hạn để bảo vệ resource của chính nó. `ReadHeaderTimeout` giới hạn thời gian đọc yêu cầu header rồi reset thời hạn xử lý (deadline) để handler tự quyết rate/thời hạn xử lý (deadline) của body. `ReadTimeout` bao cả yêu cầu body nhưng không cho handler policy riêng cho từng upload. `WriteTimeout` giới hạn phản hồi write; `IdleTimeout` giới hạn chờ yêu cầu kế tiếp trên keep-alive connection. `MaxHeaderBytes` giới hạn header parser.
+Timeout client ở chương trước bảo vệ người *gọi*. Server còn phải chọn giới hạn để bảo vệ resource của chính nó. `ReadHeaderTimeout` giới hạn thời gian đọc request header rồi reset deadline để handler tự quyết rate/deadline của body. `ReadTimeout` bao cả request body nhưng không cho handler policy riêng cho từng upload. `WriteTimeout` giới hạn response write; `IdleTimeout` giới hạn chờ request kế tiếp trên keep-alive connection. `MaxHeaderBytes` giới hạn header parser.
 
-@table Server hết thời hạn (timeout) là các policy khác nhau
+@table Server timeout là các policy khác nhau
 
 | Field | Bảo vệ điều gì | Cần quyết định cùng nó |
 | --- | --- | --- |
 | `ReadHeaderTimeout` | Client gửi header quá chậm | Header hợp lệ cần bao lâu trong mạng thực? |
-| `ReadTimeout` | Toàn bộ đọc yêu cầu, gồm body | điểm cuối upload có rate/lifetime riêng không? |
-| `WriteTimeout` | phản hồi write kéo dài | Streaming phản hồi có cần policy khác? |
-| `IdleTimeout` | Keep-alive không gửi yêu cầu tiếp | Bao lâu connection rảnh vẫn đáng giữ? |
+| `ReadTimeout` | Toàn bộ đọc request, gồm body | Endpoint upload có rate/lifetime riêng không? |
+| `WriteTimeout` | Response write kéo dài | Streaming response có cần policy khác? |
+| `IdleTimeout` | Keep-alive không gửi request tiếp | Bao lâu connection rảnh vẫn đáng giữ? |
 | `MaxHeaderBytes` | Header bất thường lớn | Cookie/proxy hợp lệ chiếm bao nhiêu? |
 
-Không có bộ số chung đúng cho mọi service. Với hết thời hạn (timeout) đọc/ghi/idle, zero có thể nghĩa là không đặt hết thời hạn (timeout) theo documented behavior của `net/http`; `MaxHeaderBytes` có default riêng. Default vô thức vẫn là policy. Chọn tải công việc, proxy, upload path và memory budget trước khi đặt number; rồi kiểm thử ingress thật khi có traffic.
+Không có bộ số chung đúng cho mọi service. Với timeout đọc/ghi/idle, zero có thể nghĩa là không đặt timeout theo documented behavior của `net/http`; `MaxHeaderBytes` có default riêng. Default vô thức vẫn là policy. Chọn workload, proxy, upload path và memory budget trước khi đặt number; rồi kiểm thử ingress thật khi có traffic.
 
-`Server.Shutdown` không giết yêu cầu active và cũng không tự cancel `r.Context()` của handler. Handler vẫn cần tôn trọng `r.Context()` khi gọi database, outbound client hoặc worker vì incoming yêu cầu có vòng đời riêng. Chương 9 và 11 đã cho ta hai nửa còn lại: goroutine phải có đường thoát khi context bị hủy; client yêu cầu phải nhận context của bên gọi. tắt an toàn (graceful shutdown) chỉ thực sự graceful khi các boundary bên trong chịu trả lại quyền điều khiển.
+`Server.Shutdown` không giết request active và cũng không tự cancel `r.Context()` của handler. Handler vẫn cần tôn trọng `r.Context()` khi gọi database, outbound client hoặc worker vì incoming request có lifecycle riêng. Chương 9 và 11 đã cho ta hai nửa còn lại: goroutine phải có đường thoát khi context bị hủy; client request phải nhận context của caller. Graceful shutdown chỉ thực sự graceful khi các boundary bên trong chịu trả lại quyền điều khiển.
 
-Service đáng tin được đánh giá ở boundary: input bị giới hạn ở đâu, business mã nguồn nhận gì, phản hồi/log tách public/private không, server ngừng nhận việc khi nào và yêu cầu cũ được bao lâu để kết thúc. WebSocket cần một owner riêng. Trả lời được các câu ấy, service có vòng đời để vận hành thay vì chỉ `ListenAndServe`.
+Service đáng tin được đánh giá ở boundary: input bị giới hạn ở đâu, business code nhận gì, response/log tách public/private không, server ngừng nhận việc khi nào và request cũ được bao lâu để kết thúc. WebSocket cần một owner riêng. Trả lời được các câu ấy, service có lifecycle để vận hành thay vì chỉ `ListenAndServe`.
 
 @references
 1. Go Team. Package `net/http`, phần Handler, Server fields, `Shutdown` và `ResponseWriter`. pkg.go.dev/net/http

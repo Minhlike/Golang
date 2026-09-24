@@ -715,6 +715,15 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
 
 
 def build() -> None:
+    # Preflight: code line width validation
+    import validate_code_width
+    violations = validate_code_width.validate_all_code_blocks()
+    if violations:
+        raise RuntimeError(
+            f"Preflight failed: {len(violations)} code line(s) overflow printable width box. "
+            f"Run scripts/validate_code_width.py for details."
+        )
+
     chapters, appendices = get_manuscript()
     for doc_path in chapters + appendices:
         if not doc_path.exists():

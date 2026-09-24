@@ -72,43 +72,49 @@ Mental model mặc định bắt buộc:
 Không cần bóc tách token-by-token mọi dòng code trong sách, nhưng BẮT BUỘC phải làm khi giới thiệu một cú pháp mới hoặc khi sự bóc tách đó giúp người học xây dựng mental model vững chắc.
 
 --------------------------------------------------
-8 LUẬT BẤT BIẾN DÀI HẠN (PERMANENT CONSTITUTIONAL LAWS)
+12 ĐIỀU HIẾN PHÁP BẤT BIẾN (PERMANENT CONSTITUTIONAL LAWS)
 --------------------------------------------------
 
 1. FIRST-PRINCIPLES BASIC GO:
    Mọi cú pháp, ngữ nghĩa và idiom được dạy từ bản chất nguyên tử nhất. Không để tích tụ "nợ nhận thức" (cognitive debt). Không giả định người học đã biết trước cú pháp Go.
 
-2. VIETNAMESE-FIRST:
-   Mục tiêu văn xuôi (prose) ≈ 99% tiếng Việt trong sáng, tự nhiên, sư phạm. Chỉ giữ tiếng Anh cho: Go keywords, identifiers, type/function/package names, official API symbols, protocol names, CLI flags/commands, và exact error messages.
+2. VIETNAMESE-NATURAL FIRST:
+   Văn xuôi (prose), lời dẫn, chú thích sơ đồ, tiêu đề bảng biểu viết bằng tiếng Việt trong sáng, tự nhiên, sư phạm. Tuyệt đối KHÔNG áp dụng quota số học cơ học (như 99% arithmetic quota) gây ra tình trạng dịch máy móc, cưỡng ép hoặc làm hỏng mã nguồn. Giữ nguyên tiếng Anh cho: Go keywords, identifiers, type/function/package names, official API symbols, protocol names, CLI flags/commands, và exact error messages.
 
-3. BULLET-MINIMAL:
-   Văn xuôi hoàn chỉnh, mạch lạc là định dạng mặc định. Bullet points chỉ dùng cho checklist thực hành, tóm tắt đối chiếu độc lập, hoặc danh mục taxonomy (như Living Error Atlas). Không dùng bullet để thay thế cho việc giải thích cơ chế.
+3. ONE-CONCEPT-ONE-NAME:
+   Sử dụng nhất quán một tên gọi chuẩn mực xuyên suốt toàn bộ cuốn sách, không tùy tiện đổi cách gọi giữa các trang hay các chương.
 
-4. VISUAL-SEMANTICS-FIRST:
-   Loại sơ đồ phải phản ánh đúng bản chất thông tin:
-   - Sequence: trật tự thời gian và tương tác giữa các bên ("Ai gọi ai? Theo thứ tự nào?").
-   - Activity: luồng xử lý, rẽ nhánh if/else, vòng lặp, fork/join.
-   - State: sự chuyển đổi trạng thái của thực thể (State Transitions).
-   - Component / Architecture: kiến trúc module, ranh giới dịch vụ, cấu trúc triển khai.
-   - Mind Map: tổng quan bức tranh khái niệm, phân cấp và liên tưởng (association).
-   Tuyệt đối không dùng sequence diagram cho taxonomy, không dùng mind map cho protocol chronology, không dùng activity diagram cho memory layout.
+4. NO-MACHINE-BILINGUAL-PARENTHESES:
+   Tuyệt đối không lặp lại dấu ngoặc đơn song ngữ ở mọi câu văn gây rối mắt ("machine-translation bilingual parentheses"). Khi một thuật ngữ mới xuất hiện lần đầu, có thể chú giải nhẹ nhàng dạng `thuật ngữ tiếng Việt (English term)`, sau đó dùng nhất quán một tên gọi.
 
-5. SOURCE-FIRST DIAGRAM EDITING:
-   Mọi sơ đồ (trừ screenshot/evidence thực tế) phải có source of truth dạng văn bản có thể tái tạo (`.puml` hoặc code vector Python/SVG). File `.png` chỉ là artifact được biên dịch từ source. TUYỆT ĐỐI không sửa chữ trực tiếp trên bitmap PNG.
+5. EXACT-OUTPUT-IMMUTABILITY:
+   Chuỗi thông điệp lỗi compiler/runtime, output dòng lệnh CLI, kết quả kiểm thử là bằng chứng kỹ thuật bất biến; cấm tự ý dịch hoặc làm giả chuỗi ký tự lỗi.
 
-6. AUTHENTIC MIND-MAPPING DISCIPLINE:
-   Mọi Mind Map trong sách phải tuân thủ nghiêm ngặt triết lý Tony Buzan với 5 Luật Cốt Lõi:
-   - Nhánh (Branches): tỏa tròn từ tâm, cong hữu cơ, đậm ở gốc và mảnh dần ra ngoài.
-   - Từ khóa (Keywords): kỷ luật 1 từ hoặc cụm từ cực ngắn trên mỗi nhánh; cấm đưa cả đoạn văn vào nhánh.
-   - Màu sắc / Tương phản (Colour): chuyển đổi sang thang độ xám (grayscale-adapted) bằng nét vẽ, độ dày, hoa văn và sắc độ để phục vụ in ấn sách.
-   - Hình ảnh (Pictures): biểu tượng và hình trung tâm có tính liên tưởng và ghi nhớ cao.
-   - Cấu trúc (Structure): phân cấp xuyên tâm rõ ràng từ khái quát đến chi tiết, có liên kết chéo (cross-links) khi thể hiện quan hệ tương hỗ.
+6. CONTEXTUAL-TECHNICAL-TRANSLATION:
+   Dịch thuật ngữ dựa trên bản chất cơ chế kỹ thuật, không dịch từng chữ (word-by-word) ngô nghê. Ví dụ: `idempotency` là `tính lũy đẳng`, `data race` là `tranh chấp dữ liệu`, `receiver` là `biến nhận`.
 
-7. GRAYSCALE-FIRST:
-   Toàn bộ hệ thống in ấn (typography, code block, table, diagram, mindmap) phải đạt độ tương phản và sắc nét tối ưu ở 300+ DPI trên máy in laser đen trắng. Không bao giờ để hai thành phần chỉ phân biệt được bằng màu sắc.
+7. NO-AUTO-PROSE-REPLACEMENT:
+   Cấm tuyệt đối việc sử dụng script find-replace tự động hoặc regex trên toàn bộ văn bản mà không soát lỗi từng dòng, nhằm ngăn ngừa triệt để nguy cơ làm biến dạng mã nguồn, kiểu dữ liệu hay cú pháp lệnh.
 
-8. NO-HALLUCINATION VISUALS:
-   Mọi node, nhãn và mũi tên trong sơ đồ phải được bảo chứng bằng sự thật kỹ thuật (Go spec, code kiểm thử, upstream repo đã khóa phiên bản). KHÔNG CÓ QUAN HỆ ĐÃ XÁC MINH = KHÔNG CÓ MŨI TÊN (NO VERIFIED RELATION = NO ARROW).
+8. CODE-WIDTH-PREFLIGHT:
+   Mọi khối mã nguồn (code block) phải được kiểm tra tự động bằng `scripts/validate_code_width.py` trước khi biên dịch PDF. Đảm bảo 100% dòng code không tràn ra ngoài hộp in (`CODE_LINES_OVERFLOWING = 0`).
+
+9. TABLE-READABILITY-PREFLIGHT:
+   Mọi bảng biểu phải được căn chỉnh độ rộng cột hợp lý, không tràn lề trang, không che lấp chữ, đảm bảo khả năng đọc hoàn hảo trên bản in.
+
+10. VISUAL-SEMANTICS-FIRST:
+    Loại sơ đồ phải phản ánh đúng bản chất thông tin:
+    - Sequence: trật tự thời gian và tương tác ("Ai gọi ai? Theo thứ tự nào?").
+    - Activity: luồng xử lý, rẽ nhánh if/else, vòng lặp, fork/join.
+    - State: sự chuyển đổi trạng thái của thực thể (State Transitions).
+    - Component / Architecture: kiến trúc module, ranh giới dịch vụ, cấu trúc triển khai.
+    - Branching Concept Diagram (Sơ đồ khái niệm phân nhánh): cấu trúc cây logic phân nhánh thích ứng in ấn sách và mã hóa bằng PlantUML. Phân biệt rõ với sơ đồ tư duy hữu cơ vẽ tay (Buzan Organic Mind Map) để tránh overclaim.
+
+11. NO-HALLUCINATION:
+    Mọi khẳng định kỹ thuật, mã nguồn ví dụ, sơ đồ, phân tích thư viện phải được bảo chứng bằng sự thật kỹ thuật (Go spec, code kiểm thử thực tế, upstream repo đã khóa hash bất biến). Không có bằng chứng = không phát biểu.
+
+12. ERROR-ATLAS-LAST:
+    Phụ lục A (Atlas Lỗi Go) LUÔN LUÔN nằm ở vị trí CUỐI CÙNG của cuốn sách bất kể có thêm bao nhiêu chương mới hay back matter nào trong tương lai. Pipeline build PDF phải tự động duy trì invariant này.
 
 --------------------------------------------------
 CÁC HÌNH THỨC DẠY CÚ PHÁP (PEDAGOGICAL FORMS)

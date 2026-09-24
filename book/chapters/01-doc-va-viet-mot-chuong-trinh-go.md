@@ -27,7 +27,7 @@ func main() {
 
 ![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
 
-@figure Giải phẫu trực quan cấu trúc một tệp nguồn Go. Sơ đồ cho thấy tên gói (package name), gói thực thi (main package), khai báo hàm và hàm khởi điểm là các khái niệm có quan hệ mật thiết, nhưng phân định ranh giới rõ ràng.
+@figure Giải phẫu trực quan cấu trúc một tệp nguồn Go. Tên gói, hàm khai báo và hàm khởi điểm có ranh giới rõ ràng.
 
 Chưa cần đọc thuộc từng dòng. Hãy quan sát luồng chảy của chương trình qua ba câu hỏi: chương trình bắt đầu chạy ở đâu, giá trị nào được tạo ra trong bộ nhớ, và thông điệp nào được gửi ra màn hình? Câu trả lời lần lượt là: hàm `main`, giá trị nguyên văn `503` cùng chuỗi kết quả từ hàm `classify`, và lời gọi hàm in `fmt.Println`.
 
@@ -37,19 +37,19 @@ Từ trên xuống dưới, tệp mã nguồn trên được chia thành bốn v
 
 1. **Khai báo gói (`package`):** Xác định tệp thuộc về phân vùng mã nguồn nào.
 2. **Nạp thư viện (`import`):** Cho phép tệp tham chiếu các hàm và kiểu dữ liệu từ các gói khác.
-3. **Khai báo cấp tệp (Package-level các khai báo):** Nơi định nghĩa hằng số (`const`), biến toàn cục (`var`) hoặc các hàm tự viết (`func`).
-4. **Hàm khởi điểm (`func main`):** Nơi chuỗi các câu lệnh bắt đầu được CPU thực thi tuần tự.
+3. **Khai báo cấp tệp:** Nơi định nghĩa hằng số (`const`), biến cấp gói (`var`) hoặc các hàm tự viết (`func`).
+4. **Hàm khởi điểm (`func main`):** Nơi chuỗi các câu lệnh bắt đầu được thực thi tuần tự sau khi hoàn tất khởi tạo.
 
-| Dòng hoặc đoạn mã | Vai trò ngữ pháp | Tác dụng thực tế khi chương trình chạy |
+| Dòng mã | Vai trò ngữ pháp | Tác dụng |
 | :--- | :--- | :--- |
-| `package main` | Khai báo gói (Package clause) | Đặt tệp vào gói `main`. Một chương trình thực thi hoàn chỉnh bắt buộc phải có gói `main` và hàm `main()` không nhận tham số, không trả về giá trị. |
-| `import "fmt"` | Khai báo nạp thư viện (Import) | Cho phép tham chiếu gói `fmt` từ thư viện chuẩn của Go để định dạng nhập xuất. |
-| `const service = "checkout"` | Khai báo hằng số cấp tệp | Gắn một tên định danh cố định vào một chuỗi ký tự bất biến trong suốt vòng đời chương trình. |
-| `func classify(status int) string` | Chữ ký hàm (chữ ký hàm) | Định nghĩa hàm `classify` nhận một tham số kiểu `int` và trả về một kết quả kiểu `string`. |
-| `status >= 500` | Biểu thức điều kiện (biểu thức) | Tính toán so sánh giữa giá trị của biến `status` với số 500, sinh ra một giá trị kiểu `bool` (`true` hoặc `false`). |
-| `return "failed"` | Câu lệnh trả về (Return câu lệnh) | Kết thúc lời gọi hàm hiện tại và chuyển giao giá trị kết quả về cho bên gọi. |
-| `status := 503` | Khai báo biến ngắn (Short khai báo) | Cấp phát ô nhớ cho biến `status` trong khối lệnh `main` và gán giá trị khởi tạo là 503. |
-| `fmt.Println(service, label)` | Lời gọi hàm (hàm call) | Triệu gọi hàm xuất dữ liệu của gói `fmt` để in hai giá trị ra màn hình console và tự động xuống dòng. |
+| `package main` | Khai báo gói | Đặt tệp vào gói `main` để tạo tệp thực thi. |
+| `import "fmt"` | Khai báo nhập gói | Cho phép dùng các định danh được xuất từ gói `fmt`. |
+| `const service = "checkout"` | Khai báo hằng | Gắn tên `service` với một hằng chuỗi bất biến. |
+| `func classify(status int) string` | Khai báo hàm | Khai báo hàm nhận `int` và trả về `string`. |
+| `status >= 500` | Biểu thức so sánh | So sánh giá trị và tạo ra giá trị `bool`. |
+| `return "failed"` | Câu lệnh trả về | Kết thúc lời gọi hiện tại và trả chuỗi cho bên gọi. |
+| `status := 503` | Khai báo biến ngắn | Khai báo biến `status` cục bộ và khởi tạo bằng `503`. |
+| `fmt.Println(service, label)` | Lời gọi hàm | Triệu gọi hàm `Println` của gói `fmt` để xuất dữ liệu. |
 
 Việc định vị chính xác vai trò ngữ pháp của từng dòng giúp ta đọc thông điệp lỗi của trình biên dịch một cách bình tĩnh: lỗi có thể nằm ở một biểu thức sai cú pháp, một phép so sánh cấn kiểu dữ liệu, hay một biến bị gọi ngoài phạm vi sống, thay vì cảm giác hoang mang rằng "toàn bộ chương trình đang bị hỏng".
 
@@ -57,20 +57,20 @@ Việc định vị chính xác vai trò ngữ pháp của từng dòng giúp ta
 
 @figure Mô hình các lớp xử lý của Go compiler. Trình biên dịch đọc tệp văn bản từ cấp độ từ vựng (token), dựng cây cú pháp trừu tượng (AST), kiểm tra chặt chẽ tính tương thích của kiểu dữ liệu, rồi mới sinh mã máy thực thi.
 
-## Định danh (tên định danh) và Từ khóa (từ khóa)
+## Định danh và Từ khóa
 
-Trong đoạn mã trên, `service`, `fmt`, `Println`, `classify`, `status` và `label` là các **định danh (các tên định danh)** — những cái tên do con người đặt ra để gọi một biến, một hàm, hoặc một gói mã nguồn.
+Trong đoạn mã trên, `service`, `fmt`, `Println`, `classify`, `status` và `label` là các **định danh (identifiers)** — những cái tên do con người đặt ra để gọi một biến, một hàm, hoặc một gói mã nguồn.
 
-Ngược lại, `package`, `import`, `const`, `func`, `if` và `return` là các **từ khóa (các từ khóa)** của ngôn ngữ Go. Chúng là những từ dành riêng được quy định bất biến trong Go Specification; bạn không bao giờ được phép đặt tên biến hay tên hàm trùng với các từ khóa này.
+Ngược lại, `package`, `import`, `const`, `func`, `if` và `return` là các **từ khóa (keywords)** của ngôn ngữ Go. Chúng là những từ dành riêng được quy định bất biến trong Go Specification; bạn không bao giờ được phép đặt tên biến hay tên hàm trùng với các từ khóa này.
 
 Quy tắc đặt tên định danh trong Go rất nhất quán:
 - Tên định danh gồm các chữ cái, chữ số và dấu gạch dưới `_`, bắt đầu bằng một chữ cái hoặc dấu gạch dưới.
-- Quy ước đặt tên theo kiểu lạc đà: `MixedCaps` hoặc `camelCase` (ví dụ `readTimeout`, `workerPool`), tuyệt đối không dùng kiểu gạch dưới `snake_case`.
+- Quy ước đặt tên theo kiểu lạc đà: `MixedCaps` hoặc `camelCase` (ví dụ `readTimeout`, `workerPool`), không dùng kiểu gạch dưới `snake_case`.
 - **Nguyên tắc xuất khẩu (Export rule):** Nếu một định danh bắt đầu bằng chữ cái in hoa (như `Println`), nó được công khai cho các gói khác bên ngoài nạp vào sử dụng. Nếu bắt đầu bằng chữ thường (như `classify`), nó là định danh nội bộ, chỉ được phép gọi bên trong nội bộ gói đó.
 
 ## Khai báo biến từ nguyên lý đầu tiên
 
-Biến là một ô nhớ trong máy tính được đặt tên để lưu trữ dữ liệu có thể thay đổi trong quá trình thực thi. Trong Go, có bốn cách khai báo biến, phản ánh từng ý đồ sư phạm và bối cảnh kỹ thuật cụ thể:
+Biến là một vùng lưu trữ dữ liệu được đặt tên trong chương trình. Trong Go, có bốn cách khai báo biến, phản ánh từng ý đồ sư phạm và bối cảnh kỹ thuật cụ thể:
 
 ### 1. Khai báo tường minh đầy đủ (`var`)
 
@@ -84,17 +84,18 @@ var maxConnections int = 100
 
 ### 2. Khai báo với suy luận kiểu (Type Inference)
 
-Nếu giá trị khởi tạo đã mang một kiểu dữ liệu rõ ràng, Go compiler đủ thông minh để tự suy luận ra kiểu của biến mà ta không cần gõ lại tên kiểu:
+Nếu giá trị khởi tạo đã mang một kiểu dữ liệu rõ ràng, Go compiler tự suy luận ra kiểu của biến mà ta không cần ghi lại tên kiểu:
 
 ~~~go
-var điểm cuối = "http://localhost:8080" // compiler tự hiểu điểm cuối có kiểu string
+// Trình biên dịch tự suy luận endpoint có kiểu string
+var endpoint = "http://localhost:8080"
 ~~~
 
-### 3. Khai báo không khởi tạo và Khái niệm Giá trị mặc định (Zero giá trị)
+### 3. Khai báo không khởi tạo và Giá trị mặc định (Zero Value)
 
-Trong nhiều ngôn ngữ lập trình như C hay C++, nếu bạn khai báo một biến mà không gán giá trị, ô nhớ đó sẽ chứa "dữ liệu rác" ngẫu nhiên còn sót lại từ các chương trình trước, gây ra những lỗi bộ nhớ nguy hiểm. 
+Trong nhiều ngôn ngữ như C hay C++, nếu bạn khai báo một biến mà không gán giá trị, ô nhớ đó có thể chứa dữ liệu rác ngẫu nhiên còn sót lại.
 
-Go loại bỏ hoàn toàn nguy cơ này bằng cơ chế **Zero giá trị**: Mọi biến khi được khai báo mà không có giá trị khởi tạo sẽ được runtime tự động xóa sạch ô nhớ về giá trị mặc định của kiểu đó:
+Go loại bỏ hoàn toàn nguy cơ này bằng cơ chế **Zero Value**: Mọi biến khi được khai báo mà không có giá trị khởi tạo sẽ tự động nhận giá trị mặc định của kiểu đó:
 
 ~~~go
 var attemptCount int // attemptCount tự động nhận giá trị 0
@@ -102,13 +103,13 @@ var isReady bool      // isReady tự động nhận giá trị false
 var errorMsg string   // errorMsg tự động nhận chuỗi rỗng ""
 ~~~
 
-| Kiểu dữ liệu | Giá trị mặc định (Zero giá trị) | Ý nghĩa thực tế |
+| Kiểu dữ liệu | Giá trị mặc định (Zero Value) | Ý nghĩa thực tế |
 | :--- | :---: | :--- |
 | Số nguyên (`int`, `int64`, `uint`...) | `0` | Số không |
 | Số thực (`float32`, `float64`) | `0.0` | Số không dấu phẩy động |
 | Logic (`bool`) | `false` | Trạng thái sai |
 | Chuỗi ký tự (`string`) | `""` | Chuỗi rỗng độ dài bằng 0 (không phải `nil`) |
-| Con trỏ, lát cắt, bản đồ, kênh, interface | `nil` | Con trỏ chưa trỏ vào vùng nhớ nào |
+| Con trỏ, lát cắt, bản đồ, kênh, interface | `nil` | Chưa trỏ vào vùng dữ liệu nào |
 
 ### 4. Khai báo biến ngắn (`:=`)
 
@@ -118,29 +119,31 @@ Trong thân hàm, cú pháp khai báo ngắn `:=` là cách viết phổ biến 
 status := 503
 ~~~
 
-Toán tử `:=` thực hiện cùng lúc ba nhiệm vụ: tạo biến mới, suy luận kiểu dữ liệu từ vế phải, và gán giá trị khởi tạo.
+Toán tử `:=` thực hiện cùng lúc ba nhiệm vụ: khai báo biến mới, suy luận kiểu dữ liệu từ vế phải, và gán giá trị khởi tạo.
 
 > **Lưu ý bất biến:** Cú pháp `:=` **chỉ được phép sử dụng bên trong thân hàm**. Ở cấp độ tệp (ngoài thân hàm), mọi biến bắt buộc phải khai báo bằng từ khóa `var` hoặc `const`.
 
-### Bảng so sánh các hình thức khai báo (Syntax Contrast)
+### Bảng so sánh các hình thức khai báo
 
-| Cú pháp | Nơi được dùng | Khi nào nên dùng? | Ví dụ thực tế |
+| Cú pháp | Phạm vi sử dụng | Khi nào nên dùng? | Ví dụ |
 | :--- | :--- | :--- | :--- |
-| `name := value` | Chỉ trong thân hàm | Khi khai báo biến cục bộ ngắn gọn và giá trị khởi tạo đã rõ ràng. | `count := 1` |
-| `var name type` | Cả trong hàm lẫn cấp tệp | Khi cần tạo biến rỗng sẵn sàng đón nhận giá trị sau (dựa vào Zero giá trị). | `var err error` |
-| `var name = value` | Cả trong hàm lẫn cấp tệp | Khi khai báo biến cấp gói (package-level) hoặc khi cần type inference ở phạm vi rộng. | `var defaultTimeout = 30 * time.Second` |
-| `var name type = value` | Cả trong hàm lẫn cấp tệp | Khi muốn chỉ định một kiểu cụ thể khác với suy luận mặc định (ví dụ ép sang interface). | `var r io.Reader = &buf` |
+| `name := value` | Chỉ trong thân hàm | Biến cục bộ ngắn gọn, khởi tạo trực tiếp | `count := 1` |
+| `var name type` | Trong hàm và cấp tệp | Biến đón nhận giá trị sau (dùng zero value) | `var err error` |
+| `var name = value` | Trong hàm và cấp tệp | Biến cấp gói hoặc suy luận kiểu rõ ràng | `var timeout = 30 * time.Second` |
+| `var name type = value` | Trong hàm và cấp tệp | Chỉ định rõ kiểu giao diện (interface) | `var r io.Reader = &buf` |
 
 ### Phân biệt phép khai báo `:=` và phép gán `=`
 
-Đây là nhầm lẫn phổ biến nhất của người mới học:
-- `:=` là **khai báo biến mới**: Nó cấp phát định danh mới trong scope hiện tại. Vế trái bắt buộc phải có ít nhất một biến mới.
-- `=` là **phép gán lại giá trị**: Nó lấy một biến đã tồn tại từ trước và ghi đè giá trị mới vào ô nhớ của biến đó. Nó không tạo ra tên mới.
+Đây là điểm cần phân biệt rõ khi mới học Go:
+- `:=` là **khai báo biến mới**: Giới thiệu định danh mới vào phạm vi hiện tại. Vế trái bắt buộc phải có ít nhất một biến mới.
+- `=` là **phép gán lại giá trị**: Ghi giá trị mới vào biến đã tồn tại từ trước. Phép gán không tạo ra tên mới.
 
 ~~~go
 count := 1  // Khai báo biến mới count và gán 1
 count = 2   // Gán lại giá trị 2 cho biến count đã có
-// count := 3 // LỖI BIÊN DỊCH: no new các biến on left side of :=
+
+// count := 3
+// Lỗi biên dịch: no new variables on left side of :=
 ~~~
 
 ## Phạm vi sống của biến (Scope và Shadowing)
@@ -162,28 +165,31 @@ func main() {
 		label := "failed"
 		fmt.Println("Bên trong if:", label)
 	}
-	// fmt.Println(label) // LỖI BIÊN DỊCH: chưa được định nghĩa: label
+	// fmt.Println(label)
+	// Lỗi biên dịch: undefined: label
 }
 ~~~
 
-Biến `label` được khai báo bên trong khối lệnh `if`, do đó nó chỉ sống từ dòng khai báo cho tới khi gặp dấu ngoặc nhọn đóng `}` của khối `if`. Sau dấu ngoặc đó, `label` bị thu hồi khỏi bảng định danh. Nếu ta cố tình gọi `fmt.Println(label)` ở ngoài, compiler sẽ từ chối biên dịch ngay lập tức.
+Biến `label` được khai báo bên trong khối lệnh `if`, do đó tầm vực của nó chỉ giới hạn trong khối lệnh này. Khi ra khỏi dấu ngoặc nhọn đóng `}` của khối `if`, định danh `label` không còn hiệu lực trong tầm vực và không thể tham chiếu được nữa. Nếu cố tình gọi `fmt.Println(label)` ở ngoài, trình biên dịch sẽ từ chối biên dịch ngay lập tức với lỗi `undefined: label`.
 
 ![Vết của scope: label nằm trong if block, còn status sống ở main block.](../../assets/diagrams/go-scope-trace.png)
 
 @figure Trực quan hóa ranh giới phạm vi sống (scope) của biến. Biến khai báo trong khối lệnh con không thể được tham chiếu từ khối lệnh cha đứng bên ngoài.
 
-### Nguy cơ che khuất biến (biến Shadowing)
+### Nguy cơ che khuất biến (Variable Shadowing)
 
-Khi bạn dùng toán tử khai báo ngắn `:=` bên trong một khối lệnh con với một tên trùng với biến ở khối lệnh cha, bạn vô tình tạo ra một biến hoàn toàn mới, che khuất (shadow) biến bên ngoài:
+Khi bạn dùng toán tử khai báo ngắn `:=` bên trong một khối lệnh con với một tên trùng với biến ở khối lệnh cha, bạn tạo ra một biến mới hoàn toàn, che khuất (shadow) biến bên ngoài:
 
 ~~~go
 func main() {
 	retries := 0
 	if retries == 0 {
-		retries := 3 // ĐÂY LÀ BIẾN MỚI TRONG KHỐI IF, CHE KHUẤT BIẾN BÊN NGOÀI
-		fmt.Println("Trong if:", retries) // In ra 3
+		// Khai báo biến mới trong khối if, che khuất biến ngoài
+		retries := 3
+		fmt.Println("Trong if:", retries) // 3
 	}
-	fmt.Println("Ngoài if:", retries) // VẪN IN RA 0! BIẾN NGOÀI KHÔNG ĐƯỢC CẬP NHẬT!
+	// Biến ngoài vẫn giữ nguyên giá trị 0 ban đầu
+	fmt.Println("Ngoài if:", retries) // 0
 }
 ~~~
 
@@ -191,12 +197,12 @@ Lỗi này rất khó phát hiện bằng mắt thường vì cả hai dòng mã
 
 ## Hệ thống Kiểu Dữ liệu Cơ bản
 
-Go là ngôn ngữ định kiểu tĩnh (statically typed). Mọi giá trị đều có kiểu dữ liệu bất biến được kiểm tra tại thời điểm biên dịch.
+Go là ngôn ngữ định kiểu tĩnh (statically typed). Mọi giá trị đều có kiểu dữ liệu xác định được kiểm tra tại thời điểm biên dịch.
 
 ### 1. Số nguyên (Integer)
-- `int` và `uint`: Kiểu số nguyên có dấu và không dấu phổ biến nhất. Kích thước bit của chúng phụ thuộc vào kiến trúc phần cứng máy tính: trên hệ điều hành 64-bit, `int` là 64-bit (chứa từ $-2^{63}$ đến $2^{63}-1$); trên hệ 32-bit, `int` là 32-bit.
+- `int` và `uint`: Kiểu số nguyên có dấu và không dấu phổ biến nhất. Kích thước bit của chúng phụ thuộc vào nền tảng: trên hệ thống 64-bit, `int` là 64 bit; trên hệ thống 32-bit, `int` là 32 bit.
 - Các kiểu có kích thước cố định tường minh: `int8`, `int16`, `int32`, `int64`, và các bản không dấu tương ứng `uint8` (còn gọi là `byte`), `uint16`, `uint32`, `uint64`.
-- `rune`: Định danh đại diện cho một điểm mã Unicode (Unicode mã nguồn point), thực chất là một bí danh (alias) của kiểu `int32`.
+- `rune`: Đại diện cho một điểm mã Unicode (Unicode code point), thực chất là một bí danh (alias) của kiểu `int32`.
 
 ### 2. Số thực (Floating-point)
 - `float32` (độ chính xác đơn) và `float64` (độ chính xác kép).
@@ -209,21 +215,26 @@ Go là ngôn ngữ định kiểu tĩnh (statically typed). Mọi giá trị đ�
 - Các toán tử logic: `&&` (VÀ), `||` (HOẶC), `!` (PHỦ ĐỊNH).
 
 ### 4. Chuỗi ký tự (String)
-- Kiểu `string` trong Go là một dãy byte bất biến (immutable sequence of bytes), thường mã hóa văn bản dưới dạng UTF-8.
-- Vì là bất biến, bạn không thể thay đổi từng ký tự của chuỗi sau khi nó đã được tạo ra. Muốn biến đổi chuỗi, ta phải tạo một chuỗi mới.
+- Kiểu `string` trong Go là một dãy byte bất biến (immutable sequence of bytes). Mặc dù văn bản nguồn Go được quy ước mã hóa theo chuẩn UTF-8, bản thân một `string` có thể chứa các byte tùy ý, không bắt buộc phải luôn là chuỗi UTF-8 hợp lệ.
+- Vì là bất biến, bạn không thể thay đổi từng byte của chuỗi sau khi nó đã được tạo ra. Muốn biến đổi dữ liệu, ta cần tạo một chuỗi mới hoặc chuyển sang lát cắt `[]byte`.
 
 ### 5. Chuyển đổi kiểu tường minh (Type Conversion)
 
-Trong Go, **không có cơ chế ép kiểu ngầm định (no implicit conversion)**. Một biến kiểu `int` và một biến kiểu `int64` là hai kiểu dữ liệu hoàn toàn xa lạ với nhau; trình biên dịch sẽ từ chối thực hiện phép cộng giữa chúng trừ khi bạn chuyển đổi tường minh:
+Trong Go, **các biến có kiểu định danh khác nhau không tự động chuyển đổi ngầm định**. Một biến kiểu `int` và một biến kiểu `int64` là hai kiểu dữ liệu khác biệt; trình biên dịch sẽ từ chối phép cộng giữa chúng trừ khi bạn chuyển đổi tường minh:
 
 ~~~go
 var a int = 10
 var b int64 = 20
-// var c int64 = a + b // LỖI BIÊN DỊCH: invalid thao tác: mismatched types int and int64
-var c int64 = int64(a) + b // HỢP LỆ: Chuyển a thành int64 trước khi cộng
+// var c int64 = a + b
+// Lỗi biên dịch:
+// invalid operation: a + b (mismatched types int and int64)
+// Chuyển đổi tường minh trước khi cộng:
+var c int64 = int64(a) + b
 ~~~
 
-Cú pháp chuyển đổi kiểu luôn có dạng: `T(v)` trong đó `T` là kiểu đích và `v` là giá trị cần chuyển.
+(Ngoại lệ là các hằng số chưa định kiểu — *untyped constants* — như số nguyên văn `500`, có thể gán linh hoạt cho bất kỳ kiểu số nào chứa được giá trị đó).
+
+Cú pháp chuyển đổi kiểu có dạng: `T(v)` trong đó `T` là kiểu đích và `v` là giá trị cần chuyển.
 
 ## Toán tử và Biểu thức
 
@@ -233,9 +244,9 @@ Biểu thức là sự kết hợp giữa các giá trị và các toán tử đ
   * *Chú ý:* Phép chia giữa hai số nguyên `5 / 2` sẽ cho kết quả là `2` (phần thập phân bị cắt cụt). Muốn có kết quả `2.5`, ít nhất một vế phải là số thực: `5.0 / 2`.
 - **Toán tử so sánh:** `==` (bằng), `!=` (khác), `<` (nhỏ hơn), `<=` (nhỏ hơn hoặc bằng), `>` (lớn hơn), `>=` (lớn hơn hoặc bằng). Kết quả luôn là `bool`.
 - **Toán tử tăng giảm:** `count++` và `count--`.
-  * *Quy tắc Go:* Trong Go, `count++` là một **câu lệnh (câu lệnh)**, không phải là một biểu thức (biểu thức). Vì vậy, bạn **không được phép** viết `x = count++` hay `++count`. Đây là thiết kế có chủ đích của tác giả Go nhằm triệt tiêu hoàn toàn những lỗi khó hiểu sinh ra từ side-effects.
+  * *Quy tắc Go:* Trong Go, `count++` là một **câu lệnh**, không phải là một **biểu thức**. Vì vậy, bạn **không được phép** viết `x = count++` hay `++count`. Đây là thiết kế có chủ đích của tác giả Go nhằm triệt tiêu hoàn toàn những lỗi khó hiểu sinh ra từ side-effects.
 
-## Bộ ba xuất dữ liệu và Bảng định dạng (Formatting Verbs)
+## Bộ ba xuất dữ liệu và Bảng định dạng
 
 Thư viện chuẩn `fmt` cung cấp ba hàm in ấn chủ đạo:
 1. `fmt.Print(...)`: In các đối số nối tiếp nhau ra stdout, không tự thêm khoảng trắng và không tự xuống dòng.
@@ -244,21 +255,21 @@ Thư viện chuẩn `fmt` cung cấp ba hàm in ấn chủ đạo:
 
 ~~~go
 name := "gateway"
-cổng := 8080
-fmt.Printf("Dịch vụ %s đang lắng nghe tại cổng %d\n", name, cổng)
+port := 8080
+fmt.Printf("Dịch vụ %s tại cổng %d\n", name, port)
 ~~~
 
 | Ký hiệu Verb | Ý nghĩa | Ví dụ áp dụng | Kết quả hiển thị |
 | :---: | :--- | :--- | :--- |
 | `%v` | Giá trị mặc định theo kiểu dữ liệu | `fmt.Printf("%v", 503)` | `503` |
 | `%+v` | In kèm tên trường của cấu trúc (struct) | `fmt.Printf("%+v", s)` | `{Name:checkout Port:80}` |
-| `%#v` | In theo cú pháp mã nguồn Go nguyên văn | `fmt.Printf("%#v", "text")` | `"text"` |
+| `%#v` | Biểu diễn theo cú pháp Go | `fmt.Printf("%#v", "text")` | `"text"` |
 | `%T` | In ra tên kiểu dữ liệu của biến | `fmt.Printf("%T", 503)` | `int` |
 | `%t` | In giá trị logic boolean (`true`/`false`) | `fmt.Printf("%t", true)` | `true` |
 | `%d` | In số nguyên hệ thập phân (cơ số 10) | `fmt.Printf("%d", 255)` | `255` |
 | `%x` / `%X` | In số nguyên dưới dạng hệ thập lục phân (hex) | `fmt.Printf("%x", 255)` | `ff` |
 | `%f` | In số thực dấu phẩy động | `fmt.Printf("%.2f", 3.14159)` | `3.14` |
-| `%s` | In chuỗi ký tự UTF-8 | `fmt.Printf("%s", "ok")` | `ok` |
+| `%s` | In các byte dưới dạng chuỗi ký tự | `fmt.Printf("%s", "ok")` | `ok` |
 | `%q` | In chuỗi có cặp dấu ngoặc kép an toàn | `fmt.Printf("%q", "ok")` | `"ok"` |
 | `%p` | In địa chỉ con trỏ dưới dạng địa chỉ ô nhớ | `fmt.Printf("%p", &status)` | `0xc000014088` |
 
@@ -296,8 +307,8 @@ Cấu trúc `switch` trong Go linh hoạt hơn nhiều so với các ngôn ngữ
 - Có thể gom nhiều giá trị vào cùng một case: `case 200, 201, 204:`.
 
 ~~~go
-func statusCategory(mã nguồn int) string {
-	switch mã nguồn {
+func statusCategory(code int) string {
+	switch code {
 	case 200, 201:
 		return "Thành công"
 	case 404:
@@ -343,10 +354,10 @@ for retries < 3 {
 }
 ~~~
 
-#### Dạng 3: Vòng lặp vô tận (Infinite loop)
+#### Dạng 3: Vòng lặp vô hạn
 ~~~go
 for {
-	// Lặp mãi mãi cho đến khi gặp lệnh break hoặc return
+	// Lặp cho đến khi gặp lệnh break hoặc return
 	if isJobFinished() {
 		break
 	}
@@ -356,35 +367,35 @@ for {
 #### Dạng 4: Lặp qua tập hợp dữ liệu với `for range`
 ~~~go
 codes := []int{200, 404, 500}
-for index, mã nguồn := range codes {
-	fmt.Printf("Chỉ số: %d, Mã trạng thái: %d\n", index, mã nguồn)
+for index, code := range codes {
+	fmt.Printf("Chỉ số: %d, Mã trạng thái: %d\n", index, code)
 }
 ~~~
 
 Nếu không dùng đến chỉ số `index`, ta dùng dấu gạch dưới `_` để thông báo cho trình biên dịch bỏ qua:
 
 ~~~go
-for _, mã nguồn := range codes {
-	fmt.Println("Mã:", mã nguồn)
+for _, code := range codes {
+	fmt.Println("Mã:", code)
 }
 ~~~
 
-> **Nguyên tắc bộ nhớ cốt lõi:** Khi duyệt mảng hoặc lát cắt qua `for range`, biến phần tử thứ hai (`code`) là một **bản sao giá trị (copy)** của phần tử trong mảng tại thời điểm duyệt. Mọi sửa đổi trên biến `code` sẽ không làm thay đổi giá trị của phần tử nằm trong mảng gốc!
+> **Nguyên tắc bộ nhớ:** Khi duyệt mảng hoặc lát cắt qua `for range`, biến phần tử thứ hai (`code`) là một bản sao giá trị của phần tử tại thời điểm duyệt. Thay đổi biến `code` không làm thay đổi phần tử trong mảng gốc.
 
 ## Hàm từ nguyên lý đầu tiên
 
 Hàm là một khối mã độc lập được đặt tên để thực hiện một nhiệm vụ cụ thể, có thể tái sử dụng nhiều lần từ các nơi khác nhau trong chương trình.
 
-### Tham số hình thức (tham số) và Đối số thực tế (đối số)
+### Tham số hình thức và Đối số thực tế
 
-- **Tham số (tham số):** Biến được khai báo trong chữ ký hàm. Ví dụ trong `func classify(status int)`, biến `status` là tham số hình thức.
-- **Đối số (đối số):** Giá trị cụ thể được truyền vào hàm khi triệu gọi. Ví dụ trong `classify(503)`, số `503` là đối số thực tế.
+- **Tham số (parameters):** Biến được khai báo trong chữ ký hàm. Ví dụ trong `func classify(status int)`, biến `status` là tham số hình thức.
+- **Đối số (arguments):** Giá trị cụ thể được truyền vào hàm khi triệu gọi. Ví dụ trong `classify(503)`, số `503` là đối số thực tế.
 
-Khi một hàm được gọi trong Go, **đối số luôn luôn được sao chép theo ngữ nghĩa giá trị (Pass by giá trị)**. Hàm nhận được một bản sao độc lập của đối số trong ngăn xếp của nó.
+Khi một hàm được triệu gọi, các biểu thức đối số được đánh giá, rồi giá trị kết quả được gán cho các tham số tương ứng. Go tuân thủ chặt chẽ ngữ nghĩa truyền theo giá trị (*pass by value*): hàm luôn nhận bản sao giá trị của đối số. Tuy nhiên, sao chép giá trị không đồng nghĩa với việc sao chép toàn bộ dữ liệu nền: nếu giá trị đó là một con trỏ, một slice descriptor hay một map handle, bản sao ấy vẫn mở đường truy cập đến cùng một cấu trúc dữ liệu dùng chung.
 
-### Trả về nhiều giá trị (Multiple Returns)
+### Trả về nhiều giá trị
 
-Không như C hay Java chỉ cho phép hàm trả về một giá trị duy nhất (buộc lập trình viên phải tạo class bọc lại), Go hỗ trợ hàm trả về cùng lúc nhiều giá trị độc lập. Đây là nền tảng cho quy ước xử lý lỗi kinh điển của Go: trả về cặp giá trị `(kết quả, lỗi)`:
+Go hỗ trợ hàm trả về cùng lúc nhiều giá trị độc lập. Đây là nền tảng cho quy ước xử lý lỗi kinh điển của Go: trả về cặp giá trị `(kết quả, lỗi)`:
 
 ~~~go
 func divide(a, b int) (int, error) {
@@ -406,9 +417,9 @@ if err != nil {
 fmt.Println("Kết quả:", result)
 ~~~
 
-### Hàm đệ quy (Recursion)
+### Hàm đệ quy
 
-Hàm đệ quy là hàm tự gọi lại chính nó để giải quyết bài toán nhỏ hơn cùng cấu trúc. Mọi hàm đệ quy bắt buộc phải có **điều kiện dừng (base case)** rõ ràng, nếu không hàm sẽ tự gọi vô tận và làm tràn ngăn xếp bộ nhớ (Stack Overflow):
+Hàm đệ quy là hàm tự gọi lại chính nó để giải quyết bài toán nhỏ hơn cùng cấu trúc. Mọi hàm đệ quy bắt buộc phải có điều kiện dừng (base case) rõ ràng, nếu không hàm sẽ tự gọi vô tận và làm cạn kiệt tài nguyên bộ nhớ:
 
 ~~~go
 func factorial(n int) int {
@@ -421,28 +432,27 @@ func factorial(n int) int {
 }
 ~~~
 
-## Nhập môn Con trỏ (con trỏ Fundamentals)
+## Nhập môn Con trỏ (Pointers)
 
-Khi một biến được tạo ra, hệ điều hành cấp phát một ô nhớ vật lý trong RAM để lưu trữ giá trị của biến đó. Mỗi ô nhớ có một địa chỉ định danh dạng số thập lục phân (ví dụ `0xc000014088`).
-
-**Con trỏ (con trỏ)** thực chất là một biến đặc biệt, nhưng thay vì chứa dữ liệu trực tiếp (như số `100`), nó lưu trữ **địa chỉ ô nhớ** của một biến khác.
+Khi một biến được khai báo, nó đại diện cho một vị trí lưu trữ mang kiểu dữ liệu xác định. Một con trỏ (pointer) là một giá trị chứa địa chỉ của một biến khác.
 
 Go cung cấp hai toán tử nền tảng để làm việc với con trỏ:
-1. **Toán tử lấy địa chỉ (`&` - Address-of operator):** Đặt trước tên biến để trích xuất địa chỉ ô nhớ của biến đó.
-2. **Toán tử giải tham chiếu (`*` - Dereference operator):** Đặt trước biến con trỏ để truy cập hoặc ghi đè giá trị tại ô nhớ mà con trỏ đang trỏ tới.
+1. **Toán tử lấy địa chỉ (`&`):** Đặt trước tên biến để trích xuất địa chỉ ô nhớ của biến đó.
+2. **Toán tử giải tham chiếu (`*`):** Đặt trước biến con trỏ để truy cập hoặc ghi đè giá trị tại vị trí mà con trỏ đang trỏ tới.
 
 ~~~go
 func main() {
 	x := 100
-	var p *int = &x // p là con trỏ kiểu *int, chứa địa chỉ ô nhớ của x
+	// p là con trỏ kiểu *int, chứa địa chỉ của x
+	var p *int = &x
 
-	fmt.Printf("Giá trị của x: %d\n", x)        // In ra: 100
-	fmt.Printf("Địa chỉ của x: %p\n", &x)       // In ra: 0xc000014088 (ví dụ)
-	fmt.Printf("Giá trị của p: %p\n", p)        // In ra: 0xc000014088 (trùng địa chỉ của x)
-	fmt.Printf("Giá trị p trỏ tới (*p): %d\n", *p) // In ra: 100
+	fmt.Println("Giá trị x:", x)           // 100
+	fmt.Printf("Địa chỉ &x: %p\n", &x)     // 0xc000014088
+	fmt.Printf("Con trỏ p:  %p\n", p)      // 0xc000014088
+	fmt.Println("Giá trị *p:", *p)         // 100
 
-	*p = 200 // Thay đổi giá trị tại ô nhớ mà p trỏ tới
-	fmt.Printf("Giá trị mới của x: %d\n", x)    // In ra: 200! Biến x đã thay đổi!
+	*p = 200 // Ghi đè giá trị tại ô nhớ p trỏ tới
+	fmt.Println("Giá trị mới x:", x)       // 200
 }
 ~~~
 
@@ -450,7 +460,7 @@ Con trỏ cho phép các hàm khác nhau cùng thao tác và biến đổi một
 
 ## Đọc thông điệp biên dịch như một người cộng tác
 
-Trong quá trình học và làm việc với Go, bạn sẽ liên tục nhận phản hồi từ trình biên dịch. Đừng hoảng sợ khi nhìn thấy thông báo lỗi. Hãy xem compiler như một người cộng sự nghiêm khắc kiểm tra chất lượng mã nguồn trước khi nó kịp gây ra sự cố trên máy chủ.
+Trong quá trình học và làm việc với Go, bạn sẽ liên tục nhận phản hồi từ trình biên dịch. Đừng hoảng sợ khi nhìn thấy thông báo lỗi. Hãy xem compiler như một người cộng sự nghiêm khắc kiểm tra chất lượng mã nguồn trước khi nó kịp gây ra sự cố trên môi trường vận hành.
 
 Ta hãy thử nghiệm ba tình huống lỗi kinh điển nhất:
 
@@ -458,24 +468,25 @@ Ta hãy thử nghiệm ba tình huống lỗi kinh điển nhất:
 | :--- | :--- | :--- |
 | **Trường hợp A** | Gán `status = 503` khi chưa từng khai báo biến `status`. | Lỗi định danh: Tên biến chưa được giới thiệu vào scope. |
 | **Trường hợp B** | Khai báo hàm nhận tham số kiểu `string` nhưng nơi gọi lại truyền vào biến kiểu `int`. | Lỗi xung đột kiểu: Đối số thực tế không khớp với chữ ký hàm. |
-| **Trường hợp C** | Cố tình gọi `fmt.Println(label)` ở ngoài khối lệnh `if`. | Lỗi phạm vi sống: Biến đã bị hủy sau dấu ngoặc nhọn `}` đóng khối. |
+| **Trường hợp C** | Cố tình gọi `fmt.Println(label)` ở ngoài khối lệnh `if`. | Lỗi tầm vực: Định danh `label` không tồn tại ngoài khối lệnh `if`. |
 
-Khi biên dịch các trường hợp trên với Go, compiler đưa ra phản hồi chính xác đến từng dòng và từng cột ký tự:
+Khi biên dịch các trường hợp trên với Go, compiler đưa ra phản hồi chính xác đến từng dòng và từng vị trí:
 
 ~~~text
 [trường-hợp-a]
-.\main.go:4:2: chưa được định nghĩa: status
+.\main.go:4:2: undefined: status
 
 [trường-hợp-b]
-.\main.go:9:15: cannot use status (biến of type int) as string giá trị in đối số to classify
+.\main.go:9:15: cannot use status (variable of type int) as
+    string value in argument to classify
 
 [trường-hợp-c]
-.\main.go:8:6: chưa được định nghĩa: label
+.\main.go:8:6: undefined: label
 ~~~
 
-- Ở **Trường hợp A**, compiler thông báo `undefined: status`: Trình biên dịch không thể gán giá trị cho một định danh chưa từng được cấp phát ô nhớ.
-- Ở **Trường hợp B**, thông báo `cannot use status (type int) as string`: Hệ thống kiểu tĩnh bảo vệ chương trình không bị lỗi sai lệch bộ nhớ khi truyền dữ liệu.
-- Ở **Trường hợp C**, thông báo `undefined: label`: Tên biến không còn tồn tại trong bảng ký hiệu của phạm vi hàm `main`.
+- Ở **Trường hợp A**, trình biên dịch thông báo `undefined: status`: Tên biến chưa từng được khai báo trong tầm vực.
+- Ở **Trường hợp B**, thông báo `cannot use status (variable of type int) as string value in argument to classify`: Hệ thống kiểu tĩnh ngăn ngừa truyền sai kiểu dữ liệu vào hàm.
+- Ở **Trường hợp C**, thông báo `undefined: label`: Định danh `label` không còn hiệu lực ngoài khối lệnh `if`.
 
 > **Bài tập nhỏ cuối chương:** Bạn hãy viết một hàm `severity(code int) string` sử dụng `switch` để phân loại các mã HTTP: mã từ 500 trở lên là `"critical"`, từ 400 đến 499 là `"warning"`, còn lại là `"normal"`. Sau đó, trong hàm `main`, hãy dùng vòng lặp `for range` duyệt qua một danh sách mã `[]int{200, 404, 503}` và in kết quả ra màn hình bằng `fmt.Printf` với verb `%d` và `%s`.
 
