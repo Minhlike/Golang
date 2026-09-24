@@ -6,7 +6,7 @@
   "official_remote": "https://github.com/prometheus/client_golang.git",
   "module_path": "github.com/prometheus/client_golang",
   "version_strategy": "GIT_STABLE_TAG",
-  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolved_at_utc": "2026-09-24T01:38:10Z",
   "resolution_method": "go_list+git_ls_remote",
   "resolved_version": "v1.24.1",
   "resolved_tag": "v1.24.1",

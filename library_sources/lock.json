@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "protocol_version": "1.0.0",
-  "generated_at_utc": "2026-09-24T00:49:14Z",
+  "generated_at_utc": "2026-09-24T01:38:43Z",
   "total_libraries": 50,
   "libraries": {
     "fsnotify": {
@@ -37,11 +37,11 @@
       "resolved_tag": "v0.37.0",
       "resolved_commit": "28076445520055420e3be4255b4cd27fd19df1f9",
       "resolved_tree": "28076445520055420e3be4255b4cd27fd19df1f9",
-      "source_tree_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_tree_sha256": "711aeac96d8ee6c277cc59760f0957ecb40109c2f9ad4cbdf58ad63d92ba2271",
       "release_status": "OFFICIAL_STABLE",
-      "resolved_at_utc": "2026-09-24T00:49:14Z",
-      "previous_version": null,
-      "previous_commit": null,
+      "resolved_at_utc": "2026-09-24T01:38:43Z",
+      "previous_version": "v0.37.0",
+      "previous_commit": "28076445520055420e3be4255b4cd27fd19df1f9",
       "guide_status": "PLANNED"
     },
     "controller-runtime": {
@@ -97,11 +97,11 @@
       "resolved_tag": "v1.24.1",
       "resolved_commit": "d6087ee482e06716ee21dc03819432d5d40f72db",
       "resolved_tree": "d6087ee482e06716ee21dc03819432d5d40f72db",
-      "source_tree_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_tree_sha256": "34d2a0058dfc78d386f14d8a71df138d39a722ed27728e42ee34729037654cdd",
       "release_status": "OFFICIAL_STABLE",
-      "resolved_at_utc": "2026-09-24T00:49:14Z",
-      "previous_version": null,
-      "previous_commit": null,
+      "resolved_at_utc": "2026-09-24T01:38:10Z",
+      "previous_version": "v1.24.1",
+      "previous_commit": "d6087ee482e06716ee21dc03819432d5d40f72db",
       "guide_status": "PLANNED"
     },
     "opentelemetry-go": {
@@ -117,11 +117,11 @@
       "resolved_tag": "v1.46.0",
       "resolved_commit": "58db4c898f5b5594f8ba78f156475bf48486e2f2",
       "resolved_tree": "58db4c898f5b5594f8ba78f156475bf48486e2f2",
-      "source_tree_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_tree_sha256": "3f9f63f0fb0101bcfb58ce0dc6f3a9a3bc9001f7f382ee4fcffe1bd6b79a4af0",
       "release_status": "OFFICIAL_STABLE",
-      "resolved_at_utc": "2026-09-24T00:49:14Z",
-      "previous_version": null,
-      "previous_commit": null,
+      "resolved_at_utc": "2026-09-24T01:36:02Z",
+      "previous_version": "v1.46.0",
+      "previous_commit": "58db4c898f5b5594f8ba78f156475bf48486e2f2",
       "guide_status": "PLANNED"
     },
     "opentelemetry-collector": {
