@@ -12,11 +12,11 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 | **C** | Error Values & I/O | Sentinel errors, stream truncated, encoding/decoding | C01–C08 |
 | **D** | Context & Cancellation | Hủy tác vụ, timeout, deadline cascade, rò rỉ context | D01–D04 |
 | **E** | Filesystem & Process | File I/O, quyền hạn Linux, binary PATH, signals OS | E01–E06 |
-| **F** | Network / HTTP / TLS | DNS resolution, TCP handshake, reset socket, TLS/x509 | F01–F10 |
+| **F** | Network / HTTP / TLS | DNS resolution, TCP handshake, reset socket, TLS/x509 | F01–F11 |
 | **G** | Database | Connection pool, locking SQLite, transaction lifecycle | G01–G06 |
 | **H** | Concurrency | Deadlock toàn cục, data race warning, goroutine leak | H01–H05 |
-| **I** | Modules / Test / Toolchain | go.mod resolution, go vet static analysis, go test timeout | I01–I07 |
-| **J** | Container / Kubernetes / CI-CD | OOMKilled, CrashLoopBackOff, probe failure, gate reject | J01–J07 |
+| **I** | Modules / Test / Toolchain | go.mod resolution, go vet static analysis, go test timeout | I01–I08 |
+| **J** | Container / Kubernetes / CI-CD | OOMKilled, CrashLoopBackOff, probe failure, gate reject | J01–J10 |
 
 ### Bản đồ phản xạ 30 giây
 
@@ -431,5 +431,12 @@ Lỗi từ chối (`API Server HTTP 409 Conflict`) khi một client cố gắng 
 Lỗi cấu hình runtime (`Kubernetes Scheme Error`) khi một Go struct được truyền vào Controller Client hoặc Reconciler nhưng kiểu dữ liệu này chưa được đăng ký vào bảng `runtime.Scheme` thông qua hàm `AddToScheme`.
 ! Xảy ra phổ biến khi khởi tạo Operator với Custom Resource Definition (CRD) nhưng quên nạp `v1alpha1.AddToScheme(mgr.GetScheme())`.
 → Đăng ký SchemeBuilder của CRD vào Manager Scheme trước khi khởi động Controller. [Ch23]
+
+### J10 Denied by Supply Chain Policy: reachable vulnerability or untrusted builder
+* `reachable <SEVERITY> vulnerability <ID> in <package> (symbol: <symbol>)`
+* `untrusted builder identity: <builder>`
+Trạng thái chặn (`Supply Chain Verification Gate Status`) khi artifact mang theo CVE có ký hiệu thực sự được gọi trong đồ thị cuộc gọi thực thi (Call-Graph Reachability) hoặc được build từ quy trình không được cấp phép.
+! Khác với các công cụ quét phụ thuộc tĩnh báo cáo hàng loạt CVE trong thư viện không dùng tới, cảnh báo này cho biết mã độc/lỗi logic nằm trên luồng thực thi trực tiếp của binary.
+→ Cập nhật phiên bản dependency đã vá lỗi, loại bỏ việc gọi ký hiệu chứa lỗ hổng, hoặc kiểm tra lại builder ID trong CI workflow. [Ch26]
 
 
