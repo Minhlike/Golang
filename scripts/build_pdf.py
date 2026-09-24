@@ -24,6 +24,7 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Image,
     KeepTogether,
+    NextPageTemplate,
     PageBreak,
     Paragraph,
     Preformatted,
@@ -37,35 +38,52 @@ from reportlab.platypus.doctemplate import PageTemplate
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CHAPTERS = [
-    ROOT / "book/chapters/00-truoc-khi-viet-dong-go-dau-tien.md",
-    ROOT / "book/chapters/00-mo-cua-vao-go.md",
-    ROOT / "book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
-    ROOT / "book/chapters/02-gia-tri-slice-va-aliasing.md",
-    ROOT / "book/chapters/03-mo-hinh-du-lieu-va-trach-nhiem-thay-doi.md",
-    ROOT / "book/chapters/04-bien-loi.md",
-    ROOT / "book/chapters/05-thiet-ke-package.md",
-    ROOT / "book/chapters/06-thay-doi-khong-so-hai.md",
-    ROOT / "book/chapters/07-du-lieu-di-vao-va-di-ra.md",
-    ROOT / "book/chapters/08-mot-race-bat-dau-tu-dau.md",
-    ROOT / "book/chapters/09-dong-cong-viec-co-ap-suat.md",
-    ROOT / "book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md",
-    ROOT / "book/chapters/11-mot-request-thuc-su-di-dau.md",
-    ROOT / "book/chapters/12-mot-service-song-va-tat-the-nao.md",
-    ROOT / "book/chapters/13-mot-thay-doi-hoac-khong-co-gi.md",
-    ROOT / "book/chapters/14-khi-kieu-tro-thanh-du-lieu.md",
-    ROOT / "book/chapters/15-tu-incident-den-cong-cu.md",
-    ROOT / "book/chapters/16-thay-duoc-he-thong.md",
-    ROOT / "book/chapters/17-dong-goi-va-dieu-phoi.md",
-    ROOT / "book/chapters/18-dua-thay-doi-ra-production.md",
-    ROOT / "book/chapters/19-giu-type-information.md",
-    ROOT / "book/chapters/20-du-an-tong-ket-opsprobe.md",
-    ROOT / "book/chapters/21-vong-lap-dieu-hoa-controller.md",
-]
+ERROR_ATLAS = ROOT / "book/appendices/error-atlas.md"
 TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
 CURRENT = ROOT / "Golang_Master.pdf"
 PREVIOUS = ROOT / "Golang_Master.prev.pdf"
+
+
+def chapter_sort_key(p: Path) -> tuple[int, int, str]:
+    """Sort chapters by canonical order: 00-truoc-khi..., 00-mo-cua..., then 01, 02..."""
+    name = p.stem
+    if name == "00-truoc-khi-viet-dong-go-dau-tien":
+        return (0, 0, name)
+    if name == "00-mo-cua-vao-go":
+        return (0, 1, name)
+    prefix = name.split("-")[0]
+    if prefix.isdigit():
+        return (1, int(prefix), name)
+    return (2, 0, name)
+
+
+def get_chapters() -> list[Path]:
+    """Discover all chapters dynamically sorted in canonical order."""
+    chapters_dir = ROOT / "book/chapters"
+    if not chapters_dir.exists():
+        return []
+    return sorted(chapters_dir.glob("*.md"), key=chapter_sort_key)
+
+
+def get_appendices() -> list[Path]:
+    """Return all appendices, guaranteeing that Error Atlas is ALWAYS last in the book."""
+    appendices_dir = ROOT / "book/appendices"
+    if not appendices_dir.exists():
+        return [ERROR_ATLAS]
+    other_appendices = [
+        p for p in sorted(appendices_dir.glob("*.md"))
+        if p.name != "error-atlas.md"
+    ]
+    return other_appendices + [ERROR_ATLAS]
+
+
+def get_manuscript() -> tuple[list[Path], list[Path]]:
+    """Return (chapters, appendices) enforcing the strict contract:
+    frontmatter -> chapters in order -> appendices -> Error Atlas ALWAYS AT THE END.
+    Any newly added chapters (Ch22, Ch23...) are automatically placed before appendices.
+    """
+    return get_chapters(), get_appendices()
 
 
 def register_fonts() -> tuple[str, str, str, str, str]:
@@ -139,8 +157,8 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
             spaceAfter=4, bulletFontName=body,
         ),
         "toc": ParagraphStyle(
-            "TOC", parent=base["BodyText"], fontName=body, fontSize=14,
-            leading=21, textColor=colors.black, leftIndent=7, spaceAfter=5,
+            "TOC", parent=base["BodyText"], fontName=body, fontSize=11.5,
+            leading=16.0, textColor=colors.black, leftIndent=7, spaceAfter=2.5,
         ),
         "code": ParagraphStyle(
             "Code", fontName=mono, fontSize=12, leading=16.5,
@@ -163,6 +181,47 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
             leading=13.0, textColor=colors.HexColor("#333333"), leftIndent=14,
             firstLineIndent=-12, spaceAfter=4,
         ),
+        # Error Atlas 2-column styles (Grayscale-first technical handbook typography)
+        "atlas_h1": ParagraphStyle(
+            "AtlasH1", parent=base["Heading1"], fontName=heading_bold, fontSize=23,
+            leading=29, textColor=colors.black, spaceBefore=4, spaceAfter=8, keepWithNext=True,
+        ),
+        "atlas_subtitle": ParagraphStyle(
+            "AtlasSubtitle", parent=base["BodyText"], fontName=heading, fontSize=12,
+            leading=16, textColor=colors.HexColor("#333333"), spaceBefore=0, spaceAfter=10, keepWithNext=True,
+        ),
+        "atlas_group": ParagraphStyle(
+            "AtlasGroup", fontName=heading_bold, fontSize=10.8,
+            leading=14, textColor=colors.black, spaceBefore=6, spaceAfter=2, keepWithNext=True,
+        ),
+        "atlas_id": ParagraphStyle(
+            "AtlasID", fontName=mono, fontSize=8.8, leading=11.2,
+            textColor=colors.black, keepWithNext=True,
+        ),
+        "atlas_bullet": ParagraphStyle(
+            "AtlasBullet", fontName=mono, fontSize=8.0, leading=10.2,
+            textColor=colors.HexColor("#222222"), leftIndent=8, firstLineIndent=-6, keepWithNext=True,
+        ),
+        "atlas_desc": ParagraphStyle(
+            "AtlasDesc", parent=base["BodyText"], fontName=body, fontSize=9.2,
+            leading=12.2, textColor=colors.HexColor("#1A1A1A"), spaceAfter=1, keepWithNext=True,
+        ),
+        "atlas_alert": ParagraphStyle(
+            "AtlasAlert", parent=base["BodyText"], fontName=body, fontSize=8.6,
+            leading=11.4, textColor=colors.HexColor("#333333"), leftIndent=6, spaceAfter=1, keepWithNext=True,
+        ),
+        "atlas_action": ParagraphStyle(
+            "AtlasAction", parent=base["BodyText"], fontName=heading, fontSize=8.6,
+            leading=11.4, textColor=colors.black, spaceAfter=3,
+        ),
+        "atlas_table": ParagraphStyle(
+            "AtlasTable", parent=base["BodyText"], fontName=body, fontSize=9.2,
+            leading=12.5, textColor=colors.black,
+        ),
+        "atlas_table_header": ParagraphStyle(
+            "AtlasTableHeader", parent=base["BodyText"], fontName=heading_bold,
+            fontSize=9.2, leading=12.5, textColor=colors.black,
+        ),
     }
 
 
@@ -183,22 +242,36 @@ def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
     ])
 
 
-def chapter_titles() -> list[str]:
+def manuscript_titles(chapters: list[Path], appendices: list[Path]) -> list[str]:
+    """Extract H1 titles for all manuscript parts in order."""
     result: list[str] = []
-    for chapter in CHAPTERS:
-        first = chapter.read_text(encoding="utf-8").splitlines()[0]
+    for doc in chapters + appendices:
+        first = doc.read_text(encoding="utf-8").splitlines()[0]
         if not first.startswith("# "):
-            raise ValueError(f"Chapter does not start with H1: {chapter}")
-        result.append(first[2:])
+            raise ValueError(f"Manuscript document does not start with H1: {doc}")
+        result.append(first[2:].strip())
     return result
 
 
+def chapter_titles() -> list[str]:
+    """Compatibility wrapper returning all manuscript titles."""
+    chaps, apps = get_manuscript()
+    return manuscript_titles(chaps, apps)
+
+
 def chapter_pages(reader: PdfReader, titles: list[str]) -> dict[str, int]:
-    """Find chapter opening pages from the first pass, without hard-coding them."""
+    """Find chapter and appendix opening pages from the first pass, without hard-coding them."""
     pages: dict[str, int] = {}
-    # The front-matter TOC contains every chapter title, so it cannot be used
-    # as a chapter opening. Page 3 is the first manuscript page.
-    for page_number, page in enumerate(reader.pages[2:], start=3):
+    first_norm = " ".join(titles[0].split())
+    # Locate the actual start of the manuscript (first chapter heading on a page that is not TOC)
+    manuscript_start_idx = 2
+    for idx, page in enumerate(reader.pages[2:], start=2):
+        text = " ".join((page.extract_text() or "").split())
+        if first_norm in text and "Mục lục của edition này" not in text:
+            manuscript_start_idx = idx
+            break
+
+    for page_number, page in enumerate(reader.pages[manuscript_start_idx:], start=manuscript_start_idx + 1):
         text = " ".join((page.extract_text() or "").split())
         for title in titles:
             if title not in pages and " ".join(title.split()) in text:
@@ -415,44 +488,224 @@ def footer(canvas, doc) -> None:
     canvas.restoreState()
 
 
+def footer_2col(canvas, doc) -> None:
+    footer(canvas, doc)
+    # Subtle hairline column divider between column 1 and column 2
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#D8D8D8"))
+    canvas.setLineWidth(0.4)
+    gx = 2.1 * cm + 8.0 * cm + 0.4 * cm
+    canvas.line(gx, 1.9 * cm, gx, A4[1] - 2.1 * cm)
+    canvas.restoreState()
+
+
+def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono: str) -> None:
+    """Render the Living Error Atlas (Grayscale-first, 2-column layout)."""
+    story.append(PageBreak())
+    lines = atlas.read_text(encoding="utf-8").splitlines()
+
+    intro_lines: list[str] = []
+    entry_lines: list[str] = []
+    in_entries = False
+
+    for line in lines:
+        if line.startswith("## A — "):
+            in_entries = True
+        if in_entries:
+            entry_lines.append(line)
+        else:
+            intro_lines.append(line)
+
+    # 1. Front page of Atlas (1 column)
+    table_lines: list[str] = []
+    for line in intro_lines:
+        ls = line.strip()
+        if ls.startswith("# PHỤ LỤC A"):
+            story.append(Paragraph(inline("PHỤ LỤC A — ATLAS LỖI GO", mono), s["atlas_h1"]))
+            continue
+        if ls.startswith("## Đọc lỗi"):
+            story.append(Paragraph(inline("Đọc lỗi từ triệu chứng đến nguyên nhân", mono), s["atlas_subtitle"]))
+            continue
+        if ls.startswith("### "):
+            story.append(Paragraph(inline(f"**{ls[4:]}**", mono), s["atlas_subtitle"]))
+            continue
+        if ls.startswith("|"):
+            table_lines.append(line)
+            continue
+        if table_lines:
+            rows = [[c.strip() for c in r.strip().strip("|").split("|")] for r in table_lines]
+            data = []
+            for r_idx, r in enumerate([rows[0], *rows[2:]]):
+                st = s["atlas_table_header"] if r_idx == 0 else s["atlas_table"]
+                data.append([Paragraph(inline(c, mono), st) for c in r])
+            if "Phạm vi" in rows[0][2]:
+                col_widths = [1.4 * cm, 4.6 * cm, 8.8 * cm, 2.0 * cm]
+            else:
+                col_widths = [6.3 * cm, 2.1 * cm, 6.3 * cm, 2.1 * cm]
+            t = Table(data, colWidths=col_widths, hAlign="LEFT")
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
+                ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+            ]))
+            story.extend([Spacer(1, 2), t, Spacer(1, 6)])
+            table_lines = []
+
+        if ls.startswith("---"):
+            story.extend([Spacer(1, 2), HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#999999")), Spacer(1, 4)])
+            continue
+        if ls:
+            story.append(Paragraph(inline(ls, mono), s["body"]))
+
+    if table_lines:
+        rows = [[c.strip() for c in r.strip().strip("|").split("|")] for r in table_lines]
+        data = []
+        for r_idx, r in enumerate([rows[0], *rows[2:]]):
+            st = s["atlas_table_header"] if r_idx == 0 else s["atlas_table"]
+            data.append([Paragraph(inline(c, mono), st) for c in r])
+        if "Phạm vi" in rows[0][2]:
+            col_widths = [1.4 * cm, 4.6 * cm, 8.8 * cm, 2.0 * cm]
+        else:
+            col_widths = [6.3 * cm, 2.1 * cm, 6.3 * cm, 2.1 * cm]
+        t = Table(data, colWidths=col_widths, hAlign="LEFT")
+        t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+        ]))
+        story.extend([Spacer(1, 2), t, Spacer(1, 6)])
+        table_lines = []
+
+    # Switch to 2 columns for Error Entries
+    story.append(NextPageTemplate("atlas_2col"))
+    story.append(PageBreak())
+
+    # 2. Error entries (2 columns)
+    current_entry: list = []
+    for line in entry_lines:
+        ls = line.strip()
+        if ls.startswith("## "):
+            if current_entry:
+                story.append(KeepTogether(current_entry))
+                current_entry = []
+            g_title = ls[3:].upper()
+            story.append(KeepTogether([
+                Spacer(1, 8),
+                Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
+                HRFlowable(width="100%", thickness=0.6, color=colors.HexColor("#333333")),
+                Spacer(1, 4),
+            ]))
+            continue
+
+        if ls.startswith("### "):
+            if current_entry:
+                story.append(KeepTogether(current_entry))
+                current_entry = []
+            m = re.match(r"^###\s+([A-J]\d{2})\s+`?([^`]+)`?$", ls)
+            if m:
+                eid, title = m.group(1), m.group(2)
+                p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font name=\"{mono}\" color=\"#111111\"><b>{html.escape(title)}</b></font>", s["atlas_id"])
+                current_entry.extend([p, Spacer(1, 1)])
+            continue
+
+        if ls.startswith(("* `", "- `")):
+            bullet_txt = ls[2:].strip().strip("`")
+            current_entry.append(Paragraph(f"• <font name=\"{mono}\">{html.escape(bullet_txt)}</font>", s["atlas_bullet"]))
+            continue
+
+        if ls.startswith("!"):
+            alert_txt = ls[1:].strip()
+            current_entry.append(Paragraph(f"<font color=\"#444444\"><b>!</b> <i>{inline(alert_txt, mono)}</i></font>", s["atlas_alert"]))
+            continue
+
+        if ls.startswith("→"):
+            m_ref = re.search(r"\[?(Ch\d+(?:,\s*\d+)*)\]?\s*$", ls)
+            if m_ref:
+                action_txt = ls[:m_ref.start()].strip()
+                ref_txt = m_ref.group(1)
+                full_html = f"{inline(action_txt, mono)}&nbsp;&nbsp;<font name=\"BookSansBold\" color=\"#444444\">{ref_txt}</font>"
+            else:
+                full_html = inline(ls, mono)
+            current_entry.extend([
+                Paragraph(full_html, s["atlas_action"]),
+                Spacer(1, 2.5),
+            ])
+            continue
+
+        if ls and not ls.startswith("---"):
+            current_entry.append(Paragraph(inline(ls, mono), s["atlas_desc"]))
+
+    if current_entry:
+        story.append(KeepTogether(current_entry))
+
+
 def build_document(story: list, body: str, body_bold: str, heading: str,
                    heading_bold: str, mono: str, toc_pages: dict[str, int] | None) -> None:
     s = styles(body, body_bold, heading, heading_bold, mono)
-    frame = Frame(2.1 * cm, 2.0 * cm, A4[0] - 4.2 * cm, A4[1] - 3.9 * cm,
-                  id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+    margin = 2.1 * cm
+    printable_w = A4[0] - 4.2 * cm
+    frame_book = Frame(margin, 2.0 * cm, printable_w, A4[1] - 3.9 * cm,
+                       id="book", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+    gutter = 0.8 * cm
+    col_w = (printable_w - gutter) / 2
+    frame_col1 = Frame(margin, 2.0 * cm, col_w, A4[1] - 3.9 * cm,
+                       id="atlas_col1", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+    frame_col2 = Frame(margin + col_w + gutter, 2.0 * cm, col_w, A4[1] - 3.9 * cm,
+                       id="atlas_col2", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+
     doc = BaseDocTemplate(str(CANDIDATE), pagesize=A4, title="Golang Master",
-                          author="Golang Living Textbook", leftMargin=2.1 * cm,
-                          rightMargin=2.1 * cm, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
-    doc.addPageTemplates([PageTemplate(id="book", frames=[frame], onPage=footer)])
+                          author="Golang Living Textbook", leftMargin=margin,
+                          rightMargin=margin, topMargin=2.0 * cm, bottomMargin=2.0 * cm)
+    doc.addPageTemplates([
+        PageTemplate(id="book", frames=[frame_book], onPage=footer),
+        PageTemplate(id="atlas_2col", frames=[frame_col1, frame_col2], onPage=footer_2col),
+    ])
     cover(story, s)
     story.append(Paragraph("Mục lục của edition này", s["h1"]))
     story.append(Paragraph(
         "Đây là edition nền móng. Mục lục tổng thể và thứ tự các phần tiếp theo "
         "được giữ trong `book/README.md` để có thể mở rộng mà không giả vờ rằng "
         "chúng đã được viết xong.", s["body"]))
-    for title in chapter_titles():
+    chapters, appendices = get_manuscript()
+    titles = manuscript_titles(chapters, appendices)
+    for title in titles:
         suffix = f" — trang {toc_pages[title]}" if toc_pages else ""
         story.append(Paragraph(inline(title + suffix, mono), s["toc"], bulletText="•"))
     story.append(PageBreak())
     numbering = {"figure": 0, "table": 0}
-    for index, chapter in enumerate(CHAPTERS):
+    for index, chapter in enumerate(chapters):
         add_markdown(story, chapter, s, mono, page_break_before=index > 0, numbering=numbering)
+    for appendix in appendices:
+        if appendix.name == "error-atlas.md":
+            add_error_atlas(story, appendix, s, mono)
+        else:
+            add_markdown(story, appendix, s, mono, page_break_before=True, numbering=numbering)
     doc.build(story)
 
 
 def build() -> None:
-    for chapter in CHAPTERS:
-        if not chapter.exists():
-            raise FileNotFoundError(f"Thiếu chapter: {chapter}")
+    chapters, appendices = get_manuscript()
+    for doc_path in chapters + appendices:
+        if not doc_path.exists():
+            raise FileNotFoundError(f"Thiếu tài liệu bản thảo: {doc_path}")
     body, body_bold, heading, heading_bold, mono = register_fonts()
     TMP.mkdir(parents=True, exist_ok=True)
-    titles = chapter_titles()
+    titles = manuscript_titles(chapters, appendices)
     build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=None)
     toc_pages = chapter_pages(PdfReader(str(CANDIDATE)), titles)
     build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=toc_pages)
     reader = add_outline(CANDIDATE, titles)
     extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
-    if len(reader.pages) < 6 or "GOLANG" not in extracted or "Chương 1" not in extracted:
+    if (len(reader.pages) < 6 or "GOLANG" not in extracted or "Chương 1" not in extracted
+            or "ATLAS LỖI GO" not in extracted):
         raise RuntimeError("Candidate PDF failed semantic validation.")
 
     if CURRENT.exists():
