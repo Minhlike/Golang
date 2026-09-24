@@ -414,3 +414,10 @@ Lỗi từ chối (`API Server HTTP 409 Conflict`) khi một client cố gắng 
 ! Đây là cơ chế kiểm soát đồng thời lạc quan (Optimistic Concurrency Control) của Kubernetes nhằm ngăn chặn ghi đè mất dữ liệu giữa các client cạnh tranh.
 → Sử dụng `k8s.io/client-go/util/retry.RetryOnConflict` để đọc lại snapshot mới nhất từ API Server và áp dụng thay đổi trước khi thử lại. [Ch22]
 
+### J09 `no kind is registered for the type in scheme`
+* `no kind is registered for the type <Type> in scheme <Scheme>`
+Lỗi cấu hình runtime (`Kubernetes Scheme Error`) khi một Go struct được truyền vào Controller Client hoặc Reconciler nhưng kiểu dữ liệu này chưa được đăng ký vào bảng `runtime.Scheme` thông qua hàm `AddToScheme`.
+! Xảy ra phổ biến khi khởi tạo Operator với Custom Resource Definition (CRD) nhưng quên nạp `v1alpha1.AddToScheme(mgr.GetScheme())`.
+→ Đăng ký SchemeBuilder của CRD vào Manager Scheme trước khi khởi động Controller. [Ch23]
+
+
