@@ -251,9 +251,9 @@ Sách cũ không được xem là source of truth cho những chi tiết có th�
 4. GIỌNG VĂN VÀ CHÍNH SÁCH TIẾNG VIỆT (VIETNAMESE-FIRST)
 ==================================================
 
-MỤC TIÊU VĂN XUÔI (PROSE): ≈ 99% TIẾNG VIỆT.
+VĂN XUÔI ƯU TIÊN TIẾNG VIỆT TỰ NHIÊN, CHUYÊN NGÀNH VÀ NHẤT QUÁN.
 
-Toàn bộ văn xuôi, chú thích hình ảnh, bảng biểu và giải thích kỹ thuật trong Golang_Master.pdf phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm.
+Văn xuôi phải ưu tiên tiếng Việt tự nhiên, chuyên ngành và nhất quán. Không đo chất lượng bằng tỷ lệ phần trăm cơ học. Toàn bộ văn xuôi, chú thích hình ảnh, bảng biểu và giải thích kỹ thuật trong Golang_Master.pdf phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm.
 
 Sử dụng bảng thuật ngữ quy chuẩn tại:
     book/VIETNAMESE_TECH_TERMS.md
@@ -401,7 +401,7 @@ NGUYÊN TẮC SOURCE-FIRST VÀ BẢO BÌNH TRÌNH TỰ
 2. Tuyệt đối không chỉnh sửa chữ trên file bitmap PNG khi file source `.puml` tồn tại.
 3. Không vẽ mũi tên hay quan hệ nếu chưa được chứng minh bằng facts kỹ thuật:
        NO VERIFIED RELATION = NO ARROW.
-4. Mọi nhãn human-facing trong sơ đồ phải đạt mục tiêu ≈ 99% tiếng Việt, trừ exact code identifiers được bảo tồn theo whitelist.
+4. Mọi nhãn human-facing trong sơ đồ phải ưu tiên tiếng Việt tự nhiên, chuyên ngành, trừ exact code identifiers được bảo tồn theo whitelist. Không đo bằng tỷ lệ phần trăm cơ học.
 
 --------------------------------------------------
 LỰA CHỌN LOẠI SƠ ĐỒ ĐÚNG BẢN CHẤT THÔNG TIN
@@ -410,7 +410,7 @@ LỰA CHỌN LOẠI SƠ ĐỒ ĐÚNG BẢN CHẤT THÔNG TIN
 - Activity Diagram: Dùng khi trọng tâm là quy trình logic, bước đi, rẽ nhánh if/else, vòng lặp, fork/join song song. Ví dụ: Retry policy, Graceful shutdown flow, Pipeline promotion.
 - State Diagram: Dùng khi một thực thể chuyển đổi trạng thái hữu hạn (State Machine). Ví dụ: Goroutine state, Pod phase, Connection lifecycle.
 - Component / Deployment Diagram: Dùng khi mô tả kiến trúc module, ranh giới dịch vụ, cấu trúc mạng hoặc container.
-- Authentic Buzan Mind Map: Dùng khi mục tiêu là bức tranh tổng thể (overview), phân cấp khái niệm (concept hierarchy), liên tưởng (association), taxonomy hoặc ôn tập chương. Tuân thủ 5 luật Tony Buzan: Branches, Keywords, Colour (grayscale-adapted), Pictures, Structure. Tham khảo `skills/mindmap_skill.md`.
+- Branching Concept Diagram (Sơ đồ khái niệm phân nhánh): Dùng khi mục tiêu là cấu trúc phân cấp khái niệm (concept hierarchy), phân nhánh tư duy, taxonomy hoặc ôn tập chương dạng cây cấu trúc in ấn. Phân biệt rõ với sơ đồ tư duy hữu cơ vẽ tay (Buzan Organic Mind Map) để tránh overclaim.
 
 TUYỆT ĐỐI KHÔNG:
 - Dùng Sequence Diagram để trình bày phân loại / taxonomy;
@@ -2067,3 +2067,61 @@ và repository:
     https://github.com/Minhlike/Golang.git
 
 Không dừng ở việc đưa ra kế hoạch. Hãy bắt đầu xây cuốn sách.
+
+==================================================
+39. FORWARD ROADMAP LOCK — REVISION 2026-09-24
+==================================================
+
+Quy tắc open-ended trước đây kiểu “xác định chapter tiếp theo nếu còn gap” KHÔNG còn được áp dụng cho tranche hiện tại.
+
+Chương 22 → Chương 28 đã được người dùng khóa trước.
+Agent không được tự thay đổi roadmap này.
+Từ Chương 29 trở đi cần một review / instruction mới.
+
+KẾ HOẠCH KHÓA CHÍNH XÁC 7 CHƯƠNG (CH22 → CH28):
+
+1. Chương 22 — Từ watch đến một controller Kubernetes thật
+   - File: book/chapters/22-tu-watch-den-controller-that.md
+   - Lab: labs/part22-client-go-controller/
+   - Mental Model: API server authoritative state → List/Watch → Reflector/Informer → Local Cache → Event Handler → Object Key → Typed Rate-Limited WorkQueue → Worker → Reconcile from Current Cache State → API Write → Observe Again
+   - Trọng tâm: Event notification ≠ source of truth; API server là authoritative state; List/Watch; resourceVersion; Reflector; SharedInformer; local cache sync; event handler; MetaNamespaceKeyFunc; typed workqueue API của client-go; dirty/processing semantics; retry/Forget; optimistic concurrency; conflict retry.
+
+2. Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên
+   - File: book/chapters/23-tu-controller-den-operator.md
+   - Lab: labs/part23-controller-runtime-operator/
+   - Mental Model: Custom Resource (spec = desired) → controller-runtime Manager (cache, client, scheme, controller) → Reconcile → owned resources / status / finalizers
+   - Trọng tâm: CRD spec vs status; Scheme; Manager; controller-runtime Client; cached read vs write; Reconcile request; owner references; garbage collection; status subresource; finalizer idempotency; deletionTimestamp.
+
+3. Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn
+   - File: book/chapters/24-tu-dong-hoa-aws-bang-go.md
+   - Lab: labs/part24-aws-sdk-go-v2/
+   - Mental Model: program intent → aws.Config → credential provider chain → service client → Smithy middleware / signing / transport → AWS API → retry / pagination / waiter → typed response
+   - Trọng tâm: AWS SDK v2, LoadDefaultConfig, default credential chain, temporary credentials, IAM roles / web identity, context timeout/cancellation, Smithy middleware stack, SigV4, typed service errors, retry.Standard, paginators, waiters.
+
+4. Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa
+   - File: book/chapters/25-git-github-automation-event-driven.md
+   - Lab: labs/part25-github-automation/
+   - Mental Model: local Git state ≠ GitHub hosted state; Git object/ref → repository state; GitHub event → webhook → HMAC verification → delivery ID → queue/handler → API operation → rate-limit-aware response
+   - Trọng tâm: local Git state (go-git) vs GitHub hosted state (go-github), Webhook HMAC verification, delivery ID idempotency, primary/secondary rate-limiting, exponential backoff, retry-after.
+
+5. Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng
+   - File: book/chapters/26-chuoi-cung-ung-co-the-kiem-chung.md
+   - Lab: labs/part26-supply-chain-gate/
+   - Mental Model: source → dependency graph → build → artifact digest → provenance / attestation / signature → verification policy → deployment decision
+   - Trọng tâm: Dependency graph, go.sum semantics, govulncheck symbol reachability, immutable OCI digests, Cosign keyless signatures, attestations/provenance, fail-closed policy gates.
+
+6. Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go
+   - File: book/chapters/27-quan-sat-linux-bang-ebpf-va-go.md
+   - Lab: labs/part27-ebpf-observer/
+   - Mental Model: kernel event → eBPF hook → verified eBPF program → BPF map / ring buffer → Go userspace reader → structured observation
+   - Trọng tâm: eBPF verifier, kernel/userspace boundary, bpf2go code generation, BPF maps & ring buffers, cilium/ebpf loader lifecycle, process exec tracepoints.
+
+7. Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền
+   - File: book/chapters/28-mcp-va-aiops-an-toan-bang-go.md
+   - Lab: labs/part28-mcp-ops-tools/
+   - Mental Model: AI/agent request → MCP protocol boundary → validated tool schema → authorization policy → bounded Go handler → real system boundary → structured result → audit trail
+   - Trọng tâm: Model Context Protocol (MCP) Go SDK, stdio transport, schema-validated tool definitions, least privilege, authorization policy boundaries, SSRF prevention, audit trails.
+
+QUY TẮC DỪNG:
+Sau khi hoàn thành Chương 28, DỪNG LẠI. Không tự ý viết Chương 29.
+
