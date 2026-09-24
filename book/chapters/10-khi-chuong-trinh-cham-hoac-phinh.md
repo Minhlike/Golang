@@ -1,10 +1,10 @@
 # Chương 10 — Khi chương trình chậm hoặc phình
 
-Một chương trình bị gọi là “chậm” rất dễ kéo theo một cuộc săn tối ưu hóa vô ích. Có người thay `fmt` bằng nối chuỗi, có người thêm goroutine, có người nhìn một dòng trông có vẻ đắt rồi sửa nó. Mọi thay đổi ấy có thể làm code khó đọc hơn mà vẫn không chạm vào thời gian người dùng đang chờ.
+Một chương trình bị gọi là “chậm” rất dễ kéo theo một cuộc săn tối ưu hóa vô ích. Có người thay `fmt` bằng nối chuỗi, có người thêm goroutine, có người nhìn một dòng trông có vẻ đắt rồi sửa nó. Mọi thay đổi ấy có thể làm mã nguồn khó đọc hơn mà vẫn không chạm vào thời gian người dùng đang chờ.
 
 Mô hình tinh thần của chương này là: **tối ưu hóa là một giả thuyết được kiểm tra dưới một tải đại diện; một phép đo chỉ trả lời câu hỏi mà nó được thiết kế để trả lời**. Benchmark không tuyên bố service của anh nhanh trong mọi hoàn cảnh. CPU profile không nói bộ nhớ đang phình. Trace không phải bản chụp ý nghĩa của chương trình. Chúng là các dụng cụ khác nhau để thu hẹp vùng suy đoán.
 
-Hãy giả sử một lệnh nhỏ xuất báo cáo kiểm tra endpoint. Nó chạy ổn với vài endpoint, nhưng trong CI có hàng nghìn endpoint thì mất nhiều giây và heap tăng rõ. Câu “hãy tối ưu formatter” mới chỉ là phỏng đoán. Trước khi động vào code, ta cần biến nó thành một câu hỏi kiểm chứng được: *với một danh sách kích thước đã chọn, `Render` tốn thời gian và allocation bao nhiêu; phần tốn chi phí nằm ở đâu; một thay đổi có giữ nguyên output và giảm chi phí đó không?*
+Hãy giả sử một lệnh nhỏ xuất báo cáo kiểm tra điểm cuối. Nó chạy ổn với vài điểm cuối, nhưng trong CI có hàng nghìn điểm cuối thì mất nhiều giây và heap tăng rõ. Câu “hãy tối ưu formatter” mới chỉ là phỏng đoán. Trước khi động vào mã nguồn, ta cần biến nó thành một câu hỏi kiểm chứng được: *với một danh sách kích thước đã chọn, `Render` tốn thời gian và allocation bao nhiêu; phần tốn chi phí nằm ở đâu; một thay đổi có giữ nguyên output và giảm chi phí đó không?*
 
 ## Một benchmark là hợp đồng về phép đo
 
@@ -28,7 +28,7 @@ Chạy benchmark với allocation metric:
 go test -bench BenchmarkRender -benchmem -count=6 ./fixed
 ~~~
 
-`ns/op` là thời gian trung bình của operation trong lần chạy đó. `B/op` và `allocs/op` cho biết bộ khung benchmark đã đo được bao nhiêu byte và lần cấp phát trên mỗi operation. Chúng không phải latency p99 của một HTTP service, cũng không phải lời hứa giữ nguyên khi đổi CPU, version Go, `GOMAXPROCS`, input hoặc load nền của máy. Sáu lần chạy không biến dữ liệu thành chân lý phổ quát; nó giúp anh thấy một thay đổi có bền qua các lần chạy hay chỉ là nhiễu.
+`ns/op` là thời gian trung bình của thao tác trong lần chạy đó. `B/op` và `allocs/op` cho biết bộ khung benchmark đã đo được bao nhiêu byte và lần cấp phát trên mỗi thao tác. Chúng không phải latency p99 của một HTTP service, cũng không phải lời hứa giữ nguyên khi đổi CPU, version Go, `GOMAXPROCS`, input hoặc load nền của máy. Sáu lần chạy không biến dữ liệu thành chân lý phổ quát; nó giúp anh thấy một thay đổi có bền qua các lần chạy hay chỉ là nhiễu.
 
 Vì thế đừng copy một con số benchmark vào sách hoặc PR rồi gọi nó là “nhanh hơn” mà không giữ lại command, version Go, input và phạm vi. Với một thay đổi có ý nghĩa, hãy so sánh nhiều lần chạy trên cùng máy hoặc dùng công cụ so sánh thống kê phù hợp. Còn trước mắt, điều đáng học là discipline: output phải được giữ đúng trước, rồi mới quan sát chi phí.
 
@@ -37,12 +37,12 @@ Vì thế đừng copy một con số benchmark vào sách hoặc PR rồi gọi
 | Dụng cụ | Câu hỏi nó giúp trả lời | Không tự chứng minh được |
 | --- | --- | --- |
 | Unit test | Output và error có còn đúng contract? | Thay đổi nhanh hơn hay dùng ít bộ nhớ hơn. |
-| Benchmark | Operation này thay đổi thế nào dưới input đã chọn? | Request ngoài đời có latency giống hệt. |
+| Benchmark | thao tác này thay đổi thế nào dưới input đã chọn? | yêu cầu ngoài đời có latency giống hệt. |
 | CPU profile | Khi đang dùng CPU, stack nào tích lũy chi phí? | Thời gian chờ I/O hoặc allocation heap đang là nguyên nhân. |
-| Heap/allocation profile | Đường code nào xuất hiện trong mẫu allocation hoặc heap? | Mỗi allocation cá thể đã được đếm chính xác. |
-| Execution trace | Trong một khoảng thời gian, runtime và goroutine tiến triển ra sao? | Một dòng source là “thủ phạm” nếu chưa đối chiếu workload. |
+| Heap/allocation profile | Đường mã nguồn nào xuất hiện trong mẫu allocation hoặc heap? | Mỗi allocation cá thể đã được đếm chính xác. |
+| Execution trace | Trong một khoảng thời gian, runtime và goroutine tiến triển ra sao? | Một dòng source là “thủ phạm” nếu chưa đối chiếu tải công việc. |
 
-## Đừng sửa từ vẻ bề ngoài của code
+## Đừng sửa từ vẻ bề ngoài của mã nguồn
 
 Lab của chương bắt đầu bằng test đỏ: hàm `Render` chưa tồn tại. Contract là output phải giữ nguyên từng byte theo test; input có thể có hàng nghìn reading; người học tự chọn cách dựng chuỗi rồi tự thêm benchmark. Cách cố tình ngây thơ thường là cộng string trong vòng lặp. Cách tham chiếu dùng `strings.Builder` và `strconv.FormatInt`, nhưng đó chỉ là một lời giải cho contract cụ thể, không phải câu thần chú rằng mọi string đều phải dùng Builder.
 
@@ -56,32 +56,32 @@ go test -run '^$' `
 go test -bench . -benchmem ./fixed
 ~~~
 
-Test trong exercise chỉ chốt wire format; benchmark đã có sẵn workload 1.000 reading để anh không vô tình đo cả phần dựng input. Trước lượt đo đầu tiên, hãy viết ra một giả thuyết có thể bị bác bỏ, chẳng hạn: “nối string trong vòng lặp tạo allocation tăng theo số reading”. Bắt đầu bằng implementation đơn giản mà anh tự chọn, giữ output xanh, rồi chạy năm lượt benchmark. Chỉ khi đã có baseline mới mở `fixed/` để so cách reference phân bổ công việc. Nếu số thay đổi mà output không còn đúng, anh vừa thắng một cuộc thi khác. Nếu hai bản tương đương trong phạm vi đo, ưu tiên bản dễ đọc hơn. Một tối ưu chỉ đáng giữ khi lợi ích của nó nằm đúng nơi vấn đề cần giải và cái giá về độ phức tạp có thể biện minh.
+Test trong exercise chỉ chốt wire format; benchmark đã có sẵn tải công việc 1.000 reading để anh không vô tình đo cả phần dựng input. Trước lượt đo đầu tiên, hãy viết ra một giả thuyết có thể bị bác bỏ, chẳng hạn: “nối string trong vòng lặp tạo allocation tăng theo số reading”. Bắt đầu bằng implementation đơn giản mà anh tự chọn, giữ output xanh, rồi chạy năm lượt benchmark. Chỉ khi đã có baseline mới mở `fixed/` để so cách reference phân bổ công việc. Nếu số thay đổi mà output không còn đúng, anh vừa thắng một cuộc thi khác. Nếu hai bản tương đương trong phạm vi đo, ưu tiên bản dễ đọc hơn. Một tối ưu chỉ đáng giữ khi lợi ích của nó nằm đúng nơi vấn đề cần giải và cái giá về độ phức tạp có thể biện minh.
 
 ## Profile để thay “có lẽ” bằng một đường đi có tên
 
-Khi benchmark cho thấy một operation có chi phí đáng quan tâm, profiler giúp xem chi phí tụ lại ở đâu. Thu profile trên workload tương ứng với câu hỏi; đừng lấy profile của một test khởi động program rồi suy luận về đường nóng production.
+Khi benchmark cho thấy một thao tác có chi phí đáng quan tâm, profiler giúp xem chi phí tụ lại ở đâu. Thu profile trên tải công việc tương ứng với câu hỏi; đừng lấy profile của một test khởi động program rồi suy luận về đường nóng môi trường vận hành.
 
 ~~~powershell
 go test -run '^$' -bench BenchmarkRender `
   -cpuprofile cpu.out -memprofile mem.out ./fixed
-go tool pprof -top cpu.out
+go công cụ pprof -top cpu.out
 ~~~
 
-CPU profile lấy mẫu những lúc process thực sự dùng CPU. Nó phù hợp để tìm stack đang làm computation; nó không biến thời gian request bị block ở network thành CPU time. Heap profile là profile mẫu của allocation/heap; chạy thêm `go tool pprof -top -alloc_space mem.out` khi hỏi tổng lượng byte đã cấp phát theo đường code. `-inuse_space` gần hơn với câu hỏi “đến cuối profile, cái gì đang còn sống”. Hai góc nhìn có thể chỉ đến hai quyết định khác nhau.
+CPU profile lấy mẫu những lúc tiến trình thực sự dùng CPU. Nó phù hợp để tìm stack đang làm computation; nó không biến thời gian yêu cầu bị khối lệnh ở network thành CPU time. Heap profile là profile mẫu của allocation/heap; chạy thêm `go tool pprof -top -alloc_space mem.out` khi hỏi tổng lượng byte đã cấp phát theo đường mã nguồn. `-inuse_space` gần hơn với câu hỏi “đến cuối profile, cái gì đang còn sống”. Hai góc nhìn có thể chỉ đến hai quyết định khác nhau.
 
-`flat` là chi phí gắn trực tiếp vào function; `cum` gồm cả thời gian bên dưới lời gọi của nó. Một function có `flat` nhỏ nhưng `cum` lớn không phải vô tội: nó có thể là cánh cửa dẫn vào công việc đắt. Hãy chọn một stack nổi bật, đọc source và kiểm tra lại bằng benchmark. Đó là vòng lặp điều tra nhỏ nhất:
+`flat` là chi phí gắn trực tiếp vào hàm; `cum` gồm cả thời gian bên dưới lời gọi của nó. Một hàm có `flat` nhỏ nhưng `cum` lớn không phải vô tội: nó có thể là cánh cửa dẫn vào công việc đắt. Hãy chọn một stack nổi bật, đọc source và kiểm tra lại bằng benchmark. Đó là vòng lặp điều tra nhỏ nhất:
 
 ![Đường đi của bằng chứng hiệu năng](../../assets/diagrams/performance-evidence-path.png)
-@figure Một vòng điều tra hiệu năng. Sơ đồ là conceptual; dữ liệu bắt đầu từ workload đại diện, không từ tên một API trông “chậm”.
+@figure Một vòng điều tra hiệu năng. Sơ đồ là conceptual; dữ liệu bắt đầu từ tải công việc đại diện, không từ tên một API trông “chậm”.
 
 Profile có overhead và có thể làm méo phép đo. Tài liệu chẩn đoán của Go còn lưu ý một số loại diagnostic có thể ảnh hưởng lẫn nhau. Thu từng loại riêng khi cần chính xác, ghi lại command, và đừng kết luận từ profile lấy trong một môi trường không giống nơi lỗi xuất hiện.
 
 ## Case study cục bộ: một giả thuyết sống sót qua profile
 
-`labs/part10-measure-first` giữ hai implementation cùng một wire format. `baseline.Render` nối string bằng `+=` trong mỗi iteration; `fixed.Render` dùng `strings.Builder` và `strconv.FormatInt`. Workload là đúng 1.000 `Reading`, tên `endpoint-0000` đến `endpoint-0999`, dựng một lần ngoài vòng benchmark. Đây là microbenchmark của renderer; nó không đo JSON, network, scheduler hay latency của một service.
+`labs/part10-measure-first` giữ hai implementation cùng một wire format. `baseline.Render` nối string bằng `+=` trong mỗi iteration; `fixed.Render` dùng `strings.Builder` và `strconv.FormatInt`. tải công việc là đúng 1.000 `Reading`, tên `endpoint-0000` đến `endpoint-0999`, dựng một lần ngoài vòng benchmark. Đây là microbenchmark của renderer; nó không đo JSON, network, scheduler hay latency của một service.
 
-Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. So sánh có ý nghĩa khi giữ cùng máy hoặc môi trường, Go version, workload và benchmark contract; `-count=5` giúp tránh đối chiếu một lần chạy đơn lẻ với một lần chạy đơn lẻ:
+Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. So sánh có ý nghĩa khi giữ cùng máy hoặc môi trường, Go version, tải công việc và benchmark contract; `-count=5` giúp tránh đối chiếu một lần chạy đơn lẻ với một lần chạy đơn lẻ:
 
 ~~~powershell
 cd labs/part10-measure-first
@@ -94,7 +94,7 @@ go test -run '^$' `
   -bench BenchmarkRender `
   -cpuprofile baseline-cpu.out `
   ./baseline
-go tool pprof -top baseline-cpu.out
+go công cụ pprof -top baseline-cpu.out
 ~~~
 
 Kết quả của năm lượt ngày 22-09-2026 trên Windows amd64, CPU 12th Gen Intel Core i5-12500H, cho thấy nhiễu đáng kể ở `ns/op` nhưng một chênh lệch ổn định về allocation. Các khoảng dưới đây là khoảng quan sát, không phải median hay SLO:
@@ -106,7 +106,7 @@ Kết quả của năm lượt ngày 22-09-2026 trên Windows amd64, CPU 12th Ge
 | `baseline` (`+=`) | 1.38–3.78 ms/op | khoảng 10.44 MB/op; 1.900–1.901 allocs/op |
 | `fixed` (`strings.Builder`) | 26.1–86.1 µs/op | khoảng 87.6 KB/op; 917 allocs/op |
 
-CPU profile của baseline (1.55 giây, 2.55 giây CPU sample với `GOMAXPROCS=16`) có `runtime.concatstrings` khoảng 25.9% cumulative và `runtime.memmove` 16.1% flat; `baseline.Render` nằm trên 30.6% cumulative sample. Evidence này ủng hộ giả thuyết về intermediate string và copy, thay vì phán đoán từ tên `Render`. Chỉ sau evidence ấy mới đổi implementation; test wire format chạy lại trước benchmark sau thay đổi. Kết luận không phải “luôn dùng `Builder`”. Với output vài byte hoặc code chạy một lần lúc khởi động, lợi ích có thể không đáng đổi cách viết. Ở workload này, profile và benchmark cùng hướng về chi phí dựng string lặp lại; ở workload khác, phải đo lại thay vì mang kết luận đi theo tên API.
+CPU profile của baseline (1.55 giây, 2.55 giây CPU sample với `GOMAXPROCS=16`) có `runtime.concatstrings` khoảng 25.9% cumulative và `runtime.memmove` 16.1% flat; `baseline.Render` nằm trên 30.6% cumulative sample. Evidence này ủng hộ giả thuyết về intermediate string và copy, thay vì phán đoán từ tên `Render`. Chỉ sau evidence ấy mới đổi implementation; test wire format chạy lại trước benchmark sau thay đổi. Kết luận không phải “luôn dùng `Builder`”. Với output vài byte hoặc mã nguồn chạy một lần lúc khởi động, lợi ích có thể không đáng đổi cách viết. Ở tải công việc này, profile và benchmark cùng hướng về chi phí dựng string lặp lại; ở tải công việc khác, phải đo lại thay vì mang kết luận đi theo tên API.
 
 ## Trace kể chuyện thời gian, không thay profile
 
@@ -114,10 +114,10 @@ Khi câu hỏi chuyển từ “CPU đi đâu?” sang “goroutine này chờ a
 
 ~~~powershell
 go test -run TestScenario -trace trace.out ./fixed
-go tool trace trace.out
+go công cụ trace trace.out
 ~~~
 
-Trace phù hợp với một khoảng thời gian nhỏ và scenario rõ. Mở trace của một process chạy lâu, workload mơ hồ, rồi tìm một vạch màu lạ là cách chắc chắn để có thêm câu hỏi chứ chưa có đáp án. Đặt khoảng trace quanh hành vi cần điều tra, rồi đối chiếu lại với log, benchmark hoặc request trace ở chương sau.
+Trace phù hợp với một khoảng thời gian nhỏ và scenario rõ. Mở trace của một tiến trình chạy lâu, tải công việc mơ hồ, rồi tìm một vạch màu lạ là cách chắc chắn để có thêm câu hỏi chứ chưa có đáp án. Đặt khoảng trace quanh hành vi cần điều tra, rồi đối chiếu lại với log, benchmark hoặc yêu cầu trace ở chương sau.
 
 Ở đây cần tách bốn lớp mà người viết performance rất hay trộn lẫn. Contract của `testing.B.Loop` là documented behavior của package `testing`. CPU/heap profile và execution trace là dữ liệu quan sát được trong một lần chạy. Escape analysis từ compiler là chẩn đoán implementation của compiler hiện tại, không phải luật ngôn ngữ. Còn G/M/P, garbage collector và cách runtime xử lý syscall là implementation detail: chúng quan trọng khi evidence dẫn đến đó, nhưng tên của chúng không phải lời giải thích cho mọi chậm trễ.
 
@@ -125,9 +125,9 @@ Trace phù hợp với một khoảng thời gian nhỏ và scenario rõ. Mở t
 go build -gcflags=-m=2 ./fixed
 ~~~
 
-Thông báo “escapes to heap” giúp tạo giả thuyết về lifetime hoặc interface boxing trong build hiện tại. Nó không cho phép anh xóa allocation bằng cách ép code khó hiểu, và cũng không thay thế `-benchmem`. Trong chương này, hãy xem escape analysis như một kính lúp phụ. Khi runtime thật sự trở thành nguyên nhân, ta sẽ quay lại bằng thí nghiệm và source đúng phiên bản, thay vì biến mô hình runtime thành mê tín.
+Thông báo “escapes to heap” giúp tạo giả thuyết về lifetime hoặc interface boxing trong build hiện tại. Nó không cho phép anh xóa allocation bằng cách ép mã nguồn khó hiểu, và cũng không thay thế `-benchmem`. Trong chương này, hãy xem escape analysis như một kính lúp phụ. Khi runtime thật sự trở thành nguyên nhân, ta sẽ quay lại bằng thí nghiệm và source đúng phiên bản, thay vì biến mô hình runtime thành mê tín.
 
-Lần tới khi ai đó đề nghị “thêm worker cho nhanh”, hãy hỏi trước: workload nào đang bị chậm; request đang dùng CPU, chờ network hay bị giữ bởi quota; contract nào phải giữ nguyên; và phép đo nào có thể bác bỏ đề nghị ấy? Một câu hỏi đo được thường có giá trị hơn năm thay đổi nhìn có vẻ thông minh.
+Lần tới khi ai đó đề nghị “thêm worker cho nhanh”, hãy hỏi trước: tải công việc nào đang bị chậm; yêu cầu đang dùng CPU, chờ network hay bị giữ bởi quota; contract nào phải giữ nguyên; và phép đo nào có thể bác bỏ đề nghị ấy? Một câu hỏi đo được thường có giá trị hơn năm thay đổi nhìn có vẻ thông minh.
 
 @references
 1. Go Team. Package testing, phần Benchmarks và `B.Loop`. pkg.go.dev/testing
