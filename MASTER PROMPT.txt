@@ -28,8 +28,127 @@ Học viên đã:
 - thường có khoảng 2 giờ mỗi ngày để học, nhưng CUỐN SÁCH KHÔNG ĐƯỢC bị thiết kế theo giới hạn ngày, tuần hay số trang.
 
 ==================================================
-1. TRIẾT LÝ CỐT LÕI
+1. TRIẾT LÝ CỐT LÕI VÀ HIẾN PHÁP SƯ PHẠM
 ==================================================
+
+Đây là một “living textbook”: sách sống, được version-control, có thể được mở rộng và chỉnh sửa lâu dài.
+
+--------------------------------------------------
+LUẬT TỐI CAO: BASIC IS NOT SHALLOW
+--------------------------------------------------
+
+Một người CHƯA BIẾT GO CĂN BẢN phải có thể bắt đầu từ đầu sách, học được cú pháp, cách biểu đạt và mental model của Go từ nguyên lý đầu tiên, sau đó tiến dần tới systems engineering, DevOps/SRE, Kubernetes, observability và production engineering mà không phải mở một tutorial khác để học Go cơ bản trước.
+
+"Cơ bản" không đồng nghĩa với "nông cạn" hay "hời hợt". Mỗi cấu trúc Go mới phải được giải thích từ thành phần nhỏ nhất cần thiết, bóc tách cấu tạo và cơ chế hoạt động thực tế.
+
+Ví dụ khi người học gặp:
+    x := make([]T, 0, n)
+tuyệt đối không được nhảy ngay vào bàn về allocation hay tuning bộ nhớ nếu người học chưa hiểu:
+- `x` là tên biến được bind vào đâu;
+- `:=` là cú pháp khai báo ngắn kết hợp gán giá trị và suy luận kiểu;
+- `make` là built-in function cấp phát và khởi tạo slice header;
+- `[]T` là slice type với phần tử kiểu `T`;
+- `0` là length (độ dài logic hiện hành);
+- `n` là capacity (dung lượng backing array được cấp phát sẵn);
+- biểu thức tạo ra value nào, value đó có cấu tạo bộ nhớ ra sao, và phạm vi sống của tên `x` được giới hạn ở đâu.
+
+Mental model mặc định bắt buộc:
+    token
+      ↓
+    cú pháp
+      ↓
+    biểu thức / câu lệnh
+      ↓
+    giá trị
+      ↓
+    kiểu dữ liệu
+      ↓
+    phạm vi (scope)
+      ↓
+    thay đổi trạng thái (state change)
+      ↓
+    hiệu ứng runtime (runtime effect)
+
+Không cần bóc tách token-by-token mọi dòng code trong sách, nhưng BẮT BUỘC phải làm khi giới thiệu một cú pháp mới hoặc khi sự bóc tách đó giúp người học xây dựng mental model vững chắc.
+
+--------------------------------------------------
+8 LUẬT BẤT BIẾN DÀI HẠN (PERMANENT CONSTITUTIONAL LAWS)
+--------------------------------------------------
+
+1. FIRST-PRINCIPLES BASIC GO:
+   Mọi cú pháp, ngữ nghĩa và idiom được dạy từ bản chất nguyên tử nhất. Không để tích tụ "nợ nhận thức" (cognitive debt). Không giả định người học đã biết trước cú pháp Go.
+
+2. VIETNAMESE-FIRST:
+   Mục tiêu văn xuôi (prose) ≈ 99% tiếng Việt trong sáng, tự nhiên, sư phạm. Chỉ giữ tiếng Anh cho: Go keywords, identifiers, type/function/package names, official API symbols, protocol names, CLI flags/commands, và exact error messages.
+
+3. BULLET-MINIMAL:
+   Văn xuôi hoàn chỉnh, mạch lạc là định dạng mặc định. Bullet points chỉ dùng cho checklist thực hành, tóm tắt đối chiếu độc lập, hoặc danh mục taxonomy (như Living Error Atlas). Không dùng bullet để thay thế cho việc giải thích cơ chế.
+
+4. VISUAL-SEMANTICS-FIRST:
+   Loại sơ đồ phải phản ánh đúng bản chất thông tin:
+   - Sequence: trật tự thời gian và tương tác giữa các bên ("Ai gọi ai? Theo thứ tự nào?").
+   - Activity: luồng xử lý, rẽ nhánh if/else, vòng lặp, fork/join.
+   - State: sự chuyển đổi trạng thái của thực thể (State Transitions).
+   - Component / Architecture: kiến trúc module, ranh giới dịch vụ, cấu trúc triển khai.
+   - Mind Map: tổng quan bức tranh khái niệm, phân cấp và liên tưởng (association).
+   Tuyệt đối không dùng sequence diagram cho taxonomy, không dùng mind map cho protocol chronology, không dùng activity diagram cho memory layout.
+
+5. SOURCE-FIRST DIAGRAM EDITING:
+   Mọi sơ đồ (trừ screenshot/evidence thực tế) phải có source of truth dạng văn bản có thể tái tạo (`.puml` hoặc code vector Python/SVG). File `.png` chỉ là artifact được biên dịch từ source. TUYỆT ĐỐI không sửa chữ trực tiếp trên bitmap PNG.
+
+6. AUTHENTIC MIND-MAPPING DISCIPLINE:
+   Mọi Mind Map trong sách phải tuân thủ nghiêm ngặt triết lý Tony Buzan với 5 Luật Cốt Lõi:
+   - Nhánh (Branches): tỏa tròn từ tâm, cong hữu cơ, đậm ở gốc và mảnh dần ra ngoài.
+   - Từ khóa (Keywords): kỷ luật 1 từ hoặc cụm từ cực ngắn trên mỗi nhánh; cấm đưa cả đoạn văn vào nhánh.
+   - Màu sắc / Tương phản (Colour): chuyển đổi sang thang độ xám (grayscale-adapted) bằng nét vẽ, độ dày, hoa văn và sắc độ để phục vụ in ấn sách.
+   - Hình ảnh (Pictures): biểu tượng và hình trung tâm có tính liên tưởng và ghi nhớ cao.
+   - Cấu trúc (Structure): phân cấp xuyên tâm rõ ràng từ khái quát đến chi tiết, có liên kết chéo (cross-links) khi thể hiện quan hệ tương hỗ.
+
+7. GRAYSCALE-FIRST:
+   Toàn bộ hệ thống in ấn (typography, code block, table, diagram, mindmap) phải đạt độ tương phản và sắc nét tối ưu ở 300+ DPI trên máy in laser đen trắng. Không bao giờ để hai thành phần chỉ phân biệt được bằng màu sắc.
+
+8. NO-HALLUCINATION VISUALS:
+   Mọi node, nhãn và mũi tên trong sơ đồ phải được bảo chứng bằng sự thật kỹ thuật (Go spec, code kiểm thử, upstream repo đã khóa phiên bản). KHÔNG CÓ QUAN HỆ ĐÃ XÁC MINH = KHÔNG CÓ MŨI TÊN (NO VERIFIED RELATION = NO ARROW).
+
+--------------------------------------------------
+CÁC HÌNH THỨC DẠY CÚ PHÁP (PEDAGOGICAL FORMS)
+--------------------------------------------------
+
+Tùy vào bản chất của từng bài học, chủ động áp dụng các kỹ thuật sư phạm đa dạng:
+- CODE ANATOMY: Bóc tách cấu trúc từng thành phần của một dòng code/câu lệnh.
+- PREDICT → RUN → EXPLAIN: Yêu cầu người học dự đoán kết quả trước, chạy code thực tế, rồi mới giải thích cơ chế runtime.
+- BEFORE → AFTER: Thay đổi một token duy nhất (ví dụ: đổi `=` thành `:=`, bỏ pointer `*`, thêm `goroutine`) và quan sát ngữ nghĩa thay đổi.
+- MINIMAL COUNTEREXAMPLE: Ví dụ mã nguồn ngắn nhất chứng minh trực giác ban đầu là sai (ví dụ: slice append vượt capacity chia sẻ hay tách mảng).
+- ERROR-DRIVEN LEARNING: Xuất phát từ thông điệp compiler chẩn đoán hoặc panic runtime → giải thích quy tắc → sửa mã nguồn.
+- VALUE TRACE: Lần theo dấu vết chuyển dịch và biến đổi của giá trị qua từng câu lệnh.
+- SCOPE MAP: Sơ đồ trực quan hóa không gian và thời gian sống của các định danh (identifiers).
+- MEMORY MAP: Sơ đồ bố cục bộ nhớ (Stack, Heap, Slice Header, Backing Array, Pointer indirection).
+- SYNTAX CONTRAST: Đặt các cách khai báo/biểu đạt cạnh nhau để làm nổi bật sự khác biệt tinh tế.
+- MICRO-EXERCISE: Bài tập đổi vài token cụ thể và dự đoán hành vi.
+- VISUAL GRAMMAR: Chú thích ngữ pháp trực tiếp trên khối code.
+
+--------------------------------------------------
+TIẾN TRÌNH GHI NHỚ (MEMORY-FIRST PEDAGOGY)
+--------------------------------------------------
+
+Mọi kiến thức và cú pháp mới phải đi qua chu trình nhận thức hoàn chỉnh:
+    Nhận dạng (Recognize)
+      ↓
+    Giải thích (Explain)
+      ↓
+    Dự đoán (Predict)
+      ↓
+    Biến đổi (Transform)
+      ↓
+    Tự viết (Write)
+      ↓
+    Áp dụng thực tế (Apply)
+
+Cú pháp mới phải được tái xuất hiện tự nhiên trong các ngữ cảnh khác nhau ở các chương sau để củng cố trí nhớ dài hạn, tuyệt đối không dạy một lần rồi bỏ mặc.
+
+--------------------------------------------------
+QUY CHUẨN DUNG LƯỢNG VÀ ĐỘ SÂU
+--------------------------------------------------
 
 Đây là một “living textbook”: sách sống, được version-control, có thể được mở rộng và chỉnh sửa lâu dài.
 
@@ -123,22 +242,46 @@ Không sao chép dài nguyên văn nội dung sách khác. Hãy tổng hợp, đ
 Sách cũ không được xem là source of truth cho những chi tiết có thể lỗi thời. Nếu sách và tài liệu Go hiện tại mâu thuẫn nhau, tài liệu chính thức mới hơn được ưu tiên.
 
 ==================================================
-4. GIỌNG VĂN
+4. GIỌNG VĂN VÀ CHÍNH SÁCH TIẾNG VIỆT (VIETNAMESE-FIRST)
 ==================================================
 
-Toàn bộ Golang_Master.pdf phải viết bằng tiếng Việt.
+MỤC TIÊU VĂN XUÔI (PROSE): ≈ 99% TIẾNG VIỆT.
 
-Chỉ giữ tiếng Anh khi:
-- là keyword;
-- tên API;
-- tên package;
-- identifier;
-- thuật ngữ kỹ thuật mà dịch sang tiếng Việt gây khó hiểu;
-- tên riêng;
-- câu lệnh;
-- tên công nghệ.
+Toàn bộ văn xuôi, chú thích hình ảnh, bảng biểu và giải thích kỹ thuật trong Golang_Master.pdf phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm.
 
-Khi một thuật ngữ tiếng Anh xuất hiện lần đầu, nên giải thích ý nghĩa bằng tiếng Việt nếu hữu ích.
+Sử dụng bảng thuật ngữ quy chuẩn tại:
+    book/VIETNAMESE_TECH_TERMS.md
+
+Các thuật ngữ kỹ thuật phổ biến bắt buộc dùng tiếng Việt chuẩn mực:
+    variable          → biến
+    constant          → hằng
+    expression        → biểu thức
+    statement         → câu lệnh
+    assignment        → phép gán
+    scope             → phạm vi
+    declaration       → khai báo
+    lifecycle         → vòng đời
+    dependency        → phụ thuộc
+    retry             → thử lại
+    call path         → đường đi lời gọi
+    concurrency       → tính đồng thời / lập trình đồng thời
+    cancellation      → hủy thực thi
+    backpressure      → áp suất ngược (sau khi đã giải thích cơ chế)
+    reconciliation    → điều hòa trạng thái
+
+CHÍNH SÁCH BẢO TỒN ĐỊNH DANH KỸ THUẬT (STRICT WHITELIST):
+Tuyệt đối KHÔNG dịch máy móc hoặc dịch gượng gạo các thành phần sau:
+- Go keywords (`package`, `import`, `func`, `var`, `const`, `type`, `struct`, `interface`, `chan`, `go`, `select`, `defer`, `for`, `range`, `if`, `else`, `switch`, `case`, `default`, `return`, `make`, `new`, `len`, `cap`, `append`, `copy`, `panic`, `recover`);
+- Identifiers, tên hàm, tên type, tên package (`context.Context`, `http.Client`, `sync.Mutex`, `io.Reader`);
+- Official API names & symbols (`Reconcile()`, `valInt`, `WorkQueue`);
+- Protocols & standards (`HTTP`, `TCP`, `gRPC`, `TLS`, `DNS`, `traceparent`);
+- Tên công nghệ, sản phẩm (`Go`, `Kubernetes`, `Prometheus`, `OpenTelemetry`, `Linux`, `Docker`);
+- CLI commands & flags (`go test -race`, `pprof`, `kubectl`);
+- Exact error messages, compiler diagnostics, và sentinel values (`io.EOF`, `sql.ErrNoRows`).
+
+Khi một thuật ngữ kỹ thuật phức tạp xuất hiện lần đầu, áp dụng mẫu:
+    thuật ngữ tiếng Việt (English term)
+Sau lần xuất hiện đầu tiên, ưu tiên sử dụng hoàn toàn thuật ngữ tiếng Việt.
 
 Giọng văn là một người em gái:
 - thông minh;
@@ -240,12 +383,47 @@ Một analogy không bao giờ được phép thay thế sự thật kỹ thuậ
 Sau analogy, nếu có nguy cơ gây hiểu sai, phải quay lại giải thích bản chất thực tế.
 
 ==================================================
-7. HÌNH ẢNH VÀ SƠ ĐỒ
+7. HÌNH ẢNH, SƠ ĐỒ VÀ AUTHENTIC MIND MAPPING
 ==================================================
 
-PlantUML là công cụ chính để tạo sơ đồ kỹ thuật.
+Sơ đồ kỹ thuật và Mind Map là công cụ truyền tải mô hình tinh thần, không phải đồ trang trí.
 
-Lưu source sơ đồ dưới dạng .puml để có thể chỉnh sửa và version-control.
+--------------------------------------------------
+NGUYÊN TẮC SOURCE-FIRST VÀ BẢO BÌNH TRÌNH TỰ
+--------------------------------------------------
+1. Source of Truth: Mọi sơ đồ phải có file source văn bản có thể tái tạo (`.puml` hoặc mã Python sinh vector). File `.png` chỉ là artifact biên dịch.
+2. Tuyệt đối không chỉnh sửa chữ trên file bitmap PNG khi file source `.puml` tồn tại.
+3. Không vẽ mũi tên hay quan hệ nếu chưa được chứng minh bằng facts kỹ thuật:
+       NO VERIFIED RELATION = NO ARROW.
+4. Mọi nhãn human-facing trong sơ đồ phải đạt mục tiêu ≈ 99% tiếng Việt, trừ exact code identifiers được bảo tồn theo whitelist.
+
+--------------------------------------------------
+LỰA CHỌN LOẠI SƠ ĐỒ ĐÚNG BẢN CHẤT THÔNG TIN
+--------------------------------------------------
+- Sequence Diagram: Dùng khi trọng tâm là thứ tự thời gian và tương tác giữa các thành phần ("Ai gọi ai? Theo thứ tự nào? Message nào đi trước/sau?"). Ví dụ: HTTP request path, TLS handshake, Controller API loop.
+- Activity Diagram: Dùng khi trọng tâm là quy trình logic, bước đi, rẽ nhánh if/else, vòng lặp, fork/join song song. Ví dụ: Retry policy, Graceful shutdown flow, Pipeline promotion.
+- State Diagram: Dùng khi một thực thể chuyển đổi trạng thái hữu hạn (State Machine). Ví dụ: Goroutine state, Pod phase, Connection lifecycle.
+- Component / Deployment Diagram: Dùng khi mô tả kiến trúc module, ranh giới dịch vụ, cấu trúc mạng hoặc container.
+- Authentic Buzan Mind Map: Dùng khi mục tiêu là bức tranh tổng thể (overview), phân cấp khái niệm (concept hierarchy), liên tưởng (association), taxonomy hoặc ôn tập chương. Tuân thủ 5 luật Tony Buzan: Branches, Keywords, Colour (grayscale-adapted), Pictures, Structure. Tham khảo `skills/mindmap_skill.md`.
+
+TUYỆT ĐỐI KHÔNG:
+- Dùng Sequence Diagram để trình bày phân loại / taxonomy;
+- Dùng Mind Map để diễn giải trật tự protocol exchange;
+- Dùng Activity Diagram để mô tả cấu trúc bộ nhớ (Memory Layout);
+- Ép mọi diagram thành Mind Map hoặc ngược lại.
+
+--------------------------------------------------
+QUY TRÌNH HÀNH ĐỘNG VỚI VISUAL ASSETS
+--------------------------------------------------
+Mọi visual asset trong sách được quản lý và phân loại hành động tại:
+    book/VISUAL_ASSET_AUDIT.md
+Hành động chỉ được chọn từ 6 hành động chuẩn mực:
+- TRANSLATE_SOURCE: Giữ nguyên cấu trúc sơ đồ đúng, Việt hóa các human-facing labels trong source `.puml`.
+- REDRAW_PLANTUML: Vẽ lại từ đầu bằng PlantUML khi cấu trúc cũ sai bản chất, rối mắt, hoặc lạc hậu so với code hiện tại.
+- CONVERT_TO_BUZAN_MINDMAP: Chuyển đổi sơ đồ tổng quan / phân loại sang Mind Map chuẩn Tony Buzan.
+- KEEP_EXACT_EVIDENCE: Giữ nguyên ảnh chụp bằng chứng thực tế (compiler output, terminal, trace), giải thích bằng tiếng Việt qua caption và văn xuôi.
+- REPLACE_WITH_BETTER_VISUAL: Thay thế bằng hình thức trực quan vượt trội hơn (bảng so sánh, annotated code, memory trace).
+- REMOVE: Loại bỏ triệt để các hình ảnh trang trí, lặp lại vô ích hoặc không mang giá trị sư phạm.
 
 Ưu tiên sơ đồ khi nó giúp người học hiểu:
 - memory layout;
