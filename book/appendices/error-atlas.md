@@ -407,3 +407,10 @@ Sự kiện chẩn đoán (`Kubelet Event`) phát ra khi endpoint kiểm tra s�
 Trạng thái từ chối (`Admission / Policy Status`) từ Kubernetes Validating Admission Webhook hoặc Promotion Gate của CI/CD khi artifact container image không có chữ ký cosign hợp lệ hoặc digest SHA-256 không khớp với bản ghi phát hành.
 ! Đây là rào chắn chính sách ở tầng CI/CD delivery hoặc Kubernetes admission webhook, không phải lỗi từ runtime của ứng dụng.
 → Bảo đảm image được build và ký số thông qua pipeline CI chính thức có attestation/provenance hợp lệ trước khi promote. [Ch18]
+
+### J08 `Operation cannot be fulfilled: the object has been modified`
+* `Operation cannot be fulfilled on <resource>: the object has been modified; please apply your changes to the latest version and try again`
+Lỗi từ chối (`API Server HTTP 409 Conflict`) khi một client cố gắng cập nhật đối tượng nhưng `metadata.resourceVersion` gửi lên đã lỗi thời so với bản ghi hiện hành trong etcd.
+! Đây là cơ chế kiểm soát đồng thời lạc quan (Optimistic Concurrency Control) của Kubernetes nhằm ngăn chặn ghi đè mất dữ liệu giữa các client cạnh tranh.
+→ Sử dụng `k8s.io/client-go/util/retry.RetryOnConflict` để đọc lại snapshot mới nhất từ API Server và áp dụng thay đổi trước khi thử lại. [Ch22]
+
