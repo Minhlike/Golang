@@ -1,0 +1,20 @@
+{
+  "id": "opa",
+  "name": "Open Policy Agent (OPA)",
+  "rank": 13,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/open-policy-agent/opa.git",
+  "module_path": "github.com/open-policy-agent/opa",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.20.2",
+  "resolved_tag": "v1.20.2",
+  "resolved_commit": "b2c26708e9d55645d7f837db495031f7e4152594",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.20.2",
+    "is_branch": false
+  }
+}

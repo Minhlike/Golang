@@ -1,0 +1,20 @@
+{
+  "id": "google-cloud-go",
+  "name": "Google Cloud Go Client Libraries",
+  "rank": 42,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/googleapis/google-cloud-go.git",
+  "module_path": "cloud.google.com/go",
+  "version_strategy": "MULTI_MODULE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.123.0",
+  "resolved_tag": "v0.123.0",
+  "resolved_commit": "4e8373586a5e48c18fbfd4bb0a3e259184e49a91",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.123.0",
+    "is_branch": false
+  }
+}

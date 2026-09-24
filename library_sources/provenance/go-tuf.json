@@ -1,0 +1,20 @@
+{
+  "id": "go-tuf",
+  "name": "The Update Framework (TUF) v2",
+  "rank": 41,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/theupdateframework/go-tuf.git",
+  "module_path": "github.com/theupdateframework/go-tuf/v2",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v2.4.2",
+  "resolved_tag": "v2.4.2",
+  "resolved_commit": "f5edbde31e5507f46db2069402dc38903fe6d9d4",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v2.4.2",
+    "is_branch": false
+  }
+}

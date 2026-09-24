@@ -1,0 +1,76 @@
+{
+  "id": "protobuf-go",
+  "name": "Go Protocol Buffers v2",
+  "rank": 16,
+  "tier": "TIER_A",
+  "module_path": "google.golang.org/protobuf",
+  "resolved_version": "v1.36.12",
+  "resolved_commit": "cdd4c5f7406e82462949c7a65defa9f3029c162d",
+  "important_paths": [
+    "proto",
+    "reflect/protoreflect",
+    "encoding/protojson"
+  ],
+  "focus_areas": [
+    "proto/wire.go",
+    "reflect/protoreflect/value.go",
+    "internal/impl/message.go"
+  ],
+  "entrypoints": [
+    "google.golang.org/protobuf.New",
+    "google.golang.org/protobuf.Init"
+  ],
+  "public_api": [
+    "google.golang.org/protobuf.Client",
+    "google.golang.org/protobuf.Config",
+    "google.golang.org/protobuf.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Go Protocol Buffers v2"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "proto/client_test.go"
+  ]
+}

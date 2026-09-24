@@ -1,0 +1,77 @@
+{
+  "id": "go-containerregistry",
+  "name": "Google go-containerregistry",
+  "rank": 17,
+  "tier": "TIER_A",
+  "module_path": "github.com/google/go-containerregistry",
+  "resolved_version": "v0.22.1",
+  "resolved_commit": "8a72a424fdecb4caa14f2d525e5d2503331442b5",
+  "important_paths": [
+    "pkg/v1",
+    "pkg/v1/remote",
+    "pkg/authn",
+    "pkg/name"
+  ],
+  "focus_areas": [
+    "pkg/v1/remote/puller.go",
+    "pkg/v1/remote/pusher.go",
+    "pkg/v1/remote/descriptor.go"
+  ],
+  "entrypoints": [
+    "github.com/google/go-containerregistry.New",
+    "github.com/google/go-containerregistry.Init"
+  ],
+  "public_api": [
+    "github.com/google/go-containerregistry.Client",
+    "github.com/google/go-containerregistry.Config",
+    "github.com/google/go-containerregistry.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Google go-containerregistry"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "pkg/v1/client_test.go"
+  ]
+}

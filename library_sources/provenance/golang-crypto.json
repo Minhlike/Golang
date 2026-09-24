@@ -1,0 +1,20 @@
+{
+  "id": "golang-crypto",
+  "name": "Go x/crypto (Focus SSH)",
+  "rank": 12,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/golang/crypto.git",
+  "module_path": "golang.org/x/crypto",
+  "version_strategy": "GO_MODULE_STABLE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.57.0",
+  "resolved_tag": "v0.57.0",
+  "resolved_commit": "3f62bf119e84c6e35e8518a2958089ade622d1a3",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.57.0",
+    "is_branch": false
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "moby",
+  "name": "Moby / Docker Engine",
+  "rank": 7,
+  "tier": "TIER_S",
+  "module_path": "github.com/moby/moby",
+  "resolved_version": "v28.5.2",
+  "resolved_commit": "89c5e8fd66634b6128fc4c0e6f1236e2540e46e0",
+  "important_paths": [
+    "client",
+    "daemon",
+    "api/types",
+    "pkg/signal"
+  ],
+  "focus_areas": [
+    "client/container_create.go",
+    "client/hijack.go",
+    "daemon/daemon.go"
+  ],
+  "entrypoints": [
+    "client.NewClientWithOpts",
+    "daemon.NewDaemon",
+    "daemon.ContainerStart"
+  ],
+  "public_api": [
+    "client.APIClient",
+    "daemon.Daemon",
+    "container.Container",
+    "pkg/archive.Tar"
+  ],
+  "core_types": [
+    {
+      "name": "Daemon",
+      "kind": "struct",
+      "description": "Central container engine daemon coordinating state, storage, and networking"
+    },
+    {
+      "name": "Container",
+      "kind": "struct",
+      "description": "Runtime container metadata, state machine, and mount configuration"
+    },
+    {
+      "name": "LayerStore",
+      "kind": "interface",
+      "description": "Copy-on-write image layer storage graph driver manager"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Container Creation",
+      "path": "Client.ContainerCreate() -> Daemon.containerCreate() -> ContainerStore.Add()"
+    },
+    {
+      "phase": "Container Start",
+      "path": "Daemon.ContainerStart() -> containerd.CreateTask() -> networking.Allocate() -> task.Start()"
+    },
+    {
+      "phase": "Container Wait",
+      "path": "Daemon.ContainerWait() -> task.Wait() -> state.SetStopped() -> cleanup()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Daemon Subsystem Coordinators with Per-Container State Mutexes",
+    "synchronization": "Container.Lock(), sync.Mutex across daemon registries and bridge networks",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "gRPC and HTTP engine calls carry Context with cancel/timeout controls",
+    "leak_prevention": "Graceful daemon shutdown cleans up running exec instances and releases IPAM leases"
+  },
+  "retry_model": {
+    "strategy": "Configurable restart policies (always, on-failure, unless-stopped)",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "Unix domain sockets (/var/run/docker.sock) and containerd gRPC socket",
+    "os": "Linux namespaces (pid, net, ipc, mnt, uts, user), cgroups v1/v2, seccomp, AppArmor",
+    "serialization": "Docker Engine HTTP REST JSON API and containerd Protobuf definitions"
+  },
+  "verification_tests": [
+    "client/container_start_test.go",
+    "daemon/daemon_test.go"
+  ]
+}

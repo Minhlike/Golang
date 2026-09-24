@@ -1,0 +1,20 @@
+{
+  "id": "azure-sdk-for-go",
+  "name": "Azure SDK for Go (Core)",
+  "rank": 43,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/Azure/azure-sdk-for-go.git",
+  "module_path": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+  "version_strategy": "MULTI_MODULE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.23.1",
+  "resolved_tag": "sdk/azcore/v1.23.1",
+  "resolved_commit": "d86ae78bd655d233689866cf78930f3c5fd42c35",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "sdk/azcore/v1.23.1",
+    "is_branch": false
+  }
+}

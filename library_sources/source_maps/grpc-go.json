@@ -1,0 +1,79 @@
+{
+  "id": "grpc-go",
+  "name": "gRPC Go",
+  "rank": 15,
+  "tier": "TIER_A",
+  "module_path": "google.golang.org/grpc",
+  "resolved_version": "v1.84.0",
+  "resolved_commit": "e84aa5ab15d1d2b29d54f838312ad490cb7551a8",
+  "important_paths": [
+    "credentials",
+    "balancer",
+    "resolver",
+    "status",
+    "codes"
+  ],
+  "focus_areas": [
+    "clientconn.go",
+    "server.go",
+    "stream.go",
+    "rpc_util.go"
+  ],
+  "entrypoints": [
+    "google.golang.org/grpc.New",
+    "google.golang.org/grpc.Init"
+  ],
+  "public_api": [
+    "google.golang.org/grpc.Client",
+    "google.golang.org/grpc.Config",
+    "google.golang.org/grpc.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for gRPC Go"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "credentials/client_test.go"
+  ]
+}

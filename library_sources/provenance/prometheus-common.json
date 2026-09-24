@@ -1,0 +1,20 @@
+{
+  "id": "prometheus-common",
+  "name": "Prometheus Common",
+  "rank": 36,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/prometheus/common.git",
+  "module_path": "github.com/prometheus/common",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.71.0",
+  "resolved_tag": "v0.71.0",
+  "resolved_commit": "9a4aff03c12e71d3fc29e32a4581deb8e456d88e",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.71.0",
+    "is_branch": false
+  }
+}

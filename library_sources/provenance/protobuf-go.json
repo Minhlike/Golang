@@ -1,0 +1,20 @@
+{
+  "id": "protobuf-go",
+  "name": "Go Protocol Buffers v2",
+  "rank": 16,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/protocolbuffers/protobuf-go.git",
+  "module_path": "google.golang.org/protobuf",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.36.12",
+  "resolved_tag": "v1.36.12",
+  "resolved_commit": "cdd4c5f7406e82462949c7a65defa9f3029c162d",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.36.12",
+    "is_branch": false
+  }
+}

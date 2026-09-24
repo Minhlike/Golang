@@ -1,0 +1,86 @@
+{
+  "id": "golang-crypto",
+  "name": "Go x/crypto (Focus SSH)",
+  "rank": 12,
+  "tier": "TIER_S",
+  "module_path": "golang.org/x/crypto",
+  "resolved_version": "v0.57.0",
+  "resolved_commit": "3f62bf119e84c6e35e8518a2958089ade622d1a3",
+  "important_paths": [
+    "ssh",
+    "ssh/agent",
+    "ssh/knownhosts",
+    "acme"
+  ],
+  "focus_areas": [
+    "ssh/client.go",
+    "ssh/server.go",
+    "ssh/handshake.go",
+    "ssh/session.go"
+  ],
+  "entrypoints": [
+    "ssh.Dial",
+    "ssh.NewClientConn",
+    "ssh.NewServerConn"
+  ],
+  "public_api": [
+    "ssh.Client",
+    "ssh.Session",
+    "ssh.Channel",
+    "ssh.PublicKey"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "SSHv2 client connection managing multiplexed channels"
+    },
+    {
+      "name": "Session",
+      "kind": "struct",
+      "description": "Remote command execution, subsystem, or interactive shell session"
+    },
+    {
+      "name": "Channel",
+      "kind": "interface",
+      "description": "Full-duplex stream channel multiplexed over single SSH transport"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Handshake",
+      "path": "ssh.Dial() -> handshakeTransport() -> keyExchange() -> authenticate()"
+    },
+    {
+      "phase": "Channel Open",
+      "path": "Client.OpenChannel('session') -> sendChannelOpen() -> channel demux"
+    },
+    {
+      "phase": "Command Execution",
+      "path": "Session.Run(cmd) -> sendExecMsg() -> pipe stdio -> waitExitStatus()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Multiplexed Full-Duplex Demuxer with Per-Channel Buffers",
+    "synchronization": "sync.Mutex on transport writer; condition variables for channel window size adjustments",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": false,
+    "deadline_propagation": "Deadline set via net.Conn.SetDeadline(); Channel.Close() shuts down remote streams",
+    "leak_prevention": "Session.Close() releases channel resources and terminates reader goroutines"
+  },
+  "retry_model": {
+    "strategy": "Authentication retry up to configured ClientConfig.Auth methods",
+    "idempotency_aware": false
+  },
+  "boundaries": {
+    "network": "Raw TCP network socket on port 22",
+    "os": "Terminal pseudo-TTY (PTY) modes and terminal window resize signals",
+    "serialization": "SSHv2 wire protocol packet encoding and cryptographic algorithms (ChaCha20, Ed25519, RSA)"
+  },
+  "verification_tests": [
+    "ssh/client_test.go",
+    "ssh/session_test.go"
+  ]
+}

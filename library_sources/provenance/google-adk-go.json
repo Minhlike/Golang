@@ -1,0 +1,20 @@
+{
+  "id": "google-adk-go",
+  "name": "Google Agent Development Kit (ADK) Go",
+  "rank": 45,
+  "tier": "FRONTIER",
+  "official_remote": "https://github.com/google/adk-go.git",
+  "module_path": "github.com/google/adk-go",
+  "version_strategy": "HEAD_TRACKING",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "git_heads",
+  "resolved_version": "HEAD-main",
+  "resolved_tag": "main",
+  "resolved_commit": "f9ce16ef9cb334b69f5ee3e64e9dfc915f02d0b7",
+  "release_status": "UNSTABLE_HEAD",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "main",
+    "is_branch": true
+  }
+}

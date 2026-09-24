@@ -1,0 +1,86 @@
+{
+  "id": "go-git",
+  "name": "go-git Pure Go Implementation",
+  "rank": 11,
+  "tier": "TIER_S",
+  "module_path": "github.com/go-git/go-git/v5",
+  "resolved_version": "v5.19.2",
+  "resolved_commit": "3eeb238da61eb9c7a324f3ee04f990ce89175642",
+  "important_paths": [
+    "plumbing",
+    "storage",
+    "worktree",
+    "repository"
+  ],
+  "focus_areas": [
+    "repository.go",
+    "worktree.go",
+    "plumbing/object/commit.go",
+    "plumbing/transport/client.go"
+  ],
+  "entrypoints": [
+    "git.PlainClone",
+    "git.PlainOpen",
+    "git.Init"
+  ],
+  "public_api": [
+    "git.Repository",
+    "git.Worktree",
+    "git.Remote",
+    "plumbing.Reference"
+  ],
+  "core_types": [
+    {
+      "name": "Repository",
+      "kind": "struct",
+      "description": "Pure Go Git repository handle coordinating worktree, storage, and remotes"
+    },
+    {
+      "name": "Worktree",
+      "kind": "struct",
+      "description": "Filesystem working directory manager for checkout, status, and commit"
+    },
+    {
+      "name": "ObjectStorage",
+      "kind": "interface",
+      "description": "Plumbing storage abstraction for blobs, trees, commits, and tags"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Repository Clone",
+      "path": "PlainClone() -> Remote.Fetch() -> Packfile.Decode() -> Worktree.Checkout()"
+    },
+    {
+      "phase": "Status Computation",
+      "path": "Worktree.Status() -> index.Read() -> file stat walk -> diff generation"
+    },
+    {
+      "phase": "Commit Creation",
+      "path": "Worktree.Commit() -> buildTrees() -> Commit.Encode() -> Ref.Update()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Thread-Safe Storage with Synchronized Worktree Mutexes",
+    "synchronization": "Internal storage mutexes; worktree operations require single-caller locking",
+    "bounded_buffer": false
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context passed to network operations (Fetch, Pull, Push) and packfile decoders",
+    "leak_prevention": "Socket and packfile stream closure on context abort"
+  },
+  "retry_model": {
+    "strategy": "No internal network retry; caller manages transport reconnections",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "Git Smart HTTP/HTTPS, SSH, and Git daemon wire protocols",
+    "os": "Local filesystem (.git directory, working files) or pure in-memory storage (memory.Storage)",
+    "serialization": "Git packfile, index file (DIRC), commit/tree/blob objects"
+  },
+  "verification_tests": [
+    "repository_test.go",
+    "worktree_test.go"
+  ]
+}

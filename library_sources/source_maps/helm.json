@@ -1,0 +1,85 @@
+{
+  "id": "helm",
+  "name": "Helm Kubernetes Package Manager",
+  "rank": 10,
+  "tier": "TIER_S",
+  "module_path": "helm.sh/helm/v3",
+  "resolved_version": "v3.22.0",
+  "resolved_commit": "144ca65f8501953fa8b41cd1d37c7223051c85b7",
+  "important_paths": [
+    "pkg/action",
+    "pkg/chart",
+    "pkg/release",
+    "pkg/engine"
+  ],
+  "focus_areas": [
+    "pkg/action/install.go",
+    "pkg/action/upgrade.go",
+    "pkg/engine/engine.go"
+  ],
+  "entrypoints": [
+    "action.NewInstall",
+    "action.NewUpgrade",
+    "loader.Load"
+  ],
+  "public_api": [
+    "action.Configuration",
+    "chart.Chart",
+    "release.Release",
+    "storage.Storage"
+  ],
+  "core_types": [
+    {
+      "name": "Configuration",
+      "kind": "struct",
+      "description": "Action environment holding Kubernetes client, driver storage, and logger"
+    },
+    {
+      "name": "Chart",
+      "kind": "struct",
+      "description": "Packaged or unpacked Helm chart containing templates, values, and metadata"
+    },
+    {
+      "name": "Storage",
+      "kind": "struct",
+      "description": "Release history backend persisting releases in Kubernetes Secrets or ConfigMaps"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Chart Loading",
+      "path": "loader.Load() -> chartutil.Validate() -> ParseValues()"
+    },
+    {
+      "phase": "Template Rendering",
+      "path": "engine.Render() -> Go template execution -> manifest YAML stream"
+    },
+    {
+      "phase": "Cluster Apply",
+      "path": "action.Install.Run() -> kube.Client.Create() -> storage.Create()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Single-Threaded Action Runner with Parallel Kubernetes Resource Creation",
+    "synchronization": "Kubernetes cluster-side atomic secrets updates; optional release mutex locks",
+    "bounded_buffer": false
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls action duration and Kubernetes API timeouts",
+    "leak_prevention": "Action timeout triggers release rollback or failure recording in storage"
+  },
+  "retry_model": {
+    "strategy": "Kubernetes resource readiness polling with configurable timeout (e.g., --wait)",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "HTTPS calls to Helm chart repositories (OCI / HTTP) and Kubernetes API server",
+    "os": "Local cache (~/.cache/helm) and temporary chart archive tar extraction",
+    "serialization": "YAML manifests, Go templates, and JSON release envelopes"
+  },
+  "verification_tests": [
+    "pkg/action/install_test.go",
+    "pkg/engine/engine_test.go"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "k8s-client-go",
+  "name": "Kubernetes client-go",
+  "rank": 1,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/kubernetes/client-go.git",
+  "module_path": "k8s.io/client-go",
+  "version_strategy": "GO_MODULE_STABLE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.37.0",
+  "resolved_tag": "v0.37.0",
+  "resolved_commit": "28076445520055420e3be4255b4cd27fd19df1f9",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.37.0",
+    "is_branch": false
+  }
+}

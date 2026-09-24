@@ -1,0 +1,76 @@
+{
+  "id": "golang-sync",
+  "name": "Go x/sync",
+  "rank": 31,
+  "tier": "TIER_B",
+  "module_path": "golang.org/x/sync",
+  "resolved_version": "v0.23.0",
+  "resolved_commit": "f75267d8412fc1dfd12b343644a7ea46e4d9c85d",
+  "important_paths": [
+    "errgroup",
+    "semaphore",
+    "singleflight"
+  ],
+  "focus_areas": [
+    "errgroup/errgroup.go",
+    "semaphore/semaphore.go",
+    "singleflight/singleflight.go"
+  ],
+  "entrypoints": [
+    "golang.org/x/sync.New",
+    "golang.org/x/sync.Init"
+  ],
+  "public_api": [
+    "golang.org/x/sync.Client",
+    "golang.org/x/sync.Config",
+    "golang.org/x/sync.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Go x/sync"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "errgroup/client_test.go"
+  ]
+}

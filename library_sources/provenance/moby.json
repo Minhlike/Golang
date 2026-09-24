@@ -1,0 +1,20 @@
+{
+  "id": "moby",
+  "name": "Moby / Docker Engine",
+  "rank": 7,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/moby/moby.git",
+  "module_path": "github.com/moby/moby",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "git_tags_scan",
+  "resolved_version": "v28.5.2",
+  "resolved_tag": "v28.5.2",
+  "resolved_commit": "89c5e8fd66634b6128fc4c0e6f1236e2540e46e0",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v28.5.2",
+    "is_branch": false
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "containerd",
+  "name": "containerd Container Runtime",
+  "rank": 8,
+  "tier": "TIER_S",
+  "module_path": "github.com/containerd/containerd/v2",
+  "resolved_version": "v2.4.0",
+  "resolved_commit": "a7fe631d96c08fb14cf8eff0afdc280e99c30a94",
+  "important_paths": [
+    "client",
+    "core/runtime",
+    "pkg/oci",
+    "namespaces"
+  ],
+  "focus_areas": [
+    "client.go",
+    "core/runtime/v2/shim.go",
+    "pkg/oci/spec.go"
+  ],
+  "entrypoints": [
+    "containerd.New",
+    "client.NewContainer",
+    "cio.NewCreator"
+  ],
+  "public_api": [
+    "containerd.Client",
+    "containerd.Container",
+    "containerd.Task",
+    "containerd.Process"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "High-level Go client communicating with containerd over gRPC"
+    },
+    {
+      "name": "Task",
+      "kind": "interface",
+      "description": "Active container process executing in isolated Linux namespaces via shim-v2"
+    },
+    {
+      "name": "Snapshotter",
+      "kind": "interface",
+      "description": "Copy-on-write block or filesystem snapshot driver (overlayfs, devmapper)"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Image Pull",
+      "path": "Client.Pull() -> ContentStore.Ingest() -> Snapshotter.Prepare()"
+    },
+    {
+      "phase": "Task Creation",
+      "path": "Container.NewTask() -> TaskService.Create() -> runc/shim-v2.Create()"
+    },
+    {
+      "phase": "Task Execution",
+      "path": "Task.Start() -> shim.Start() -> process.Exec()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "gRPC Multi-Tenant Architecture with Out-of-Process Shim Daemons",
+    "synchronization": "Locking inside metadata database (bbolt) and shim FIFO queues",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "Context cancellation propagates to gRPC streams and triggers task SIGTERM/SIGKILL escalation",
+    "leak_prevention": "TTRPC stream cleanup and process reaping to prevent zombie child processes"
+  },
+  "retry_model": {
+    "strategy": "gRPC transport backoff on connection drops to containerd socket",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "Unix domain socket (/run/containerd/containerd.sock) and TTRPC shim sockets",
+    "os": "runc, crun, Linux clone(2), setns(2), pivot_root(2), and cgroup filesystem",
+    "serialization": "Protobuf over gRPC / TTRPC and OCI Image/Runtime specifications"
+  },
+  "verification_tests": [
+    "client_test.go",
+    "task_test.go"
+  ]
+}

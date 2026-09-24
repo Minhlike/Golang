@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "protocol_version": "1.0.0",
+  "generated_at_utc": "2026-09-24T00:49:14Z",
+  "total_libraries": 50,
+  "libraries": {
+    "fsnotify": {
+      "id": "fsnotify",
+      "rank": 27,
+      "sync_status": "UP_TO_DATE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.10.1",
+      "resolved_commit": "76b01a6e8f502187fecedea8b025e79e5a86085c",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "k8s-client-go": {
+      "id": "k8s-client-go",
+      "rank": 1,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.37.0",
+      "resolved_commit": "28076445520055420e3be4255b4cd27fd19df1f9",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "controller-runtime": {
+      "id": "controller-runtime",
+      "rank": 2,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.25.1",
+      "resolved_commit": "67b72c2517be1d2b0dec612477eb20c3c959a8aa",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "aws-sdk-go-v2": {
+      "id": "aws-sdk-go-v2",
+      "rank": 3,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.47.0",
+      "resolved_commit": "b189f382f4924bc6c948c9942e17c547553faf0d",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "prometheus-client-golang": {
+      "id": "prometheus-client-golang",
+      "rank": 4,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.24.1",
+      "resolved_commit": "d6087ee482e06716ee21dc03819432d5d40f72db",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "opentelemetry-go": {
+      "id": "opentelemetry-go",
+      "rank": 5,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.46.0",
+      "resolved_commit": "58db4c898f5b5594f8ba78f156475bf48486e2f2",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "opentelemetry-collector": {
+      "id": "opentelemetry-collector",
+      "rank": 6,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.161.0",
+      "resolved_commit": "0bf928af5487d3c4e0b4174eabb7ba075c322517",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "moby": {
+      "id": "moby",
+      "rank": 7,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v28.5.2",
+      "resolved_commit": "89c5e8fd66634b6128fc4c0e6f1236e2540e46e0",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "containerd": {
+      "id": "containerd",
+      "rank": 8,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v2.4.0",
+      "resolved_commit": "a7fe631d96c08fb14cf8eff0afdc280e99c30a94",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "terraform-plugin-framework": {
+      "id": "terraform-plugin-framework",
+      "rank": 9,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.19.0",
+      "resolved_commit": "c7ac25e86333d194946fb5e3fd1114e7d101fc23",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "helm": {
+      "id": "helm",
+      "rank": 10,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v3.22.0",
+      "resolved_commit": "144ca65f8501953fa8b41cd1d37c7223051c85b7",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-git": {
+      "id": "go-git",
+      "rank": 11,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v5.19.2",
+      "resolved_commit": "3eeb238da61eb9c7a324f3ee04f990ce89175642",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "golang-crypto": {
+      "id": "golang-crypto",
+      "rank": 12,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.57.0",
+      "resolved_commit": "3f62bf119e84c6e35e8518a2958089ade622d1a3",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "opa": {
+      "id": "opa",
+      "rank": 13,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.20.2",
+      "resolved_commit": "b2c26708e9d55645d7f837db495031f7e4152594",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "cosign": {
+      "id": "cosign",
+      "rank": 14,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v2.6.5",
+      "resolved_commit": "3e82f50a2839855693aacf7b3d0e7e2f30774cb4",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "grpc-go": {
+      "id": "grpc-go",
+      "rank": 15,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.84.0",
+      "resolved_commit": "e84aa5ab15d1d2b29d54f838312ad490cb7551a8",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "protobuf-go": {
+      "id": "protobuf-go",
+      "rank": 16,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.36.12",
+      "resolved_commit": "cdd4c5f7406e82462949c7a65defa9f3029c162d",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-containerregistry": {
+      "id": "go-containerregistry",
+      "rank": 17,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.22.1",
+      "resolved_commit": "8a72a424fdecb4caa14f2d525e5d2503331442b5",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "oras-go": {
+      "id": "oras-go",
+      "rank": 18,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v2.6.2",
+      "resolved_commit": "105715ee12eac6895ec736a075285c34d9f2eeb6",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "cni": {
+      "id": "cni",
+      "rank": 19,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.3.1",
+      "resolved_commit": "3f51e8803ebbdba0ebeed735b42137e4c7302403",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "cilium-ebpf": {
+      "id": "cilium-ebpf",
+      "rank": 20,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.22.0",
+      "resolved_commit": "e55144e17360b60cc4583229c35c2dbf0935b308",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "netlink": {
+      "id": "netlink",
+      "rank": 21,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.3.1",
+      "resolved_commit": "17daef607c6442d47b0565343cf8a69f985a4cb7",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "crossplane-runtime": {
+      "id": "crossplane-runtime",
+      "rank": 22,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.20.11",
+      "resolved_commit": "84fc49a3e3b88733677824b1a4dcce5097ca0c59",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "fluxcd-pkg": {
+      "id": "fluxcd-pkg",
+      "rank": 23,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.114.0",
+      "resolved_commit": "a1797f9a0f060b8e2556a980c853b0fb304114c6",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-github": {
+      "id": "go-github",
+      "rank": 24,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v68.0.0",
+      "resolved_commit": "98d4f502e28c1de670e319f18a219cfe98dfe4cd",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "cobra": {
+      "id": "cobra",
+      "rank": 25,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.10.2",
+      "resolved_commit": "88b30ab89da2d0d0abb153818746c5a2d30eccec",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "viper": {
+      "id": "viper",
+      "rank": 26,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.21.0",
+      "resolved_commit": "394040caccbdf5821fa6839386a35f0fb1b1ee9e",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "zap": {
+      "id": "zap",
+      "rank": 28,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.28.0",
+      "resolved_commit": "5b81b37b81b8e2ed447a6f57991e372ee4fa5c8f",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "automaxprocs": {
+      "id": "automaxprocs",
+      "rank": 29,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.6.0",
+      "resolved_commit": "1ea14c35ce47a73089b824e504d1c92eeb61a5a6",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-retryablehttp": {
+      "id": "go-retryablehttp",
+      "rank": 30,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.7.8",
+      "resolved_commit": "e1f5485fe84728709b857cb89e17088894c301d6",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "golang-sync": {
+      "id": "golang-sync",
+      "rank": 31,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.23.0",
+      "resolved_commit": "f75267d8412fc1dfd12b343644a7ea46e4d9c85d",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "golang-time": {
+      "id": "golang-time",
+      "rank": 32,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.16.0",
+      "resolved_commit": "fb013b3d305a26f5ef5350a6eaffc7c87a200383",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-plugin": {
+      "id": "go-plugin",
+      "rank": 33,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.8.0",
+      "resolved_commit": "155dcddc94873a285e14b7fa24b2f6ab6139668e",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "hcl": {
+      "id": "hcl",
+      "rank": 34,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v2.25.0",
+      "resolved_commit": "00057cf06d7b38a3f89e6e54d622eee98322b314",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "terraform-plugin-go": {
+      "id": "terraform-plugin-go",
+      "rank": 35,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.31.0",
+      "resolved_commit": "09a1181b051c53a3700401895ae281afbc91f0fc",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "prometheus-common": {
+      "id": "prometheus-common",
+      "rank": 36,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.71.0",
+      "resolved_commit": "9a4aff03c12e71d3fc29e32a4581deb8e456d88e",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "modernc-sqlite": {
+      "id": "modernc-sqlite",
+      "rank": 37,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.59.0",
+      "resolved_commit": "c96a4e6cb22254bf70026502a781a54a053c2cf0",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "opentelemetry-go-contrib": {
+      "id": "opentelemetry-go-contrib",
+      "rank": 38,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.46.0",
+      "resolved_commit": "c4c6248ec2289133b6a51f554ca9367ece1de8e7",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "trivy": {
+      "id": "trivy",
+      "rank": 39,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.74.0",
+      "resolved_commit": "e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "in-toto-golang": {
+      "id": "in-toto-golang",
+      "rank": 40,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.11.0",
+      "resolved_commit": "36d782ffb2ca3adbffcdce1fd971c23319dd4469",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "go-tuf": {
+      "id": "go-tuf",
+      "rank": 41,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v2.4.2",
+      "resolved_commit": "f5edbde31e5507f46db2069402dc38903fe6d9d4",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "google-cloud-go": {
+      "id": "google-cloud-go",
+      "rank": 42,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.123.0",
+      "resolved_commit": "4e8373586a5e48c18fbfd4bb0a3e259184e49a91",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "azure-sdk-for-go": {
+      "id": "azure-sdk-for-go",
+      "rank": 43,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.23.1",
+      "resolved_commit": "d86ae78bd655d233689866cf78930f3c5fd42c35",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "mcp-go-sdk": {
+      "id": "mcp-go-sdk",
+      "rank": 44,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.8.0",
+      "resolved_commit": "3f3b699b2b67e1ed033a63d6651671dab53c2d32",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "google-adk-go": {
+      "id": "google-adk-go",
+      "rank": 45,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "UNSTABLE_HEAD",
+      "resolved_version": "HEAD-main",
+      "resolved_commit": "f9ce16ef9cb334b69f5ee3e64e9dfc915f02d0b7",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "microsoft-agent-framework-go": {
+      "id": "microsoft-agent-framework-go",
+      "rank": 46,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "UNSTABLE_HEAD",
+      "resolved_version": "HEAD-main",
+      "resolved_commit": "5fea526630dac7b74dca5b04e6bcf6cbbcd2a2f0",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "eino": {
+      "id": "eino",
+      "rank": 47,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v0.9.21",
+      "resolved_commit": "ba04fde8641057055c358d7ab5d3015a9ba825e1",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "trpc-agent-go": {
+      "id": "trpc-agent-go",
+      "rank": 48,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "OFFICIAL_STABLE",
+      "resolved_version": "v1.11.2",
+      "resolved_commit": "5a0030b628a5bd93c8c5a30b1451f6fdd9d6740e",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "kagent": {
+      "id": "kagent",
+      "rank": 49,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "UNSTABLE_HEAD",
+      "resolved_version": "HEAD-main",
+      "resolved_commit": "375fe73a0c1d4fc57991e321bf03a5a2fb1a3cd6",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    },
+    "agentscope-go": {
+      "id": "agentscope-go",
+      "rank": 50,
+      "sync_status": "CHECK_ONLY_UPDATE_AVAILABLE",
+      "release_status": "UNSTABLE_HEAD",
+      "resolved_version": "HEAD-main",
+      "resolved_commit": "8f82bd22c4fdf20e53205e1a2d22b4217073399b",
+      "checked_at_utc": "2026-09-24T00:49:14Z"
+    }
+  }
+}

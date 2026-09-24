@@ -1,0 +1,20 @@
+{
+  "id": "go-containerregistry",
+  "name": "Google go-containerregistry",
+  "rank": 17,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/google/go-containerregistry.git",
+  "module_path": "github.com/google/go-containerregistry",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.22.1",
+  "resolved_tag": "v0.22.1",
+  "resolved_commit": "8a72a424fdecb4caa14f2d525e5d2503331442b5",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.22.1",
+    "is_branch": false
+  }
+}

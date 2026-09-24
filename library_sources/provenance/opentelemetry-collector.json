@@ -1,0 +1,20 @@
+{
+  "id": "opentelemetry-collector",
+  "name": "OpenTelemetry Collector Core",
+  "rank": 6,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/open-telemetry/opentelemetry-collector.git",
+  "module_path": "go.opentelemetry.io/collector",
+  "version_strategy": "MULTI_MODULE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.161.0",
+  "resolved_tag": "v0.161.0",
+  "resolved_commit": "0bf928af5487d3c4e0b4174eabb7ba075c322517",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.161.0",
+    "is_branch": false
+  }
+}

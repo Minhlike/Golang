@@ -1,0 +1,20 @@
+{
+  "id": "cosign",
+  "name": "Sigstore Cosign",
+  "rank": 14,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/sigstore/cosign.git",
+  "module_path": "github.com/sigstore/cosign/v2",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v2.6.5",
+  "resolved_tag": "v2.6.5",
+  "resolved_commit": "3e82f50a2839855693aacf7b3d0e7e2f30774cb4",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v2.6.5",
+    "is_branch": false
+  }
+}

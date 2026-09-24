@@ -1,0 +1,76 @@
+{
+  "id": "zap",
+  "name": "Uber Zap Structured Logger",
+  "rank": 28,
+  "tier": "TIER_A",
+  "module_path": "go.uber.org/zap",
+  "resolved_version": "v1.28.0",
+  "resolved_commit": "5b81b37b81b8e2ed447a6f57991e372ee4fa5c8f",
+  "important_paths": [
+    "zapcore",
+    "zap",
+    "buffer"
+  ],
+  "focus_areas": [
+    "logger.go",
+    "zapcore/core.go",
+    "zapcore/entry.go"
+  ],
+  "entrypoints": [
+    "go.uber.org/zap.New",
+    "go.uber.org/zap.Init"
+  ],
+  "public_api": [
+    "go.uber.org/zap.Client",
+    "go.uber.org/zap.Config",
+    "go.uber.org/zap.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Uber Zap Structured Logger"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "zapcore/client_test.go"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "kagent",
+  "name": "kagent Autonomous Kubernetes Agent",
+  "rank": 49,
+  "tier": "FRONTIER",
+  "official_remote": "https://github.com/kagent-dev/kagent.git",
+  "module_path": "github.com/kagent-dev/kagent",
+  "version_strategy": "HEAD_TRACKING",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "git_heads",
+  "resolved_version": "HEAD-main",
+  "resolved_tag": "main",
+  "resolved_commit": "375fe73a0c1d4fc57991e321bf03a5a2fb1a3cd6",
+  "release_status": "UNSTABLE_HEAD",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "main",
+    "is_branch": true
+  }
+}

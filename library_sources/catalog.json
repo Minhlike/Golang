@@ -1,0 +1,1153 @@
+[
+  {
+    "id": "k8s-client-go",
+    "rank": 1,
+    "name": "Kubernetes client-go",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/kubernetes/client-go.git",
+    "module_path": "k8s.io/client-go",
+    "module_root": ".",
+    "version_strategy": "GO_MODULE_STABLE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "tools/cache",
+      "informers",
+      "workqueue",
+      "kubernetes",
+      "rest",
+      "dynamic"
+    ],
+    "focus_areas": [
+      "tools/cache/reflector.go",
+      "tools/cache/controller.go",
+      "util/workqueue/queue.go"
+    ],
+    "description": "The foundational Kubernetes programmatic client library providing Informers, Reflector, ListerWatcher, and WorkQueue abstractions."
+  },
+  {
+    "id": "controller-runtime",
+    "rank": 2,
+    "name": "Kubernetes Controller Runtime",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/kubernetes-sigs/controller-runtime.git",
+    "module_path": "sigs.k8s.io/controller-runtime",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/controller",
+      "pkg/manager",
+      "pkg/reconcile",
+      "pkg/client",
+      "pkg/source"
+    ],
+    "focus_areas": [
+      "pkg/controller/controller.go",
+      "pkg/internal/controller/controller.go",
+      "pkg/manager/manager.go"
+    ],
+    "description": "De-facto framework for building Kubernetes Operators and controllers with high-level Manager and Reconciler loops."
+  },
+  {
+    "id": "aws-sdk-go-v2",
+    "rank": 3,
+    "name": "AWS SDK for Go v2",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/aws/aws-sdk-go-v2.git",
+    "module_path": "github.com/aws/aws-sdk-go-v2",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "aws",
+      "aws/middleware",
+      "aws/retry",
+      "aws/transport",
+      "config"
+    ],
+    "focus_areas": [
+      "aws/middleware/stack.go",
+      "aws/retry/retry.go",
+      "aws/transport/http/client.go"
+    ],
+    "description": "Modern modular AWS client library built on a composable middleware execution stack with exponential backoff."
+  },
+  {
+    "id": "prometheus-client-golang",
+    "rank": 4,
+    "name": "Prometheus Go Client",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/prometheus/client_golang.git",
+    "module_path": "github.com/prometheus/client_golang",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "prometheus",
+      "prometheus/promhttp",
+      "prometheus/push"
+    ],
+    "focus_areas": [
+      "prometheus/registry.go",
+      "prometheus/counter.go",
+      "prometheus/gauge.go",
+      "prometheus/promhttp/http.go"
+    ],
+    "description": "Official instrumentation metrics library for Prometheus defining Counter, Gauge, Histogram, Summary, and HTTP exposure."
+  },
+  {
+    "id": "opentelemetry-go",
+    "rank": 5,
+    "name": "OpenTelemetry Go SDK & API",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/open-telemetry/opentelemetry-go.git",
+    "module_path": "go.opentelemetry.io/otel",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "trace",
+      "metric",
+      "propagation",
+      "sdk/trace",
+      "sdk/metric"
+    ],
+    "focus_areas": [
+      "trace/tracer.go",
+      "sdk/trace/tracer.go",
+      "sdk/trace/batch_span_processor.go",
+      "propagation/trace_context.go"
+    ],
+    "description": "Vendor-neutral distributed tracing and metrics API/SDK conforming to CNCF OpenTelemetry specifications."
+  },
+  {
+    "id": "opentelemetry-collector",
+    "rank": 6,
+    "name": "OpenTelemetry Collector Core",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/open-telemetry/opentelemetry-collector.git",
+    "module_path": "go.opentelemetry.io/collector",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "component",
+      "consumer",
+      "processor",
+      "receiver",
+      "exporter",
+      "pdata"
+    ],
+    "focus_areas": [
+      "consumer/consumer.go",
+      "processor/processor.go",
+      "receiver/receiver.go",
+      "exporter/exporter.go"
+    ],
+    "description": "Core pipeline engine receiving, processing, and exporting telemetry data across heterogeneous observability backends."
+  },
+  {
+    "id": "moby",
+    "rank": 7,
+    "name": "Moby / Docker Engine",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/moby/moby.git",
+    "module_path": "github.com/moby/moby",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "client",
+      "daemon",
+      "api/types",
+      "pkg/signal"
+    ],
+    "focus_areas": [
+      "client/container_create.go",
+      "client/hijack.go",
+      "daemon/daemon.go"
+    ],
+    "description": "Open framework for container engines and official client implementation for the Docker daemon REST API."
+  },
+  {
+    "id": "containerd",
+    "rank": 8,
+    "name": "containerd Container Runtime",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/containerd/containerd.git",
+    "module_path": "github.com/containerd/containerd/v2",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "client",
+      "core/runtime",
+      "pkg/oci",
+      "namespaces"
+    ],
+    "focus_areas": [
+      "client.go",
+      "core/runtime/v2/shim.go",
+      "pkg/oci/spec.go"
+    ],
+    "description": "Industry-standard core container runtime managing complete container lifecycle, image transfer, and storage execution."
+  },
+  {
+    "id": "terraform-plugin-framework",
+    "rank": 9,
+    "name": "Terraform Plugin Framework",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/hashicorp/terraform-plugin-framework.git",
+    "module_path": "github.com/hashicorp/terraform-plugin-framework",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "provider",
+      "resource",
+      "datasource",
+      "types",
+      "diag"
+    ],
+    "focus_areas": [
+      "internal/provider/provider.go",
+      "internal/resource/resource.go",
+      "types/string.go"
+    ],
+    "description": "Modern SDK for developing HashiCorp Terraform providers with strongly typed schemas and structured diagnostics."
+  },
+  {
+    "id": "helm",
+    "rank": 10,
+    "name": "Helm Kubernetes Package Manager",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/helm/helm.git",
+    "module_path": "helm.sh/helm/v3",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/action",
+      "pkg/chart",
+      "pkg/release",
+      "pkg/engine"
+    ],
+    "focus_areas": [
+      "pkg/action/install.go",
+      "pkg/action/upgrade.go",
+      "pkg/engine/engine.go"
+    ],
+    "description": "Package manager for Kubernetes providing chart rendering, release lifecycle management, and driver state stores."
+  },
+  {
+    "id": "go-git",
+    "rank": 11,
+    "name": "go-git Pure Go Implementation",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/go-git/go-git.git",
+    "module_path": "github.com/go-git/go-git/v5",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "plumbing",
+      "storage",
+      "worktree",
+      "repository"
+    ],
+    "focus_areas": [
+      "repository.go",
+      "worktree.go",
+      "plumbing/object/commit.go",
+      "plumbing/transport/client.go"
+    ],
+    "description": "Highly extensible Git implementation written purely in Go without external C dependencies."
+  },
+  {
+    "id": "golang-crypto",
+    "rank": 12,
+    "name": "Go x/crypto (Focus SSH)",
+    "tier": "TIER_S",
+    "official_remote": "https://github.com/golang/crypto.git",
+    "module_path": "golang.org/x/crypto",
+    "module_root": ".",
+    "version_strategy": "GO_MODULE_STABLE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "ssh",
+      "ssh/agent",
+      "ssh/knownhosts",
+      "acme"
+    ],
+    "focus_areas": [
+      "ssh/client.go",
+      "ssh/server.go",
+      "ssh/handshake.go",
+      "ssh/session.go"
+    ],
+    "description": "Official supplementary Go cryptography libraries with deep emphasis on production SSH protocol client/server implementation."
+  },
+  {
+    "id": "opa",
+    "rank": 13,
+    "name": "Open Policy Agent (OPA)",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/open-policy-agent/opa.git",
+    "module_path": "github.com/open-policy-agent/opa",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "rego",
+      "ast",
+      "topdown",
+      "storage"
+    ],
+    "focus_areas": [
+      "rego/rego.go",
+      "topdown/query.go",
+      "ast/compiler.go"
+    ],
+    "description": "General-purpose policy engine with declarative Rego evaluator used across cloud-native admission control and authorization."
+  },
+  {
+    "id": "cosign",
+    "rank": 14,
+    "name": "Sigstore Cosign",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/sigstore/cosign.git",
+    "module_path": "github.com/sigstore/cosign/v2",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/cosign",
+      "pkg/oci",
+      "pkg/signature",
+      "cmd/cosign"
+    ],
+    "focus_areas": [
+      "pkg/cosign/sign.go",
+      "pkg/cosign/verify.go",
+      "pkg/oci/remote/signatures.go"
+    ],
+    "description": "Standard container signing, signature verification, and software supply chain attestation engine."
+  },
+  {
+    "id": "grpc-go",
+    "rank": 15,
+    "name": "gRPC Go",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/grpc/grpc-go.git",
+    "module_path": "google.golang.org/grpc",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "credentials",
+      "balancer",
+      "resolver",
+      "status",
+      "codes"
+    ],
+    "focus_areas": [
+      "clientconn.go",
+      "server.go",
+      "stream.go",
+      "rpc_util.go"
+    ],
+    "description": "Go implementation of gRPC: HTTP/2-based RPC framework powering high-performance microservices communication."
+  },
+  {
+    "id": "protobuf-go",
+    "rank": 16,
+    "name": "Go Protocol Buffers v2",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/protocolbuffers/protobuf-go.git",
+    "module_path": "google.golang.org/protobuf",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "proto",
+      "reflect/protoreflect",
+      "encoding/protojson"
+    ],
+    "focus_areas": [
+      "proto/wire.go",
+      "reflect/protoreflect/value.go",
+      "internal/impl/message.go"
+    ],
+    "description": "Official Protocol Buffers API v2 with reflective inspection, memory-efficient wire encoding, and schema generation."
+  },
+  {
+    "id": "go-containerregistry",
+    "rank": 17,
+    "name": "Google go-containerregistry",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/google/go-containerregistry.git",
+    "module_path": "github.com/google/go-containerregistry",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/v1",
+      "pkg/v1/remote",
+      "pkg/authn",
+      "pkg/name"
+    ],
+    "focus_areas": [
+      "pkg/v1/remote/puller.go",
+      "pkg/v1/remote/pusher.go",
+      "pkg/v1/remote/descriptor.go"
+    ],
+    "description": "Idiomatic Go library for interacting with OCI/Docker container registries and manipulating image layers."
+  },
+  {
+    "id": "oras-go",
+    "rank": 18,
+    "name": "ORAS Go OCI Registry Client",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/oras-project/oras-go.git",
+    "module_path": "oras.land/oras-go/v2",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "content",
+      "registry",
+      "target",
+      "oci"
+    ],
+    "focus_areas": [
+      "registry/remote/repository.go",
+      "content/oci/store.go",
+      "copy.go"
+    ],
+    "description": "OCI Registry As Storage (ORAS) client for pushing and pulling arbitrary software artifacts via OCI registries."
+  },
+  {
+    "id": "cni",
+    "rank": 19,
+    "name": "Container Network Interface (CNI)",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/containernetworking/cni.git",
+    "module_path": "github.com/containernetworking/cni",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/skel",
+      "pkg/types",
+      "pkg/version"
+    ],
+    "focus_areas": [
+      "pkg/skel/skel.go",
+      "pkg/types/types.go",
+      "pkg/invoke/raw_exec.go"
+    ],
+    "description": "Standard specification and Go execution framework for container network configuration plugin execution."
+  },
+  {
+    "id": "cilium-ebpf",
+    "rank": 20,
+    "name": "Cilium eBPF Library for Go",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/cilium/ebpf.git",
+    "module_path": "github.com/cilium/ebpf",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "link",
+      "ringbuf",
+      "perf",
+      "asm",
+      "btf"
+    ],
+    "focus_areas": [
+      "collection.go",
+      "map.go",
+      "prog.go",
+      "ringbuf/reader.go"
+    ],
+    "description": "Pure Go library for loading, compiling, and attaching extended BPF programs and maps to Linux kernel hooks."
+  },
+  {
+    "id": "netlink",
+    "rank": 21,
+    "name": "Vishvananda Netlink Library",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/vishvananda/netlink.git",
+    "module_path": "github.com/vishvananda/netlink",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "link",
+      "addr",
+      "route",
+      "rule",
+      "socket"
+    ],
+    "focus_areas": [
+      "link_linux.go",
+      "route_linux.go",
+      "addr_linux.go",
+      "netlink_linux.go"
+    ],
+    "description": "Low-level Linux netlink system interface library widely used in container networking and Kubernetes CNI implementations."
+  },
+  {
+    "id": "crossplane-runtime",
+    "rank": 22,
+    "name": "Crossplane Runtime",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/crossplane/crossplane-runtime.git",
+    "module_path": "github.com/crossplane/crossplane-runtime",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/reconciler/managed",
+      "pkg/resource",
+      "pkg/controller"
+    ],
+    "focus_areas": [
+      "pkg/reconciler/managed/reconciler.go",
+      "pkg/resource/interfaces.go"
+    ],
+    "description": "Universal control plane runtime defining managed resource reconciliation loops and infrastructure composition."
+  },
+  {
+    "id": "fluxcd-pkg",
+    "rank": 23,
+    "name": "Flux CD Runtime Packages",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/fluxcd/pkg.git",
+    "module_path": "github.com/fluxcd/pkg/runtime",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "runtime/v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "runtime/controller",
+      "runtime/events",
+      "runtime/conditions"
+    ],
+    "focus_areas": [
+      "runtime/controller/controller.go",
+      "runtime/conditions/setter.go"
+    ],
+    "description": "Shared controllers, conditions, and event emitters underpinning the GitOps toolkit and Flux CD ecosystem."
+  },
+  {
+    "id": "go-github",
+    "rank": 24,
+    "name": "Google go-github Client",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/google/go-github.git",
+    "module_path": "github.com/google/go-github/v68",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "github",
+      "github/actions",
+      "github/repos",
+      "github/pulls"
+    ],
+    "focus_areas": [
+      "github/github.go",
+      "github/actions_workflows.go",
+      "github/repos.go"
+    ],
+    "description": "Complete Go client library for accessing GitHub REST API v3, managing releases, repositories, and CI workflows."
+  },
+  {
+    "id": "cobra",
+    "rank": 25,
+    "name": "spf13 Cobra CLI Commander",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/spf13/cobra.git",
+    "module_path": "github.com/spf13/cobra",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "command",
+      "args",
+      "flag"
+    ],
+    "focus_areas": [
+      "command.go",
+      "args.go"
+    ],
+    "description": "Command-line execution framework powering Kubernetes kubectl, Hugo, GitHub CLI, and modern DevOps tools."
+  },
+  {
+    "id": "viper",
+    "rank": 26,
+    "name": "spf13 Viper Configuration",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/spf13/viper.git",
+    "module_path": "github.com/spf13/viper",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "viper",
+      "remote",
+      "flags"
+    ],
+    "focus_areas": [
+      "viper.go",
+      "flags.go"
+    ],
+    "description": "Complete configuration solution supporting JSON, YAML, environment variables, remote key-value stores, and live reload."
+  },
+  {
+    "id": "fsnotify",
+    "rank": 27,
+    "name": "fsnotify File Watcher",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/fsnotify/fsnotify.git",
+    "module_path": "github.com/fsnotify/fsnotify",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "fsnotify",
+      "backend_windows",
+      "backend_kqueue",
+      "backend_inotify"
+    ],
+    "focus_areas": [
+      "fsnotify.go",
+      "backend_windows.go",
+      "backend_inotify.go"
+    ],
+    "description": "Cross-platform file system notification watcher with native kernel event backends (inotify, kqueue, ReadDirectoryChangesW)."
+  },
+  {
+    "id": "zap",
+    "rank": 28,
+    "name": "Uber Zap Structured Logger",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/uber-go/zap.git",
+    "module_path": "go.uber.org/zap",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "zapcore",
+      "zap",
+      "buffer"
+    ],
+    "focus_areas": [
+      "logger.go",
+      "zapcore/core.go",
+      "zapcore/entry.go"
+    ],
+    "description": "Blazing fast, zero-allocation structured JSON logging library designed for ultra-high throughput distributed services."
+  },
+  {
+    "id": "automaxprocs",
+    "rank": 29,
+    "name": "Uber automaxprocs",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/uber-go/automaxprocs.git",
+    "module_path": "go.uber.org/automaxprocs",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "maxprocs",
+      "cgroups"
+    ],
+    "focus_areas": [
+      "maxprocs/maxprocs.go"
+    ],
+    "description": "Automatically tunes Go runtime GOMAXPROCS to match Linux container CPU CFS quota limits, avoiding CPU throttling."
+  },
+  {
+    "id": "go-retryablehttp",
+    "rank": 30,
+    "name": "HashiCorp go-retryablehttp",
+    "tier": "TIER_A",
+    "official_remote": "https://github.com/hashicorp/go-retryablehttp.git",
+    "module_path": "github.com/hashicorp/go-retryablehttp",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "client",
+      "retry"
+    ],
+    "focus_areas": [
+      "client.go"
+    ],
+    "description": "Resilient HTTP client wrapper executing bounded retries, exponential backoffs, and safe body buffering."
+  },
+  {
+    "id": "golang-sync",
+    "rank": 31,
+    "name": "Go x/sync",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/golang/sync.git",
+    "module_path": "golang.org/x/sync",
+    "module_root": ".",
+    "version_strategy": "GO_MODULE_STABLE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "errgroup",
+      "semaphore",
+      "singleflight"
+    ],
+    "focus_areas": [
+      "errgroup/errgroup.go",
+      "semaphore/semaphore.go",
+      "singleflight/singleflight.go"
+    ],
+    "description": "Official concurrency extensions providing ErrGroup context synchronization, weighted semaphores, and duplicate suppression."
+  },
+  {
+    "id": "golang-time",
+    "rank": 32,
+    "name": "Go x/time (Focus Rate)",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/golang/time.git",
+    "module_path": "golang.org/x/time",
+    "module_root": ".",
+    "version_strategy": "GO_MODULE_STABLE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "rate"
+    ],
+    "focus_areas": [
+      "rate/rate.go"
+    ],
+    "description": "Token bucket rate limiter implementation with reservation, cancellation, and burst limit management."
+  },
+  {
+    "id": "go-plugin",
+    "rank": 33,
+    "name": "HashiCorp go-plugin",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/hashicorp/go-plugin.git",
+    "module_path": "github.com/hashicorp/go-plugin",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "client",
+      "server",
+      "grpc_controller"
+    ],
+    "focus_areas": [
+      "client.go",
+      "server.go",
+      "grpc_client.go"
+    ],
+    "description": "Production-grade plugin system over RPC and gRPC, powering Terraform providers, Vault plugins, and Packer."
+  },
+  {
+    "id": "hcl",
+    "rank": 34,
+    "name": "HashiCorp HCL v2",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/hashicorp/hcl.git",
+    "module_path": "github.com/hashicorp/hcl/v2",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "hclsyntax",
+      "gohcl",
+      "eval"
+    ],
+    "focus_areas": [
+      "hclsyntax/parser.go",
+      "gohcl/decode.go",
+      "eval_context.go"
+    ],
+    "description": "HashiCorp Configuration Language parser and evaluation engine powering Terraform and Nomad manifest definitions."
+  },
+  {
+    "id": "terraform-plugin-go",
+    "rank": 35,
+    "name": "Terraform Plugin Go",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/hashicorp/terraform-plugin-go.git",
+    "module_path": "github.com/hashicorp/terraform-plugin-go",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "tfprotov6",
+      "tftypes"
+    ],
+    "focus_areas": [
+      "tfprotov6/server.go",
+      "tftypes/value.go"
+    ],
+    "description": "Low-level wire protocol and type system abstraction mediating communication between Terraform Core and providers."
+  },
+  {
+    "id": "prometheus-common",
+    "rank": 36,
+    "name": "Prometheus Common",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/prometheus/common.git",
+    "module_path": "github.com/prometheus/common",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "expfmt",
+      "model",
+      "config"
+    ],
+    "focus_areas": [
+      "expfmt/text_parse.go",
+      "model/metric.go",
+      "config/http_config.go"
+    ],
+    "description": "Shared data models, text exposition format parsers, and client configurations across the Prometheus project suite."
+  },
+  {
+    "id": "modernc-sqlite",
+    "rank": 37,
+    "name": "modernc.org/sqlite",
+    "tier": "TIER_B",
+    "official_remote": "https://gitlab.com/cznic/sqlite.git",
+    "module_path": "modernc.org/sqlite",
+    "module_root": ".",
+    "version_strategy": "GO_MODULE_STABLE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "driver",
+      "sqlite"
+    ],
+    "focus_areas": [
+      "driver.go"
+    ],
+    "description": "Pure Go CGo-free SQLite database driver transpiled directly from C via ccgo, ensuring portable embedded persistence."
+  },
+  {
+    "id": "opentelemetry-go-contrib",
+    "rank": 38,
+    "name": "OpenTelemetry Go Contrib",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/open-telemetry/opentelemetry-go-contrib.git",
+    "module_path": "go.opentelemetry.io/contrib",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "instrumentation/net/http/otelhttp",
+      "instrumentation/google.golang.org/grpc/otelgrpc"
+    ],
+    "focus_areas": [
+      "instrumentation/net/http/otelhttp/handler.go",
+      "instrumentation/net/http/otelhttp/transport.go"
+    ],
+    "description": "Collection of official community instrumentation plugins for standard Go HTTP handlers, gRPC interceptors, and database/sql."
+  },
+  {
+    "id": "trivy",
+    "rank": 39,
+    "name": "Aqua Security Trivy",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/aquasecurity/trivy.git",
+    "module_path": "github.com/aquasecurity/trivy",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "pkg/fanal",
+      "pkg/scanner",
+      "pkg/types"
+    ],
+    "focus_areas": [
+      "pkg/scanner/scan.go",
+      "pkg/fanal/artifact/artifact.go"
+    ],
+    "description": "Comprehensive security scanner detecting vulnerabilities, misconfigurations, and software bills of materials (SBOM)."
+  },
+  {
+    "id": "in-toto-golang",
+    "rank": 40,
+    "name": "in-toto Supply Chain Metadata",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/in-toto/in-toto-golang.git",
+    "module_path": "github.com/in-toto/in-toto-golang",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "in_toto",
+      "slsa"
+    ],
+    "focus_areas": [
+      "in_toto/in_toto.go",
+      "in_toto/model.go"
+    ],
+    "description": "Framework and Go library for cryptographically enforcing and validating the integrity of software supply chains."
+  },
+  {
+    "id": "go-tuf",
+    "rank": 41,
+    "name": "The Update Framework (TUF) v2",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/theupdateframework/go-tuf.git",
+    "module_path": "github.com/theupdateframework/go-tuf/v2",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "client",
+      "metadata"
+    ],
+    "focus_areas": [
+      "metadata/client/client.go",
+      "metadata/trustedmetadata/trustedmetadata.go"
+    ],
+    "description": "Security specification and library protecting software update systems against key compromises and rollback attacks."
+  },
+  {
+    "id": "google-cloud-go",
+    "rank": 42,
+    "name": "Google Cloud Go Client Libraries",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/googleapis/google-cloud-go.git",
+    "module_path": "cloud.google.com/go",
+    "module_root": ".",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "storage/v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "storage",
+      "compute/metadata",
+      "auth"
+    ],
+    "focus_areas": [
+      "storage/bucket.go",
+      "storage/reader.go",
+      "compute/metadata/metadata.go"
+    ],
+    "description": "Monorepo containing idiomatic Go client SDKs for Google Cloud Platform services with HTTP/JSON and gRPC transport."
+  },
+  {
+    "id": "azure-sdk-for-go",
+    "rank": 43,
+    "name": "Azure SDK for Go (Core)",
+    "tier": "TIER_B",
+    "official_remote": "https://github.com/Azure/azure-sdk-for-go.git",
+    "module_path": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+    "module_root": "sdk/azcore",
+    "version_strategy": "MULTI_MODULE",
+    "tag_prefix": "sdk/azcore/v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "sdk/azcore",
+      "sdk/azidentity"
+    ],
+    "focus_areas": [
+      "sdk/azcore/arm/client.go",
+      "sdk/azcore/runtime/pipeline.go"
+    ],
+    "description": "Modular Azure client runtime defining authentication pipeline middleware, token credential refresh, and HTTP policies."
+  },
+  {
+    "id": "mcp-go-sdk",
+    "rank": 44,
+    "name": "Model Context Protocol (MCP) Go SDK",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/modelcontextprotocol/go-sdk.git",
+    "module_path": "github.com/modelcontextprotocol/go-sdk",
+    "module_root": ".",
+    "version_strategy": "PRE_RELEASE_ALLOWED",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "mcp",
+      "client",
+      "server"
+    ],
+    "focus_areas": [
+      "mcp/protocol.go",
+      "client/client.go",
+      "server/server.go"
+    ],
+    "description": "Official Model Context Protocol implementation in Go facilitating AI assistant interactions with external tools and resources."
+  },
+  {
+    "id": "google-adk-go",
+    "rank": 45,
+    "name": "Google Agent Development Kit (ADK) Go",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/google/adk-go.git",
+    "module_path": "github.com/google/adk-go",
+    "module_root": ".",
+    "version_strategy": "HEAD_TRACKING",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "adk",
+      "agents",
+      "tools"
+    ],
+    "focus_areas": [
+      "agent.go"
+    ],
+    "description": "Google toolkit for building structured AI agent workflows, function calling pipelines, and tool orchestration in Go."
+  },
+  {
+    "id": "microsoft-agent-framework-go",
+    "rank": 46,
+    "name": "Microsoft Agent Framework Go",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/microsoft/agent-framework-go.git",
+    "module_path": "github.com/microsoft/agent-framework-go",
+    "module_root": ".",
+    "version_strategy": "HEAD_TRACKING",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "agent",
+      "runtime"
+    ],
+    "focus_areas": [
+      "runtime.go"
+    ],
+    "description": "Microsoft runtime for constructing autonomous LLM agents and multi-agent coordination architectures in Go."
+  },
+  {
+    "id": "eino",
+    "rank": 47,
+    "name": "CloudWeGo Eino LLM Framework",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/cloudwego/eino.git",
+    "module_path": "github.com/cloudwego/eino",
+    "module_root": ".",
+    "version_strategy": "GIT_STABLE_TAG",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "compose",
+      "schema",
+      "flow"
+    ],
+    "focus_areas": [
+      "compose/graph.go",
+      "schema/message.go"
+    ],
+    "description": "High-performance LLM application orchestration framework from ByteDance/CloudWeGo featuring directed acyclic graph execution."
+  },
+  {
+    "id": "trpc-agent-go",
+    "rank": 48,
+    "name": "tRPC Agent Go Framework",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/trpc-group/trpc-agent-go.git",
+    "module_path": "trpc.group/trpc-go/trpc-agent-go",
+    "module_root": ".",
+    "version_strategy": "PRE_RELEASE_ALLOWED",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "agent",
+      "tools",
+      "memory"
+    ],
+    "focus_areas": [
+      "agent/agent.go",
+      "tools/tool.go"
+    ],
+    "description": "Enterprise AI agent framework designed by Tencent for high-concurrency RPC agent architectures and tool calling."
+  },
+  {
+    "id": "kagent",
+    "rank": 49,
+    "name": "kagent Autonomous Kubernetes Agent",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/kagent-dev/kagent.git",
+    "module_path": "github.com/kagent-dev/kagent",
+    "module_root": ".",
+    "version_strategy": "HEAD_TRACKING",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "agent",
+      "kubernetes",
+      "diagnostics"
+    ],
+    "focus_areas": [
+      "pkg/agent/agent.go"
+    ],
+    "description": "Autonomous AI SRE agent specialized in Kubernetes cluster anomaly detection, automated triage, and self-healing."
+  },
+  {
+    "id": "agentscope-go",
+    "rank": 50,
+    "name": "AgentScope Multi-Agent Platform Go",
+    "tier": "FRONTIER",
+    "official_remote": "https://github.com/agentscope-ai/agentscope-go.git",
+    "module_path": "github.com/agentscope-ai/agentscope-go",
+    "module_root": ".",
+    "version_strategy": "HEAD_TRACKING",
+    "tag_prefix": "v",
+    "checkout_scope": "SHALLOW",
+    "important_paths": [
+      "agents",
+      "pipelines",
+      "message"
+    ],
+    "focus_areas": [
+      "agents/agent.go",
+      "message/message.go"
+    ],
+    "description": "Multi-agent platform for constructing communicative and collaborative agent societies and consensus workflows."
+  }
+]

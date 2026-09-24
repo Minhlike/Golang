@@ -1,0 +1,20 @@
+{
+  "id": "modernc-sqlite",
+  "name": "modernc.org/sqlite",
+  "rank": 37,
+  "tier": "TIER_B",
+  "official_remote": "https://gitlab.com/cznic/sqlite.git",
+  "module_path": "modernc.org/sqlite",
+  "version_strategy": "GO_MODULE_STABLE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.59.0",
+  "resolved_tag": "v1.59.0",
+  "resolved_commit": "c96a4e6cb22254bf70026502a781a54a053c2cf0",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.59.0",
+    "is_branch": false
+  }
+}

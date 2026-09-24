@@ -1,0 +1,20 @@
+{
+  "id": "grpc-go",
+  "name": "gRPC Go",
+  "rank": 15,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/grpc/grpc-go.git",
+  "module_path": "google.golang.org/grpc",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.84.0",
+  "resolved_tag": "v1.84.0",
+  "resolved_commit": "e84aa5ab15d1d2b29d54f838312ad490cb7551a8",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.84.0",
+    "is_branch": false
+  }
+}

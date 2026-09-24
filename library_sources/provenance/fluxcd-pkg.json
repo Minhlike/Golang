@@ -1,0 +1,20 @@
+{
+  "id": "fluxcd-pkg",
+  "name": "Flux CD Runtime Packages",
+  "rank": 23,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/fluxcd/pkg.git",
+  "module_path": "github.com/fluxcd/pkg/runtime",
+  "version_strategy": "MULTI_MODULE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.114.0",
+  "resolved_tag": "runtime/v0.114.0",
+  "resolved_commit": "a1797f9a0f060b8e2556a980c853b0fb304114c6",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "runtime/v0.114.0",
+    "is_branch": false
+  }
+}

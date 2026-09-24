@@ -1,0 +1,20 @@
+{
+  "id": "go-github",
+  "name": "Google go-github Client",
+  "rank": 24,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/google/go-github.git",
+  "module_path": "github.com/google/go-github/v68",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v68.0.0",
+  "resolved_tag": "v68.0.0",
+  "resolved_commit": "98d4f502e28c1de670e319f18a219cfe98dfe4cd",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v68.0.0",
+    "is_branch": false
+  }
+}

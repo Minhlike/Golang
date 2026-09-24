@@ -1,0 +1,20 @@
+{
+  "id": "terraform-plugin-framework",
+  "name": "Terraform Plugin Framework",
+  "rank": 9,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/hashicorp/terraform-plugin-framework.git",
+  "module_path": "github.com/hashicorp/terraform-plugin-framework",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.19.0",
+  "resolved_tag": "v1.19.0",
+  "resolved_commit": "c7ac25e86333d194946fb5e3fd1114e7d101fc23",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.19.0",
+    "is_branch": false
+  }
+}

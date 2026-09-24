@@ -1,0 +1,76 @@
+{
+  "id": "go-plugin",
+  "name": "HashiCorp go-plugin",
+  "rank": 33,
+  "tier": "TIER_B",
+  "module_path": "github.com/hashicorp/go-plugin",
+  "resolved_version": "v1.8.0",
+  "resolved_commit": "155dcddc94873a285e14b7fa24b2f6ab6139668e",
+  "important_paths": [
+    "client",
+    "server",
+    "grpc_controller"
+  ],
+  "focus_areas": [
+    "client.go",
+    "server.go",
+    "grpc_client.go"
+  ],
+  "entrypoints": [
+    "github.com/hashicorp/go-plugin.New",
+    "github.com/hashicorp/go-plugin.Init"
+  ],
+  "public_api": [
+    "github.com/hashicorp/go-plugin.Client",
+    "github.com/hashicorp/go-plugin.Config",
+    "github.com/hashicorp/go-plugin.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for HashiCorp go-plugin"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "client/client_test.go"
+  ]
+}

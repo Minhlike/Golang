@@ -1,0 +1,20 @@
+{
+  "id": "go-retryablehttp",
+  "name": "HashiCorp go-retryablehttp",
+  "rank": 30,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/hashicorp/go-retryablehttp.git",
+  "module_path": "github.com/hashicorp/go-retryablehttp",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.7.8",
+  "resolved_tag": "v0.7.8",
+  "resolved_commit": "e1f5485fe84728709b857cb89e17088894c301d6",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.7.8",
+    "is_branch": false
+  }
+}

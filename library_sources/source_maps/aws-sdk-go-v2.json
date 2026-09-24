@@ -1,0 +1,86 @@
+{
+  "id": "aws-sdk-go-v2",
+  "name": "AWS SDK for Go v2",
+  "rank": 3,
+  "tier": "TIER_S",
+  "module_path": "github.com/aws/aws-sdk-go-v2",
+  "resolved_version": "v1.47.0",
+  "resolved_commit": "b189f382f4924bc6c948c9942e17c547553faf0d",
+  "important_paths": [
+    "aws",
+    "aws/middleware",
+    "aws/retry",
+    "aws/transport",
+    "config"
+  ],
+  "focus_areas": [
+    "aws/middleware/stack.go",
+    "aws/retry/retry.go",
+    "aws/transport/http/client.go"
+  ],
+  "entrypoints": [
+    "config.LoadDefaultConfig",
+    "s3.NewFromConfig",
+    "middleware.Stack"
+  ],
+  "public_api": [
+    "aws.Config",
+    "middleware.Stack",
+    "smithy.Handler",
+    "transport/http.BuildableClient"
+  ],
+  "core_types": [
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Cross-service AWS runtime configuration and credential provider"
+    },
+    {
+      "name": "Stack",
+      "kind": "struct",
+      "description": "Modular Smithy middleware execution pipeline (Initialize, Serialize, Build, Finalize, Deserialize)"
+    },
+    {
+      "name": "StandardRateLimiter",
+      "kind": "struct",
+      "description": "Token bucket client-side rate limiter for throttling responses"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Credential Resolution",
+      "path": "LoadDefaultConfig() -> ResolveCredentials() -> Env -> SharedConfig -> IMDS/OIDC"
+    },
+    {
+      "phase": "Operation Pipeline",
+      "path": "Client.Operation() -> Stack.Serialize() -> Stack.Finalize() -> Transport.Do()"
+    },
+    {
+      "phase": "Response Handling",
+      "path": "Transport.Do() -> Stack.Deserialize() -> UnmarshalResponse() -> ErrorClassifier"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Stateless Concurrency / Thread-Safe Client Instances",
+    "synchronization": "Immutable middleware stacks per operation; atomic credential caching",
+    "bounded_buffer": false
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context passed to every API operation and propagated to HTTP RoundTripper",
+    "leak_prevention": "Response bodies drained and closed or returned to caller as io.ReadCloser"
+  },
+  "retry_model": {
+    "strategy": "Standard / Adaptive mode with exponential backoff, jitter, and error classification",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "HTTPS/1.1 and HTTP/2 TLS connections to AWS service regional endpoints",
+    "os": "Filesystem credentials (~/.aws/credentials) and IMDS HTTP metadata socket",
+    "serialization": "AWS REST-JSON, REST-XML, Query, and Smithy RPC protocols"
+  },
+  "verification_tests": [
+    "aws/retry/retry_test.go",
+    "aws/middleware/stack_test.go"
+  ]
+}

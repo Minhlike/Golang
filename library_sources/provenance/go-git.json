@@ -1,0 +1,20 @@
+{
+  "id": "go-git",
+  "name": "go-git Pure Go Implementation",
+  "rank": 11,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/go-git/go-git.git",
+  "module_path": "github.com/go-git/go-git/v5",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v5.19.2",
+  "resolved_tag": "v5.19.2",
+  "resolved_commit": "3eeb238da61eb9c7a324f3ee04f990ce89175642",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v5.19.2",
+    "is_branch": false
+  }
+}

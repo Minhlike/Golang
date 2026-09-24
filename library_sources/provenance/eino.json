@@ -1,0 +1,20 @@
+{
+  "id": "eino",
+  "name": "CloudWeGo Eino LLM Framework",
+  "rank": 47,
+  "tier": "FRONTIER",
+  "official_remote": "https://github.com/cloudwego/eino.git",
+  "module_path": "github.com/cloudwego/eino",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.9.21",
+  "resolved_tag": "v0.9.21",
+  "resolved_commit": "ba04fde8641057055c358d7ab5d3015a9ba825e1",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.9.21",
+    "is_branch": false
+  }
+}

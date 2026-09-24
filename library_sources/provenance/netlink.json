@@ -1,0 +1,20 @@
+{
+  "id": "netlink",
+  "name": "Vishvananda Netlink Library",
+  "rank": 21,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/vishvananda/netlink.git",
+  "module_path": "github.com/vishvananda/netlink",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.3.1",
+  "resolved_tag": "v1.3.1",
+  "resolved_commit": "17daef607c6442d47b0565343cf8a69f985a4cb7",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.3.1",
+    "is_branch": false
+  }
+}

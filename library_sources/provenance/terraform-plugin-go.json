@@ -1,0 +1,20 @@
+{
+  "id": "terraform-plugin-go",
+  "name": "Terraform Plugin Go",
+  "rank": 35,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/hashicorp/terraform-plugin-go.git",
+  "module_path": "github.com/hashicorp/terraform-plugin-go",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.31.0",
+  "resolved_tag": "v0.31.0",
+  "resolved_commit": "09a1181b051c53a3700401895ae281afbc91f0fc",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.31.0",
+    "is_branch": false
+  }
+}

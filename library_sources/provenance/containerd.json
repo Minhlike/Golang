@@ -1,0 +1,20 @@
+{
+  "id": "containerd",
+  "name": "containerd Container Runtime",
+  "rank": 8,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/containerd/containerd.git",
+  "module_path": "github.com/containerd/containerd/v2",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v2.4.0",
+  "resolved_tag": "v2.4.0",
+  "resolved_commit": "a7fe631d96c08fb14cf8eff0afdc280e99c30a94",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v2.4.0",
+    "is_branch": false
+  }
+}

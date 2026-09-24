@@ -1,0 +1,88 @@
+{
+  "id": "opentelemetry-collector",
+  "name": "OpenTelemetry Collector Core",
+  "rank": 6,
+  "tier": "TIER_S",
+  "module_path": "go.opentelemetry.io/collector",
+  "resolved_version": "v0.161.0",
+  "resolved_commit": "0bf928af5487d3c4e0b4174eabb7ba075c322517",
+  "important_paths": [
+    "component",
+    "consumer",
+    "processor",
+    "receiver",
+    "exporter",
+    "pdata"
+  ],
+  "focus_areas": [
+    "consumer/consumer.go",
+    "processor/processor.go",
+    "receiver/receiver.go",
+    "exporter/exporter.go"
+  ],
+  "entrypoints": [
+    "otelcol.NewCommand",
+    "service.New",
+    "connector.NewFactory"
+  ],
+  "public_api": [
+    "receiver.Receiver",
+    "processor.Processor",
+    "exporter.Exporter",
+    "pipeline.Pipeline"
+  ],
+  "core_types": [
+    {
+      "name": "Service",
+      "kind": "struct",
+      "description": "Host daemon orchestrating telemetry pipelines and telemetry components"
+    },
+    {
+      "name": "Consumer",
+      "kind": "interface",
+      "description": "Data consumption interface (ConsumeTraces, ConsumeMetrics, ConsumeLogs)"
+    },
+    {
+      "name": "BatchProcessor",
+      "kind": "struct",
+      "description": "Pipeline stage aggregating telemetry items by size and timeout"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Pipeline Ingestion",
+      "path": "Receiver.ConsumeTraces() -> Pipeline.Router() -> Processor.ConsumeTraces()"
+    },
+    {
+      "phase": "Processing",
+      "path": "Processor.ProcessTraces() -> Filter / Transform / Batch -> NextConsumer"
+    },
+    {
+      "phase": "Export",
+      "path": "Exporter.ConsumeTraces() -> QueueSender -> RetrySender -> Network Sender"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Pipeline Fan-Out / Fan-In with Buffered Senders",
+    "synchronization": "Bounded channel queues per exporter; atomic pipeline counters",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "Context passed through every consumer step; timeout cancels downstream RPCs",
+    "leak_prevention": "Service.Shutdown(ctx) halts receivers, drains pipelines, and flushes exporters"
+  },
+  "retry_model": {
+    "strategy": "Queue-sender bounded memory/disk buffering with exponential retry policy",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "OTLP, Jaeger, Prometheus, Zipkin network servers and clients",
+    "os": "Process signals and filesystem configuration files",
+    "serialization": "OTLP Protobuf, JSON, and Arrow telemetry formats"
+  },
+  "verification_tests": [
+    "service/pipelines_test.go",
+    "exporter/exporterhelper/retry_sender_test.go"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "id": "k8s-client-go",
+  "name": "Kubernetes client-go",
+  "rank": 1,
+  "tier": "TIER_S",
+  "module_path": "k8s.io/client-go",
+  "resolved_version": "v0.37.0",
+  "resolved_commit": "28076445520055420e3be4255b4cd27fd19df1f9",
+  "important_paths": [
+    "tools/cache",
+    "informers",
+    "workqueue",
+    "kubernetes",
+    "rest",
+    "dynamic"
+  ],
+  "focus_areas": [
+    "tools/cache/reflector.go",
+    "tools/cache/controller.go",
+    "util/workqueue/queue.go"
+  ],
+  "entrypoints": [
+    "kubernetes.NewForConfig",
+    "dynamic.NewForConfig",
+    "tools/cache.NewInformer"
+  ],
+  "public_api": [
+    "kubernetes.Clientset",
+    "tools/cache.SharedIndexInformer",
+    "util/workqueue.RateLimitingInterface"
+  ],
+  "core_types": [
+    {
+      "name": "Reflector",
+      "kind": "struct",
+      "description": "ListerWatcher synchronizer populating DeltaFIFO"
+    },
+    {
+      "name": "DeltaFIFO",
+      "kind": "struct",
+      "description": "Producer-consumer queue for delta mutation events"
+    },
+    {
+      "name": "SharedIndexInformer",
+      "kind": "interface",
+      "description": "Multiplexed local cache with event callbacks"
+    },
+    {
+      "name": "TypeQueue",
+      "kind": "struct",
+      "description": "Thread-safe work queue with failure rate limiting"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Watch Stream",
+      "path": "Reflector.ListAndWatch() -> ListerWatcher.Watch() -> DeltaFIFO.Add/Update/Delete()"
+    },
+    {
+      "phase": "Cache Distribution",
+      "path": "controller.processLoop() -> SharedIndexInformer.HandleDeltas() -> Indexer.Update() + Listener.add()"
+    },
+    {
+      "phase": "Worker Reconcile",
+      "path": "WorkQueue.Get() -> Reconcile(key) -> WorkQueue.Done() -> WorkQueue.Forget()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Actor-like Event Distributor with Parallel Worker Queues",
+    "synchronization": "sync.RWMutex for cache indexer, channels for processor listeners",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context passed to ListAndWatch and Run loops",
+    "leak_prevention": "Stop channel and context cancellation triggers Reflector and processor listener shutdown"
+  },
+  "retry_model": {
+    "strategy": "Exponential failure backoff with per-item rate-limiting workqueue",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "HTTP/1.1 chunked or HTTP/2 chunked watch streams with keep-alive ping frames",
+    "os": "In-memory indexing cache and kernel network socket buffers",
+    "serialization": "JSON and Protobuf decoding of runtime.Object envelopes"
+  },
+  "verification_tests": [
+    "tools/cache/reflector_test.go",
+    "util/workqueue/queue_test.go"
+  ]
+}

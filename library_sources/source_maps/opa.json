@@ -1,0 +1,77 @@
+{
+  "id": "opa",
+  "name": "Open Policy Agent (OPA)",
+  "rank": 13,
+  "tier": "TIER_A",
+  "module_path": "github.com/open-policy-agent/opa",
+  "resolved_version": "v1.20.2",
+  "resolved_commit": "b2c26708e9d55645d7f837db495031f7e4152594",
+  "important_paths": [
+    "rego",
+    "ast",
+    "topdown",
+    "storage"
+  ],
+  "focus_areas": [
+    "rego/rego.go",
+    "topdown/query.go",
+    "ast/compiler.go"
+  ],
+  "entrypoints": [
+    "github.com/open-policy-agent/opa.New",
+    "github.com/open-policy-agent/opa.Init"
+  ],
+  "public_api": [
+    "github.com/open-policy-agent/opa.Client",
+    "github.com/open-policy-agent/opa.Config",
+    "github.com/open-policy-agent/opa.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Open Policy Agent (OPA)"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "rego/client_test.go"
+  ]
+}

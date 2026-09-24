@@ -1,0 +1,20 @@
+{
+  "id": "hcl",
+  "name": "HashiCorp HCL v2",
+  "rank": 34,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/hashicorp/hcl.git",
+  "module_path": "github.com/hashicorp/hcl/v2",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v2.25.0",
+  "resolved_tag": "v2.25.0",
+  "resolved_commit": "00057cf06d7b38a3f89e6e54d622eee98322b314",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v2.25.0",
+    "is_branch": false
+  }
+}

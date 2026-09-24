@@ -1,0 +1,20 @@
+{
+  "id": "trivy",
+  "name": "Aqua Security Trivy",
+  "rank": 39,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/aquasecurity/trivy.git",
+  "module_path": "github.com/aquasecurity/trivy",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.74.0",
+  "resolved_tag": "v0.74.0",
+  "resolved_commit": "e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.74.0",
+    "is_branch": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "prometheus-client-golang",
+  "name": "Prometheus Go Client",
+  "rank": 4,
+  "tier": "TIER_S",
+  "official_remote": "https://github.com/prometheus/client_golang.git",
+  "module_path": "github.com/prometheus/client_golang",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.24.1",
+  "resolved_tag": "v1.24.1",
+  "resolved_commit": "d6087ee482e06716ee21dc03819432d5d40f72db",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.24.1",
+    "is_branch": false
+  }
+}

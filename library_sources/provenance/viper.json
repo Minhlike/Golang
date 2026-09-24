@@ -1,0 +1,20 @@
+{
+  "id": "viper",
+  "name": "spf13 Viper Configuration",
+  "rank": 26,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/spf13/viper.git",
+  "module_path": "github.com/spf13/viper",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.21.0",
+  "resolved_tag": "v1.21.0",
+  "resolved_commit": "394040caccbdf5821fa6839386a35f0fb1b1ee9e",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.21.0",
+    "is_branch": false
+  }
+}

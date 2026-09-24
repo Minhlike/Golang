@@ -1,0 +1,20 @@
+{
+  "id": "crossplane-runtime",
+  "name": "Crossplane Runtime",
+  "rank": 22,
+  "tier": "TIER_A",
+  "official_remote": "https://github.com/crossplane/crossplane-runtime.git",
+  "module_path": "github.com/crossplane/crossplane-runtime",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v1.20.11",
+  "resolved_tag": "v1.20.11",
+  "resolved_commit": "84fc49a3e3b88733677824b1a4dcce5097ca0c59",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v1.20.11",
+    "is_branch": false
+  }
+}

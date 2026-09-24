@@ -1,0 +1,75 @@
+{
+  "id": "fluxcd-pkg",
+  "name": "Flux CD Runtime Packages",
+  "rank": 23,
+  "tier": "TIER_A",
+  "module_path": "github.com/fluxcd/pkg/runtime",
+  "resolved_version": "v0.114.0",
+  "resolved_commit": "a1797f9a0f060b8e2556a980c853b0fb304114c6",
+  "important_paths": [
+    "runtime/controller",
+    "runtime/events",
+    "runtime/conditions"
+  ],
+  "focus_areas": [
+    "runtime/controller/controller.go",
+    "runtime/conditions/setter.go"
+  ],
+  "entrypoints": [
+    "github.com/fluxcd/pkg/runtime.New",
+    "github.com/fluxcd/pkg/runtime.Init"
+  ],
+  "public_api": [
+    "github.com/fluxcd/pkg/runtime.Client",
+    "github.com/fluxcd/pkg/runtime.Config",
+    "github.com/fluxcd/pkg/runtime.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for Flux CD Runtime Packages"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "runtime/controller/client_test.go"
+  ]
+}

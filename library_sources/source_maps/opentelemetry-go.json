@@ -1,0 +1,92 @@
+{
+  "id": "opentelemetry-go",
+  "name": "OpenTelemetry Go SDK & API",
+  "rank": 5,
+  "tier": "TIER_S",
+  "module_path": "go.opentelemetry.io/otel",
+  "resolved_version": "v1.46.0",
+  "resolved_commit": "58db4c898f5b5594f8ba78f156475bf48486e2f2",
+  "important_paths": [
+    "trace",
+    "metric",
+    "propagation",
+    "sdk/trace",
+    "sdk/metric"
+  ],
+  "focus_areas": [
+    "trace/tracer.go",
+    "sdk/trace/tracer.go",
+    "sdk/trace/batch_span_processor.go",
+    "propagation/trace_context.go"
+  ],
+  "entrypoints": [
+    "otel.GetTracerProvider",
+    "sdktrace.NewTracerProvider",
+    "trace.SpanFromContext"
+  ],
+  "public_api": [
+    "trace.Tracer",
+    "trace.Span",
+    "metric.Meter",
+    "propagation.TextMapPropagator"
+  ],
+  "core_types": [
+    {
+      "name": "TracerProvider",
+      "kind": "interface",
+      "description": "Factory and lifecycle owner of Tracer instances"
+    },
+    {
+      "name": "Span",
+      "kind": "interface",
+      "description": "Active tracing span recording attributes, events, and status"
+    },
+    {
+      "name": "BatchSpanProcessor",
+      "kind": "struct",
+      "description": "Buffered worker goroutine batching spans for export"
+    },
+    {
+      "name": "Sampler",
+      "kind": "interface",
+      "description": "Sampling decision engine (AlwaysOn, TraceIDRatioBased, ParentBased)"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Span Creation",
+      "path": "Tracer.Start(ctx, name) -> Sampler.ShouldSample() -> newRecordableSpan() -> context.WithValue()"
+    },
+    {
+      "phase": "Span Completion",
+      "path": "Span.End() -> BatchSpanProcessor.OnEnd() -> ringBuffer.enqueue()"
+    },
+    {
+      "phase": "Background Export",
+      "path": "BatchSpanProcessor.worker() -> Exporter.ExportSpans(ctx, batch) -> OTLP/gRPC/HTTP"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Lock-Free RingBuffer / Worker Goroutine Batcher",
+    "synchronization": "Channel or bounded ring buffer queue for spans; atomic flags for Span state",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "Context embeds SpanContext and propagates TraceParent/TraceState across process boundaries",
+    "leak_prevention": "TracerProvider.Shutdown(ctx) drains pending queue and waits for export completion"
+  },
+  "retry_model": {
+    "strategy": "OTLP exporter retry with exponential backoff on transient network failure",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "OTLP gRPC or HTTP transport to OpenTelemetry Collector",
+    "os": "Clock syscalls (runtime/nanotime) for precise span timestamping",
+    "serialization": "W3C Trace Context headers and OTLP Protobuf payloads"
+  },
+  "verification_tests": [
+    "sdk/trace/batch_span_processor_test.go",
+    "sdk/trace/tracer_test.go"
+  ]
+}

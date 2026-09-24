@@ -1,0 +1,90 @@
+{
+  "id": "prometheus-client-golang",
+  "name": "Prometheus Go Client",
+  "rank": 4,
+  "tier": "TIER_S",
+  "module_path": "github.com/prometheus/client_golang",
+  "resolved_version": "v1.24.1",
+  "resolved_commit": "d6087ee482e06716ee21dc03819432d5d40f72db",
+  "important_paths": [
+    "prometheus",
+    "prometheus/promhttp",
+    "prometheus/push"
+  ],
+  "focus_areas": [
+    "prometheus/registry.go",
+    "prometheus/counter.go",
+    "prometheus/gauge.go",
+    "prometheus/promhttp/http.go"
+  ],
+  "entrypoints": [
+    "prometheus.NewRegistry",
+    "promhttp.Handler",
+    "prometheus.NewCounterVec"
+  ],
+  "public_api": [
+    "prometheus.Registerer",
+    "prometheus.Gatherer",
+    "prometheus.Collector",
+    "prometheus.Metric"
+  ],
+  "core_types": [
+    {
+      "name": "Registry",
+      "kind": "struct",
+      "description": "Thread-safe metric collector registration and gatherer coordinator"
+    },
+    {
+      "name": "Counter",
+      "kind": "interface",
+      "description": "Monotonically increasing floating point counter metric"
+    },
+    {
+      "name": "Histogram",
+      "kind": "interface",
+      "description": "Configurable bucketed observation accumulator"
+    },
+    {
+      "name": "MetricVec",
+      "kind": "struct",
+      "description": "Partitioned metric bundle indexed by label value arrays"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Metric Observation",
+      "path": "Counter.Inc() -> atomic.AddUint64() / floatBits update"
+    },
+    {
+      "phase": "HTTP Scraping",
+      "path": "promhttp.Handler() -> Gatherer.Gather() -> Collector.Collect() -> Metric.Write()"
+    },
+    {
+      "phase": "Text Exposition",
+      "path": "Gather() -> expfmt.NewEncoder() -> WriteProtoText() / OpenMetrics format"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Lock-Free / Atomic Ingestion with Read-Locked Gathering",
+    "synchronization": "sync/atomic for metric values; sync.RWMutex for MetricVec label index maps",
+    "bounded_buffer": false
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "Scrape HTTP request context aborts exposition stream if client disconnects",
+    "leak_prevention": "Zero lingering goroutines for counter/gauge observations"
+  },
+  "retry_model": {
+    "strategy": "No internal retry; metrics ingestion is fire-and-forget",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "HTTP /metrics exposition endpoint",
+    "os": "Process / Linux procfs memory, CPU, and FD descriptors via procfs collectors",
+    "serialization": "Prometheus text format (0.0.4) and OpenMetrics text exposition"
+  },
+  "verification_tests": [
+    "prometheus/registry_test.go",
+    "prometheus/promhttp/http_test.go"
+  ]
+}

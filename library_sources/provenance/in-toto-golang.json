@@ -1,0 +1,20 @@
+{
+  "id": "in-toto-golang",
+  "name": "in-toto Supply Chain Metadata",
+  "rank": 40,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/in-toto/in-toto-golang.git",
+  "module_path": "github.com/in-toto/in-toto-golang",
+  "version_strategy": "GIT_STABLE_TAG",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.11.0",
+  "resolved_tag": "v0.11.0",
+  "resolved_commit": "36d782ffb2ca3adbffcdce1fd971c23319dd4469",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.11.0",
+    "is_branch": false
+  }
+}

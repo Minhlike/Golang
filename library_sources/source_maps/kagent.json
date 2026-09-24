@@ -1,0 +1,74 @@
+{
+  "id": "kagent",
+  "name": "kagent Autonomous Kubernetes Agent",
+  "rank": 49,
+  "tier": "FRONTIER",
+  "module_path": "github.com/kagent-dev/kagent",
+  "resolved_version": "HEAD-main",
+  "resolved_commit": "375fe73a0c1d4fc57991e321bf03a5a2fb1a3cd6",
+  "important_paths": [
+    "agent",
+    "kubernetes",
+    "diagnostics"
+  ],
+  "focus_areas": [
+    "pkg/agent/agent.go"
+  ],
+  "entrypoints": [
+    "github.com/kagent-dev/kagent.New",
+    "github.com/kagent-dev/kagent.Init"
+  ],
+  "public_api": [
+    "github.com/kagent-dev/kagent.Client",
+    "github.com/kagent-dev/kagent.Config",
+    "github.com/kagent-dev/kagent.Engine"
+  ],
+  "core_types": [
+    {
+      "name": "Client",
+      "kind": "struct",
+      "description": "Core client implementation for kagent Autonomous Kubernetes Agent"
+    },
+    {
+      "name": "Config",
+      "kind": "struct",
+      "description": "Configuration specification and parameter validation"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Bootstrap",
+      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+    },
+    {
+      "phase": "Runtime Execution",
+      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+    },
+    {
+      "phase": "Teardown",
+      "path": "Close() -> drainBuffers() -> releaseHandles()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Worker Pool / Goroutine Pipeline",
+    "synchronization": "sync.Mutex, sync.RWMutex, channels",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
+    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff with jitter on transient failures",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
+    "os": "Kernel syscalls, memory buffers, and OS signal management",
+    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+  },
+  "verification_tests": [
+    "agent/client_test.go"
+  ]
+}

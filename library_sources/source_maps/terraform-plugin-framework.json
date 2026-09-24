@@ -1,0 +1,86 @@
+{
+  "id": "terraform-plugin-framework",
+  "name": "Terraform Plugin Framework",
+  "rank": 9,
+  "tier": "TIER_S",
+  "module_path": "github.com/hashicorp/terraform-plugin-framework",
+  "resolved_version": "v1.19.0",
+  "resolved_commit": "c7ac25e86333d194946fb5e3fd1114e7d101fc23",
+  "important_paths": [
+    "provider",
+    "resource",
+    "datasource",
+    "types",
+    "diag"
+  ],
+  "focus_areas": [
+    "internal/provider/provider.go",
+    "internal/resource/resource.go",
+    "types/string.go"
+  ],
+  "entrypoints": [
+    "providerserver.NewProtocol6WithError",
+    "resource.Resource",
+    "datasource.DataSource"
+  ],
+  "public_api": [
+    "provider.Provider",
+    "resource.Resource",
+    "datasource.DataSource",
+    "tfsdk.Config"
+  ],
+  "core_types": [
+    {
+      "name": "Provider",
+      "kind": "interface",
+      "description": "Terraform provider plugin definition declaring schema and resources"
+    },
+    {
+      "name": "Resource",
+      "kind": "interface",
+      "description": "Managed infrastructure resource lifecycle handler (Create, Read, Update, Delete)"
+    },
+    {
+      "name": "Schema",
+      "kind": "struct",
+      "description": "Type-safe specification of resource attributes, blocks, and validators"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Schema Negotiation",
+      "path": "Provider.GetSchema() -> Schema.Request() -> Terraform Core RPC"
+    },
+    {
+      "phase": "Plan Modification",
+      "path": "Resource.ModifyPlan() -> PlanModifier.PlanModify() -> Diagnostics check"
+    },
+    {
+      "phase": "Resource Apply",
+      "path": "Resource.Create/Update/Delete() -> Cloud API Call -> State.Set()"
+    }
+  ],
+  "concurrency_model": {
+    "type": "RPC Worker Threads Managed by Terraform Plugin Server",
+    "synchronization": "Thread-safe provider instances; resource CRUD operations multiplexed via gRPC",
+    "bounded_buffer": false
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "context.Context carries execution timeout configured in HCL resource blocks",
+    "leak_prevention": "Cancellation aborts in-flight HTTP requests and sets partial resource state if possible"
+  },
+  "retry_model": {
+    "strategy": "Delegated to upstream cloud SDKs with framework retry helpers",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "Loopback gRPC socket connecting plugin subprocess to Terraform Core",
+    "os": "Subprocess stdio negotiation and process exit codes",
+    "serialization": "Terraform Provider Protocol v6 Protobuf and tftypes data structures"
+  },
+  "verification_tests": [
+    "internal/fwserver/server_test.go",
+    "resource/resource_test.go"
+  ]
+}

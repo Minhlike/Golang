@@ -1,0 +1,20 @@
+{
+  "id": "golang-time",
+  "name": "Go x/time (Focus Rate)",
+  "rank": 32,
+  "tier": "TIER_B",
+  "official_remote": "https://github.com/golang/time.git",
+  "module_path": "golang.org/x/time",
+  "version_strategy": "GO_MODULE_STABLE",
+  "resolved_at_utc": "2026-09-24T00:49:14Z",
+  "resolution_method": "go_list+git_ls_remote",
+  "resolved_version": "v0.16.0",
+  "resolved_tag": "v0.16.0",
+  "resolved_commit": "fb013b3d305a26f5ef5350a6eaffc7c87a200383",
+  "release_status": "OFFICIAL_STABLE",
+  "tag_protection_verified": true,
+  "remote_evidence": {
+    "fetch_ref": "v0.16.0",
+    "is_branch": false
+  }
+}

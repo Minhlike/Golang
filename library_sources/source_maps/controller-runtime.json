@@ -1,0 +1,86 @@
+{
+  "id": "controller-runtime",
+  "name": "Kubernetes Controller Runtime",
+  "rank": 2,
+  "tier": "TIER_S",
+  "module_path": "sigs.k8s.io/controller-runtime",
+  "resolved_version": "v0.25.1",
+  "resolved_commit": "67b72c2517be1d2b0dec612477eb20c3c959a8aa",
+  "important_paths": [
+    "pkg/controller",
+    "pkg/manager",
+    "pkg/reconcile",
+    "pkg/client",
+    "pkg/source"
+  ],
+  "focus_areas": [
+    "pkg/controller/controller.go",
+    "pkg/internal/controller/controller.go",
+    "pkg/manager/manager.go"
+  ],
+  "entrypoints": [
+    "manager.New",
+    "builder.ControllerManagedBy",
+    "reconcile.Reconciler"
+  ],
+  "public_api": [
+    "manager.Manager",
+    "reconcile.Reconciler",
+    "client.Client",
+    "controller.Controller"
+  ],
+  "core_types": [
+    {
+      "name": "Manager",
+      "kind": "interface",
+      "description": "Shared controller lifecycle and dependency container"
+    },
+    {
+      "name": "Controller",
+      "kind": "interface",
+      "description": "Reconciliation loop executor reacting to events"
+    },
+    {
+      "name": "Client",
+      "kind": "interface",
+      "description": "Split client routing reads to cache and writes to APIServer"
+    }
+  ],
+  "call_paths": [
+    {
+      "phase": "Manager Start",
+      "path": "Manager.Start(ctx) -> startCaches() -> startRunnables() -> startControllers()"
+    },
+    {
+      "phase": "Event Ingestion",
+      "path": "Source.Start() -> EventHandler.Create/Update/Delete() -> WorkQueue.Add()"
+    },
+    {
+      "phase": "Reconcile Loop",
+      "path": "Controller.processNextWorkItem() -> Reconciler.Reconcile(ctx, req) -> Result"
+    }
+  ],
+  "concurrency_model": {
+    "type": "Multi-Worker Goroutine Pool per Controller with Shared Cache",
+    "synchronization": "Internal WorkQueue locks, Cache Informer read-locks",
+    "bounded_buffer": true
+  },
+  "cancellation_model": {
+    "context_aware": true,
+    "deadline_propagation": "Parent Manager context cascades to all registered Runnables and Reconcile invocations",
+    "leak_prevention": "Manager gracefully waits for Reconcile workers via sync.WaitGroup on shutdown"
+  },
+  "retry_model": {
+    "strategy": "Exponential backoff via Reconcile.Result{RequeueAfter: duration} or rate-limited error requeue",
+    "idempotency_aware": true
+  },
+  "boundaries": {
+    "network": "k8s REST client HTTPS queries and Informer cache watch streams",
+    "os": "Host process signals (SIGTERM, SIGINT) bound to context cancellation",
+    "serialization": "runtime.Object JSON/Protobuf codec"
+  },
+  "verification_tests": [
+    "pkg/controller/controller_test.go",
+    "pkg/manager/manager_test.go"
+  ]
+}
