@@ -29,7 +29,7 @@ Cuốn sách hiện tại đã đạt quy mô **400 trang in chuẩn mực (Prin
    - **Chương 28:** MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền (Model Context Protocol, SSRF Guard, RBAC).
 10. **Back Matter & Phụ lục Bất biến:**
     - **Back Matter:** Atlas Mã Nguồn 50 Thư Viện Go DevOps & Cloud (Mổ xẻ trực tiếp commit đã khóa của 50 thư viện hàng đầu).
-    - **Phụ lục A:** Atlas Lỗi Go (44 mã lỗi thực chiến phân nhóm A–J, kết thúc bằng J11). Luôn là tài liệu cuối cùng của sách.
+    - **Phụ lục A:** Atlas Lỗi Go (85 mục tra cứu chẩn đoán thực chiến phân nhóm A–J, từ A01 đến J11). Luôn là tài liệu cuối cùng của sách.
 
 ---
 

@@ -7,7 +7,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct exec_event {
     __u32 pid;
-    __u32 ppid;
     __u32 uid;
     __u32 gid;
     char  comm[16];

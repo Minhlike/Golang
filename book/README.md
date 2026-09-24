@@ -64,4 +64,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ 28 chương kỹ thuật từ Chương 00 đến Chương 28, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (44 mã lỗi thực chiến A01–J11). Toàn bộ cuốn sách đạt quy mô 400 trang in chuẩn mực, được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight không lỗi. Tranche phát triển khóa đã định (`FORWARD ROADMAP LOCK`) đã hoàn thành trọn vẹn 100%. Các hướng phát triển tiếp theo được tổng hợp tại `book/FORWARD_COVERAGE_AFTER_CH28.md`.
+Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ 28 chương kỹ thuật từ Chương 00 đến Chương 28, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (85 mục tra cứu chẩn đoán thực chiến A01–J11). Toàn bộ cuốn sách đạt quy mô 400 trang in chuẩn mực, được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight không lỗi. Tranche phát triển khóa đã định (`FORWARD ROADMAP LOCK`) đã hoàn thành trọn vẹn 100%. Các hướng phát triển tiếp theo được tổng hợp tại `book/FORWARD_COVERAGE_AFTER_CH28.md`.

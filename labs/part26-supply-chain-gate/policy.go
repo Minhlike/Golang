@@ -19,13 +19,33 @@ const (
 	DecisionDeny  Decision = "DENY"
 )
 
-// Vulnerability represents a finding with govulncheck symbol reachability semantics.
+// SignatureVerifier defines the contract for verifying container image cryptographic signatures
+// (e.g. Cosign, Notary, or Sigstore).
+type SignatureVerifier interface {
+	VerifySignature(digest string, sig *SignatureVerification) error
+}
+
+// ProvenanceVerifier defines the contract for verifying build provenance attestations
+// (e.g. SLSA Provenance or in-toto attestations).
+type ProvenanceVerifier interface {
+	VerifyProvenance(digest string, att *Attestation) error
+}
+
+// VulnerabilityProvider defines the contract for obtaining vulnerability scan reports
+// (e.g. govulncheck call-graph reachability or Trivy container scanning).
+type VulnerabilityProvider interface {
+	GetVulnerabilities(digest string) ([]Vulnerability, error)
+}
+
+// Vulnerability represents a finding enriched with OSV database metadata and
+// govulncheck call-graph reachability trace. Note that in actual govulncheck JSON output,
+// severity comes from external OSV records and reachability is derived by walking the call graph.
 type Vulnerability struct {
 	ID        string `json:"id"`
 	Package   string `json:"package"`
 	Symbol    string `json:"symbol"`
-	Severity  string `json:"severity"` // "CRITICAL", "HIGH", "MEDIUM", "LOW"
-	Reachable bool   `json:"reachable"` // True if called in execution call-graph
+	Severity  string `json:"severity"` // "CRITICAL", "HIGH", "MEDIUM", "LOW" (from OSV)
+	Reachable bool   `json:"reachable"` // Synthesized from govulncheck call-graph trace
 }
 
 // Attestation represents SLSA provenance metadata.
@@ -34,7 +54,7 @@ type Attestation struct {
 	SubjectDigest string `json:"subjectDigest"`
 }
 
-// SignatureVerification represents cryptographic Cosign signature proof.
+// SignatureVerification represents cryptographic signature proof.
 type SignatureVerification struct {
 	PublicKey *ecdsa.PublicKey
 	RBytes    []byte
@@ -50,37 +70,19 @@ type EvaluationResult struct {
 	Warnings   []string `json:"warnings,omitempty"`
 }
 
-// PolicyEngine enforces fail-closed supply chain integrity gates.
-type PolicyEngine struct {
-	TrustedBuilders []string
-	TrustedIssuers  []string
+// DefaultSignatureVerifier validates ECDSA P-256 signatures against trusted OIDC identity issuers.
+type DefaultSignatureVerifier struct {
+	TrustedIssuers []string
 }
 
-// NewPolicyEngine creates a verification engine with trusted identity anchors.
-func NewPolicyEngine(trustedBuilders, trustedIssuers []string) *PolicyEngine {
-	return &PolicyEngine{
-		TrustedBuilders: trustedBuilders,
-		TrustedIssuers:  trustedIssuers,
-	}
-}
-
-// VerifyDigest validates that the artifact uses an immutable content-addressed OCI digest.
-func VerifyDigest(digest string) error {
-	if !digestRegex.MatchString(digest) {
-		return errors.New("invalid or mutable OCI digest: must be sha256:64hex")
-	}
-	return nil
-}
-
-// VerifySignature validates ECDSA P-256 signature against artifact digest and OIDC issuer.
-func (e *PolicyEngine) VerifySignature(digest string, sig *SignatureVerification) error {
+func (v *DefaultSignatureVerifier) VerifySignature(digest string, sig *SignatureVerification) error {
 	if sig == nil || sig.PublicKey == nil {
 		return errors.New("missing cryptographic signature or public key")
 	}
 
 	// 1. Verify trusted OIDC identity issuer
 	trustedIssuer := false
-	for _, ti := range e.TrustedIssuers {
+	for _, ti := range v.TrustedIssuers {
 		if sig.Issuer == ti {
 			trustedIssuer = true
 			break
@@ -102,6 +104,78 @@ func (e *PolicyEngine) VerifySignature(digest string, sig *SignatureVerification
 	}
 
 	return nil
+}
+
+// DefaultProvenanceVerifier validates SLSA attestation subject digest and builder identity.
+type DefaultProvenanceVerifier struct {
+	TrustedBuilders []string
+}
+
+func (v *DefaultProvenanceVerifier) VerifyProvenance(digest string, att *Attestation) error {
+	if att == nil {
+		return errors.New("missing SLSA provenance attestation")
+	}
+	if att.SubjectDigest != digest {
+		return errors.New("provenance subject digest does not match artifact digest")
+	}
+
+	builderTrusted := false
+	for _, tb := range v.TrustedBuilders {
+		if att.BuilderID == tb {
+			builderTrusted = true
+			break
+		}
+	}
+	if !builderTrusted {
+		return fmt.Errorf("untrusted builder identity: %s", att.BuilderID)
+	}
+	return nil
+}
+
+// PolicyEngine enforces fail-closed supply chain integrity gates.
+// Note: This is a Pedagogical Verification Policy Model that illustrates policy gate design,
+// not an official Cosign CLI wrapper or SLSA verifier.
+type PolicyEngine struct {
+	TrustedBuilders []string
+	TrustedIssuers  []string
+	SigVerifier     SignatureVerifier
+	ProvVerifier    ProvenanceVerifier
+}
+
+// NewPolicyEngine creates a verification engine with trusted identity anchors.
+func NewPolicyEngine(trustedBuilders, trustedIssuers []string) *PolicyEngine {
+	sigV := &DefaultSignatureVerifier{TrustedIssuers: trustedIssuers}
+	provV := &DefaultProvenanceVerifier{TrustedBuilders: trustedBuilders}
+	return &PolicyEngine{
+		TrustedBuilders: trustedBuilders,
+		TrustedIssuers:  trustedIssuers,
+		SigVerifier:     sigV,
+		ProvVerifier:    provV,
+	}
+}
+
+// VerifyDigest validates that the artifact uses an immutable content-addressed OCI digest.
+func VerifyDigest(digest string) error {
+	if !digestRegex.MatchString(digest) {
+		return errors.New("invalid or mutable OCI digest: must be sha256:64hex")
+	}
+	return nil
+}
+
+// VerifySignature delegates to the configured SignatureVerifier.
+func (e *PolicyEngine) VerifySignature(digest string, sig *SignatureVerification) error {
+	if e.SigVerifier == nil {
+		return errors.New("no signature verifier configured")
+	}
+	return e.SigVerifier.VerifySignature(digest, sig)
+}
+
+// VerifyProvenance delegates to the configured ProvenanceVerifier.
+func (e *PolicyEngine) VerifyProvenance(digest string, att *Attestation) error {
+	if e.ProvVerifier == nil {
+		return errors.New("no provenance verifier configured")
+	}
+	return e.ProvVerifier.VerifyProvenance(digest, att)
 }
 
 // Evaluate evaluates all supply chain invariants following the fail-closed principle.
@@ -126,27 +200,10 @@ func (e *PolicyEngine) Evaluate(
 		res.Violations = append(res.Violations, err.Error())
 	}
 
-	// 3. SLSA Provenance and Builder identity gate
-	if att == nil {
+	// 3. Provenance and Builder identity gate
+	if err := e.VerifyProvenance(artifactDigest, att); err != nil {
 		res.Decision = DecisionDeny
-		res.Violations = append(res.Violations, "missing SLSA provenance attestation")
-	} else {
-		if att.SubjectDigest != artifactDigest {
-			res.Decision = DecisionDeny
-			res.Violations = append(res.Violations, "provenance subject digest does not match artifact digest")
-		}
-
-		builderTrusted := false
-		for _, tb := range e.TrustedBuilders {
-			if att.BuilderID == tb {
-				builderTrusted = true
-				break
-			}
-		}
-		if !builderTrusted {
-			res.Decision = DecisionDeny
-			res.Violations = append(res.Violations, fmt.Sprintf("untrusted builder identity: %s", att.BuilderID))
-		}
+		res.Violations = append(res.Violations, err.Error())
 	}
 
 	// 4. Vulnerability gate with govulncheck reachability semantics

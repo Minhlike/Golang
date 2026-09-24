@@ -79,7 +79,7 @@ Không cần bóc tách token-by-token mọi dòng code trong sách, nhưng BẮ
    Mọi cú pháp, ngữ nghĩa và idiom được dạy từ bản chất nguyên tử nhất. Không để tích tụ "nợ nhận thức" (cognitive debt). Không giả định người học đã biết trước cú pháp Go.
 
 2. VIETNAMESE-NATURAL FIRST:
-   Văn xuôi (prose), lời dẫn, chú thích sơ đồ, tiêu đề bảng biểu viết bằng tiếng Việt trong sáng, tự nhiên, sư phạm. Tuyệt đối KHÔNG áp dụng quota số học cơ học (như 99% arithmetic quota) gây ra tình trạng dịch máy móc, cưỡng ép hoặc làm hỏng mã nguồn. Giữ nguyên tiếng Anh cho: Go keywords, identifiers, type/function/package names, official API symbols, protocol names, CLI flags/commands, và exact error messages.
+   Văn xuôi (prose), lời dẫn, chú thích sơ đồ, tiêu đề bảng biểu viết theo nguyên tắc: Vietnamese-natural first, terminology consistent, exact identifiers preserved. Tuyệt đối KHÔNG áp dụng quota số học cơ học gây ra tình trạng dịch máy móc, cưỡng ép hoặc làm hỏng mã nguồn. Giữ nguyên tiếng Anh cho: Go keywords, identifiers, type/function/package names, official API symbols, protocol names, CLI flags/commands, và exact error messages.
 
 3. ONE-CONCEPT-ONE-NAME:
    Sử dụng nhất quán một tên gọi chuẩn mực xuyên suốt toàn bộ cuốn sách, không tùy tiện đổi cách gọi giữa các trang hay các chương.
@@ -253,7 +253,7 @@ Sách cũ không được xem là source of truth cho những chi tiết có th�
 
 VĂN XUÔI ƯU TIÊN TIẾNG VIỆT TỰ NHIÊN, CHUYÊN NGÀNH VÀ NHẤT QUÁN.
 
-Văn xuôi phải ưu tiên tiếng Việt tự nhiên, chuyên ngành và nhất quán. Không đo chất lượng bằng tỷ lệ phần trăm cơ học. Toàn bộ văn xuôi, chú thích hình ảnh, bảng biểu và giải thích kỹ thuật trong Golang_Master.pdf phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm.
+Văn xuôi phải tuân thủ nghiêm ngặt nguyên tắc: Vietnamese-natural first, terminology consistent, exact identifiers preserved. Tuyệt đối không áp dụng quota dịch thuật số học hoặc tỷ lệ phần trăm cơ học. Toàn bộ văn xuôi, chú thích hình ảnh, bảng biểu và giải thích kỹ thuật trong Golang_Master.pdf phải được viết bằng tiếng Việt trong sáng, chính xác, tự nhiên và giàu tính sư phạm.
 
 Sử dụng bảng thuật ngữ quy chuẩn tại:
     book/VIETNAMESE_TECH_TERMS.md
@@ -2121,6 +2121,11 @@ KẾ HOẠCH KHÓA CHÍNH XÁC 7 CHƯƠNG (CH22 → CH28):
    - Lab: labs/part28-mcp-ops-tools/
    - Mental Model: AI/agent request → MCP protocol boundary → validated tool schema → authorization policy → bounded Go handler → real system boundary → structured result → audit trail
    - Trọng tâm: Model Context Protocol (MCP) Go SDK, stdio transport, schema-validated tool definitions, least privilege, authorization policy boundaries, SSRF prevention, audit trails.
+
+BÀI HỌC VỀ TÍNH CHÍNH XÁC VÀ KIỂM CHỨNG (VERIFICATION LESSONS LEARNED):
+- A passing mock test MUST NOT be described as external integration verification.
+- A custom protocol model MUST NOT be described as using an official SDK.
+- Security claims require adversarial boundary tests, not only happy-path unit tests.
 
 QUY TẮC DỪNG:
 Sau khi hoàn thành Chương 28, DỪNG LẠI. Không tự ý viết Chương 29.

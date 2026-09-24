@@ -319,22 +319,31 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         table_caption = None
 
     def add_code_block() -> None:
-        """Make tabs deterministic and keep code distinct in light mode."""
+        """Make tabs deterministic, keep code distinct, and split long blocks across pages."""
         nonlocal code_lines
-        code = Preformatted("\n".join(code_lines).expandtabs(4), s["code"])
-        box = Table([[code]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
-        box.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_LIGHT),
-            ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 9),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
-        ]))
-        if len(code_lines) <= 25:
-            story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
+        chunk_size = 28
+        if len(code_lines) <= chunk_size:
+            chunks = [code_lines]
         else:
-            story.extend([Spacer(1, 5), box, Spacer(1, 12)])
+            chunks = [code_lines[i : i + chunk_size] for i in range(0, len(code_lines), chunk_size)]
+
+        for idx, chunk in enumerate(chunks):
+            code = Preformatted("\n".join(chunk).expandtabs(4), s["code"])
+            box = Table([[code]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
+            box.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_LIGHT),
+                ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+            ]))
+            if len(chunks) == 1 and len(chunk) <= 22:
+                story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
+            else:
+                top_spacer = 5 if idx == 0 else 2
+                bottom_spacer = 12 if idx == len(chunks) - 1 else 4
+                story.extend([Spacer(1, top_spacer), box, Spacer(1, bottom_spacer)])
         code_lines = []
 
     def flush_image() -> None:

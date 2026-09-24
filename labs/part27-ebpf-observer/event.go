@@ -8,13 +8,12 @@ import (
 	"time"
 )
 
-// EventPayloadSize represents the exact C struct size (160 bytes).
-const EventPayloadSize = 160
+// EventPayloadSize represents the exact C struct size (156 bytes).
+const EventPayloadSize = 156
 
-// ExecEvent models the structured information observed from Linux kernel execve.
+// ExecEvent models the structured information observed from Linux kernel sys_enter_execve.
 type ExecEvent struct {
 	PID       uint32    `json:"pid"`
-	PPID      uint32    `json:"ppid"`
 	UID       uint32    `json:"uid"`
 	GID       uint32    `json:"gid"`
 	Comm      string    `json:"comm"`
@@ -32,16 +31,14 @@ func DecodeExecEvent(data []byte) (*ExecEvent, error) {
 	}
 
 	pid := binary.LittleEndian.Uint32(data[0:4])
-	ppid := binary.LittleEndian.Uint32(data[4:8])
-	uid := binary.LittleEndian.Uint32(data[8:12])
-	gid := binary.LittleEndian.Uint32(data[12:16])
+	uid := binary.LittleEndian.Uint32(data[4:8])
+	gid := binary.LittleEndian.Uint32(data[8:12])
 
-	commBytes := data[16:32]
-	fileBytes := data[32:160]
+	commBytes := data[12:28]
+	fileBytes := data[28:156]
 
 	return &ExecEvent{
 		PID:       pid,
-		PPID:      ppid,
 		UID:       uid,
 		GID:       gid,
 		Comm:      parseCString(commBytes),
@@ -50,7 +47,7 @@ func DecodeExecEvent(data []byte) (*ExecEvent, error) {
 	}, nil
 }
 
-// EncodeExecEvent serializes an ExecEvent into the exact 160-byte C struct ABI layout.
+// EncodeExecEvent serializes an ExecEvent into the exact 156-byte C struct ABI layout.
 func EncodeExecEvent(e *ExecEvent) ([]byte, error) {
 	if e == nil {
 		return nil, errors.New("cannot encode nil ExecEvent")
@@ -58,12 +55,11 @@ func EncodeExecEvent(e *ExecEvent) ([]byte, error) {
 
 	buf := make([]byte, EventPayloadSize)
 	binary.LittleEndian.PutUint32(buf[0:4], e.PID)
-	binary.LittleEndian.PutUint32(buf[4:8], e.PPID)
-	binary.LittleEndian.PutUint32(buf[8:12], e.UID)
-	binary.LittleEndian.PutUint32(buf[12:16], e.GID)
+	binary.LittleEndian.PutUint32(buf[4:8], e.UID)
+	binary.LittleEndian.PutUint32(buf[8:12], e.GID)
 
-	copy(buf[16:32], e.Comm)
-	copy(buf[32:160], e.Filename)
+	copy(buf[12:28], e.Comm)
+	copy(buf[28:156], e.Filename)
 
 	return buf, nil
 }

@@ -56,8 +56,12 @@ Trong mô hình này, mỗi mắt xích phía sau đều phải có bằng chứ
 
 Trước khi container image được build, chuỗi cung ứng bắt đầu ngay tại thời điểm Go tải các gói phụ thuộc về máy.
 
-### Cấu trúc của `go.sum`
-Khi bạn thêm một dependency vào `go.mod`, Go tự động tạo hoặc cập nhật tệp `go.sum`. Mỗi bản ghi trong `go.sum` có dạng:
+### Bản chất kỹ thuật của `go.sum`
+Một ngộ nhận kinh điển là coi `go.sum` như một "lock file" quyết định phiên bản (như `package-lock.json` hay `yarn.lock`). Trên thực tế:
+- **`go.mod`** mới là nơi quyết định phiên bản module thông qua giải thuật **Minimal Version Selection (MVS)**.
+- **`go.sum`** là **cơ sở dữ liệu xác thực nội dung mật mã (Content Validation Database)**. Nó lưu trữ các mã băm SHA-256 mật mã của mã nguồn module và tệp `go.mod` để phát hiện mọi hành vi can thiệp trái phép (tampering) hoặc thay đổi nội dung sau khi phát hành.
+
+Mỗi bản ghi trong `go.sum` có dạng:
 
 ~~~
 github.com/gin-gonic/gin v1.9.1 h1:4A06lVSJ...
@@ -65,7 +69,7 @@ github.com/gin-gonic/gin v1.9.1/go.mod h1:h1hp...
 ~~~
 
 Ý nghĩa của các thành phần:
-- `h1:<base64-hash>`: Chuỗi băm SHA-256 được tính toán trên toàn bộ nội dung của module (cây thư mục của mã nguồn sau khi giải nén).
+- `h1:<base64-hash>`: Chuỗi băm SHA-256 được tính toán trên toàn bộ cây thư mục mã nguồn của module sau khi giải nén.
 - Bản ghi có đuôi `/go.mod`: Mã băm chỉ tính riêng trên nội dung tệp `go.mod` của module đó. Điều này cho phép Go kiểm tra sự phụ thuộc mà không cần tải toàn bộ source code của thư viện về.
 
 ### Go Checksum Database (`sum.golang.org`)
@@ -88,7 +92,7 @@ Go giải quyết triệt để vấn đề này thông qua **Go Checksum Databa
 
 Trong các pipeline CI/CD truyền thống, các công cụ quét container (như Trivy, Grype, Snyk) thường đối chiếu danh sách gói phần mềm với cơ sở dữ liệu CVE. Cách tiếp cận này tạo ra một vấn nạn nghiêm trọng trong vận hành: **Hội chứng mệt mỏi vì cảnh báo (Alert Fatigue)**.
 
-Một dự án Go có thể sử dụng thư viện `golang.org/x/crypto`. Giả sử thư viện này có một lỗ hổng nghiêm trọng (Critical) trong hàm xử lý khóa SSH: `ssh.ParsePrivateKey`.
+Một dự án Go có thể sử dụng thư viện `golang.org/x/crypto`. Giả sử thư viện này có một lỗ hổng nghiêm trọng trong hàm xử lý khóa SSH: `ssh.ParsePrivateKey`.
 - **Máy quét tĩnh truyền thống:** Thấy `golang.org/x/crypto` trong `go.mod` $\rightarrow$ Báo động đỏ $\rightarrow$ Chặn pipeline.
 - **Thực tế ứng dụng:** Ứng dụng của bạn chỉ dùng hàm `bcrypt.GenerateFromPassword` để băm mật khẩu, hoàn toàn không dính dáng đến SSH!
 
@@ -103,14 +107,21 @@ Công cụ chính thức của Go team — `govulncheck` — hoạt động theo
       └──X (Bỏ qua) ssh.ParsePrivateKey [CRITICAL]
 ~~~
 
-`govulncheck` duyệt qua đồ thị cuộc gọi (Call-Graph) của toàn bộ mã nguồn sau khi biên dịch:
-1. Xác định xem module có chứa lỗ hổng hay không.
-2. Kiểm tra xem gói (package) chứa lỗ hổng có được import không.
-3. Quan trọng nhất: **Hàm hoặc ký hiệu (symbol) bị lỗi có thực sự nằm trên đường thực thi của file nhị phân hay không?**
+Bản chất dữ liệu đầu ra của `govulncheck`:
+1. Đầu ra JSON có cấu trúc của `govulncheck` chứa các bản ghi: **`OSV`** (thông tin lỗ hổng định dạng Open Source Vulnerability), **`Modules`** (danh sách module liên quan), và **`Traces`** (đồ thị dấu vết cuộc gọi từ `main` tới ký hiệu bị tổn thương).
+2. `govulncheck` **không** tự sinh ra trường nguyên thủy `Severity: "CRITICAL"` trong output thô; mức độ nghiêm trọng (Severity) được làm giàu từ cơ sở dữ liệu OSV hoặc CVSS bên ngoài.
+3. Thuộc tính `Reachable: true` trong mô hình chính sách là kết quả tổng hợp sau khi duyệt qua mảng `Traces`: nếu tồn tại ít nhất một đường dẫn hợp lệ từ `main` tới hàm chứa lỗi, lỗ hổng được xác định là thực sự có thể kích hoạt (`Reachable`).
+
+### Giới hạn phân tích cần lưu ý
+Cần hiểu rõ phạm vi phân tích tĩnh của `govulncheck`:
+- Chỉ phân tích mã nguồn Go thuần túy.
+- **Không** phân tích các phụ thuộc CGO runtime (thư viện C/C++ liên kết động).
+- **Không** phát hiện lỗ hổng trong các plugin tải động (`plugin.Open`).
+- **Không** quét các tầng nhị phân bên ngoài của hệ điều hành container (như OpenSSL hay glibc trong base image — phần này vẫn cần scanner container như Trivy).
 
 ### Thiết kế chính sách thông minh
 Từ góc độ kỹ thuật cổng kiểm soát (Gate Policy), chúng ta phân chia hai mức độ phản hồi:
-- **`Reachable = true`:** Lỗ hổng nằm trực tiếp trên đường thực thi của ứng dụng. Đây là mối đe dọa trực tiếp $\rightarrow$ **TỪ CHỐI TRIỂN KHAI (DENY)**.
+- **`Reachable = true`:** Lỗ hổng nằm trực tiếp trên đường thực thi của ứng dụng $\rightarrow$ **TỪ CHỐI TRIỂN KHAI (DENY)**.
 - **`Reachable = false`:** Thư viện chứa lỗ hổng nhưng ứng dụng không bao giờ gọi tới hàm lỗi $\rightarrow$ **GHI NHẬN CẢNH BÁO (WARN / AUDIT)** nhưng không làm đứt gãy quy trình phát hành.
 
 ---
@@ -153,34 +164,16 @@ Giải pháp hiện đại nhất là hệ sinh thái **Sigstore / Cosign**:
 
 ## 6. Xây dựng Cổng chính sách Fail-Closed trong Go
 
-Bây giờ, chúng ta sẽ hiện thực hóa toàn bộ các nguyên lý trên vào một module Go có khả năng tích hợp vào Kubernetes Admission Webhook hoặc CI/CD Promotion Gate.
+Bây giờ, chúng ta sẽ hiện thực hóa toàn bộ các nguyên lý trên vào một module Go theo **Mô hình chính sách kiểm chứng sư phạm (Pedagogical Verification Policy Model)**. 
 
-### Nguyên tắc Fail-Closed (Mặc định từ chối)
-Một hệ thống an ninh không bao giờ được phép hoạt động theo kiểu "cho qua nếu không thấy lỗi". Nó phải tuân thủ triệt để nguyên tắc **Fail-Closed**:
-- Bất kỳ tham số nào bị thiếu (thiếu chữ ký, thiếu provenance) $\rightarrow$ **DENY**.
-- Bất kỳ chữ ký nào không khớp hoặc không do OIDC Issuer tin cậy phát hành $\rightarrow$ **DENY**.
-- Builder ID không nằm trong danh sách trắng $\rightarrow$ **DENY**.
-- Phát hiện lỗ hổng Critical/High có thể vươn tới (`Reachable`) $\rightarrow$ **DENY**.
+Mô hình này không nhằm mục đích thay thế hay bao bọc toàn bộ mã nguồn của Cosign CLI hay SLSA verifier bên ngoài. Thay vào đó, nó tách bạch rõ ràng 3 khế ước giao tiếp (interfaces) cốt lõi của một hệ thống kiểm định chuỗi cung ứng hiện đại:
+1. `SignatureVerifier`: Chịu trách nhiệm xác thực chữ ký số mật mã của image (Cosign / Notary).
+2. `ProvenanceVerifier`: Chịu trách nhiệm kiểm chứng xuất xứ bản build (SLSA Provenance / in-toto).
+3. `VulnerabilityProvider`: Chịu trách nhiệm cung cấp dữ liệu lỗ hổng (govulncheck / scanner).
 
-### Khai báo mô hình dữ liệu chính sách
+### Khai báo các Interface và Mô hình dữ liệu chính sách
 
 ~~~go
-package supplychain
-
-import (
-	"crypto/ecdsa"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"regexp"
-	"strings"
-)
-
-var digestRegex = regexp.MustCompile(
-	`^sha256:[a-f0-9]{64}$`,
-)
-
 type Decision string
 
 const (
@@ -188,18 +181,37 @@ const (
 	DecisionDeny  Decision = "DENY"
 )
 
+// 3 Interface cốt lõi của Cổng kiểm định chuỗi cung ứng:
+type SignatureVerifier interface {
+	VerifySignature(
+		digest string, sig *SignatureVerification,
+	) error
+}
+
+type ProvenanceVerifier interface {
+	VerifyProvenance(
+		digest string, att *Attestation,
+	) error
+}
+
+type VulnerabilityProvider interface {
+	GetVulnerabilities(
+		digest string,
+	) ([]Vulnerability, error)
+}
+
 // Vulnerability mô phỏng phát hiện với ngữ nghĩa
-// reachability của govulncheck.
+// reachability của govulncheck và mức độ từ OSV.
 type Vulnerability struct {
 	ID        string `json:"id"`
 	Package   string `json:"package"`
 	Symbol    string `json:"symbol"`
-	Severity  string `json:"severity"`
-	Reachable bool   `json:"reachable"`
+	Severity  string `json:"severity"` // Từ OSV
+	Reachable bool   `json:"reachable"` // Từ call-graph
 }
 ~~~
 
-Tiếp theo là cấu trúc chứng thực SLSA và bằng chứng xác thực chữ ký số:
+### Metadata Xuất xứ, Chữ ký số và Bộ điều phối PolicyEngine
 
 ~~~go
 // Attestation đại diện cho metadata xuất xứ SLSA.
@@ -222,17 +234,26 @@ type EvaluationResult struct {
 	Warnings   []string `json:"warnings,omitempty"`
 }
 
+// PolicyEngine điều phối việc kiểm định fail-closed
 type PolicyEngine struct {
 	TrustedBuilders []string
 	TrustedIssuers  []string
+	SigVerifier     SignatureVerifier
+	ProvVerifier    ProvenanceVerifier
 }
 
-func NewPolicyEngine(
-	builders, issuers []string,
-) *PolicyEngine {
+func NewPolicyEngine(builders, issuers []string) *PolicyEngine {
+	sigV := &DefaultSignatureVerifier{
+		TrustedIssuers: issuers,
+	}
+	provV := &DefaultProvenanceVerifier{
+		TrustedBuilders: builders,
+	}
 	return &PolicyEngine{
 		TrustedBuilders: builders,
 		TrustedIssuers:  issuers,
+		SigVerifier:     sigV,
+		ProvVerifier:    provV,
 	}
 }
 ~~~
@@ -430,7 +451,7 @@ func (e *PolicyEngine) Evaluate(
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part26-supply-chain-gate`)
 
-Mã nguồn hoàn chỉnh của bài lab nằm tại thư mục `labs/part26-supply-chain-gate`. Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
+Mã nguồn hoàn chỉnh của bài lab nằm tại thư mục `labs/part26-supply-chain-gate` (phân loại mức kiểm chứng: `UNIT_TESTED` / `MODEL_ONLY` đối với logic chính sách cổng fail-closed và chữ ký ECDSA P-256 nội bộ, chứng minh khế ước an ninh của 5 kịch bản thực chiến mà không phụ thuộc vào hạ tầng mạng Sigstore bên ngoài). Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
 
 ~~~bash
 go test -v -race ./...

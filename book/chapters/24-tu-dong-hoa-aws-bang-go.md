@@ -4,7 +4,7 @@ Trong hành trình xây dựng các công cụ vận hành và nền tảng hạ
 
 > *Làm thế nào để chương trình Go giao tiếp an toàn với AWS API mà không bao giờ nhúng Access Key dài hạn vào mã nguồn, file cấu hình hay biến môi trường?*
 
-Theo các báo cáo bảo mật đám mây, việc để lộ cặp khóa `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY` dài hạn (static credentials) trên GitHub hoặc log CI/CD là nguyên nhân hàng đầu khiến các doanh nghiệp bị chiếm đoạt tài khoản trong vòng chưa đầy 60 giây.
+Theo các báo cáo bảo mật đám mây, việc để lộ cặp khóa `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY` dài hạn (static credentials) trên kho mã nguồn công khai hoặc nhật ký CI/CD là nguyên nhân hàng đầu khiến các doanh nghiệp bị xâm phạm hạ tầng.
 
 Chương này trang bị cho bạn tư duy thiết kế hệ thống tự động hóa đám mây hiện đại dựa trên thư viện chính thức **AWS SDK for Go v2**: từ cơ chế cấp quyền động ngắn hạn (Temporary Credentials), ngăn xếp middleware Smithy, ký chữ ký số **SigV4**, đến duyệt dữ liệu lớn qua **Paginator** và phân loại lỗi chuẩn mực.
 
@@ -12,19 +12,20 @@ Chương này trang bị cho bạn tư duy thiết kế hệ thống tự độn
 
 ## 1. Chuỗi định danh ngầm định và Quyền tạm thời
 
-Thay vì lưu trữ khóa tĩnh, nguyên lý bảo mật đám mây hiện đại yêu cầu mọi chương trình chạy trên hạ tầng phải sử dụng **Thông tin xác thực tạm thời (Temporary Credentials)** được cấp phát tự động bởi dịch vụ AWS Security Token Service (STS).
+Thay vì lưu trữ khóa tĩnh dài hạn, nguyên lý bảo mật đám mây hiện đại yêu cầu mọi chương trình chạy trên hạ tầng phải sử dụng **Thông tin xác thực tạm thời (Temporary Credentials)** được cấp phát động bởi dịch vụ AWS Security Token Service (STS).
 
-Các khóa tạm thời này luôn có thời hạn sống ngắn (TTL từ 15 phút đến 1 giờ), gắn liền với một Session Token, và quan trọng nhất: **tự động mất hiệu lực nếu bị kẻ xấu đánh cắp**.
+Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời lượng phiên của IAM Role có thể cấu hình linh hoạt từ 15 phút tới 12 giờ tùy theo cấu hình vai trò, trong khi các cơ chế phiên liên kết (chained roles) hay `AssumeRoleWithWebIdentity` áp dụng giới hạn riêng. Mỗi bộ thông tin xác thực tạm thời luôn gắn liền với một Session Token (`AWS_SESSION_TOKEN`). Cần đặc biệt lưu ý: nếu khóa tạm thời bị rò rỉ trong thời gian còn hiệu lực, kẻ tấn công vẫn có thể sử dụng hợp lệ cho đến khi hết hạn hoặc cho đến khi quản trị viên chủ động thu hồi phiên (thông qua IAM revocation policy, cập nhật inline policy, hoặc vô hiệu hóa IAM role).
 
 ~~~
 [Chương trình Go gọi config.LoadDefaultConfig]
                    │
                    ▼
     [Default Credential Provider Chain]
-    ├── 1. Biến môi trường (AWS_ACCESS_KEY_ID...)
-    ├── 2. Web Identity Token (EKS Pod Identity / IRSA)
-    ├── 3. ECS Task Role (Container Credentials)
-    └── 4. EC2 Instance Metadata Service (IMDSv2)
+    ├── 1. Biến môi trường (AWS_ACCESS_KEY_ID, SECRET...)
+    ├── 2. Tệp cấu hình (~/.aws/config, credentials)
+    ├── 3. Web Identity Token (EKS Pod Identity / IRSA)
+    ├── 4. ECS Task Role (Container Credentials)
+    └── 5. EC2 Instance Metadata Service (IMDSv2 / IMDSv1)
                    │
                    ▼
      [aws.Credentials struct]
@@ -35,12 +36,12 @@ Các khóa tạm thời này luôn có thời hạn sống ngắn (TTL từ 15 p
      - Expires:         2026-09-24T13:00:00Z
 ~~~
 
-### Cơ chế tự động xoay vòng của SDK
+### Cơ chế bộ đệm và tự động làm mới của SDK (`aws.CredentialsCache`)
 
 Khi bạn nạp cấu hình qua hàm `config.LoadDefaultConfig(ctx)`:
-1. SDK không đọc một chuỗi khóa cố định vào bộ nhớ. Nó khởi tạo một chuỗi tìm kiếm (**Credential Chain**).
-2. Khi chạy trên Kubernetes (EKS), SDK tự động đọc tệp token do Kubernetes gắn vào Pod (`/var/run/secrets/eks.amazonaws.com/serviceaccount/token`) và trao đổi với AWS STS để lấy quyền IAM Role (IRSA).
-3. Trường `CanExpire: true` báo hiệu cho SDK biết thông tin này có hạn dùng. Trước khi gửi bất kỳ yêu cầu HTTP nào, SDK tự động so sánh thời gian hiện tại với `Expires`. Nếu token sắp hết hạn, SDK âm thầm kích hoạt hàm `Retrieve(ctx)` để lấy token mới mà tiến trình của bạn không hề bị gián đoạn!
+1. SDK không đọc một chuỗi khóa cố định vào bộ nhớ rồi giữ nguyên suốt vòng đời ứng dụng. Nó khởi tạo chuỗi tìm kiếm định danh mặc định theo thứ tự ưu tiên 5 cấp độ như trên.
+2. Khi chạy trên Kubernetes (EKS), SDK tự động phát hiện tệp token do Kubernetes gắn vào Pod và trao đổi với AWS STS qua `AssumeRoleWithWebIdentity` để lấy quyền IAM Role (IRSA).
+3. Để tối ưu hiệu năng và tránh gọi STS liên tục trước mỗi HTTP request, SDK v2 bọc provider bằng cấu trúc `aws.CredentialsCache`. Cache này lưu giữ credentials trong bộ nhớ và kiểm tra trường `CanExpire` cùng mốc thời gian `Expires`. Khi credentials tiến gần đến thời điểm hết hạn (nằm trong cửa sổ làm mới - refresh window), `CredentialsCache` tự động gọi hàm `Retrieve(ctx)` của underlying provider để lấy bộ khóa mới trong nền mà tiến trình của bạn không hề bị gián đoạn hay phát sinh lỗi 403 do khóa hết hạn.
 
 ---
 
@@ -62,7 +63,7 @@ Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra m�
    └── 5. Deserialize ──> Đọc HTTP Response thành Go Struct
              │
              ▼
-  [HTTP RoundTripper / Mạng] ──> [AWS Cloud Endpoint]
+  [HTTP RoundTripper / Mạng] ──> [AWS Cloud Service Endpoint]
 ~~~
 
 ### Chữ ký số SigV4 (Signature Version 4)
@@ -74,7 +75,7 @@ Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật t
 4. Tạo mã băm HMAC cuối cùng và gắn vào HTTP Header:
    `Authorization: AWS4-HMAC-SHA256 Credential=ASIA.../20260924/...`
 
-Bất kỳ kẻ xấu nào chặn bắt gói tin trên đường truyền và sửa đổi dù chỉ 1 byte trong payload hoặc header, chữ ký số sẽ không khớp và AWS API Gateway lập tức từ chối với mã lỗi `403 SignatureDoesNotMatch`.
+Bất kỳ kẻ xấu nào chặn bắt gói tin trên đường truyền và sửa đổi dù chỉ 1 byte trong payload hoặc header, chữ ký số sẽ không khớp và máy chủ dịch vụ AWS (AWS service endpoint như S3, DynamoDB, STS) lập tức từ chối với mã lỗi `403 SignatureDoesNotMatch`.
 
 ---
 
@@ -153,7 +154,7 @@ func ClassifyError(err error) (bool, string) {
 
 ## 5. Hiện thực Storage Client và Middleware tùy biến
 
-Dưới đây là mã nguồn trích xuất từ dự án mẫu `labs/part24-aws-sdk-go-v2/`:
+Dưới đây là cấu trúc mã nguồn trích xuất từ dự án mẫu `labs/part24-aws-sdk-go-v2/`. Trong khi mã nguồn triển khai thực tế trên production sẽ sử dụng `config.LoadDefaultConfig(ctx)` để gọi trực tiếp tới các endpoint dịch vụ AWS thật, dự án lab minh họa kiến trúc bằng `httptest.Server` giả lập giao thức S3 nhằm kiểm chứng hành vi nội tại của SDK v2 (middleware, provider, paginator, phân loại lỗi) hoàn toàn cô lập, không yêu cầu tài khoản đám mây thật hay chi phí vận hành:
 
 ### 1. Provider cấp khóa tạm thời tự xoay vòng
 
@@ -230,8 +231,8 @@ s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 ---
 
 ## 6. Bằng chứng kiểm thử: Kiểm chứng 5 hành vi then chốt
-
-Toàn bộ bộ kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` vận hành độc lập bằng `httptest.Server`, mô phỏng chính xác hành vi của máy chủ AWS S3 mà không tốn chi phí điện toán đám mây:
+ 
+Toàn bộ bộ kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` vận hành độc lập bằng `httptest.Server` (phân loại mức kiểm chứng: `MOCK_VERIFIED` đối với tầng HTTP transport và `UNIT_TESTED` đối với logic provider/paginator/middleware), mô phỏng cấu trúc phản hồi XML của S3 và kiểm chứng 5 hành vi kiến trúc then chốt mà không cần tài nguyên AWS thực tế:
 
 ~~~
 === RUN   TestTemporaryCredentialRefresh

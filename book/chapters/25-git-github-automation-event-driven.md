@@ -81,9 +81,9 @@ Toán tử `==` trong Go so sánh từng byte từ trái qua phải và trả v�
 
 Kẻ tấn công có thể gửi hàng ngàn request với các byte đoán trước và đo thời gian phản hồi ở mức nano-giây. Thời gian phản hồi càng lâu chứng tỏ càng nhiều byte đầu tiên khớp đúng. Bằng cách này, kẻ xấu có thể giải mã từng ký tự của chữ ký mà không cần biết khóa bí mật!
 
-### Giải pháp bắt buộc: crypto/subtle
+### Giải pháp bắt buộc: crypto/hmac.Equal hoặc crypto/subtle
 
-Trong Go, bạn bắt buộc phải dùng hàm `subtle.ConstantTimeCompare`:
+Trong Go, bạn bắt buộc phải dùng hàm `hmac.Equal` hoặc `subtle.ConstantTimeCompare`:
 
 ~~~go
 func VerifyHMACSHA256(
@@ -102,39 +102,41 @@ func VerifyHMACSHA256(
 	mac.Write(payload)
 	expectedSig := mac.Sum(nil)
 
-	// So sánh thời gian cố định, chống timing attack
-	match := subtle.ConstantTimeCompare(
-		actualSig, expectedSig,
-	)
-	return match == 1
+	// So sánh thời gian cố định, triệt tiêu timing attack
+	return hmac.Equal(actualSig, expectedSig)
 }
 ~~~
 
-Hàm này luôn duyệt qua toàn bộ chuỗi byte bất kể byte sai nằm ở đâu, triệt tiêu hoàn toàn nguy cơ rò rỉ qua kênh phụ.
+Hàm `hmac.Equal` (hoặc `subtle.ConstantTimeCompare(a, b) == 1`) luôn duyệt qua toàn bộ chuỗi byte với thời gian thực thi không phụ thuộc vào vị trí hay số lượng byte sai lệch, loại bỏ hoàn toàn khả năng giải mã chữ ký qua kênh phụ (side-channel).
 
 ---
 
 ## 3. Khế ước phân tán: Delivery ID và Tính Lũy Đẳng
 
-GitHub gửi webhook theo nguyên lý **At-Least-Once Delivery** (Phát ít nhất một lần).
+Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho rằng GitHub sẽ tự động thử lại (auto-retry) vô điều kiện mỗi khi máy chủ nhận trả về mã lỗi 5xx hoặc bị timeout. Trên thực tế, trong hầu hết các cấu hình webhook tiêu chuẩn, GitHub **không tự động gửi lại** các lần phát thất bại.
 
-Khi mạng chập chờn hoặc máy chủ của bạn xử lý tác vụ quá 10 giây khiến HTTP response bị timeout, GitHub sẽ tự động gửi lại sự kiện đó lần thứ hai hoặc thứ ba.
+Việc một webhook được gửi lại (redelivery) với cùng mã sự kiện thường bắt nguồn từ 4 nguyên nhân cụ thể:
+1. Quản trị viên hoặc kỹ sư kích hoạt tính năng **Redeliver** thủ công trên giao diện quản trị GitHub hoặc qua REST API.
+2. Các luồng xử lý chuyên biệt có cấu hình retry định kỳ (scheduled redelivery) của GitHub Apps trong một số trường hợp giới hạn.
+3. Sự cố nhân bản gói tin ở tầng mạng truyền tải (network duplicate packets).
+4. Hệ thống hàng đợi hạ tầng nội bộ của bạn (downstream queue worker) retry lại sự kiện sau khi nhận thành công từ webhook receiver.
 
-Mỗi lần gửi, GitHub cấp một mã UUID duy nhất tại header:
+Mỗi lần gửi, GitHub đính kèm một mã UUID duy nhất tại header:
 `X-GitHub-Delivery: 7a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d`
 
 ~~~
-GitHub Server                           Máy chủ Webhook (Go)
-     │                                           │
-     ├─ 1. Delivery "7a1b..." ──────────────────>│ (Xử lý OK)
-     │  <── HTTP 504 Timeout ────────────────────┤ (Rớt mạng)
-     │                                           │
-     ├─ 2. Delivery "7a1b..." (Gửi lại) ────────>│
-     │                                           ├─ Đã xử lý?
-     │  <── HTTP 200 OK (status: duplicate) ─────┴─ BỎ QUA!
+GitHub / Mạng / Quản trị viên      Máy chủ Webhook (Go)
+      │                                    │
+      ├─ 1. Delivery "7a1b..." ───────────>│ (Xử lý OK)
+      │                                    │
+      ├─ 2. Delivery "7a1b..." (Replay) ──>│
+      │                                    ├─ Đã lưu ID này?
+      │  <── HTTP 200 OK (duplicate) ──────┴─ BỎ QUA!
 ~~~
 
-Nếu chương trình của bạn không kiểm tra `X-GitHub-Delivery`, bạn có thể vô tình tạo 2 bản phát hành (release), comment 2 lần lên PR, hoặc kích hoạt 2 pipeline build trùng lặp.
+Mục đích sống còn của việc kiểm tra tính lũy đẳng dựa trên `X-GitHub-Delivery` là:
+- Triệt tiêu hoàn toàn rủi ro nhân bản hành vi khi có duplicate delivery hoặc manual redelivery (tránh việc bot tạo 2 bản release, bình luận 2 lần trên PR, hay triển khai 2 lần).
+- Bảo vệ hàng đợi nội bộ khỏi các cuộc tấn công phát lại (replay attack) nếu khóa bí mật không bị xâm phạm.
 
 Thiết kế bộ tiếp nhận có kiểm tra trùng lặp:
 
@@ -171,12 +173,18 @@ func (r *WebhookReceiver) Process(
 
 Khi bot tự động hóa tương tác với GitHub API, rào cản lớn nhất trên môi trường production là chính sách kiểm soát tần suất (**Rate Limiting**).
 
-GitHub áp dụng hai tầng rào chắn:
+Tuyệt đối không xem "5.000 requests/giờ" là con số phổ quát cố định. GitHub áp dụng hạn mức phân cấp tùy theo loại định danh và ngữ cảnh ủy quyền:
 
-| Tầng rào chắn | Hạn mức áp dụng | Dấu hiệu phản hồi | Chiến lược ứng phó |
-| :--- | :--- | :--- | :--- |
-| **Primary Rate Limit** | 5.000 requests/giờ cho tài khoản xác thực. | `X-RateLimit-Remaining: 0`<br>`X-RateLimit-Reset: <epoch>` | Ngủ (Sleep) chính xác tới mốc `ResetAt`, không gửi thêm request. |
-| **Secondary Rate Limit** | Chống spam và gọi đồng thời quá nhanh. | HTTP `403` hoặc `429`<br>`Retry-After: <seconds>` | Ngừng ngay lập tức trong số giây quy định, áp dụng backoff có jitter. |
+| Loại định danh (Authentication Context) | Hạn mức Primary Quota | Dấu hiệu nhận diện |
+| :--- | :--- | :--- |
+| **Chưa xác thực (Unauthenticated)** | 60 requests/giờ (tính theo địa chỉ IP) | Dễ bị nghẽn trong môi trường NAT/CI chung |
+| **Personal Access Token (PAT) / OAuth User** | 5.000 requests/giờ cho mỗi người dùng | `X-RateLimit-Limit: 5000` |
+| **GitHub App: User-to-Server** | 5.000 requests/giờ cho mỗi người dùng | Áp dụng khi app hành động thay mặt user |
+| **GitHub App: Server-to-Server (Installation)** | 5.000 req/h cơ bản + 50 req/h/repo (tối đa 12.500 req/h cho tổ chức >20 repos) | Phù hợp nhất cho bot tự động hóa cấp doanh nghiệp |
+| **GITHUB_TOKEN trong GitHub Actions** | 1.000 requests/giờ cho mỗi repository | Áp dụng cho runner tiêu chuẩn (Enterprise có thể cao hơn) |
+| **GitHub Enterprise Cloud / Server** | Tùy biến theo chính sách của tổ chức | Quản trị viên có thể nâng trần hạn mức |
+
+Song song với Primary Rate Limit theo giờ, GitHub áp dụng **Secondary Rate Limit** để chống lạm dụng (Abuse Detection) khi bot gửi quá nhiều request đồng thời hoặc tạo tài nguyên quá nhanh (trả về mã HTTP `403` hoặc `429` kèm header `Retry-After`).
 
 ### Thuật toán bóc tách Rate Limit trong Go
 
@@ -285,7 +293,7 @@ Toàn bộ quá trình tạo commit, tính hash SHA, và cập nhật HEAD diễ
 
 ## 6. Bằng chứng kiểm thử: Chứng minh 4 quy luật tự động hóa
 
-Bộ kiểm thử tại `labs/part25-github-automation/automation_test.go` xác thực toàn diện các ranh giới an toàn:
+Bộ kiểm thử tại `labs/part25-github-automation/automation_test.go` vận hành độc lập (phân loại kiểm chứng: `UNIT_TESTED` cho toàn bộ các thành phần webhook receiver, HMAC validation, idempotency filter, rate-limit parser, và in-memory Git DAG), chứng minh tính đúng đắn ở các ranh giới bảo mật và khế ước dữ liệu:
 
 ~~~
 === RUN   TestWebhookHMACVerification
@@ -308,7 +316,7 @@ Kiểm chứng 4 ca biên:
 - Header sai định dạng: **TỪ CHỐI**.
 
 ### 2. Khử trùng lặp sự kiện (TestWebhookDeliveryIdempotency)
-Bắn 2 webhook mang cùng một `X-GitHub-Delivery`. Lần đầu tiên xử lý thành công (`isDuplicate = false`). Lần thứ hai được nhận diện chính xác là sự kiện gửi lặp (`isDuplicate = true`), bảo vệ hệ thống không bị kích hoạt kép.
+Bắn 2 webhook mang cùng một `X-GitHub-Delivery`. Lần đầu tiên xử lý thành công (`isDuplicate = false`). Lần thứ hai được nhận diện chính xác là sự kiện gửi lặp (`isDuplicate = true`), bảo vệ hệ thống không bị kích hoạt kép khi có manual redelivery hoặc duplicate packet.
 
 ### 3. Bóc tách Rate Limit hai tầng (TestRateLimitParsing)
 Kiểm chứng cả hai tình huống:
@@ -324,9 +332,9 @@ Tạo liên tiếp 2 commit trong bộ nhớ RAM, kiểm tra mã băm SHA của 
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **So sánh chữ ký bằng ==** thay vì ConstantTimeCompare. | Rò rỉ thông tin qua thời gian thực thi, bị kẻ xấu tấn công vét cạn chữ ký số. | Bắt buộc dùng `crypto/subtle.ConstantTimeCompare`. |
-| **Bỏ qua X-GitHub-Delivery** và xử lý mù quáng mọi webhook. | Gây trùng lặp hành vi (tạo 2 PR, merge 2 lần) khi mạng chập chờn khiến GitHub gửi lại. | Lưu `X-GitHub-Delivery` vào bộ đệm và bỏ qua các sự kiện trùng lặp. |
-| **Gọi API ồ ạt trong vòng lặp** mà không kiểm tra Remaining. | Nhanh chóng làm cạn kiệt 5.000 request/giờ, khiến toàn bộ bot của tổ chức bị tê liệt. | Đọc `X-RateLimit-Remaining`. Chủ động ngủ khi quota chạm ngưỡng an toàn (ví dụ còn dưới 50). |
+| **So sánh chữ ký bằng ==** thay vì `hmac.Equal`. | Rò rỉ thông tin qua thời gian thực thi, bị kẻ xấu tấn công vét cạn chữ ký số. | Bắt buộc dùng `crypto/hmac.Equal` hoặc `crypto/subtle.ConstantTimeCompare`. |
+| **Bỏ qua X-GitHub-Delivery** và xử lý mù quáng mọi webhook. | Gây trùng lặp hành vi (tạo 2 PR, merge 2 lần) khi có manual redelivery hoặc trùng lặp mạng. | Lưu `X-GitHub-Delivery` vào bộ đệm và bỏ qua các sự kiện trùng lặp. |
+| **Gọi API ồ ạt trong vòng lặp** mà không kiểm tra Remaining. | Nhanh chóng làm cạn kiệt hạn mức quota (1.000–12.500 req/h), làm tê liệt bot tự động hóa. | Đọc `X-RateLimit-Remaining`. Chủ động ngủ khi quota chạm ngưỡng an toàn (ví dụ còn dưới 50). |
 | **Ghi file tạm ra ổ đĩa** khi thao tác Git trong container. | Gây phân mảnh ổ đĩa, rò rỉ dữ liệu nhạy cảm và xung đột tiến trình đồng thời. | Dùng `go-git` kết hợp `memfs` và `memory.NewStorage()` trên RAM. |
 
 ---

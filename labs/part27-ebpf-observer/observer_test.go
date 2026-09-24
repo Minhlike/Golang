@@ -41,7 +41,6 @@ func (m *mockRecordReader) Close() error {
 func TestEncodeDecodeExecEvent(t *testing.T) {
 	original := &ExecEvent{
 		PID:      12345,
-		PPID:     1000,
 		UID:      1001,
 		GID:      1001,
 		Comm:     "golang-worker",
@@ -64,9 +63,6 @@ func TestEncodeDecodeExecEvent(t *testing.T) {
 	if decoded.PID != original.PID {
 		t.Errorf("PID mismatch: expected %d, got %d", original.PID, decoded.PID)
 	}
-	if decoded.PPID != original.PPID {
-		t.Errorf("PPID mismatch: expected %d, got %d", original.PPID, decoded.PPID)
-	}
 	if decoded.UID != original.UID {
 		t.Errorf("UID mismatch: expected %d, got %d", original.UID, decoded.UID)
 	}
@@ -82,7 +78,7 @@ func TestEncodeDecodeExecEvent(t *testing.T) {
 }
 
 func TestDecodeExecEventTruncated(t *testing.T) {
-	truncated := make([]byte, 100) // Less than EventPayloadSize (160)
+	truncated := make([]byte, 100) // Less than EventPayloadSize (156)
 	_, err := DecodeExecEvent(truncated)
 	if err == nil {
 		t.Fatal("expected error for truncated payload, got nil")
@@ -90,8 +86,8 @@ func TestDecodeExecEventTruncated(t *testing.T) {
 }
 
 func TestObserverStreaming(t *testing.T) {
-	e1 := &ExecEvent{PID: 101, PPID: 1, Comm: "curl", Filename: "/usr/bin/curl"}
-	e2 := &ExecEvent{PID: 102, PPID: 101, Comm: "bash", Filename: "/bin/bash"}
+	e1 := &ExecEvent{PID: 101, Comm: "curl", Filename: "/usr/bin/curl"}
+	e2 := &ExecEvent{PID: 102, Comm: "bash", Filename: "/bin/bash"}
 
 	raw1, _ := EncodeExecEvent(e1)
 	raw2, _ := EncodeExecEvent(e2)

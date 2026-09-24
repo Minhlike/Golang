@@ -44,45 +44,47 @@ EXPECTED_GROUPS = [
 # - STATUS: Kubernetes / runtime / CI status hoặc reason
 # - FAMILY: tên hiện tượng / diagnostic family
 ENTRY_TYPES: dict[str, str] = {
-    # Nhóm A: Compiler & Type System (14 EXACT)
+    # Nhóm A: Compiler & Type System
     "A01": "EXACT", "A02": "EXACT", "A03": "EXACT", "A04": "EXACT", "A05": "EXACT",
     "A06": "EXACT", "A07": "EXACT", "A08": "EXACT", "A09": "EXACT", "A10": "EXACT",
     "A11": "EXACT", "A12": "EXACT", "A13": "EXACT", "A14": "EXACT",
 
-    # Nhóm B: Runtime & Panic (11 EXACT)
+    # Nhóm B: Runtime & Panic
     "B01": "EXACT", "B02": "EXACT", "B03": "EXACT", "B04": "EXACT", "B05": "EXACT",
     "B06": "EXACT", "B07": "EXACT", "B08": "EXACT", "B09": "EXACT", "B10": "EXACT",
     "B11": "EXACT",
 
-    # Nhóm C: Error Values & I/O (2 EXACT, 6 SENTINEL)
+    # Nhóm C: Error Values & I/O
     "C01": "SENTINEL", "C02": "SENTINEL", "C03": "SENTINEL", "C04": "SENTINEL",
     "C05": "EXACT", "C06": "EXACT", "C07": "SENTINEL", "C08": "SENTINEL",
 
-    # Nhóm D: Context & Cancellation (2 SENTINEL, 2 FAMILY)
+    # Nhóm D: Context & Cancellation
     "D01": "SENTINEL", "D02": "SENTINEL", "D03": "FAMILY", "D04": "FAMILY",
 
-    # Nhóm E: Filesystem & Process (3 SENTINEL, 3 EXACT)
+    # Nhóm E: Filesystem & Process
     "E01": "SENTINEL", "E02": "SENTINEL", "E03": "SENTINEL",
-    "E04": "EXACT", "E05": "EXACT", "E06": "EXACT",
+    "E04": "EXACT", "E05": "EXACT", "E06": "EXACT", "E07": "EXACT",
 
-    # Nhóm F: Network / HTTP / TLS (9 EXACT, 1 FAMILY)
+    # Nhóm F: Network / HTTP / TLS
     "F01": "EXACT", "F02": "EXACT", "F03": "EXACT", "F04": "EXACT", "F05": "EXACT",
     "F06": "EXACT", "F07": "EXACT", "F08": "EXACT", "F09": "EXACT", "F10": "FAMILY",
+    "F11": "EXACT",
 
-    # Nhóm G: Database (4 EXACT, 1 SENTINEL, 1 FAMILY)
+    # Nhóm G: Database
     "G01": "SENTINEL", "G02": "EXACT", "G03": "FAMILY",
     "G04": "EXACT", "G05": "EXACT", "G06": "EXACT",
 
-    # Nhóm H: Concurrency (4 EXACT, 1 FAMILY)
+    # Nhóm H: Concurrency
     "H01": "EXACT", "H02": "EXACT", "H03": "FAMILY", "H04": "EXACT", "H05": "EXACT",
 
-    # Nhóm I: Modules & Toolchain (7 EXACT)
+    # Nhóm I: Modules & Toolchain
     "I01": "EXACT", "I02": "EXACT", "I03": "EXACT", "I04": "EXACT", "I05": "EXACT",
-    "I06": "EXACT", "I07": "EXACT",
+    "I06": "EXACT", "I07": "EXACT", "I08": "EXACT",
 
-    # Nhóm J: Container / Kubernetes / CI-CD (7 STATUS)
+    # Nhóm J: Container / Kubernetes / CI-CD
     "J01": "STATUS", "J02": "STATUS", "J03": "STATUS", "J04": "STATUS",
-    "J05": "STATUS", "J06": "STATUS", "J07": "STATUS",
+    "J05": "STATUS", "J06": "STATUS", "J07": "STATUS", "J08": "STATUS",
+    "J09": "EXACT", "J10": "STATUS", "J11": "STATUS",
 }
 
 

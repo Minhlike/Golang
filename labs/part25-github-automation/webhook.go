@@ -3,7 +3,6 @@ package automation
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"strings"
@@ -33,7 +32,7 @@ func VerifyHMACSHA256(payload []byte, signatureHeader string, secret []byte) boo
 	mac.Write(payload)
 	expectedSig := mac.Sum(nil)
 
-	return subtle.ConstantTimeCompare(actualSig, expectedSig) == 1
+	return hmac.Equal(actualSig, expectedSig)
 }
 
 // WebhookReceiver processes GitHub Webhook events with signature verification

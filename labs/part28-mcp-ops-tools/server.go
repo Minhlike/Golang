@@ -2,12 +2,9 @@ package mcpopstools
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strings"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -15,28 +12,66 @@ import (
 type Role string
 
 const (
-	RoleObserver Role = "observer" // Read-only
-	RoleOperator Role = "operator" // Mutating with change ticket
-	RoleAdmin    Role = "admin"    // Full access
+	RoleObserver Role = "observer" // Read-only access
+	RoleOperator Role = "operator" // Mutating access with approved change ticket
+	RoleAdmin    Role = "admin"    // Full administrative access
 )
 
-type JSONRPCRequest struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      any             `json:"id"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
+type contextKey string
+
+const roleContextKey contextKey = "mcp_caller_role"
+
+// WithCallerRole binds authenticated caller identity to session context.
+// Agents cannot self-assert elevated roles via JSON arguments.
+func WithCallerRole(ctx context.Context, role Role) context.Context {
+	return context.WithValue(ctx, roleContextKey, role)
 }
 
-type JSONRPCResponse struct {
-	JSONRPC string        `json:"jsonrpc"`
-	ID      any           `json:"id"`
-	Result  any           `json:"result,omitempty"`
-	Error   *JSONRPCError `json:"error,omitempty"`
+// CallerRoleFromContext extracts caller role with safe least-privilege fallback (RoleObserver).
+func CallerRoleFromContext(ctx context.Context) Role {
+	if r, ok := ctx.Value(roleContextKey).(Role); ok {
+		return r
+	}
+	return RoleObserver
 }
 
-type JSONRPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+// ServiceActuator executes actual stateful operations on managed services.
+type ServiceActuator interface {
+	RestartService(ctx context.Context, serviceName string) error
+}
+
+// ChangeAuthorizer validates human-in-the-loop change tickets and approval policies.
+type ChangeAuthorizer interface {
+	AuthorizeChange(ctx context.Context, role Role, serviceName, ticket string) error
+}
+
+// DefaultChangeAuthorizer verifies tickets against an approved registry.
+type DefaultChangeAuthorizer struct {
+	ApprovedTickets map[string]string // ticket -> serviceName
+}
+
+func (a *DefaultChangeAuthorizer) AuthorizeChange(ctx context.Context, role Role, serviceName, ticket string) error {
+	if role == RoleObserver {
+		return fmt.Errorf("mcp: role %s not authorized for mutating tool restart_service", role)
+	}
+	if ticket == "" {
+		return errors.New("mcp: missing change_ticket")
+	}
+	expectedSvc, exists := a.ApprovedTickets[ticket]
+	if !exists {
+		return fmt.Errorf("mcp: change ticket %s not found in approval system", ticket)
+	}
+	if expectedSvc != serviceName {
+		return fmt.Errorf("mcp: change ticket %s is approved for %s, not %s", ticket, expectedSvc, serviceName)
+	}
+	return nil
+}
+
+// HealthTarget represents a pre-approved internal endpoint in the target allowlist.
+type HealthTarget struct {
+	ID          string `json:"id"`
+	ServiceName string `json:"serviceName"`
+	URL         string `json:"url"`
 }
 
 type Tool struct {
@@ -62,24 +97,45 @@ type CallToolResult struct {
 
 type AuditRecord struct {
 	Timestamp time.Time      `json:"timestamp"`
-	AgentRole Role           `json:"agentRole"`
+	Caller    Role           `json:"caller"`
 	ToolName  string         `json:"toolName"`
 	Arguments map[string]any `json:"arguments"`
-	Allowed   bool           `json:"allowed"`
-	Error     string         `json:"error,omitempty"`
+	Decision  string         `json:"decision"` // "ALLOW" or "DENY"
+	Result    string         `json:"result"`
 }
 
+// MCPServer implements an MCP Protocol Architecture & Security Model.
 type MCPServer struct {
-	mu           sync.Mutex
-	tools        map[string]Tool
-	auditLog     []AuditRecord
-	allowedHosts map[string]bool
+	mu         sync.Mutex
+	tools      map[string]Tool
+	targets    map[string]HealthTarget
+	httpClient *http.Client
+	actuator   ServiceActuator
+	authorizer ChangeAuthorizer
+	auditLog   []AuditRecord
 }
 
-func NewMCPServer() *MCPServer {
+// NewMCPServer instantiates an MCP tools server with target allowlist and policy gates.
+func NewMCPServer(
+	targets []HealthTarget,
+	httpClient *http.Client,
+	actuator ServiceActuator,
+	authorizer ChangeAuthorizer,
+) *MCPServer {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 3 * time.Second}
+	}
+	targetMap := make(map[string]HealthTarget)
+	for _, t := range targets {
+		targetMap[t.ID] = t
+	}
+
 	s := &MCPServer{
-		tools:        make(map[string]Tool),
-		allowedHosts: make(map[string]bool),
+		tools:      make(map[string]Tool),
+		targets:    targetMap,
+		httpClient: httpClient,
+		actuator:   actuator,
+		authorizer: authorizer,
 	}
 	s.registerDefaultTools()
 	return s
@@ -88,13 +144,16 @@ func NewMCPServer() *MCPServer {
 func (s *MCPServer) registerDefaultTools() {
 	s.tools["query_service_health"] = Tool{
 		Name:        "query_service_health",
-		Description: "Inspects HTTP service status and response code with SSRF protection",
+		Description: "Inspects health status of an approved service via target_id allowlist (SSRF-safe)",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"target_url": map[string]any{"type": "string", "description": "Public URL to inspect"},
+				"target_id": map[string]any{
+					"type":        "string",
+					"description": "Approved service identifier (e.g. checkout-health, payment-health)",
+				},
 			},
-			"required": []string{"target_url"},
+			"required": []string{"target_id"},
 		},
 	}
 
@@ -105,130 +164,137 @@ func (s *MCPServer) registerDefaultTools() {
 			"type": "object",
 			"properties": map[string]any{
 				"service_name":  map[string]any{"type": "string"},
-				"change_ticket": map[string]any{"type": "string", "description": "Approved change request ID"},
+				"change_ticket": map[string]any{"type": "string", "description": "Approved change ticket ID"},
 			},
 			"required": []string{"service_name", "change_ticket"},
 		},
 	}
 }
 
-// ValidateSSRF ensures outgoing targets do not access internal networks or cloud metadata.
-func ValidateSSRF(rawURL string) error {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return fmt.Errorf("invalid target URL: %w", err)
-	}
-
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return errors.New("unsupported protocol scheme: only http/https allowed")
-	}
-
-	hostname := u.Hostname()
-	if strings.EqualFold(hostname, "localhost") {
-		return errors.New("mcp: ssrf blocked: localhost access forbidden")
-	}
-
-	ip := net.ParseIP(hostname)
-	if ip != nil {
-		if ip.IsLoopback() {
-			return errors.New("mcp: ssrf blocked: loopback target prohibited")
-		}
-		if ip.IsPrivate() {
-			return errors.New("mcp: ssrf blocked: private RFC1918 range prohibited")
-		}
-		if ip.IsLinkLocalUnicast() || ip.String() == "169.254.169.254" {
-			return errors.New("mcp: ssrf blocked: cloud metadata endpoint forbidden")
-		}
-	}
-
-	return nil
-}
-
-// AuthorizeCall enforces least privilege based on agent role.
-func (s *MCPServer) AuthorizeCall(role Role, toolName string, args map[string]any) error {
-	switch toolName {
-	case "query_service_health":
-		// Read-only tools allowed for all roles
-		return nil
-
-	case "restart_service":
-		// Mutating tool: forbid observer role
-		if role == RoleObserver {
-			return fmt.Errorf("mcp: tool authorization denied for role %s on mutating tool %s", role, toolName)
-		}
-		ticket, ok := args["change_ticket"].(string)
-		if !ok || strings.TrimSpace(ticket) == "" {
-			return errors.New("mcp: mutation denied: missing or empty change_ticket")
-		}
-		return nil
-
-	default:
-		return fmt.Errorf("mcp: unknown tool: %s", toolName)
-	}
-}
-
-// ExecuteToolCall handles schema validation, authorization, execution, and audit logging.
+// ExecuteToolCall validates arguments, checks session authorization, performs execution, and audits.
 func (s *MCPServer) ExecuteToolCall(
 	ctx context.Context,
-	role Role,
 	params *CallToolParams,
 ) (*CallToolResult, error) {
 	if params == nil {
 		return nil, errors.New("nil call params")
 	}
 
+	role := CallerRoleFromContext(ctx)
+
 	tool, exists := s.tools[params.Name]
 	if !exists {
-		s.recordAudit(role, params.Name, params.Arguments, false, "tool not found")
-		return nil, fmt.Errorf("tool not found: %s", params.Name)
+		errStr := fmt.Sprintf("unknown tool: %s", params.Name)
+		s.recordAudit(role, params.Name, params.Arguments, "DENY", errStr)
+		return nil, errors.New(errStr)
 	}
 
-	// 1. Authorization Gate
-	if err := s.AuthorizeCall(role, params.Name, params.Arguments); err != nil {
-		s.recordAudit(role, params.Name, params.Arguments, false, err.Error())
-		return &CallToolResult{
-			IsError: true,
-			Content: []ToolContent{{Type: "text", Text: err.Error()}},
-		}, nil
-	}
-
-	// 2. Tool Execution Logic
-	var resultText string
 	switch tool.Name {
 	case "query_service_health":
-		targetURL, _ := params.Arguments["target_url"].(string)
-		if err := ValidateSSRF(targetURL); err != nil {
-			s.recordAudit(role, params.Name, params.Arguments, false, err.Error())
+		targetID, ok := params.Arguments["target_id"].(string)
+		if !ok || targetID == "" {
+			errStr := "missing or invalid target_id"
+			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
 			return &CallToolResult{
 				IsError: true,
-				Content: []ToolContent{{Type: "text", Text: err.Error()}},
+				Content: []ToolContent{{Type: "text", Text: errStr}},
 			}, nil
 		}
-		resultText = fmt.Sprintf("Service at %s responded: HTTP 200 OK (health: healthy)", targetURL)
+
+		target, found := s.targets[targetID]
+		if !found {
+			// SSRF Guard: reject any unapproved target_id immediately
+			errStr := fmt.Sprintf("unapproved target_id %q: blocked by SSRF allowlist policy", targetID)
+			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
+			return &CallToolResult{
+				IsError: true,
+				Content: []ToolContent{{Type: "text", Text: errStr}},
+			}, nil
+		}
+
+		// Real HTTP execution to target URL
+		start := time.Now()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.URL, nil)
+		if err != nil {
+			errStr := fmt.Sprintf("failed to create health check request: %v", err)
+			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
+			return &CallToolResult{
+				IsError: true,
+				Content: []ToolContent{{Type: "text", Text: errStr}},
+			}, nil
+		}
+
+		resp, err := s.httpClient.Do(req)
+		latency := time.Since(start)
+		if err != nil {
+			errStr := fmt.Sprintf("service %s (%s) health check error: %v", target.ServiceName, target.ID, err)
+			s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
+			return &CallToolResult{
+				IsError: true,
+				Content: []ToolContent{{Type: "text", Text: errStr}},
+			}, nil
+		}
+		defer resp.Body.Close()
+
+		resultText := fmt.Sprintf(
+			"Service %s (%s) health check returned HTTP %d in %v",
+			target.ServiceName, target.ID, resp.StatusCode, latency.Round(time.Millisecond),
+		)
+		s.recordAudit(role, tool.Name, params.Arguments, "ALLOW", resultText)
+		return &CallToolResult{
+			IsError: false,
+			Content: []ToolContent{{Type: "text", Text: resultText}},
+		}, nil
 
 	case "restart_service":
 		svc, _ := params.Arguments["service_name"].(string)
 		ticket, _ := params.Arguments["change_ticket"].(string)
-		resultText = fmt.Sprintf("Service %s restart initiated successfully under ticket %s", svc, ticket)
-	}
 
-	s.recordAudit(role, params.Name, params.Arguments, true, "")
-	return &CallToolResult{
-		IsError: false,
-		Content: []ToolContent{{Type: "text", Text: resultText}},
-	}, nil
+		// Authorization policy check via authorizer
+		if s.authorizer != nil {
+			if err := s.authorizer.AuthorizeChange(ctx, role, svc, ticket); err != nil {
+				s.recordAudit(role, tool.Name, params.Arguments, "DENY", err.Error())
+				return &CallToolResult{
+					IsError: true,
+					Content: []ToolContent{{Type: "text", Text: err.Error()}},
+				}, nil
+			}
+		}
+
+		// Stateful execution via ServiceActuator
+		if s.actuator != nil {
+			if err := s.actuator.RestartService(ctx, svc); err != nil {
+				errStr := fmt.Sprintf("service %s restart failed: %v", svc, err)
+				s.recordAudit(role, tool.Name, params.Arguments, "DENY", errStr)
+				return &CallToolResult{
+					IsError: true,
+					Content: []ToolContent{{Type: "text", Text: errStr}},
+				}, nil
+			}
+		}
+
+		resultText := fmt.Sprintf("Service %s successfully restarted under ticket %s", svc, ticket)
+		s.recordAudit(role, tool.Name, params.Arguments, "ALLOW", resultText)
+		return &CallToolResult{
+			IsError: false,
+			Content: []ToolContent{{Type: "text", Text: resultText}},
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("unhandled tool: %s", tool.Name)
+	}
 }
 
-func (s *MCPServer) recordAudit(role Role, tool string, args map[string]any, allowed bool, errStr string) {
+func (s *MCPServer) recordAudit(caller Role, tool string, args map[string]any, decision, result string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.auditLog = append(s.auditLog, AuditRecord{
 		Timestamp: time.Now().UTC(),
-		AgentRole: role,
+		Caller:    caller,
 		ToolName:  tool,
 		Arguments: args,
-		Allowed:   allowed,
-		Error:     errStr,
+		Decision:  decision,
+		Result:    result,
 	})
 }
 
@@ -241,7 +307,7 @@ func (s *MCPServer) GetAuditLog() []AuditRecord {
 	return copied
 }
 
-// ListTools returns all registered tools for the tools/list JSON-RPC method.
+// ListTools returns registered tools following the tools/list MCP protocol definition.
 func (s *MCPServer) ListTools() []Tool {
 	var list []Tool
 	for _, t := range s.tools {

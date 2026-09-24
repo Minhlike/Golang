@@ -53,13 +53,15 @@ Trong kiến trúc này:
 
 ---
 
-## 2. Model Context Protocol: "Cổng USB-C" cho AI
+## 2. Model Context Protocol: Chuẩn giao thức công cụ cho AI
 
 Giao thức **Model Context Protocol (MCP)** do Anthropic khởi xướng đã nhanh chóng trở thành tiêu chuẩn công nghiệp mở giúp kết nối các mô hình AI với các nguồn dữ liệu và công cụ bên ngoài.
 
 Về bản chất kỹ thuật, MCP vận hành trên nền giao thức **JSON-RPC 2.0**:
 - **`tools/list`:** Máy chủ Go công bố danh sách các công cụ mà nó cung cấp kèm theo mô tả chức năng và JSON Schema quy định các tham số đầu vào.
 - **`tools/call`:** Khi Agent quyết định sử dụng một công cụ, nó gửi một yêu cầu JSON-RPC chứa tên công cụ và các tham số tương ứng.
+
+Dự án thực hành tại `labs/part28-mcp-ops-tools/` xây dựng một **Mô hình kiến trúc và bảo mật giao thức MCP (MCP Protocol Architecture & Security Model)** chuẩn mực bằng Go dựa trên đặc tả JSON-RPC 2.0, tập trung giải quyết các rào chắn kiểm soát an ninh tối quan trọng khi trao quyền cho Agent.
 
 ### Vì sao ưu tiên Stdio Transport?
 Trong môi trường DevOps và container, MCP thường ưu tiên sử dụng giao vận qua luồng nhập xuất chuẩn (`os.Stdin` và `os.Stdout`) thay vì mở cổng mạng HTTP:
@@ -69,99 +71,105 @@ Trong môi trường DevOps và container, MCP thường ưu tiên sử dụng g
 
 ---
 
-## 3. Ảo tưởng an ninh của JSON Schema và Hiểm họa Prompt Injection
+## 3. Cạm bẫy thiết kế: SSRF qua URL tùy ý và Giải pháp Target Allowlist
 
-Một sai lầm rất phổ biến của các kỹ sư khi mới tiếp cận MCP là tin tưởng rằng: *"Công cụ đã có JSON Schema chặt chẽ nên an toàn tuyệt đối trước hacker"*.
+Một sai lầm rất phổ biến của các kỹ sư khi mới thiết kế MCP Server cho AIOps là cho phép Agent truyền trực tiếp một URL tùy ý:
 
-Đây là một sự ngộ nhận nguy hiểm:
-- **JSON Schema chỉ kiểm tra kiểu hình thức (Type Validation):** Nó chỉ xác nhận xem tham số `target_url` có phải là một chuỗi ký tự hay không.
-- **JSON Schema hoàn toàn mù lòa trước nội dung ngữ nghĩa (Semantic Blindness):** Nếu kẻ tấn công chèn một đoạn chỉ thị độc hại vào tài liệu log mà Agent đang đọc, khiến Agent gửi tham số:
-  `target_url: "http://169.254.169.254/latest/meta-data/iam/security-credentials/"`
-  thì chuỗi này **hoàn toàn hợp lệ** theo JSON Schema!
+~~~json
+{
+  "name": "query_service_health",
+  "arguments": {"target_url": "https://..."}
+}
+~~~
 
-Nếu Go handler nhắm mắt gửi HTTP GET tới URL đó, toàn bộ khóa bí mật IAM tạm thời của máy chủ AWS sẽ bị Agent đọc và trả về cho kẻ tấn công!
+Đây là một **anti-pattern an ninh chết người**:
+- **JSON Schema chỉ kiểm tra kiểu hình thức:** Nó chỉ xác nhận `target_url` là một chuỗi ký tự hợp lệ.
+- **Hiểm họa Prompt Injection & SSRF:** Nếu Agent bị tấn công hoặc ảo giác (hallucination), nó có thể gửi yêu cầu nhắm tới địa chỉ AWS Metadata (`http://169.254.169.254/latest/meta-data/...`), localhost (`http://127.0.0.1:9090`), hoặc các dịch vụ nội bộ chưa mã hóa trong mạng VPC.
 
-Do đó: **Go Handler ở phía sau MCP bắt buộc phải tự mình thực hiện các rào chắn phòng thủ an ninh nghiêm ngặt nhất.**
+### Nguyên tắc vàng: Tuyệt đối không nhận URL tùy ý từ Agent
+Thay vì cho phép Agent chỉ định URL, kiến trúc chuẩn mực yêu cầu:
+1. Agent **chỉ được phép truyền mã định danh mục tiêu (`target_id`)** đã được định nghĩa trước (ví dụ `checkout-health`, `payment-health`).
+2. Máy chủ Go quản lý một **Danh sách trắng đã kiểm duyệt (Target Allowlist Registry)** ánh xạ `target_id` sang URL nội bộ thực tế.
+3. Bất kỳ `target_id` nào không nằm trong danh sách trắng sẽ bị từ chối ngay lập tức tại ranh giới chính sách!
 
 ---
 
-## 4. Rào chắn phòng vệ SSRF trong Go (`ValidateSSRF`)
+## 4. Cấu hình Target Allowlist và Thực thi HTTP Kiểm tra Sức khỏe
 
-Tấn công giả mạo yêu cầu từ máy chủ (**Server-Side Request Forgery - SSRF**) là hiểm họa số 1 khi trao công cụ mạng cho Agent.
-
-Hàm kiểm tra được chia thành các lớp phòng thủ rõ ràng. Đầu tiên là kiểm tra giao thức và tên miền cục bộ:
+Dưới đây là cấu trúc định danh mục tiêu và đăng ký công cụ an toàn trong Go:
 
 ~~~go
-func checkSchemeAndHost(u *url.URL) error {
-	// 1. Chỉ chấp nhận giao thức an toàn
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return errors.New(
-			"unsupported protocol: only http/https allowed",
-		)
-	}
+type HealthTarget struct {
+	ID          string `json:"id"`
+	ServiceName string `json:"serviceName"`
+	URL         string `json:"url"`
+}
 
-	// 2. Chặn truy cập localhost
-	if strings.EqualFold(u.Hostname(), "localhost") {
-		return errors.New(
-			"mcp: ssrf blocked: localhost access forbidden",
-		)
-	}
-	return nil
+// Khai báo công cụ query_service_health: chỉ nhận target_id
+Tool{
+	Name:        "query_service_health",
+	Description: "Ktra sức khỏe qua target_id allowlist",
+	InputSchema: map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"target_id": map[string]any{
+				"type":        "string",
+				"description": "Mã (vd checkout-health)",
+			},
+		},
+		"required": []string{"target_id"},
+	},
 }
 ~~~
 
-Tiếp theo là kiểm tra dải IP nhạy cảm (Private RFC 1918, Loopback và Cloud Metadata):
+### Thực thi HTTP thật với giới hạn Timeout
+Khi nhận được `target_id` hợp lệ, Go handler thực hiện một lời gọi HTTP GET thực tế (trong bài test trỏ tới `httptest.Server`) để đo đạc độ trễ và mã phản hồi:
 
 ~~~go
-func checkSensitiveIP(ip net.IP) error {
-	if ip == nil {
-		return nil
-	}
-	if ip.IsLoopback() {
-		return errors.New(
-			"mcp: ssrf blocked: loopback target prohibited",
-		)
-	}
-	if ip.IsPrivate() {
-		return errors.New(
-			"mcp: ssrf blocked: private IP forbidden",
-		)
-	}
-	if ip.IsLinkLocalUnicast() ||
-		ip.String() == "169.254.169.254" {
-		return errors.New(
-			"mcp: ssrf blocked: cloud metadata forbidden",
-		)
-	}
-	return nil
+target, found := s.targets[targetID]
+if !found {
+	// Chặn đứng hoàn toàn nguy cơ SSRF
+	return &CallToolResult{
+		IsError: true,
+		Content: []ToolContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf(
+					"target %q blocked by policy",
+					targetID,
+				),
+			},
+		},
+	}, nil
 }
-~~~
 
-Hàm `ValidateSSRF` chính thức tổng hợp các kiểm tra:
-
-~~~go
-func ValidateSSRF(rawURL string) error {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return fmt.Errorf("invalid target URL: %w", err)
-	}
-	if err := checkSchemeAndHost(u); err != nil {
-		return err
-	}
-	return checkSensitiveIP(net.ParseIP(u.Hostname()))
+// Thực hiện HTTP call thực tế
+start := time.Now()
+req, _ := http.NewRequestWithContext(
+	ctx, http.MethodGet, target.URL, nil,
+)
+resp, err := s.httpClient.Do(req)
+if err != nil {
+	return &CallToolResult{
+		IsError: true,
+		Content: []ToolContent{
+			{Type: "text", Text: err.Error()},
+		},
+	}, nil
 }
+defer resp.Body.Close()
 ~~~
-
-### Ba chốt chặn SSRF bất khả xâm phạm:
-1. **Loopback (`127.0.0.1`):** Ngăn Agent tấn công các dịch vụ quản trị nội bộ đang lắng nghe trên cổng cục bộ của máy chủ (ví dụ Prometheus metrics endpoint trên port 9090, Redis trên port 6379).
-2. **RFC 1918 Private Ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`):** Ngăn Agent rà quét mạng VPC nội bộ của doanh nghiệp.
-3. **Cloud Metadata (`169.254.169.254`):** Ngăn Agent truy cập endpoint AWS Instance Metadata Service (IMDS) để đánh cắp IAM credentials của máy chủ EC2/EKS.
 
 ---
 
-## 5. Phân quyền vai trò (RBAC) và Thao tác biến đổi có kiểm soát
+## 5. Phân quyền vai trò theo Ngữ cảnh Phiên và Rào chắn Đột biến
 
-Không phải tác tử nào cũng có quyền như nhau. Chúng ta thiết lập mô hình kiểm soát truy cập dựa trên vai trò (Role-Based Access Control):
+Không phải tác tử nào cũng có quyền như nhau. Tuy nhiên, một nguyên tắc bảo mật tối thượng cần ghi nhớ:
+> **Vai trò của Agent BẮT BUỘC phải được xác định qua Ngữ cảnh Phiên (Session Context), tuyệt đối không để Agent tự khai báo vai trò trong tham số JSON của công cụ!**
+
+Nếu bạn để Agent gửi `{"role": "admin"}` trong JSON arguments, một cuộc tấn công Prompt Injection đơn giản có thể ép Agent mạo danh quản trị viên để chiếm quyền điều khiển toàn bộ hệ thống!
+
+### Gắn danh tính vào context.Context
 
 ~~~go
 type Role string
@@ -171,40 +179,41 @@ const (
 	RoleOperator Role = "operator" // Đột biến có phiếu
 	RoleAdmin    Role = "admin"    // Toàn quyền
 )
+
+type contextKey string
+const roleContextKey contextKey = "mcp_caller_role"
+
+func WithCallerRole(
+	ctx context.Context, role Role,
+) context.Context {
+	return context.WithValue(ctx, roleContextKey, role)
+}
+
+func CallerRoleFromContext(ctx context.Context) Role {
+	if r, ok := ctx.Value(roleContextKey).(Role); ok {
+		return r
+	}
+	return RoleObserver // Mặc định đặc quyền tối thiểu
+}
 ~~~
 
-### Tách bạch hai nhóm công cụ:
-1. **Công cụ chỉ đọc (Read-Only Tools):** Ví dụ `query_service_health`. Cho phép vai trò `observer` tự do truy vấn để thu thập thông tin chẩn đoán.
-2. **Công cụ gây đột biến (Mutating Tools):** Ví dụ `restart_service`. 
+### Tách bạch hai nhóm công cụ và Rào chắn Đột biến (`ChangeAuthorizer`):
+1. **Công cụ chỉ đọc (Read-Only):** Ví dụ `query_service_health`. Cho phép vai trò `observer` tự do truy vấn để thu thập thông tin chẩn đoán.
+2. **Công cụ gây đột biến (Mutating):** Ví dụ `restart_service`. 
    - Từ chối thẳng thừng vai trò `observer`.
-   - Đối với vai trò `operator`, bắt buộc phải truyền kèm tham số `change_ticket` (mã phiếu thay đổi đã được phê duyệt trong hệ thống Jira/ServiceNow).
+   - Đối với vai trò `operator`, bắt buộc phải thông qua interface `ChangeAuthorizer` để kiểm tra mã phiếu thay đổi (`change_ticket`), và thực thi thay đổi trạng thái có kiểm soát qua interface `ServiceActuator`.
 
 ~~~go
-func (s *MCPServer) AuthorizeCall(
-	role Role, toolName string, args map[string]any,
-) error {
-	switch toolName {
-	case "query_service_health":
-		return nil // Công cụ chỉ đọc: Cho phép mọi vai trò
+type ServiceActuator interface {
+	RestartService(
+		ctx context.Context, serviceName string,
+	) error
+}
 
-	case "restart_service":
-		if role == RoleObserver {
-			return fmt.Errorf(
-				"mcp: denied for role %s on mutating tool %s",
-				role, toolName,
-			)
-		}
-		ticket, ok := args["change_ticket"].(string)
-		if !ok || strings.TrimSpace(ticket) == "" {
-			return errors.New(
-				"mcp: mutation denied: missing change_ticket",
-			)
-		}
-		return nil
-
-	default:
-		return fmt.Errorf("mcp: unknown tool: %s", toolName)
-	}
+type ChangeAuthorizer interface {
+	AuthorizeChange(
+		ctx context.Context, role Role, svc, ticket string,
+	) error
 }
 ~~~
 
@@ -214,87 +223,159 @@ func (s *MCPServer) AuthorizeCall(
 
 Phương thức `ExecuteToolCall` liên kết toàn bộ chuỗi bảo vệ:
 
+### 6.1. Định tuyến công cụ và Rút trích Vai trò Caller
+Trước tiên, phương thức bóc tách `Role` bảo đảm từ context và đối chiếu với danh mục công cụ đã đăng ký:
+
 ~~~go
 func (s *MCPServer) ExecuteToolCall(
 	ctx context.Context,
-	role Role,
 	params *CallToolParams,
 ) (*CallToolResult, error) {
 	if params == nil {
 		return nil, errors.New("nil call params")
 	}
 
+	// Lấy vai trò an toàn từ session context
+	role := CallerRoleFromContext(ctx)
+
 	tool, exists := s.tools[params.Name]
 	if !exists {
+		errStr := fmt.Sprintf("unknown tool: %s", params.Name)
 		s.recordAudit(
-			role, params.Name, params.Arguments,
-			false, "tool not found",
+			role, params.Name, params.Arguments, "DENY", errStr,
 		)
-		return nil, fmt.Errorf(
-			"tool not found: %s", params.Name,
-		)
+		return nil, errors.New(errStr)
 	}
 
-	// 1. Chốt chặn Phân quyền RBAC
-	if err := s.AuthorizeCall(
-		role, params.Name, params.Arguments,
-	); err != nil {
-		s.recordAudit(
-			role, params.Name, params.Arguments,
-			false, err.Error(),
-		)
-		return &CallToolResult{
-			IsError: true,
-			Content: []ToolContent{{
-				Type: "text", Text: err.Error(),
-			}},
-		}, nil
+	switch tool.Name {
+	case "query_service_health":
+		return s.executeHealthCheck(ctx, role, tool, params)
+	case "restart_service":
+		return s.executeRestart(ctx, role, tool, params)
 	}
-
-	// 2. Chốt chặn Ngữ nghĩa và Thực thi
-	return s.dispatchExecution(
-		role, tool.Name, params.Arguments,
-	)
+	return nil, fmt.Errorf("unhandled tool: %s", tool.Name)
 }
 ~~~
 
-Hàm phụ trợ điều phối thực thi và ghi nhận audit log an toàn thread-safe:
+### 6.2. Thực thi kiểm tra sức khỏe an toàn (Read-Only + Allowlist)
+Công cụ chỉ đọc áp dụng rào chắn SSRF và thực hiện HTTP request có kiểm soát thời gian:
 
 ~~~go
-func (s *MCPServer) dispatchExecution(
-	role Role, name string, args map[string]any,
+func (s *MCPServer) executeHealthCheck(
+	ctx context.Context, role Role,
+	tool Tool, params *CallToolParams,
 ) (*CallToolResult, error) {
-	var resultText string
-	switch name {
-	case "query_service_health":
-		urlStr, _ := args["target_url"].(string)
-		if err := ValidateSSRF(urlStr); err != nil {
-			s.recordAudit(role, name, args, false, err.Error())
-			return &CallToolResult{
-				IsError: true,
-				Content: []ToolContent{{
-					Type: "text", Text: err.Error(),
-				}},
-			}, nil
-		}
-		resultText = fmt.Sprintf(
-			"Service at %s responded: HTTP 200 OK", urlStr,
+	targetID, _ := params.Arguments["target_id"].(string)
+	target, found := s.targets[targetID]
+	if !found {
+		errStr := fmt.Sprintf(
+			"target %q blocked by policy", targetID,
 		)
-
-	case "restart_service":
-		svc, _ := args["service_name"].(string)
-		ticket, _ := args["change_ticket"].(string)
-		resultText = fmt.Sprintf(
-			"Service %s restart initiated under ticket %s",
-			svc, ticket,
+		s.recordAudit(
+			role, tool.Name,
+			params.Arguments, "DENY", errStr,
 		)
+		return &CallToolResult{
+			IsError: true,
+			Content: []ToolContent{
+				{Type: "text", Text: errStr},
+			},
+		}, nil
 	}
 
-	s.recordAudit(role, name, args, true, "")
+	start := time.Now()
+	req, _ := http.NewRequestWithContext(
+		ctx, http.MethodGet, target.URL, nil,
+	)
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		errStr := fmt.Sprintf("health check err: %v", err)
+		s.recordAudit(
+			role, tool.Name,
+			params.Arguments, "DENY", errStr,
+		)
+		return &CallToolResult{
+			IsError: true,
+			Content: []ToolContent{
+				{Type: "text", Text: errStr},
+			},
+		}, nil
+	}
+	defer resp.Body.Close()
+
+	resText := fmt.Sprintf(
+		"Service %s (%s) HTTP %d (%v)",
+		target.ServiceName, target.ID, resp.StatusCode,
+		time.Since(start).Round(time.Millisecond),
+	)
+	s.recordAudit(
+		role, tool.Name,
+		params.Arguments, "ALLOW", resText,
+	)
 	return &CallToolResult{
-		IsError: false,
 		Content: []ToolContent{
-			{Type: "text", Text: resultText},
+			{Type: "text", Text: resText},
+		},
+	}, nil
+}
+~~~
+
+### 6.3. Rào chắn Đột biến và Kích hoạt Khởi động lại dịch vụ
+Với công cụ gây đột biến, yêu cầu bắt buộc phải qua `AuthorizeChange` trước khi kích hoạt `RestartService`:
+
+~~~go
+func (s *MCPServer) executeRestart(
+	ctx context.Context, role Role,
+	tool Tool, params *CallToolParams,
+) (*CallToolResult, error) {
+	svc, _ := params.Arguments["service_name"].(string)
+	ticket, _ := params.Arguments["change_ticket"].(string)
+
+	if s.authorizer != nil {
+		if err := s.authorizer.AuthorizeChange(
+			ctx, role, svc, ticket,
+		); err != nil {
+			s.recordAudit(
+				role, tool.Name, params.Arguments,
+				"DENY", err.Error(),
+			)
+			return &CallToolResult{
+				IsError: true,
+				Content: []ToolContent{
+					{Type: "text", Text: err.Error()},
+				},
+			}, nil
+		}
+	}
+
+	if s.actuator != nil {
+		if err := s.actuator.RestartService(
+			ctx, svc,
+		); err != nil {
+			errStr := fmt.Sprintf("restart err: %v", err)
+			s.recordAudit(
+				role, tool.Name,
+				params.Arguments, "DENY", errStr,
+			)
+			return &CallToolResult{
+				IsError: true,
+				Content: []ToolContent{
+					{Type: "text", Text: errStr},
+				},
+			}, nil
+		}
+	}
+
+	resText := fmt.Sprintf(
+		"Service %s restarted under ticket %s", svc, ticket,
+	)
+	s.recordAudit(
+		role, tool.Name,
+		params.Arguments, "ALLOW", resText,
+	)
+	return &CallToolResult{
+		Content: []ToolContent{
+			{Type: "text", Text: resText},
 		},
 	}, nil
 }
@@ -303,19 +384,28 @@ func (s *MCPServer) dispatchExecution(
 Ghi vết kiểm toán với khóa đồng bộ:
 
 ~~~go
+type AuditRecord struct {
+	Timestamp time.Time      `json:"timestamp"`
+	Caller    Role           `json:"caller"`
+	ToolName  string         `json:"toolName"`
+	Arguments map[string]any `json:"arguments"`
+	Decision  string         `json:"decision"` // ALLOW/DENY
+	Result    string         `json:"result"`
+}
+
 func (s *MCPServer) recordAudit(
-	role Role, tool string, args map[string]any,
-	allowed bool, errStr string,
+	caller Role, tool string, args map[string]any,
+	decision, result string,
 ) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.auditLog = append(s.auditLog, AuditRecord{
 		Timestamp: time.Now().UTC(),
-		AgentRole: role,
+		Caller:    caller,
 		ToolName:  tool,
 		Arguments: args,
-		Allowed:   allowed,
-		Error:     errStr,
+		Decision:  decision,
+		Result:    result,
 	})
 }
 ~~~
@@ -324,38 +414,38 @@ func (s *MCPServer) recordAudit(
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part28-mcp-ops-tools`)
 
-Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools`. Chạy kiểm thử:
+Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools` (phân loại kiểm chứng: `UNIT_TESTED` / `MOCK_VERIFIED` cho giao thức MCP, phân quyền theo session context, rào chắn SSRF qua target allowlist, thực thi HTTP thật tới test server, và kích hoạt actuator). Chạy kiểm thử:
 
 ~~~bash
 go test -v -race ./...
 ~~~
 
-Bộ kiểm thử xác thực 6 kịch bản thực chiến:
+Bộ kiểm thử xác thực 6 kịch bản an ninh thực chiến:
 
 ~~~
 === RUN   TestMCPListTools
 --- PASS: TestMCPListTools (0.00s)
-=== RUN   TestMCPOperatorQueryHealthSuccess
---- PASS: TestMCPOperatorQueryHealthSuccess (0.00s)
-=== RUN   TestMCPSSRFPrevention
---- PASS: TestMCPSSRFPrevention (0.00s)
-=== RUN   TestMCPAuthorizationBoundaryObserverDenied
---- PASS: TestMCPAuthorizationBoundaryObserverDenied (0.00s)
+=== RUN   TestMCPQueryHealthRealHTTP
+--- PASS: TestMCPQueryHealthRealHTTP (0.00s)
+=== RUN   TestMCPSSRFDeniedForUnapprovedTarget
+--- PASS: TestMCPSSRFDeniedForUnapprovedTarget (0.00s)
 === RUN   TestMCPOperatorRestartSuccess
 --- PASS: TestMCPOperatorRestartSuccess (0.00s)
-=== RUN   TestMCPOperatorMissingTicketDenied
---- PASS: TestMCPOperatorMissingTicketDenied (0.00s)
+=== RUN   TestMCPObserverMutatingActionDenied
+--- PASS: TestMCPObserverMutatingActionDenied (0.00s)
+=== RUN   TestMCPMissingOrInvalidTicketDenied
+--- PASS: TestMCPMissingOrInvalidTicketDenied (0.00s)
 PASS
-ok      part28-mcp-ops-tools   2.049s
+ok      part28-mcp-ops-tools   3.259s
 ~~~
 
 ### Phân tích kết quả kiểm thử:
 1. **Khai báo công cụ chuẩn mực (`tools/list`):** Danh sách công cụ phản ánh chính xác JSON Schema của tham số đầu vào.
-2. **Thực thi đọc hợp lệ:** Vai trò Observer gọi thành công `query_service_health` với URL công khai, ghi nhận `allowed: true` trong nhật ký kiểm toán.
-3. **Phòng chống SSRF toàn diện:** Chặn đứng cả 4 nỗ lực độc hại: AWS metadata (`169.254.169.254`), Localhost (`localhost:8080`), Loopback IP (`127.0.0.1`), và Mạng nội bộ (`10.0.1.5`). Mọi nỗ lực đều bị từ chối và ghi log cảnh báo.
-4. **Rào chắn phân quyền tác tử:** Observer cố tình gọi `restart_service` bị chặn ngay từ cổng kiểm tra quyền hạn.
-5. **Đột biến hợp lệ có kiểm soát:** Operator có mã phiếu thay đổi hợp lệ được phép kích hoạt khởi động lại dịch vụ.
-6. **Chặn đột biến không phiếu:** Operator gọi restart nhưng bỏ trống `change_ticket` lập tức bị từ chối.
+2. **Thực thi đọc hợp lệ qua HTTP thật:** Vai trò Observer gọi `query_service_health` với `target_id` hợp lệ, thực hiện HTTP request thật tới `httptest.Server`, nhận HTTP 200 và ghi nhận `ALLOW` trong nhật ký kiểm toán.
+3. **Phòng chống SSRF bằng Target Allowlist:** Chặn đứng mọi nỗ lực tiêm URL hoặc IP độc hại (AWS metadata `169.254.169.254`, localhost, target lạ). Mọi nỗ lực trái phép đều bị từ chối với quyết định `DENY` và ghi log cảnh báo.
+4. **Đột biến hợp lệ có kiểm soát:** Operator có mã phiếu thay đổi hợp lệ được phép kích hoạt `ServiceActuator` để khởi động lại dịch vụ.
+5. **Rào chắn phân quyền tác tử:** Observer cố tình gọi `restart_service` bị chặn ngay lập tức do thiếu thẩm quyền.
+6. **Chặn đột biến không phiếu hoặc sai phiếu:** Operator gọi restart với phiếu không tồn tại hoặc phiếu cấp cho dịch vụ khác lập tức bị từ chối.
 
 ---
 
