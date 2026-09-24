@@ -11,7 +11,7 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 | **B** | Runtime & Panic | Crash process, nil pointer dereference, bounds, panic | B01–B11 |
 | **C** | Error Values & I/O | Sentinel errors, stream truncated, encoding/decoding | C01–C08 |
 | **D** | Context & Cancellation | Hủy tác vụ, timeout, deadline cascade, rò rỉ context | D01–D04 |
-| **E** | Filesystem & Process | File I/O, quyền hạn Linux, binary PATH, signals OS | E01–E06 |
+| **E** | Filesystem & Process | File I/O, quyền hạn Linux, binary PATH, signals OS | E01–E07 |
 | **F** | Network / HTTP / TLS | DNS resolution, TCP handshake, reset socket, TLS/x509 | F01–F11 |
 | **G** | Database | Connection pool, locking SQLite, transaction lifecycle | G01–G06 |
 | **H** | Concurrency | Deadlock toàn cục, data race warning, goroutine leak | H01–H05 |
@@ -230,6 +230,13 @@ Hàm `exec.LookPath` hoặc `exec.Command` không tìm thấy file thực thi t�
 Process bị dừng đột ngột bởi tín hiệu hệ điều hành: SIGTERM khi dừng dịch vụ có phối hợp, hoặc SIGKILL khi bị cưỡng chế tiêu diệt (kill -9, hết hạn grace period, hoặc do Linux kernel OOM Killer).
 ! SIGKILL có thể đến từ nhiều nguyên nhân (admin kill, timeout của bộ điều phối, cgroup limit); không tự động suy diễn mọi SIGKILL đều là OOM.
 → Kiểm tra dmesg/journalctl hoặc Kubernetes termination reason để xác định process bị kill bởi OOM Killer hay do lệnh quản trị bên ngoài. [Ch10,12,17]
+
+### E07 `failed to load bpf program: operation not permitted / permission denied (eBPF Verifier Error)`
+* `failed to load bpf program: operation not permitted`
+* `failed to load bpf program: permission denied: ... (verifier log)`
+Lỗi nạp chương trình eBPF vào Linux kernel thông qua syscall `SYS_BPF` khi tiến trình Go thiếu quyền quản trị (`CAP_BPF`/`CAP_SYS_ADMIN`), hoặc bytecode bị Kernel Verifier từ chối do vi phạm an toàn bộ nhớ (truy cập con trỏ ngoài biên, vòng lặp không xác định, hoặc stack vượt quá 512 bytes).
+! Kernel Verifier từ chối ngay lập tức ở cấp hệ điều hành trước khi chương trình eBPF được thực thi; phía Go nhận lỗi chi tiết qua Verifier Log.
+→ Chạy ứng dụng với quyền root hoặc cấp capability `setcap cap_bpf,cap_sys_admin+ep <binary>`, kiểm tra mã C eBPF bảo đảm mọi con trỏ đều qua hàm `bpf_probe_read_*` và kích thước stack < 512 bytes. [Ch27]
 
 ---
 

@@ -64,4 +64,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ các chương kỹ thuật từ Chương 00 đến Chương 26, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight). Các chương tiếp theo (Chương 27 đến Chương 28) thuộc lộ trình khóa đã định (`FORWARD ROADMAP LOCK`) đang được viết và kiểm thử tuần tự theo tiêu chuẩn nghiêm ngặt của Living Textbook.
+Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ các chương kỹ thuật từ Chương 00 đến Chương 27, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight). Chương tiếp theo (Chương 28) thuộc lộ trình khóa đã định (`FORWARD ROADMAP LOCK`) đang được viết và kiểm thử tuần tự theo tiêu chuẩn nghiêm ngặt của Living Textbook.
