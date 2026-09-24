@@ -332,27 +332,42 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         for row_index, row in enumerate([rows[0], *rows[2:]]):
             style = s["table_header"] if row_index == 0 else s["table"]
             data.append([Paragraph(inline(cell, mono), style) for cell in row])
-        table = Table(data, colWidths=[16.8 * cm / columns] * columns, repeatRows=1,
-                      hAlign="LEFT")
+
+        # Compute proportional column widths based on maximum cell lengths
+        avail_width = 16.8 * cm
+        col_max_lens = [max(len(row[c]) for row in [rows[0], *rows[2:]]) for c in range(columns)]
+        total_len = sum(col_max_lens) or 1
+        if columns > 2 and total_len > 0:
+            weights = [max(l, 4) for l in col_max_lens]
+            sum_w = sum(weights)
+            col_widths = [avail_width * (w / sum_w) for w in weights]
+        else:
+            col_widths = [avail_width / columns] * columns
+
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAEAE7")),
             ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#777777")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 7),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]))
-        flowables = [Spacer(1, 3), table]
+        flowables = []
         if table_caption:
             numbering["table"] += 1
             flowables.extend([
-                Spacer(1, 4),
                 Paragraph(f"Bảng {numbering['table']} — {inline(table_caption, mono)}",
                           s["caption"]),
+                Spacer(1, 4),
             ])
+        flowables.append(table)
         flowables.append(Spacer(1, 10))
-        story.append(KeepTogether(flowables))
+        if len(rows) <= 6:
+            story.append(KeepTogether(flowables))
+        else:
+            story.extend(flowables)
         table_lines = []
         table_caption = None
 
@@ -369,7 +384,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ("TOPPADDING", (0, 0), (-1, -1), 9),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
         ]))
-        story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
+        if len(code_lines) <= 25:
+            story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
+        else:
+            story.extend([Spacer(1, 5), box, Spacer(1, 12)])
         code_lines = []
 
     def flush_image() -> None:
