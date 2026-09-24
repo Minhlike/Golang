@@ -278,6 +278,12 @@ Client đóng response body (`resp.Body.Close()`) khi dữ liệu stream chưa �
 ! Bounded drain (`io.LimitReader`) chỉ giúp kết nối đủ điều kiện tái sử dụng (`ReusedEligible = true`) khi toàn bộ dữ liệu thực sự chạm `io.EOF` trong ngưỡng giới hạn (như 16 KiB); nếu payload vượt quá giới hạn, socket buộc phải bị đóng để bảo vệ bộ nhớ.
 → Luôn đọc cạn có giới hạn bằng `io.LimitReader` và chỉ coi kết nối là reuse-eligible khi số byte còn lại chạm `io.EOF` trước khi `Close()`. [Ch11,20]
 
+### F11 `RequestTimeTooSkewed`
+* `RequestTimeTooSkewed: The difference between the request time and the current time is too large.`
+Lỗi xác thực chữ ký đám mây (`AWS SigV4 HTTP 403 Forbidden`) khi đồng hồ hệ thống của máy client bị lệch quá 15 phút so với đồng hồ chuẩn của AWS Server, khiến timestamp trong chữ ký SigV4 bị từ chối để chống tấn công phát lại (replay attack).
+! Thường gặp trong container hoặc máy ảo khi tiến trình đồng bộ thời gian NTP bị lỗi hoặc đóng băng sau khi suspend.
+→ Đồng bộ lại đồng hồ hệ điều hành thông qua dịch vụ chrony hoặc NTP daemon (`chronyc makestep`). [Ch24]
+
 ---
 
 ## G — Database
