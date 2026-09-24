@@ -47,7 +47,7 @@
 
 21. **Vòng lặp điều hòa và Controller Pattern.** Từ quan sát thụ động sang tự điều hòa chủ động; level-triggered vs edge-triggered; thiết kế rate-limited deduplicating workqueue bằng Go; kiểm soát giãn cách lũy thừa (exponential backoff) ngăn bão retry; tính lũy đẳng (idempotency) và tắt nguồn mềm mại cho controller.
 
-## Phần IX — Điều phối Nâng cao, Hạ tầng Cloud & Tự động hóa Thông minh (Roadmap đang triển khai)
+## Phần IX — Điều phối Nâng cao, Hạ tầng Cloud & Tự động hóa Thông minh (Hoàn thành)
 
 22. **Từ watch đến một controller Kubernetes thật.** API server là authoritative state; List/Watch; resourceVersion; Reflector và Informer; event handler và cache sync; typed rate-limited workqueue của client-go; optimistic concurrency; retry và conflict resolution.
 23. **Từ controller đến operator: API riêng và vòng đời tài nguyên.** Custom Resource Definition (CRD); spec vs status; controller-runtime Scheme và Manager; Reconcile request; owner references và garbage collection; finalizer idempotency.
@@ -64,4 +64,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ các chương kỹ thuật từ Chương 00 đến Chương 27, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight). Chương tiếp theo (Chương 28) thuộc lộ trình khóa đã định (`FORWARD ROADMAP LOCK`) đang được viết và kiểm thử tuần tự theo tiêu chuẩn nghiêm ngặt của Living Textbook.
+Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ 28 chương kỹ thuật từ Chương 00 đến Chương 28, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (44 mã lỗi thực chiến A01–J11). Toàn bộ cuốn sách đạt quy mô 400 trang in chuẩn mực, được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight không lỗi. Tranche phát triển khóa đã định (`FORWARD ROADMAP LOCK`) đã hoàn thành trọn vẹn 100%. Các hướng phát triển tiếp theo được tổng hợp tại `book/FORWARD_COVERAGE_AFTER_CH28.md`.

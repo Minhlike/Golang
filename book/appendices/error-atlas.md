@@ -16,7 +16,7 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 | **G** | Database | Connection pool, locking SQLite, transaction lifecycle | G01–G06 |
 | **H** | Concurrency | Deadlock toàn cục, data race warning, goroutine leak | H01–H05 |
 | **I** | Modules / Test / Toolchain | go.mod resolution, go vet static analysis, go test timeout | I01–I08 |
-| **J** | Container / Kubernetes / CI-CD | OOMKilled, CrashLoopBackOff, probe failure, gate reject | J01–J10 |
+| **J** | Container / Kubernetes / CI-CD | OOMKilled, CrashLoopBackOff, probe failure, gate reject | J01–J11 |
 
 ### Bản đồ phản xạ 30 giây
 
@@ -445,5 +445,12 @@ Lỗi cấu hình runtime (`Kubernetes Scheme Error`) khi một Go struct đư�
 Trạng thái chặn (`Supply Chain Verification Gate Status`) khi artifact mang theo CVE có ký hiệu thực sự được gọi trong đồ thị cuộc gọi thực thi (Call-Graph Reachability) hoặc được build từ quy trình không được cấp phép.
 ! Khác với các công cụ quét phụ thuộc tĩnh báo cáo hàng loạt CVE trong thư viện không dùng tới, cảnh báo này cho biết mã độc/lỗi logic nằm trên luồng thực thi trực tiếp của binary.
 → Cập nhật phiên bản dependency đã vá lỗi, loại bỏ việc gọi ký hiệu chứa lỗ hổng, hoặc kiểm tra lại builder ID trong CI workflow. [Ch26]
+
+### J11 MCP Tool Execution Denied: unauthorized mutation or SSRF boundary violation
+* `mcp: tool authorization denied for role <role> on tool <tool>`
+* `mcp: ssrf blocked: target ip <ip> belongs to private/metadata range`
+Trạng thái từ chối (`MCP Security Boundary Status`) khi Agent AI cố gắng kích hoạt công cụ làm thay đổi trạng thái hạ tầng (Mutating Tool) mà không có quyền hạn, hoặc truyền tham số URL vi phạm ranh giới phòng vệ SSRF (hướng tới AWS Metadata Service `169.254.169.254` hoặc Loopback `127.0.0.1`).
+! JSON Schema trong MCP chỉ xác thực kiểu dữ liệu của tham số; nó KHÔNG THỂ ngăn chặn Prompt Injection hay khai thác SSRF. Rào chắn này bắt buộc phải do Go handler thực thi.
+→ Kiểm tra role của Agent trong phiên MCP, cấu hình whitelist URL cho công cụ mạng, hoặc cấp token ủy quyền (Change Request ID) trước khi gọi các tool gây đột biến. [Ch28]
 
 
