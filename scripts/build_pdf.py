@@ -189,10 +189,10 @@ def manuscript_titles(chapters: list[Path], appendices: list[Path]) -> list[str]
     """Extract H1 titles for all manuscript parts in order."""
     result: list[str] = []
     for doc in chapters + appendices:
-        first = doc.read_text(encoding="utf-8").splitlines()[0]
-        if not first.startswith("# "):
+        lines = [line.strip() for line in doc.read_text(encoding="utf-8").splitlines() if line.strip() and not (line.strip().startswith("<!--") and line.strip().endswith("-->"))]
+        if not lines or not lines[0].startswith("# "):
             raise ValueError(f"Manuscript document does not start with H1: {doc}")
-        result.append(first[2:].strip())
+        result.append(lines[0][2:].strip())
     return result
 
 
