@@ -9,11 +9,7 @@ Trong phát triển phần mềm hiện đại, ứng dụng của bạn hiếm 
 Các sự cố an ninh nghiêm trọng trên thế giới — từ SolarWinds, Codecov cho đến các cuộc tấn công Dependency Confusion và Typosquatting — đã chỉ ra một sự thật cay đắng:
 > *Một kho mã nguồn sạch, được review kỹ lưỡng và vượt qua mọi bài kiểm thử unit test, vẫn có thể cho ra lò một container image độc hại nếu quy trình build, dependency hoặc kho lưu trữ artifact bị xâm phạm.*
 
-Làm thế nào để đảm bảo rằng container image đang chuẩn bị chạy trên cụm Kubernetes của bạn:
-1. Được biên dịch chính xác từ commit đã được phê duyệt trong Git?
-2. Không bị tráo đổi nội dung sau khi xuất xưởng khỏi quy trình CI?
-3. Không chứa các lỗ hổng bảo mật nghiêm trọng có thể kích hoạt từ xa?
-4. Được bảo chứng bằng chữ ký mật mã không thể chối bỏ?
+Làm thế nào để đảm bảo rằng container image đang chuẩn bị chạy trên cụm Kubernetes của bạn được biên dịch chính xác từ commit đã được phê duyệt trong Git, không bị tráo đổi nội dung sau khi xuất xưởng khỏi quy trình CI, không chứa các lỗ hổng bảo mật nghiêm trọng có thể kích hoạt từ xa, và được bảo chứng bằng chữ ký mật mã không thể chối bỏ?
 
 Chương này hướng dẫn bạn tư duy và xây dựng một **Cổng kiểm soát chuỗi cung ứng phần mềm (Supply Chain Verification Gate)** bằng Go theo nguyên tắc đóng kín (fail-closed), tích hợp kiểm chứng digest OCI, chữ ký số mật mã ECDSA, chứng thực nguồn gốc SLSA và phân tích khả năng vươn tới của lỗ hổng (`govulncheck`).
 
@@ -71,11 +67,7 @@ Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư vi�
 
 Nếu máy bạn chưa từng tải bản release đó, làm sao Go biết mã băm `h1:` nào là chuẩn?
 
-Go giải quyết triệt để vấn đề này thông qua **Go Checksum Database (sum.golang.org)** — một sổ cái minh bạch (Transparency Log) dựa trên cấu trúc cây Merkle:
-1. Khi máy của bạn tải một module mới lần đầu tiên, Go toolchain sẽ truy vấn `sum.golang.org`.
-2. Checksum Database chỉ ghi nhận mã băm của một module một lần duy nhất (nhật ký append-only).
-3. Nếu hacker thay đổi code của tag `v1.2.0`, mã băm tải về sẽ không khớp với bản ghi trong sổ cái toàn cầu. Go sẽ lập tức hủy bỏ quá trình build với thông báo lỗi:
-   `SECURITY ERROR: checksum mismatch`.
+Go giải quyết triệt để vấn đề này thông qua **Go Checksum Database (sum.golang.org)** — một sổ cái minh bạch (Transparency Log) dựa trên cấu trúc cây Merkle: khi máy của bạn tải một module mới lần đầu tiên, Go toolchain sẽ truy vấn `sum.golang.org`; Checksum Database chỉ ghi nhận mã băm của một module một lần duy nhất (nhật ký append-only); nếu hacker thay đổi code của tag `v1.2.0`, mã băm tải về sẽ không khớp với bản ghi trong sổ cái toàn cầu, và Go sẽ lập tức hủy bỏ quá trình build với thông báo lỗi `SECURITY ERROR: checksum mismatch`.
 
 > [!IMPORTANT]
 > **Quy tắc vàng:** Tệp `go.sum` BẮT BUỘC phải được commit vào Git repository. Tuyệt đối không đưa `go.sum` vào `.gitignore`. Bỏ qua `go.sum` đồng nghĩa với việc mở toang cửa cho các cuộc tấn công tráo đổi mã nguồn phụ thuộc.
@@ -99,10 +91,7 @@ Công cụ chính thức của Go team — `govulncheck` — hoạt động theo
       └──X (Bỏ qua) ssh.ParsePrivateKey [CRITICAL]
 ~~~
 
-Bản chất dữ liệu đầu ra của `govulncheck`:
-1. Đầu ra JSON có cấu trúc của `govulncheck` chứa các bản ghi: **`OSV`** (thông tin lỗ hổng định dạng Open Source Vulnerability), **`Modules`** (danh sách module liên quan), và **`Traces`** (đồ thị dấu vết cuộc gọi từ `main` tới ký hiệu bị tổn thương).
-2. `govulncheck` **không** tự sinh ra trường nguyên thủy `Severity: "CRITICAL"` trong output thô; mức độ nghiêm trọng (Severity) được làm giàu từ cơ sở dữ liệu OSV hoặc CVSS bên ngoài.
-3. Thuộc tính `Reachable: true` trong mô hình chính sách là kết quả tổng hợp sau khi duyệt qua mảng `Traces`: nếu tồn tại ít nhất một đường dẫn hợp lệ từ `main` tới hàm chứa lỗi, lỗ hổng được xác định là thực sự có thể kích hoạt (`Reachable`).
+Bản chất dữ liệu đầu ra của `govulncheck`: đầu ra JSON có cấu trúc chứa các bản ghi `OSV` (thông tin lỗ hổng định dạng Open Source Vulnerability), `Modules` (danh sách module liên quan), và `Traces` (đồ thị dấu vết cuộc gọi từ `main` tới ký hiệu bị tổn thương). Cần lưu ý rằng `govulncheck` không tự sinh ra trường nguyên thủy `Severity: "CRITICAL"` trong output thô; mức độ nghiêm trọng được làm giàu từ cơ sở dữ liệu OSV hoặc CVSS bên ngoài. Thuộc tính `Reachable: true` trong mô hình chính sách là kết quả tổng hợp sau khi duyệt qua mảng `Traces`: nếu tồn tại ít nhất một đường dẫn hợp lệ từ `main` tới hàm chứa lỗi, lỗ hổng được xác định là thực sự có thể kích hoạt (`Reachable`).
 
 ### Giới hạn phân tích cần lưu ý
 
@@ -141,10 +130,14 @@ Vì vậy, Cổng kiểm soát chuỗi cung ứng chuẩn mực luôn thực thi
 Làm sao chúng ta biết một container image có mã băm `sha256:abc...` thực sự được tạo ra bởi quy trình CI chính thức của tổ chức chứ không phải do hacker tự biên dịch rồi đẩy lên?
 
 Giải pháp hiện đại nhất là hệ sinh thái **Sigstore / Cosign**:
-1. **Ký không cần khóa (Keyless Signing):** Không còn nỗi lo lưu trữ private key dài hạn trên máy chủ CI (vốn rất dễ bị rò rỉ). CI Runner sử dụng OpenID Connect (OIDC) token do GitHub Actions cấp phát để chứng minh danh tính với nhà cấp phát chứng chỉ Sigstore (Fulcio).
-2. **Chứng chỉ ngắn hạn:** Fulcio cấp chứng chỉ X.509 có hiệu lực trong vài phút, gắn liền với danh tính workflow (`https://token.actions.githubusercontent.com`).
-3. **Ký trên Digest:** Chữ ký số (ECDSA P-256) được tính toán trực tiếp trên mã băm OCI Digest của image.
-4. **SLSA Provenance Attestation:** Ngoài chữ ký, CI còn tạo ra bản chứng thực nguồn gốc (Provenance) ghi rõ: Commit SHA nào, quy trình workflow nào (Builder ID) đã tạo ra artifact.
+
+Một là, Ký không cần khóa (Keyless Signing): Không còn nỗi lo lưu trữ private key dài hạn trên máy chủ CI (vốn rất dễ bị rò rỉ). CI Runner sử dụng OpenID Connect (OIDC) token do GitHub Actions cấp phát để chứng minh danh tính với nhà cấp phát chứng chỉ Sigstore (Fulcio).
+
+Hai là, Chứng chỉ ngắn hạn: Fulcio cấp chứng chỉ X.509 có hiệu lực trong vài phút, gắn liền với danh tính workflow (`https://token.actions.githubusercontent.com`).
+
+Ba là, Ký trên Digest: Chữ ký số (ECDSA P-256) được tính toán trực tiếp trên mã băm OCI Digest của image.
+
+Bốn là, SLSA Provenance Attestation: Ngoài chữ ký, CI còn tạo ra bản chứng thực nguồn gốc (Provenance) ghi rõ: Commit SHA nào, quy trình workflow nào (Builder ID) đã tạo ra artifact.
 
 ---
 
@@ -153,9 +146,12 @@ Giải pháp hiện đại nhất là hệ sinh thái **Sigstore / Cosign**:
 Bây giờ, chúng ta sẽ hiện thực hóa toàn bộ các nguyên lý trên vào một module Go theo **Mô hình chính sách kiểm chứng sư phạm (Pedagogical Verification Policy Model)**. 
 
 Mô hình này không nhằm mục đích thay thế hay bao bọc toàn bộ mã nguồn của Cosign CLI hay SLSA verifier bên ngoài. Thay vào đó, nó tách bạch rõ ràng 3 khế ước giao tiếp (interfaces) cốt lõi của một hệ thống kiểm định chuỗi cung ứng hiện đại:
-1. `SignatureVerifier`: Chịu trách nhiệm xác thực chữ ký số mật mã của image (Cosign / Notary).
-2. `ProvenanceVerifier`: Chịu trách nhiệm kiểm chứng xuất xứ bản build (SLSA Provenance / in-toto).
-3. `VulnerabilityProvider`: Chịu trách nhiệm cung cấp dữ liệu lỗ hổng (govulncheck / scanner).
+
+| Khế ước giao tiếp | Nhiệm vụ kỹ thuật |
+| :--- | :--- |
+| `SignatureVerifier` | Chịu trách nhiệm xác thực chữ ký số mật mã của image (Cosign / Notary). |
+| `ProvenanceVerifier` | Chịu trách nhiệm kiểm chứng xuất xứ bản build (SLSA Provenance / in-toto). |
+| `VulnerabilityProvider` | Chịu trách nhiệm cung cấp dữ liệu lỗ hổng (govulncheck / scanner). |
 
 ### Khai báo các Interface và Mô hình dữ liệu chính sách
 
@@ -460,12 +456,15 @@ PASS
 ok      part26-supply-chain-gate   2.128s
 ~~~
 
-### Phân tích các kịch bản kiểm thử:
-1. **Artifact hợp lệ toàn diện:** Có chữ ký ECDSA hợp lệ, ký bởi GitHub Actions OIDC, provenance khớp digest và không có CVE $\rightarrow$ **`ALLOW`**.
-2. **Image không có chữ ký:** Bị chặn đứng ngay tại Cửa 2 $\rightarrow$ **`DENY`**.
-3. **Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`):** Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng $\rightarrow$ **`DENY`**.
-4. **Lỗ hổng nằm trong dependency nhưng không được gọi (`Reachable = false`):** Ký hiệu `http2.Server.ServeConn` không nằm trong luồng thực thi $\rightarrow$ **`ALLOW`** kèm thông điệp cảnh báo kiểm toán trong danh sách `Warnings`.
-5. **Cố tình dùng tag thay vì digest:** Truyền vào chuỗi `my-registry.io/app:v1.2.0` $\rightarrow$ Bị chặn ngay từ Cửa 1 $\rightarrow$ **`DENY`**.
+### Phân tích các kịch bản kiểm thử
+
+| Kịch bản kiểm thử | Đặc điểm kiểm tra | Quyết định tuyển sinh (`Decision`) |
+| :--- | :--- | :--- |
+| Artifact hợp lệ toàn diện | Có chữ ký ECDSA hợp lệ, ký bởi GitHub Actions OIDC, provenance khớp digest và không có CVE | **`ALLOW`** |
+| Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
+| Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
+| Lỗ hổng trong dependency nhưng không được gọi (`Reachable = false`) | Ký hiệu `http2.Server.ServeConn` không nằm trong luồng thực thi | **`ALLOW`** (kèm cảnh báo kiểm toán trong `Warnings`) |
+| Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 $\rightarrow$ **`DENY`** |
 
 ---
 

@@ -40,10 +40,13 @@ Lab này dùng SQLite trong memory qua `modernc.org/sqlite`, một driver thuầ
 
 Mở `exercise/disable_test.go` trước. Test đã dựng schema và nêu API, nhưng chưa cho implementation. Anh cần viết `Disable` sao cho có đủ bốn contract:
 
-- `check` tồn tại được tắt và có đúng một event `disabled`.
-- Không có `check` thì trả `ErrCheckNotFound`, không tự tạo event.
-- Nếu event không thể ghi, `check` vẫn giữ `enabled = true`.
-- `nil` database là lỗi ở API boundary, không phải một panic muộn trong goroutine hay driver.
+Một là, `check` tồn tại được tắt và có đúng một event `disabled`.
+
+Hai là, không có `check` thì trả `ErrCheckNotFound`, không tự tạo event.
+
+Ba là, nếu event không thể ghi, `check` vẫn giữ `enabled = true`.
+
+Bốn là, `nil` database là lỗi ở API boundary, không phải một panic muộn trong goroutine hay driver.
 
 ~~~powershell
 cd labs/part13-transaction-boundary

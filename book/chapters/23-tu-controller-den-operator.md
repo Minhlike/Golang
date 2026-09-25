@@ -15,10 +15,7 @@ Nếu làm theo cách thủ công, bạn phải bảo trì hàng trăm file YAML
 Câu hỏi trung tâm của chương này là:
 > *Sự khác biệt cốt lõi giữa một Kubernetes Controller thông thường và một Kubernetes Operator là gì?*
 
-Mọi Operator đều là Controller, nhưng không phải mọi Controller đều là Operator:
-
-1. **Controller thông thường:** Thường làm việc với các tài nguyên dựng sẵn của Kubernetes (`Pod`, `Deployment`, `Service`, `ConfigMap`). Nó chỉ hiểu các khái niệm hạ tầng chung chung.
-2. **Operator:** Kết hợp giữa **Custom Resource Definition (CRD)** — một API hoàn toàn mới do bạn tự định nghĩa cho bài toán của mình — và một **Dedicated Controller** mang tri thức nghiệp vụ chuyên sâu.
+Mọi Operator đều là Controller, nhưng không phải mọi Controller đều là Operator. Trong khi một controller thông thường chỉ làm việc với các tài nguyên dựng sẵn của Kubernetes (`Pod`, `Deployment`, `Service`, `ConfigMap`) và hiểu các khái niệm hạ tầng chung chung, thì một Operator kết hợp giữa **Custom Resource Definition (CRD)** — một API hoàn toàn mới do bạn tự định nghĩa cho bài toán của mình — và một **Dedicated Controller** mang tri thức nghiệp vụ chuyên sâu.
 
 ~~~
 Tri thức chuyên gia (Domain Knowledge)
@@ -75,12 +72,12 @@ Sơ đồ phân nhánh dưới đây mô tả cấu trúc của một hệ thố
 
 ### Bốn trụ cột của controller-runtime
 
-1. **Manager:** Thùng chứa (container) quản lý vòng đời của toàn bộ tiến trình Operator: quản lý các bộ nhớ đệm dùng chung, cơ chế bầu chọn trưởng cụm (leader election), máy chủ metric Prometheus và kiểm tra sức khỏe (health probes).
-2. **Scheme:** Bảng đăng ký ánh xạ giữa Go struct (`v1alpha1.AppService`) và định danh `GroupVersionKind` (`apps.example.com/v1alpha1, Kind=AppService`) của Kubernetes.
-3. **Split Client:** Bộ client thông minh với cơ chế phân tách:
-   - Các thao tác đọc (`Get`, `List`): Luôn truy vấn vào Informer Cache cục bộ, tiêu tốn 0 request HTTP tới API Server.
-   - Các thao tác ghi (`Create`, `Update`, `Delete`, `Patch`): Gửi trực tiếp đến API Server để bảo đảm tính nhất quán dữ liệu.
-4. **Reconciler:** Interface tối giản chứa một hàm duy nhất `Reconcile(ctx, req)`. Khác với `client-go`, hàm này chỉ nhận vào struct `ctrl.Request` chứa `NamespacedName (namespace/name)` của tài nguyên cần điều hòa.
+| Trụ cột `controller-runtime` | Vai trò kiến trúc | Tương tác trong hệ thống |
+| :--- | :--- | :--- |
+| `Manager` | Quản lý vòng đời tiến trình Operator | Quản lý bộ đệm chung, leader election, server metrics và probe. |
+| `Scheme` | Đăng ký ánh xạ kiểu dữ liệu | Ánh xạ giữa Go struct (`v1alpha1.AppService`) và `GroupVersionKind`. |
+| `Split Client` | Phân tách đọc từ cache và ghi vào API | Đọc từ Informer Cache (0 HTTP), ghi gửi trực tiếp API Server. |
+| `Reconciler` | Hiện thực logic điều hòa cốt lõi | Nhận `ctrl.Request` chứa `NamespacedName`, hội tụ trạng thái. |
 
 ---
 
@@ -130,19 +127,17 @@ if err := controllerutil.SetControllerReference(
 }
 ~~~
 
-### Lợi ích tối cao của OwnerReference:
+### Lợi ích tối cao của OwnerReference
 
-1. **Tự động dọn dẹp (Cascading Deletion):** Khi người dùng xóa `AppService`, bộ dọn rác (Garbage Collector) của Kubernetes tự động xóa tất cả `Deployment`, `Pod`, `Service` con thuộc về nó mà Operator không cần viết thêm dòng code nào.
-2. **Theo dõi sự kiện ngược dòng (Watch Events):** Controller có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
+Thứ nhất là khả năng tự động dọn dẹp (Cascading Deletion): Khi người dùng xóa `AppService`, bộ dọn rác (Garbage Collector) của Kubernetes tự động xóa tất cả `Deployment`, `Pod`, `Service` con thuộc về nó mà Operator không cần viết thêm dòng code nào.
+
+Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): Controller có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
 
 ---
 
 ## 5. Finalizer: Cổng gác vòng đời và Dọn dẹp tài nguyên ngoại vi
 
-Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng của bạn tạo ra các tài nguyên bên ngoài cụm?
-- Một cơ sở dữ liệu Amazon RDS hoặc Google Cloud SQL.
-- Một bản ghi DNS trên Cloudflare.
-- Một hàng đợi tin nhắn AWS SQS.
+Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng của bạn tạo ra các tài nguyên bên ngoài cụm như một cơ sở dữ liệu Amazon RDS, một bản ghi DNS trên Cloudflare, hay một hàng đợi tin nhắn AWS SQS?
 
 Khi người dùng chạy `kubectl delete appservice payment-api`, nếu Kubernetes xóa ngay đối tượng khỏi etcd, Operator sẽ mất dấu vĩnh viễn và không còn biết tài nguyên đám mây nào cần phải thu hồi, gây lãng phí hàng nghìn USD chi phí hạ tầng.
 

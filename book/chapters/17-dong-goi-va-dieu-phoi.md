@@ -283,16 +283,9 @@ kubectl -n go-book port-forward service/probe-api 18080:80
 
 Trong `deployment.yaml`, hai probe phục vụ hai mục đích hoàn toàn khác biệt:
 
-1. **Readiness Probe (`/readyz`):** Trả lời câu hỏi "Pod này có sẵn sàng nhận
-   traffic từ Service ngay lúc này không?". Nếu readiness thất bại, endpoint
-   controller sẽ tạm thời gỡ Pod khỏi danh sách IP nhận tải của Service, nhưng
-   container **không** bị restart.
-2. **Liveness Probe (`/livez`):** Trả lời câu hỏi "Process này còn sống và hoạt
-   động bình thường không, hay đã bị deadlock hoàn toàn?". Nếu liveness thất
-   bại, kubelet sẽ tiêu diệt và restart container. Tuyệt đối không kiểm tra
-   database hay dependency từ xa trong liveness probe; một sự cố mạng thoáng qua
-   của dependency sẽ khiến toàn bộ cluster tự restart hàng loạt (cascading
-   failure).
+Thứ nhất là Readiness Probe (`/readyz`): Trả lời câu hỏi "Pod này có sẵn sàng nhận traffic từ Service ngay lúc này không?". Nếu readiness thất bại, endpoint controller sẽ tạm thời gỡ Pod khỏi danh sách IP nhận tải của Service, nhưng container **không** bị restart.
+
+Thứ hai là Liveness Probe (`/livez`): Trả lời câu hỏi "Process này còn sống và hoạt động bình thường không, hay đã bị deadlock hoàn toàn?". Nếu liveness thất bại, kubelet sẽ tiêu diệt và restart container. Tuyệt đối không kiểm tra database hay dependency từ xa trong liveness probe; một sự cố mạng thoáng qua của dependency sẽ khiến toàn bộ cluster tự restart hàng loạt (cascading failure).
 
 Phần tài nguyên cũng phân định rõ ràng giữa `requests` (con số scheduler dùng
 để tìm node phù hợp cho Pod) và `limits` (ngưỡng tối đa kernel cho phép; vượt CPU

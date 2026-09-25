@@ -186,18 +186,26 @@ func drainResponseBody(body io.ReadCloser) bool {
 ~~~
 
 Quy tắc kỹ thuật ở đây rất rõ ràng:
-1. **Luôn đóng body (`defer body.Close()`):** Giải phóng file descriptor socket ngay cả khi xảy ra lỗi giữa chừng.
-2. **Đọc tối đa 16 KiB:** Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework mà không nạp toàn bộ vào RAM.
-3. **Phát hiện cạn dòng (EOF):** Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`). Lưu ý rằng đây là điều kiện cần trên tầng stream HTTP/1.x, không phải bảo đảm tuyệt đối của mọi tầng Transport.
-4. **Đánh đổi có chủ đích:** Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Hệ thống phát hiện luồng bị cắt ngắn và chấp nhận rằng kết nối TCP này không thể tái sử dụng an toàn trên HTTP/1.1; socket sẽ bị đóng để ưu tiên an toàn bộ nhớ.
-5. **Thời lượng probe phản ánh toàn bộ lifecycle:** Đồng hồ đo thời lượng probe bắt đầu từ trước khi phát request tới sau khi quy trình cleanup/drain kết thúc. Nếu target trả về header 200 nhưng luồng body bị nghẽn (stall) vượt quá deadline, probe sẽ kết luận đúng là `OutcomeTimeout` thay vì báo nhầm `OutcomeSuccess`.
+
+Một là, luôn đóng body (`defer body.Close()`): Giải phóng file descriptor socket ngay cả khi xảy ra lỗi giữa chừng.
+
+Hai là, đọc tối đa 16 KiB: Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework mà không nạp toàn bộ vào RAM.
+
+Ba là, phát hiện cạn dòng (EOF): Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`). Lưu ý rằng đây là điều kiện cần trên tầng stream HTTP/1.x, không phải bảo đảm tuyệt đối của mọi tầng Transport.
+
+Bốn là, đánh đổi có chủ đích: Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Hệ thống phát hiện luồng bị cắt ngắn và chấp nhận rằng kết nối TCP này không thể tái sử dụng an toàn trên HTTP/1.1; socket sẽ bị đóng để ưu tiên an toàn bộ nhớ.
+
+Năm là, thời lượng probe phản ánh toàn bộ lifecycle: Đồng hồ đo thời lượng probe bắt đầu từ trước khi phát request tới sau khi quy trình cleanup/drain kết thúc. Nếu target trả về header 200 nhưng luồng body bị nghẽn (stall) vượt quá deadline, probe sẽ kết luận đúng là `OutcomeTimeout` thay vì báo nhầm `OutcomeSuccess`.
 
 ### 5. Ranh giới Bảo mật, Hợp đồng JSON và Distributed Tracing
 
 Một công cụ vận hành chỉ an toàn khi các ranh giới ngoại vi được xác định rành mạch:
-- **Mô hình đe dọa (Threat Model):** `opsprobe` được thiết kế như công cụ chẩn đoán nội bộ (trusted-operator diagnostic tool). Việc kiểm tra URL trong mã nguồn là validation cú pháp cơ bản, **không thay thế được cơ chế chống SSRF toàn diện**. Khi triển khai nhận input từ ngoài, hệ thống bắt buộc phải có network policy chặn các dải Private IP hoặc đặt sau egress proxy.
-- **Hợp đồng JSON di động:** Trường `timeout_ms` trong request payload sử dụng kiểu số nguyên mili-giây (`0 <= timeout_ms <= 60000`), bảo đảm tương thích đa nền tảng thay vì parse cú pháp chuỗi duration của riêng Go.
-- **Phân tán ngữ cảnh (W3C TraceContext):** Outbound probe request tự động chèn header `traceparent` theo child span hiện tại, bảo đảm chuỗi quan sát phân tán không bị đứt gãy giữa các dịch vụ.
+
+Về mô hình đe dọa (Threat Model): `opsprobe` được thiết kế như công cụ chẩn đoán nội bộ (trusted-operator diagnostic tool). Việc kiểm tra URL trong mã nguồn là validation cú pháp cơ bản, **không thay thế được cơ chế chống SSRF toàn diện**. Khi triển khai nhận input từ ngoài, hệ thống bắt buộc phải có network policy chặn các dải Private IP hoặc đặt sau egress proxy.
+
+Về hợp đồng JSON di động: Trường `timeout_ms` trong request payload sử dụng kiểu số nguyên mili-giây (`0 <= timeout_ms <= 60000`), bảo đảm tương thích đa nền tảng thay vì parse cú pháp chuỗi duration của riêng Go.
+
+Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request tự động chèn header `traceparent` theo child span hiện tại, bảo đảm chuỗi quan sát phân tán không bị đứt gãy giữa các dịch vụ.
 
 ## Bài tập chẩn đoán sự cố: Bão cạn kiệt Socket
 
@@ -211,10 +219,13 @@ Hệ thống probe giả định được triển khai để kiểm tra sức kh
 
 ### Bốn tầng bằng chứng chẩn đoán
 
-1. **Tầng Hệ điều hành:** `ss -s` ghi nhận số lượng socket mở tăng liên tục theo số lượng request mà không được thu hồi.
-2. **Tầng Transport Pool:** `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi.
-3. **Tầng Runtime Trace:** Sử dụng `net/http/httptrace` với hook `GotConnInfo.Reused`. Kết quả cho thấy `info.Reused` luôn bằng `false`.
-4. **Tầng Mã nguồn:** Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
+Thứ nhất ở tầng Hệ điều hành: `ss -s` ghi nhận số lượng socket mở tăng liên tục theo số lượng request mà không được thu hồi.
+
+Thứ hai ở tầng Transport Pool: `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi.
+
+Thứ ba ở tầng Runtime Trace: Sử dụng `net/http/httptrace` với hook `GotConnInfo.Reused`. Kết quả cho thấy `info.Reused` luôn bằng `false`.
+
+Thứ tư ở tầng Mã nguồn: Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
 
 ~~~go
 resp, err := client.Do(req)
@@ -243,10 +254,13 @@ Kiểm thử `TestIncident_BoundedDrainOversizedBody` đồng thời chứng min
 
 Để đưa `opsprobe` ra môi trường production, ta áp dụng toàn bộ các nguyên tắc đã học ở Chương 17 và 18:
 
-1. **Multi-Stage Dockerfile:** Biên dịch tĩnh hoàn toàn với `CGO_ENABLED=0` và sử dụng base image tối giản `gcr.io/distroless/static-debian12:nonroot`, chạy dưới tài khoản không đặc quyền (`USER 65532:65532`).
-2. **Ranh giới lưu trữ và số lượng Pod trong Kubernetes:** Manifest `deploy/k8s/deployment.yaml` thiết lập `replicas: 1` kết hợp PersistentVolumeClaim `opsprobe-data-pvc` (`ReadWriteOnce`). Do SQLite là cơ sở dữ liệu file cục bộ, việc chạy nhiều pod đồng thời trên cùng một file dữ liệu sẽ gây tranh chấp khóa và không nhất quán state. Chiến lược triển khai sử dụng `strategy: Recreate` để bảo đảm pod cũ nhả volume trước khi pod mới được gắn. Khi hệ thống có nhu cầu mở rộng quy mô ngang (`replicas > 1`), tầng `store` phải được chuyển sang hệ quản trị cơ sở dữ liệu máy khách - máy chủ (client-server) như PostgreSQL.
-3. **Cấu hình động qua ConfigMap:** Các tham số giới hạn như concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường của container (`OPSPROBE_*`).
-4. **Định danh bất biến trong CI/CD:** Trong manifest Kubernetes thực tế, image phải được gán digest bất biến sha256 (`image: ghcr.io/...@sha256:...`) đã được kiểm chứng bởi pipeline CI/CD, loại bỏ hoàn toàn các tag trôi nổi rủi ro như `:latest`.
+Một là, Multi-Stage Dockerfile: Biên dịch tĩnh hoàn toàn với `CGO_ENABLED=0` và sử dụng base image tối giản `gcr.io/distroless/static-debian12:nonroot`, chạy dưới tài khoản không đặc quyền (`USER 65532:65532`).
+
+Hai là, ranh giới lưu trữ và số lượng Pod trong Kubernetes: Manifest `deploy/k8s/deployment.yaml` thiết lập `replicas: 1` kết hợp PersistentVolumeClaim `opsprobe-data-pvc` (`ReadWriteOnce`). Do SQLite là cơ sở dữ liệu file cục bộ, việc chạy nhiều pod đồng thời trên cùng một file dữ liệu sẽ gây tranh chấp khóa và không nhất quán state. Chiến lược triển khai sử dụng `strategy: Recreate` để bảo đảm pod cũ nhả volume trước khi pod mới được gắn. Khi hệ thống có nhu cầu mở rộng quy mô ngang (`replicas > 1`), tầng `store` phải được chuyển sang hệ quản trị cơ sở dữ liệu máy khách - máy chủ (client-server) như PostgreSQL.
+
+Ba là, cấu hình động qua ConfigMap: Các tham số giới hạn như concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường của container (`OPSPROBE_*`).
+
+Bốn là, định danh bất biến trong CI/CD: Trong manifest Kubernetes thực tế, image phải được gán digest bất biến sha256 (`image: ghcr.io/...@sha256:...`) đã được kiểm chứng bởi pipeline CI/CD, loại bỏ hoàn toàn các tag trôi nổi rủi ro như `:latest`.
 
 ## Lệnh kiểm thử và vận hành hệ thống
 

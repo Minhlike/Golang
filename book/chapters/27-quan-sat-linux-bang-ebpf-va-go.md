@@ -38,11 +38,7 @@ Mô hình tư duy cốt lõi của việc quan sát bằng eBPF và Go được 
 [Heuristic Anomaly Engine] (Cảnh báo vi phạm hành vi)
 ~~~
 
-Trong mô hình này:
-1. Mỗi khi có tiến trình cố gắng thực thi (`sys_enter_execve`), kernel kích hoạt điểm móc (tracepoint).
-2. Chương trình eBPF thu thập thông tin định danh (PID, UID, GID, tên tiến trình gọi, đường dẫn file nhị phân).
-3. Dữ liệu nhị phân được ghi vào bộ đệm vòng (Ring Buffer) dùng chung.
-4. Ứng dụng Go ở userspace thức dậy thông qua cơ chế `epoll`, giải mã dữ liệu nhị phân và phân tích bất thường an ninh (heuristic).
+Trong mô hình này, mỗi khi có tiến trình cố gắng thực thi (`sys_enter_execve`), kernel kích hoạt điểm móc (tracepoint). Chương trình eBPF thu thập thông tin định danh (PID, UID, GID, tên tiến trình gọi, đường dẫn file nhị phân). Dữ liệu nhị phân sau đó được ghi vào bộ đệm vòng (Ring Buffer) dùng chung. Ứng dụng Go ở userspace thức dậy thông qua cơ chế `epoll`, giải mã dữ liệu nhị phân và phân tích bất thường an ninh (heuristic).
 
 ---
 
@@ -52,10 +48,12 @@ Tại sao Linux Kernel lại cho phép mã do người dùng viết chạy trự
 
 Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trước khi bất kỳ chương trình eBPF nào được nạp vào kernel thông qua lời gọi hệ thống `SYS_BPF`, Verifier sẽ phân tích tĩnh toàn bộ mã bytecode và thực thi các quy tắc kiểm tra nghiêm ngặt:
 
-1. **Bảo đảm dừng hữu hạn (Termination Guarantee):** Verifier phân tích đồ thị luồng điều khiển (Control Flow Graph). Mọi nhánh rẽ thực thi phải được chứng minh có điểm kết thúc; mọi vòng lặp phải là vòng lặp hữu hạn có biên (bounded loops), loại bỏ hoàn toàn rủi ro treo CPU của kernel.
-2. **Kiểm soát truy cập bộ nhớ an toàn (Memory Safety):** Mọi thao tác truy xuất bộ nhớ qua con trỏ đều phải kiểm tra ranh giới (bounds checking). Con trỏ trỏ tới vùng nhớ người dùng (Userspace) không bao giờ được dereference trực tiếp mà bắt buộc phải qua hàm trợ giúp an toàn như `bpf_probe_read_user_str()`.
-3. **Hạn mức bộ nhớ Stack nghiêm ngặt (512-Byte Limit):** Chương trình eBPF chỉ được cấp phát tối đa **512 bytes** trên ngăn xếp (stack). Khai báo mảng lớn cục bộ sẽ bị Verifier từ chối ngay lập tức với lỗi tràn stack.
-4. **Bảo toàn trạng thái thanh ghi và Frame Pointer:** Thanh ghi `R10` là con trỏ khung ngăn xếp chỉ đọc (read-only frame pointer). Verifier theo dõi chặt chẽ kiểu dữ liệu và phạm vi giá trị của từng thanh ghi (R0–R9) qua từng lệnh thực thi.
+| Tiêu chuẩn an toàn Verifier | Cơ chế kiểm tra | Mục đích bảo vệ Kernel |
+| :--- | :--- | :--- |
+| **Bảo đảm dừng hữu hạn** | Phân tích đồ thị luồng điều khiển (CFG), chỉ cho phép bounded loops. | Loại bỏ hoàn toàn nguy cơ treo hoặc khóa chết CPU của nhân. |
+| **Kiểm soát truy cập bộ nhớ** | Bắt buộc kiểm tra biên; truy cập userspace qua `bpf_probe_read_user_str()`. | Chống rò rỉ hoặc ghi đè trái phép lên không gian nhớ kernel. |
+| **Hạn mức ngăn xếp 512 byte** | Giới hạn tổng kích thước stack frame của chương trình eBPF $\le$ 512 bytes. | Ngăn chặn tràn ngăn xếp nhân hệ điều hành. |
+| **Bảo toàn thanh ghi và FP** | Khóa thanh ghi `R10` làm read-only frame pointer, theo dõi kiểu R0–R9. | Đảm bảo tính toàn vẹn ngữ cảnh thanh ghi vi xử lý. |
 
 ---
 
@@ -88,10 +86,13 @@ go run github.com/cilium/ebpf/cmd/bpf2go \
     -I/usr/include/bpf -O2 -g
 ~~~
 
-1. **Giai đoạn phát triển:** Bạn viết mã C eBPF, sau đó chạy `go generate` với `bpf2go` và Clang trên máy phát triển để biên dịch mã nguồn C thành bytecode eBPF (định dạng ELF) cùng các tệp Go bindings tương ứng.
-2. **Tự động nhúng Bytecode:** `bpf2go` tự động sinh ra tệp Go chứa mã bytecode ELF đã được nhúng thẳng vào binary thông qua tính năng `//go:embed`.
-3. **Thực thi không CGO:** Khi binary Go khởi chạy trên máy chủ production, nó tự tay mở file descriptor và kích hoạt syscall cấp thấp của Linux: `unix.Syscall(unix.SYS_BPF, ...)` để nạp chương trình eBPF vào kernel mà **hoàn toàn không cần CGO** (`CGO_ENABLED=0`) và không cần cài thêm bất kỳ gói phần mềm nào trên OS host!
-4. **Mô hình kiểm thử linh hoạt:** Trong môi trường CI hoặc máy phát triển không có Clang/kernel headers, mã Go có thể sử dụng các loader mô hình hóa hoặc giả lập nguồn đọc (`RecordReader`) để kiểm chứng toàn bộ pipeline xử lý mà không cần quyền root.
+Một là, giai đoạn phát triển: Kỹ sư viết mã C eBPF, sau đó chạy `go generate` với `bpf2go` và Clang trên máy phát triển để biên dịch mã nguồn C thành bytecode eBPF (định dạng ELF) cùng các tệp Go bindings tương ứng.
+
+Hai là, tự động nhúng Bytecode: Công cụ `bpf2go` tự động sinh ra tệp Go chứa mã bytecode ELF đã được nhúng thẳng vào binary thông qua tính năng `//go:embed`.
+
+Ba là, thực thi không CGO: Khi binary Go khởi chạy trên máy chủ production, nó tự tay mở file descriptor và kích hoạt syscall cấp thấp của Linux: `unix.Syscall(unix.SYS_BPF, ...)` để nạp chương trình eBPF vào kernel mà **hoàn toàn không cần CGO** (`CGO_ENABLED=0`) và không cần cài thêm bất kỳ gói phần mềm nào trên OS host!
+
+Bốn là, mô hình kiểm thử linh hoạt: Trong môi trường CI hoặc máy phát triển không có Clang/kernel headers, mã Go có thể sử dụng các loader mô hình hóa hoặc giả lập nguồn đọc (`RecordReader`) để kiểm chứng toàn bộ pipeline xử lý mà không cần quyền root.
 
 ---
 

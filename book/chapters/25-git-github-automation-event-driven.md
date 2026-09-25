@@ -6,9 +6,7 @@ Trong kỷ nguyên GitOps và tự động hóa hạ tầng (Infrastructure as C
 
 Một commit được merge vào nhánh `main` có thể tự động kích hoạt ArgoCD triển khai ứng dụng lên Kubernetes. Một nhãn (label) được gắn vào Pull Request có thể kích hoạt bot tự động cấp phát môi trường kiểm thử tạm thời (Ephemeral Environment) trên AWS.
 
-Nhưng khi bắt tay viết các công cụ tự động hóa bằng Go, hầu hết kỹ sư đều vấp phải hai sai lầm kiến trúc cơ bản:
-1. Đánh đồng trạng thái Git cục bộ với trạng thái máy chủ GitHub.
-2. Xử lý sự kiện Webhook như một lời gọi hàm thông thường mà bỏ qua các rủi ro bảo mật và tính lũy đẳng phân tán.
+Nhưng khi bắt tay viết các công cụ tự động hóa bằng Go, hầu hết kỹ sư đều vấp phải hai sai lầm kiến trúc cơ bản: một là đánh đồng trạng thái Git cục bộ với trạng thái máy chủ GitHub; hai là xử lý sự kiện Webhook như một lời gọi hàm thông thường mà bỏ qua các rủi ro bảo mật và tính lũy đẳng phân tán.
 
 Chương này phân tích sâu bản chất kỹ thuật của Git và GitHub dưới góc nhìn của một hệ thống hướng sự kiện (Event-Driven System), từ đó hướng dẫn bạn xây dựng các bot tự động hóa chuẩn mực bằng Go.
 
@@ -127,10 +125,14 @@ Mã định danh `X-GitHub-Delivery` là khóa hữu ích để khử trùng l�
 Tuy nhiên, cần nhận thức rõ ranh giới bền bỉ: trong mã nguồn lab thực hành, danh sách delivery ID chỉ được lưu tạm thời trên bộ nhớ RAM thông qua cấu trúc `map[string]time.Time`. Do đó, cam kết khử trùng lặp chỉ tồn tại trong vòng đời của tiến trình (process lifetime). Ngay khi tiến trình khởi động lại hoặc container bị điều phối lại, toàn bộ trạng thái khử trùng lặp trong bộ nhớ sẽ bị mất.
 
 Trên môi trường production thực tế, một hệ thống tự động hóa chịu lỗi đòi hỏi phải kết hợp một trong các cơ chế sau:
-1. **Durable idempotency store**: Lưu trữ delivery ID vào kho dữ liệu phân tán có TTL (như Redis hoặc DynamoDB).
-2. **Ràng buộc duy nhất trong cơ sở dữ liệu (Database uniqueness/transaction)**: Ghi delivery ID vào bảng sự kiện với ràng buộc khóa duy nhất (unique constraint) trong cùng transaction xử lý nghiệp vụ.
-3. **Mã định danh thao tác (Operation identity)**: Sinh token lũy đẳng gắn với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện webhook.
-4. **Bản chất nghiệp vụ tự lũy đẳng (Idempotent domain mutation)**: Thiết kế các tác vụ thay đổi hạ tầng theo dạng khai báo (declarative desired-state) để việc thực thi lặp lại nhiều lần vẫn tạo ra cùng một kết quả hội tụ duy nhất.
+
+Một là, kho lưu trữ phân tán bền bỉ (Durable idempotency store): Lưu trữ delivery ID vào kho dữ liệu phân tán có TTL (như Redis hoặc DynamoDB).
+
+Hai là, ràng buộc duy nhất trong cơ sở dữ liệu (Database uniqueness/transaction): Ghi delivery ID vào bảng sự kiện với ràng buộc khóa duy nhất (unique constraint) trong cùng transaction xử lý nghiệp vụ.
+
+Ba là, mã định danh thao tác (Operation identity): Sinh token lũy đẳng gắn với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện webhook.
+
+Bốn là, bản chất nghiệp vụ tự lũy đẳng (Idempotent domain mutation): Thiết kế các tác vụ thay đổi hạ tầng theo dạng khai báo (declarative desired-state) để việc thực thi lặp lại nhiều lần vẫn tạo ra cùng một kết quả hội tụ duy nhất.
 
 Thiết kế bộ tiếp nhận có kiểm tra trùng lặp trong bộ nhớ:
 

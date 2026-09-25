@@ -42,9 +42,12 @@ Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời l
 Khi ứng dụng gọi `config.LoadDefaultConfig(ctx)`, SDK thiết lập chuỗi tìm kiếm định danh mặc định theo thứ tự ưu tiên chuẩn mực: bắt đầu từ các biến môi trường trực tiếp (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), nạp cấu hình chia sẻ cục bộ (`~/.aws/config`), định danh Web Identity hoặc container, và sau cùng là dịch vụ siêu dữ liệu máy chủ ảo EC2 (IMDSv2).
 
 Đối với các khối lượng công việc container hóa và điều phối đám mây, SDK phân định rõ ba cơ chế cấp phát định danh độc lập thay vì gộp chung mọi môi trường:
-1. **IAM Roles for Service Accounts (IRSA)** trên Kubernetes: Pod gắn projected OIDC web identity token (qua biến `AWS_WEB_IDENTITY_TOKEN_FILE` và `AWS_ROLE_ARN`), kích hoạt Web Identity provider gọi tới AWS STS thông qua API `AssumeRoleWithWebIdentity`.
-2. **ECS Task Role**: Container credential provider kết nối tới ECS agent credential endpoint cục bộ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`.
-3. **EKS Pod Identity**: Container credential provider tương tác trực tiếp với EKS Pod Identity Agent trên node thông qua `AWS_CONTAINER_CREDENTIALS_FULL_URI` và token xác thực tại `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE`.
+
+Một là, IAM Roles for Service Accounts (IRSA) trên Kubernetes: Pod gắn projected OIDC web identity token (qua biến `AWS_WEB_IDENTITY_TOKEN_FILE` và `AWS_ROLE_ARN`), kích hoạt Web Identity provider gọi tới AWS STS thông qua API `AssumeRoleWithWebIdentity`.
+
+Hai là, ECS Task Role: Container credential provider kết nối tới ECS agent credential endpoint cục bộ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`.
+
+Ba là, EKS Pod Identity: Container credential provider tương tác trực tiếp với EKS Pod Identity Agent trên node thông qua `AWS_CONTAINER_CREDENTIALS_FULL_URI` và token xác thực tại `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE`.
 
 Nhằm giảm thiểu số lượt gọi mạng lặp lại trước mỗi HTTP request, SDK v2 bọc provider bên trong cấu trúc `aws.CredentialsCache`. Cần lưu ý rằng `aws.CredentialsCache` không cần một background goroutine riêng để định kỳ làm mới credentials. Lượt `Retrieve(ctx)` tiếp theo sẽ lấy lại credentials từ provider khi cache không còn hợp lệ. Cụ thể, mỗi khi mã nguồn gọi `Retrieve(ctx)`, bộ đệm kiểm tra trực tiếp thời điểm hết hạn của khóa: nếu `ExpiryWindow > 0`, cache coi credentials hết hạn sớm hơn thời điểm hết hạn thực tế (effective expiration sớm hơn) để lượt `Retrieve(ctx)` tiếp theo làm mới chúng một cách đồng bộ; nếu `ExpiryWindow <= 0`, tùy chọn này bị bỏ qua. Nhờ cơ chế kiểm tra đồng bộ theo yêu cầu, `CredentialsCache` duy trì tính hợp lệ của phiên làm việc mà không cần duy trì tiến trình quét nền.
 

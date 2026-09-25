@@ -4,10 +4,7 @@
 
 Trong Chương 21, chúng ta đã tự tay dựng một vòng lặp điều hòa tối giản bằng Mutex, Channel và slice trong bộ nhớ. Mô hình đó giúp ta nắm vững tinh thần cốt lõi: *quan sát thực tế, đo lường sai lệch và hội tụ về trạng thái mong muốn*. Nhưng khi bước ra hạ tầng phân tán thật — nơi hàng chục nghìn Pod, Node và Service biến đổi liên tục qua mạng — việc dùng một channel thô để lắng nghe sự kiện sẽ nhanh chóng dẫn đến thảm họa.
 
-Khi kết nối mạng chập chờn, khi API Server chịu tải cao, hay khi 500 sự kiện cập nhật cùng ùa về trong một giây, một chương trình ngây thơ sẽ rơi vào tình trạng:
-1. Làm tràn bộ đệm kênh hoặc bỏ sót sự kiện.
-2. Xử lý các bản tin cũ rích đè lên trạng thái mới nhất.
-3. Tạo ra bão thử lại (retry storm) vắt kiệt CPU của cụm máy chủ.
+Khi kết nối mạng chập chờn, khi API Server chịu tải cao, hay khi 500 sự kiện cập nhật cùng ùa về trong một giây, một chương trình ngây thơ sẽ rơi vào tình trạng làm tràn bộ đệm kênh hoặc bỏ sót sự kiện, xử lý các bản tin cũ rích đè lên trạng thái mới nhất, hoặc tạo ra bão thử lại (retry storm) vắt kiệt CPU của cụm máy chủ.
 
 Chương này đưa bạn từ tư duy "lắng nghe sự kiện ngây thơ" bước sang kiến trúc chuẩn mực của một **Production Kubernetes Controller** được xây dựng trên thư viện chính thức `k8s.io/client-go`.
 
@@ -26,11 +23,7 @@ Trạng thái thẩm quyền duy nhất của hệ thống nằm tại cơ sở 
 
 ### Bẫy tư duy: Xử lý theo payload của sự kiện
 
-Hãy tưởng tượng kịch bản sau:
-1. Lúc `t₀`: Pod `web-app` có trạng thái `Pending`. API Server phát sự kiện `E₁(Pending)`.
-2. Lúc `t₁`: Kubelet khởi động xong container, Pod chuyển sang `Running`. API Server phát sự kiện `E₂(Running)`.
-3. Do độ trễ mạng hoặc hàng đợi bận rộn, worker trong controller nhận `E₁` chậm mất 3 giây.
-4. Nếu worker dùng ngay dữ liệu bên trong `E₁`, nó sẽ tưởng Pod vẫn đang `Pending` và ra lệnh hủy Pod để tạo lại. Hành động này phá hủy trực tiếp Pod vừa khởi động lành lặn lúc `t₁`.
+Hãy tưởng tượng kịch bản sau: lúc `t₀`, Pod `web-app` có trạng thái `Pending` và API Server phát sự kiện `E₁(Pending)`. Đến lúc `t₁`, Kubelet khởi động xong container khiến Pod chuyển sang `Running`, và API Server phát sự kiện `E₂(Running)`. Do độ trễ mạng hoặc hàng đợi bận rộn, worker trong controller nhận `E₁` chậm mất 3 giây. Nếu worker dùng ngay dữ liệu bên trong `E₁`, nó sẽ tưởng Pod vẫn đang `Pending` và ra lệnh hủy Pod để tạo lại. Hành động này phá hủy trực tiếp Pod vừa khởi động lành lặn lúc `t₁`.
 
 Quy tắc bất biến của Kubernetes Controller:
 > **Chỉ đẩy định danh (Key: `namespace/name`) vào hàng đợi. Khi worker thức dậy, nó luôn truy vấn trạng thái mới nhất từ Informer Cache để quyết định hành động.**
@@ -73,10 +66,12 @@ Sơ đồ khái niệm phân nhánh dưới đây mô tả chính xác luồng d
 
 ### Bốn thành phần then chốt trong chuỗi cung ứng dữ liệu
 
-1. **Reflector:** Chịu trách nhiệm mở kết nối tới API Server, thực thi giao thức **List/Watch**, và đổ các biến động vào bộ đệm `DeltaFIFO`.
-2. **Indexer (Local Store):** Một bộ nhớ đệm in-memory thread-safe được đồng bộ hóa liên tục với API Server. Mọi tác vụ đọc của controller đều truy vấn vào đây với độ trễ cỡ microsecond thay vì gửi yêu cầu HTTP đè nặng lên API Server.
-3. **SharedInformer:** Phân phối các sự kiện từ `DeltaFIFO` tới các hàm lắng nghe (`ResourceEventHandlerFuncs`), đồng thời bảo đảm local cache luôn được cập nhật trước khi event handler kích hoạt.
-4. **Typed Rate-Limited WorkQueue:** Hàng đợi chuyên dụng giúp gộp trùng sự kiện (deduplication), kiểm soát tốc độ thử lại (rate-limiting & backoff), và ngăn ngừa xung đột xử lý đồng thời trên cùng một tài nguyên.
+| Thành phần Informer | Vai trò kỹ thuật | Tương tác trong hệ thống |
+| :--- | :--- | :--- |
+| `Reflector` | Mở kết nối List/Watch tới API Server | Đẩy các biến động tài nguyên vào bộ đệm `DeltaFIFO`. |
+| `Indexer (Local Store)` | Bộ nhớ đệm in-memory thread-safe | Phục vụ truy vấn đọc tức thì cỡ microsecond, giảm tải API Server. |
+| `SharedInformer` | Phân phối sự kiện từ `DeltaFIFO` | Đảm bảo local cache cập nhật trước khi event handler kích hoạt. |
+| `Typed Rate-Limited WorkQueue` | Hàng đợi công việc chuyên dụng | Gộp trùng sự kiện, kiểm soát tốc độ thử lại và ngăn race condition. |
 
 ---
 
@@ -103,12 +98,15 @@ Client                                    API Server
   │ <── Nối tiếp stream không mất sự kiện ────┤
 ~~~
 
-### Cơ chế hoạt động:
+### Cơ chế hoạt động
 
-1. **Pha List (Khởi tạo nền tảng):** Khi controller vừa bật, Reflector gọi API `List` để lấy toàn bộ các đối tượng hiện hữu. API Server trả về danh sách đối tượng kèm theo giá trị `resourceVersion` đại diện cho commit log mới nhất của etcd tại thời điểm đó (ví dụ: `1040`). Reflector lưu dữ liệu vào `Indexer`.
-2. **Pha Watch (Đón nhận gia số):** Ngay sau khi List thành công, Reflector mở một kết nối HTTP dạng chunked stream với tham số `?watch=true&resourceVersion=1040`. API Server chỉ truyền về những thay đổi diễn ra sau mốc `1040`.
-3. **Tự phục hồi sau sự cố mạng:** Nếu đường truyền bị đứt ở sự kiện `1042`, Reflector tự động kết nối lại và yêu cầu phát tiếp từ `1042`. Nó không cần phải tải lại hàng nghìn Pod từ đầu!
-4. **Lỗi HTTP 410 Gone:** Nếu kết nối bị gián đoạn quá lâu khiến etcd đã dọn dẹp các bản ghi lịch sử (compact log), API Server sẽ trả về mã lỗi `410 Gone (Too old resource version)`. Khi đó, Reflector hiểu rằng khoảng trống dữ liệu không thể bù đắp, nó sẽ tự động kích hoạt một chu kỳ `List` mới từ đầu để tái lập snapshot chuẩn.
+Thứ nhất là Pha List (Khởi tạo nền tảng): Khi controller vừa bật, Reflector gọi API `List` để lấy toàn bộ các đối tượng hiện hữu. API Server trả về danh sách đối tượng kèm theo giá trị `resourceVersion` đại diện cho commit log mới nhất của etcd tại thời điểm đó (ví dụ: `1040`). Reflector lưu dữ liệu vào `Indexer`.
+
+Thứ hai là Pha Watch (Đón nhận gia số): Ngay sau khi List thành công, Reflector mở một kết nối HTTP dạng chunked stream với tham số `?watch=true&resourceVersion=1040`. API Server chỉ truyền về những thay đổi diễn ra sau mốc `1040`.
+
+Thứ ba là tự phục hồi sau sự cố mạng: Nếu đường truyền bị đứt ở sự kiện `1042`, Reflector tự động kết nối lại và yêu cầu phát tiếp từ `1042` mà không cần phải tải lại hàng nghìn Pod từ đầu.
+
+Thứ tư là xử lý lỗi HTTP 410 Gone: Nếu kết nối bị gián đoạn quá lâu khiến etcd đã dọn dẹp các bản ghi lịch sử (compact log), API Server sẽ trả về mã lỗi `410 Gone (Too old resource version)`. Khi đó, Reflector hiểu rằng khoảng trống dữ liệu không thể bù đắp, nó sẽ tự động kích hoạt một chu kỳ `List` mới từ đầu để tái lập snapshot chuẩn.
 
 ---
 
@@ -179,8 +177,9 @@ Khi worker xử lý xong, nó bắt buộc phải gọi `queue.Done(key)`. Lúc 
 
 Một worker sau khi xử lý xong một lượt điều hòa (`reconcile`) sẽ đứng trước hai tình huống:
 
-1. **Thành công:** Gọi `c.queue.Forget(key)` để xóa sạch lịch sử số lần thất bại, đưa bộ đếm backoff về mức 0, và gọi `c.queue.Done(key)`.
-2. **Thất bại tạm thời (Transient Error):** Không gọi `Forget`. Thay vào đó, gọi `c.queue.AddRateLimited(key)`. Hàng đợi sẽ áp dụng thuật toán lũy thừa cơ số 2 kết hợp jitter (Exponential Backoff): `T_wait = base * 2^failures ± jitter`. Điều này bảo vệ hệ thống không bị đổ vỡ dây chuyền khi một dịch vụ phụ thuộc tạm thời không phản hồi.
+Thứ nhất, nếu thành công: Gọi `c.queue.Forget(key)` để xóa sạch lịch sử số lần thất bại, đưa bộ đếm backoff về mức 0, và gọi `c.queue.Done(key)`.
+
+Thứ hai, nếu gặp thất bại tạm thời (Transient Error): Không gọi `Forget`. Thay vào đó, gọi `c.queue.AddRateLimited(key)`. Hàng đợi sẽ áp dụng thuật toán lũy thừa cơ số 2 kết hợp jitter (Exponential Backoff): `T_wait = base * 2^failures ± jitter`. Điều này bảo vệ hệ thống không bị đổ vỡ dây chuyền khi một dịch vụ phụ thuộc tạm thời không phản hồi.
 
 ---
 
@@ -334,9 +333,7 @@ Bắn liên tiếp 10 sự kiện cập nhật cho cùng một Pod `production/p
 Sự kiện đầu tiên phát ra với nhãn `version: "v1"`. Trước khi worker kịp chạy, nhãn trong Informer cache đã được cập nhật thành `version: "v3"`. Khi worker thức dậy, giá trị nó nhận được là `v3`, chứng minh controller không bị đầu độc bởi dữ liệu cũ từ kênh sự kiện.
 
 ### 3. Tách biệt lỗi tạm thời và Lũy thừa thử lại (TestRateLimitedRetry)
-Giả lập hàm `Reconcile` trả về lỗi kết nối mạng tạm thời. Test kiểm chứng rằng:
-- Lần chạy đầu thất bại: key được đẩy vào `AddRateLimited` thay vì vứt bỏ.
-- Lần chạy thứ hai thành công: `Forget(key)` được gọi ngay lập tức để xóa sạch vết backoff.
+Giả lập hàm `Reconcile` trả về lỗi kết nối mạng tạm thời. Test kiểm chứng rằng ở lần chạy đầu thất bại, key được đẩy vào `AddRateLimited` thay vì vứt bỏ; đến lần chạy thứ hai thành công, `Forget(key)` được gọi ngay lập tức để xóa sạch vết backoff.
 
 ### 4. An toàn trước Tombstone (TestSafeDeletionAndTombstone)
 Đưa trực tiếp một struct `cache.DeletedFinalStateUnknown` vào hàm `handleDelete`. Chương trình không hề bị panic runtime mà giải mã chính xác key `default/orphaned-pod` để tiến hành dọn dẹp tài nguyên.
@@ -417,9 +414,7 @@ Mẫu hình này tự động thử lại với backoff ngắn, đọc lại sna
 ## 10. Bài tập thực hành thiết kế Controller
 
 ### Thử thách 1: Tích hợp Metric đo đạc độ trễ và chiều sâu hàng đợi
-**Yêu cầu:** Hãy thiết kế hai metric Prometheus để giám sát sức khỏe của controller:
-1. `controller_workqueue_depth`: Gauge đo số lượng key đang chờ xử lý trong `queue`.
-2. `controller_reconcile_duration_seconds`: Histogram đo thời gian thực thi của một chu kỳ `Reconcile`.
+**Yêu cầu:** Hãy thiết kế hai metric Prometheus để giám sát sức khỏe của controller: metric Gauge `controller_workqueue_depth` đo số lượng key đang chờ xử lý trong `queue`, và metric Histogram `controller_reconcile_duration_seconds` đo thời gian thực thi của một chu kỳ `Reconcile`.
 
 *Gợi ý:* Đặt điểm đo `time.Now()` trước khi gọi `c.reconciler.Reconcile` và cập nhật metric trong lệnh `defer`.
 

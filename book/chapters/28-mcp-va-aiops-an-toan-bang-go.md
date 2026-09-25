@@ -565,17 +565,12 @@ Với việc hoàn thành **Chương 28**, bạn đã chính thức khép lại 
 
 Hãy cùng nhìn lại những nấc thang bạn đã vượt qua:
 
-1. **Phần I–III (Nền tảng Nguyên bản):** Bắt đầu từ nguyên lý đầu tiên về kiến trúc máy tính, bố cục ô nhớ, con trỏ, cơ chế chia sẻ bộ nhớ của slice, hệ thống kiểu và giao diện (interfaces), thiết kế gói (package design) và triết lý xử lý lỗi tường minh của Go.
-2. **Phần IV–V (Đồng thời & Vận hành Chuyên sâu):** Chinh phục mô hình Concurrency của Go, thấu hiểu ranh giới goroutine leak, race conditions, áp suất ngược (backpressure) với worker pool, cơ chế điều phối của Go Runtime, bộ thu gom rác (GC) và phân tích hiệu năng bằng pprof.
-3. **Phần VI–VII (Hệ thống Mạng & Dịch vụ Production):** Vận chuyển dữ liệu qua mạng với HTTP, gRPC, giao thức TLS, kết nối database an toàn với transaction lifecycle, quản lý vòng đời tiến trình với Graceful Shutdown và công cụ chẩn đoán incident.
-4. **Phần VIII (Quan sát Toàn diện & Điều phối):** Triển khai 3 trụ cột Observability (Prometheus, OpenTelemetry Tracing), đóng gói container tối ưu, triển khai Kubernetes, điều hòa trạng thái với Reconciliation Loop và vận hành dự án thực chiến `opsprobe`.
-5. **Phần IX (Hạ tầng Nâng cao, Chuỗi Cung ứng & AI):** 
-   - Xây dựng **Kubernetes Controller thật** bằng `client-go` với Informer và WorkQueue có giãn cách tốc độ (Ch22).
-   - Thiết kế **Operator hoàn chỉnh** với CRD, Scheme và Finalizer bằng `controller-runtime` (Ch23).
-   - Tự động hóa hạ tầng đám mây **AWS SDK v2** với chứng chỉ ngắn hạn và ký số SigV4 (Ch24).
-   - Xây dựng hệ thống tự động hóa hướng sự kiện với **Git và GitHub** (Ch25).
-   - Thiết lập cổng kiểm soát **Chuỗi cung ứng phần mềm có thể kiểm chứng** với Cosign, SLSA Attestation và `govulncheck` (Ch26).
-   - Xâm nhập vào tầng sâu nhất của hệ điều hành Linux để **Quan sát Kernel bằng eBPF** và Go mà không cần CGO (Ch27).
-   - Và cuối cùng, trao công cụ an toàn cho Tác tử AI bằng **Model Context Protocol (MCP)** với rào chắn chống SSRF, RBAC và Audit Trail (Ch28).
+| Chặng đường | Phạm vi kiến thức và kỹ năng | Thành tựu kỹ thuật cốt lõi |
+| :--- | :--- | :--- |
+| **Phần I–III: Nền tảng Nguyên bản** | Kiến trúc máy tính, ô nhớ, con trỏ, slice aliasing, interface và error handling. | Làm chủ tư duy ngôn ngữ từ nguyên lý đầu tiên, xóa bỏ sự suy diễn cảm tính. |
+| **Phần IV–V: Đồng thời & Vận hành** | Concurrency, memory model, worker pool backpressure, Go runtime scheduler, GC và pprof. | Khống chế rò rỉ goroutine, triệt tiêu race condition, tối ưu hóa có đo đạc thực nghiệm. |
+| **Phần VI–VII: Mạng & Dịch vụ** | HTTP/gRPC, mTLS, SQL transaction boundaries, graceful shutdown, incident diagnostics. | Xây dựng dịch vụ mạng kiên cố, bảo toàn tính toàn vẹn dữ liệu và vòng đời tiến trình. |
+| **Phần VIII: Quan sát & Điều phối** | Observability (Prometheus, OTel), Docker multi-stage, Kubernetes, reconciliation loops. | Đóng gói tối ưu, vận hành dự án thực chiến `opsprobe`, điều hòa trạng thái mức. |
+| **Phần IX: Hạ tầng, Chuỗi cung ứng & AI** | `client-go` controller, K8s operator, AWS SDK v2, Git automation, SLSA gate, eBPF, MCP. | Tự động hóa hạ tầng đám mây, bảo vệ chuỗi cung ứng, quan sát kernel và AI an toàn. |
 
 Bạn không còn là một lập trình viên chỉ biết gọi thư viện bên ngoài theo các hướng dẫn rời rạc trên mạng. Bạn đã làm chủ **tư duy kiến trúc hệ thống từ nguyên lý đầu tiên (First-Principles Thinking)**, sở hữu phản xạ chẩn đoán sự cố nhạy bén, và hoàn toàn tự tin thiết kế, xây dựng và vận hành những hệ thống phần mềm hiệu năng cao, kiên cố và bảo mật trong kỷ nguyên Cloud Native và Trí tuệ Nhân tạo.

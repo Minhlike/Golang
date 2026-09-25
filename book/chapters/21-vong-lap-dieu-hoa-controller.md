@@ -17,12 +17,7 @@ Level: "Actual != Desired" -> Can thiệp -> Hội tụ về chuẩn
 
 Trong mô hình **Edge-Triggered**, hệ thống chỉ phát tín hiệu khi có một biến cố chuyển đổi trạng thái (chẳng hạn: `Target X chuyển từ Healthy sang Down`). Cách tiếp cận này rất trực quan và tiết kiệm tài nguyên khi hệ thống hoạt động lý tưởng. Tuy nhiên, trong môi trường phân tán thực tế, mạng có thể bị phân mảnh (network partition), tiến trình nhận có thể bị crash, hoặc bộ đệm hàng đợi có thể bị tràn. Khi sự kiện chuyển trạng thái bị rơi rớt trên đường truyền, tiến trình xử lý sẽ không bao giờ biết sự cố đã diễn ra. Hệ thống bị kẹt vĩnh viễn ở trạng thái sai lệch dù nguyên nhân gốc đã kết thúc từ lâu.
 
-Ngược lại, mô hình **Level-Triggered** không quan tâm quá khứ đã xảy ra bao nhiêu lần chuyển trạng thái hay bao nhiêu thông điệp bị thất lạc. Ở mỗi chu kỳ, Controller chỉ quan sát **Trạng thái thực tế (Actual State)** hiện hành và so sánh với **Trạng thái mong muốn (Desired State)**:
-
-1. **Trạng thái mong muốn:** Hệ thống cần 3 bản sao `payment-service` khỏe mạnh.
-2. **Trạng thái thực tế:** Chỉ có 1 bản sao đang phản hồi 200 OK; 2 bản sao còn lại không thể kết nối.
-3. **Sai lệch (Diff):** Thiếu 2 bản sao.
-4. **Hành động:** Kích hoạt khởi chạy thêm 2 bản sao mới.
+Ngược lại, mô hình **Level-Triggered** không quan tâm quá khứ đã xảy ra bao nhiêu lần chuyển trạng thái hay bao nhiêu thông điệp bị thất lạc. Ở mỗi chu kỳ, Controller chỉ quan sát **Trạng thái thực tế (Actual State)** hiện hành và so sánh với **Trạng thái mong muốn (Desired State)**. Khi trạng thái mong muốn đòi hỏi 3 bản sao `payment-service` khỏe mạnh nhưng trạng thái thực tế chỉ có 1 bản sao phản hồi thành công, Controller nhận diện mức sai lệch là thiếu 2 bản sao và lập tức kích hoạt hành động khởi chạy bổ sung.
 
 Ngay cả khi controller bị tắt đột ngột lúc đang khởi động bản sao thứ hai, ở lần thức dậy kế tiếp, nó lại tiếp tục so sánh và nhận ra sai lệch vẫn còn (hiện có 2 bản sao, vẫn thiếu 1). Nó lặp lại hành động cho đến khi sai lệch triệt tiêu hoàn toàn. Đặc tính này gọi là **sự hội tụ trạng thái (State Convergence)**.
 
@@ -58,9 +53,11 @@ Quy ước này thể hiện rõ ranh giới trách nhiệm: `Reconciler` chỉ 
 
 Một sai lầm thường gặp của lập trình viên Go là sử dụng ngay một unbuffered channel (`chan string`) để làm hàng đợi cho controller. Trên môi trường production, channel thô nhanh chóng bộc lộ ba lỗ hổng nghiêm trọng:
 
-1. **Thiếu khả năng gộp trùng (Deduplication):** Khi một dịch vụ chập chờn, 50 sự kiện báo lỗi liên tiếp có thể dồn về trong một giây. Nếu đẩy cả 50 item vào channel, worker sẽ chạy 50 lần reconcile hoàn toàn trùng lặp, gây lãng phí tài nguyên vô ích.
-2. **Xung đột điều hòa song song (Parallel Race):** Nếu hai worker trong pool cùng lấy một `key` ra xử lý song song, chúng có thể cùng nhìn thấy trạng thái thiếu hụt và cùng kích hoạt hành động tạo mới, dẫn đến tình trạng nhân đôi bản sao ngoài ý muốn (split-brain).
-3. **Bão thử lại (Retry Storm):** Nếu tài nguyên đích bị sập hoàn toàn, hàm `Act` sẽ liên tục trả về lỗi. Đẩy lại channel ngay lập tức sẽ khiến worker pool quay cuồng trong vòng lặp thử lại vô tận (spin-lock), vắt kiệt CPU và đánh sập chính dịch vụ đang hấp hối.
+Một là, thiếu khả năng gộp trùng (Deduplication): Khi một dịch vụ chập chờn, 50 sự kiện báo lỗi liên tiếp có thể dồn về trong một giây. Nếu đẩy cả 50 item vào channel, worker sẽ chạy 50 lần reconcile hoàn toàn trùng lặp, gây lãng phí tài nguyên vô ích.
+
+Hai là, xung đột điều hòa song song (Parallel Race): Nếu hai worker trong pool cùng lấy một `key` ra xử lý song song, chúng có thể cùng nhìn thấy trạng thái thiếu hụt và cùng kích hoạt hành động tạo mới, dẫn đến tình trạng nhân đôi bản sao ngoài ý muốn (split-brain).
+
+Ba là, bão thử lại (Retry Storm): Nếu tài nguyên đích bị sập hoàn toàn, hàm `Act` sẽ liên tục trả về lỗi. Đẩy lại channel ngay lập tức sẽ khiến worker pool quay cuồng trong vòng lặp thử lại vô tận (spin-lock), vắt kiệt CPU và đánh sập chính dịch vụ đang hấp hối.
 
 Để giải quyết triệt để ba bài toán trên, ta thiết kế cấu trúc `WorkQueue` chuyên dụng:
 
@@ -239,10 +236,7 @@ go test -race ./...  # Kiểm tra race condition
 go vet ./...        # Phân tích tĩnh cú pháp
 ~~~
 
-Bộ kiểm thử tự động xác thực ba đặc tính kỹ thuật quan trọng:
-- `TestWorkQueue_Deduplication`: Gộp nhiều sự kiện cùng key thành 1 lượt xử lý duy nhất trong queue.
-- `TestController_SelfHealing_Success`: Tự động điều hòa dịch vụ hỏng về trạng thái chuẩn và bảo đảm tính lũy thừa khi enqueue lặp lại.
-- `TestController_HealFailure_RateLimitedBackoff`: Tự động lùi lịch thử lại bằng exponential backoff khi hành động chữa lành bị lỗi.
+Bộ kiểm thử tự động xác thực ba đặc tính kỹ thuật quan trọng: hàm `TestWorkQueue_Deduplication` kiểm tra việc gộp nhiều sự kiện cùng key thành một lượt xử lý duy nhất trong queue; hàm `TestController_SelfHealing_Success` kiểm tra khả năng tự động điều hòa dịch vụ hỏng về trạng thái chuẩn và bảo đảm tính lũy thừa khi enqueue lặp lại; và hàm `TestController_HealFailure_RateLimitedBackoff` xác thực cơ chế tự động lùi lịch thử lại bằng exponential backoff khi hành động chữa lành bị lỗi.
 
 ## Bước phát triển tiếp theo
 

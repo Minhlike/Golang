@@ -35,7 +35,7 @@ def validate_chapter(file_path: Path) -> list[tuple[int, str, str]]:
         stripped = line.strip()
         
         # Check code fence
-        if stripped.startswith("```"):
+        if stripped.startswith("```") or stripped.startswith("~~~"):
             in_code_fence = not in_code_fence
             continue
         if in_code_fence:

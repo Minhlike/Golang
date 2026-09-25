@@ -117,9 +117,11 @@ rollback request
 
 Một release `sha256:abc...` pass unit và integration test, provenance đã verify, rồi được deploy bằng digest. Deployment báo complete: Pod mới available. Vài phút sau, availability SLI tụt vì config ở production trỏ tới endpoint dependency đã retire. Không evidence nào ở đây mâu thuẫn nhau:
 
-- Build/promotion proof nói artifact và gate nào đã được dùng.
-- Deployment status nói controller đã thay replica theo policy.
-- SLI/log/trace của Chương 16 nói user path đang fail và giúp tìm cohort/config lệch.
+Một là, build/promotion proof nói artifact và gate nào đã được dùng.
+
+Hai là, deployment status nói controller đã thay replica theo policy.
+
+Ba là, SLI/log/trace của Chương 16 nói user path đang fail và giúp tìm cohort/config lệch.
 
 Action đúng không phải kết luận “CI vô dụng” hay “Kubernetes đánh lừa mình”. Team kiểm tra blast radius, candidate config và data contract; nếu rollback digest cũ khôi phục khả năng phục vụ mà không phá migration, họ promote digest cũ theo runbook. Sau incident, gate cần được sửa ở boundary đã thiếu: configuration validation hoặc integration environment gần production hơn, không nhất thiết là thêm một security scan vô liên quan.
 
@@ -151,23 +153,17 @@ hoàn chỉnh gồm ba phần: một workflow GitHub Actions mẫu (reviewable s
 một công cụ `promote-gate` bằng Go có thể chạy trong CI, và một cấu hình
 Terraform thiết lập cầu nối OIDC với hạ tầng đám mây.
 
-Để tránh những ngộ nhận tai hại trong vận hành, chuỗi delivery phải phân định
-rõ bảy lớp thông tin kỹ thuật:
+Để tránh những ngộ nhận tai hại trong vận hành, chuỗi delivery phải phân định rõ bảy lớp thông tin kỹ thuật:
 
-1. **Source revision:** Mã băm commit Git của mã nguồn đầu vào (ví dụ: `bcb3fe0`).
-2. **Local image identity:** Tên/tag cục bộ hoặc Image Config ID (`.Id`) mà
-   Docker daemon tạo ra trên máy build.
-3. **Manifest digest:** Mã băm nội dung bất biến của OCI Image Manifest
-   (`sha256:...`) bao gồm descriptor của mọi layer và config, được registry và
-   Kubernetes dùng làm định danh duy nhất.
-4. **Provenance:** Bản chứng thực (attestation) ghi nhận nguồn gốc commit,
-   builder và công thức build.
-5. **Verified evidence:** Kết quả xác minh chữ ký số của provenance từ công cụ
-   chuyên trách; tuyệt đối không dùng cờ boolean giả mạo.
-6. **Promotion decision:** Quyết định phê duyệt hoặc từ chối fail-closed dựa
-   trên bằng chứng đã xác minh.
-7. **Actual deployment:** Thao tác cập nhật desired state của workload bằng
-   chính manifest digest đã được duyệt.
+| Lớp thông tin | Bản chất kỹ thuật | Vai trò trong Delivery Pipeline |
+| :--- | :--- | :--- |
+| `Source revision` | Mã băm commit Git của mã nguồn đầu vào (ví dụ: `bcb3fe0`). | Xác định chính xác phiên bản mã nguồn cần đóng gói. |
+| `Local image identity` | Tên/tag cục bộ hoặc Image Config ID (`.Id`) trên máy build. | Tạm thời cục bộ, không dùng để ra quyết định production. |
+| `Manifest digest` | Mã băm nội dung bất biến của OCI Image Manifest (`sha256:...`). | Định danh bất biến duy nhất cho registry và Kubernetes. |
+| `Provenance` | Bản chứng thực ghi nhận nguồn gốc commit, builder và công thức. | Cung cấp bằng chứng chuỗi cung ứng cho gate kiểm tra. |
+| `Verified evidence` | Kết quả xác minh chữ ký số của provenance từ công cụ chuyên trách. | Căn cứ kỹ thuật xác thực, loại bỏ cờ boolean giả mạo. |
+| `Promotion decision` | Quyết định phê duyệt hoặc từ chối fail-closed. | Cổng chặn ngăn chặn việc triển khai khi thiếu bằng chứng. |
+| `Actual deployment` | Cập nhật desired state của workload bằng manifest digest đã duyệt. | Thực thi đưa phiên bản đã duyệt vào vận hành. |
 
 ~~~text
 Source Revision (git commit SHA)
@@ -192,19 +188,13 @@ Tệp `labs/part18-workflow-delivery/workflows/delivery.yaml` là tài liệu ng
 cứu và kiểm tra mẫu (runnable specimen), không phải workflow đang kích hoạt trong
 `.github/workflows/`. Nó minh họa các nguyên tắc thiết kế cốt lõi:
 
-1. **Kiểm tra đúng từng Go module:** Repository của chúng ta gồm nhiều module
-   độc lập và không có `go.work` ở root. Chạy `go test ./...` tại root sẽ thất
-   bại hoặc vô nghĩa. Job `verify` dùng `working-directory` để chạy test, vet,
-   và race detector riêng cho từng module thuộc delivery path:
-   `labs/part16-real-signals` (service) và `labs/part18-workflow-delivery` (gate).
-2. **Quyền mặc định chỉ đọc:** Khai báo `permissions: { contents: read }` ở cấp
-   cao nhất. Quyền `id-token: write` chỉ được mở duy nhất ở job deploy.
-3. **Ghim action bằng commit SHA bất biến:** Thay vì tag phiên bản có thể bị trôi,
-   workflow ghim mã băm commit 40 ký tự đầy đủ của từng Action.
-4. **Không đánh đồng Local Image ID với Manifest Digest:** Khi build cục bộ mà
-   chưa push registry, Docker daemon chỉ lưu Image Config ID (`.Id`). Chỉ khi
-   Buildx xuất metadata hoặc push lên registry, OCI Image Manifest Digest mới
-   tồn tại để làm định danh bất biến cho promotion.
+Một là, kiểm tra đúng từng Go module: Repository của chúng ta gồm nhiều module độc lập và không có `go.work` ở root. Chạy `go test ./...` tại root sẽ thất bại hoặc vô nghĩa. Job `verify` dùng `working-directory` để chạy test, vet, và race detector riêng cho từng module thuộc delivery path: `labs/part16-real-signals` (service) và `labs/part18-workflow-delivery` (gate).
+
+Hai là, quyền mặc định chỉ đọc: Khai báo `permissions: { contents: read }` ở cấp cao nhất. Quyền `id-token: write` chỉ được mở duy nhất ở job deploy.
+
+Ba là, ghim action bằng commit SHA bất biến: Thay vì tag phiên bản có thể bị trôi, workflow ghim mã băm commit 40 ký tự đầy đủ của từng Action.
+
+Bốn là, không đánh đồng Local Image ID với Manifest Digest: Khi build cục bộ mà chưa push registry, Docker daemon chỉ lưu Image Config ID (`.Id`). Chỉ khi Buildx xuất metadata hoặc push lên registry, OCI Image Manifest Digest mới tồn tại để làm định danh bất biến cho promotion.
 
 ~~~yaml
 # Trích đoạn từ workflows/delivery.yaml
@@ -301,19 +291,11 @@ AWS IAM nhằm loại bỏ hoàn toàn các access key dài hạn tĩnh.
 
 Cần hiểu đúng ranh giới của các cơ chế phân quyền trong cấu hình này:
 
-1. **Khóa chặt claim `sub`:** Trust policy bắt buộc claim `sub` phải khớp chính
-   xác `repo:Minhlike/Golang:environment:production`. Bất kỳ workflow nào chạy
-   từ repo fork hoặc branch khác đều bị AWS STS từ chối cấp token.
-2. **Hiểu đúng về Wildcard trong AWS IAM:** Ký tự đại diện `*` trong
-   `Resource = ["*"]` **chỉ được chấp nhận duy nhất** cho hành động
-   `ecr:GetAuthorizationToken`. Đây là đặc thù bắt buộc của AWS IAM vì service
-   này không hỗ trợ phân quyền ở cấp độ tài nguyên cho token xác thực ban đầu.
-   Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`)
-   đều bắt buộc phải khóa chặt vào Account ID cụ thể lấy từ
-   `data.aws_caller_identity.current.account_id` và tên repository cụ thể.
-3. **Tên ECR Repository tuân thủ chuẩn:** Biến `ecr_repository_name` được tách
-   riêng và áp dụng validation bắt buộc viết thường (`^[a-z0-9][a-z0-9-_/]*$`),
-   tránh xung đột với quy tắc đặt tên viết hoa của GitHub repository.
+Thứ nhất, khóa chặt claim `sub`: Trust policy bắt buộc claim `sub` phải khớp chính xác `repo:Minhlike/Golang:environment:production`. Bất kỳ workflow nào chạy từ repo fork hoặc branch khác đều bị AWS STS từ chối cấp token.
+
+Thứ hai, hiểu đúng về Wildcard trong AWS IAM: Ký tự đại diện `*` trong `Resource = ["*"]` **chỉ được chấp nhận duy nhất** cho hành động `ecr:GetAuthorizationToken`. Đây là đặc thù bắt buộc của AWS IAM vì service này không hỗ trợ phân quyền ở cấp độ tài nguyên cho token xác thực ban đầu. Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`) đều bắt buộc phải khóa chặt vào Account ID cụ thể lấy từ `data.aws_caller_identity.current.account_id` và tên repository cụ thể.
+
+Thứ ba, tên ECR Repository tuân thủ chuẩn: Biến `ecr_repository_name` được tách riêng và áp dụng validation bắt buộc viết thường (`^[a-z0-9][a-z0-9-_/]*$`), tránh xung đột với quy tắc đặt tên viết hoa của GitHub repository.
 
 ~~~hcl
 # Trích đoạn từ terraform/main.tf
