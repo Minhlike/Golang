@@ -2,17 +2,101 @@
 
 # Chương 10 — Khi chương trình chậm hoặc phình
 
-Một chương trình bị gọi là “chậm” rất dễ kéo theo một cuộc săn tối ưu hóa vô ích. Có người thay `fmt` bằng nối chuỗi, có người thêm goroutine, có người nhìn một dòng trông có vẻ đắt rồi sửa nó. Mọi thay đổi ấy có thể làm code khó đọc hơn mà vẫn không chạm vào thời gian người dùng đang chờ.
+Một chương trình bị phán xét là "chậm" hoặc "tốn bộ nhớ" thường kéo theo những nỗ lực tối ưu hóa mù quáng: thay thế gói `fmt` bằng phép cộng chuỗi thủ công, mở thêm hàng loạt goroutine không kiểm soát, hoặc viết lại thuật toán theo những mẹo vặt phức tạp. Những can thiệp này thường làm mã nguồn suy giảm độ trong sáng nghiêm trọng mà không giải quyết được nguyên nhân gốc rễ khiến người dùng hoặc hệ thống phải chờ đợi.
 
-Mô hình tinh thần của chương này là: **tối ưu hóa là một giả thuyết được kiểm tra dưới một tải đại diện; một phép đo chỉ trả lời câu hỏi mà nó được thiết kế để trả lời**. Benchmark không tuyên bố service của anh nhanh trong mọi hoàn cảnh. CPU profile không nói bộ nhớ đang phình. Trace không phải bản chụp ý nghĩa của chương trình. Chúng là các dụng cụ khác nhau để thu hẹp vùng suy đoán.
+Mô hình tư duy nền tảng của chương này xác lập: tối ưu hóa là việc kiểm chứng một giả thuyết khoa học dưới một khối lượng công việc (workload) mang tính đại diện; một phép đo chỉ trả lời câu hỏi mà nó được thiết kế để đo lường. Benchmark không bảo đảm một dịch vụ mạng sẽ phản hồi nhanh trong mọi tình huống thực tế. Bản ghi CPU profile không phản ánh việc bộ nhớ đang phình to. Dấu vết thực thi (Execution trace) không phải là bản chụp toàn cảnh ngữ nghĩa của mã nguồn. Mỗi công cụ là một dụng cụ đo lường chuyên biệt nhằm thu hẹp không gian suy đoán.
 
-Hãy giả sử một lệnh nhỏ xuất báo cáo kiểm tra endpoint. Nó chạy ổn với vài endpoint, nhưng trong CI có hàng nghìn endpoint thì mất nhiều giây và heap tăng rõ. Câu “hãy tối ưu formatter” mới chỉ là phỏng đoán. Trước khi động vào code, ta cần biến nó thành một câu hỏi kiểm chứng được: *với một danh sách kích thước đã chọn, `Render` tốn thời gian và allocation bao nhiêu; phần tốn chi phí nằm ở đâu; một thay đổi có giữ nguyên output và giảm chi phí đó không?*
+Giả sử một tiến trình kiểm tra dịch vụ định kỳ (`opsprobe`) cần kết xuất báo cáo trạng thái cho hàng nghìn endpoint mạng. Khi chạy trên môi trường tích hợp liên tục (CI), thao tác này tiêu tốn nhiều giây và dung lượng vùng nhớ động (heap) tăng vọt. Thay vì phỏng đoán cảm tính, kỹ sư chuyển hóa vấn đề thành câu hỏi kỹ thuật có thể đo đạc: với một danh sách đầu vào xác định, hàm `Render` tiêu tốn bao nhiêu thời gian CPU và bao nhiêu lần cấp phát bộ nhớ; chu kỳ xử lý đắt đỏ tập trung ở đâu; và một thiết kế thay thế có bảo toàn từng byte đầu ra trong khi giảm thiểu chi phí tài nguyên hay không?
 
-## Một benchmark là hợp đồng về phép đo
+## Bản chất Chuỗi Tối ưu hóa: Từ Source đến Mã máy
 
-Một benchmark có ích phải nói rõ phần nào nằm trong phép đo. Nếu nó đọc tệp, tạo dữ liệu ngẫu nhiên, mở kết nối và format kết quả trong cùng một vòng lặp, con số `ns/op` không còn trả lời được một câu hỏi đơn giản. Trước tiên hãy dựng input đại diện ở ngoài vòng đo; sau đó chỉ để phần cần so sánh ở trong vòng.
+Hiệu năng của một chương trình Go là kết quả của sự tương tác chặt chẽ giữa các pass tối ưu hóa của trình biên dịch và các hệ thống con bên trong Go runtime:
 
-Từ Go 1.24, benchmark mới nên dùng `b.Loop()`. Lần gọi đầu tiên tự bắt đầu timer sau phần setup, và kết thúc timer khi vòng lặp dừng. Điều đó giảm một lỗi quen thuộc: vô tình đo cả công việc chuẩn bị hoặc để compiler loại bỏ một body không có quan sát được.
+```
+[Mã nguồn Go]
+       │
+       ▼
+[Pass Inlining (Budget = 80)]
+       │ Triệt tiêu chi phí gọi hàm, mở rộng ngữ cảnh
+       ▼
+[Pass Escape Analysis]
+       │ Phân tích vòng đời: Cấp phát Stack vs Heap
+       ▼
+[Pass SSA & Bounds Elimination]
+       │ Chứng minh biến quy nạp, loại bỏ kiểm tra biên
+       ▼
+[Phát sinh Mã máy Target]
+       │ Thanh ghi vi kiến trúc, tập lệnh CPU
+       ▼
+[Go Runtime Subsystems]
+         Bộ cấp phát mallocgc (TCMalloc), Tracing GC
+```
+
+Một quyết định ở tầng trình biên dịch (như hàm có được inline hay không) sẽ làm thay đổi kết quả phân tích thoát bộ nhớ (escape analysis), từ đó quyết định xem đối tượng được cấp phát tức thì trên ngăn xếp (stack) hay phải gọi vào bộ quản lý bộ nhớ động (`mallocgc`), và cuối cùng tác động trực tiếp lên tần suất chạy của bộ thu gom rác (Garbage Collector).
+
+## Phân tích Thoát Bộ nhớ: Ngăn xếp đối đầu Vùng nhớ Động
+
+Trình biên dịch Go sử dụng phân tích thoát bộ nhớ tĩnh (`cmd/compile/internal/escape`) để xác định xem vòng đời của một biến có vượt ra khỏi khung ngăn xếp (stack frame) của hàm khởi tạo hay không.
+
+Nếu biến không thoát, nó được cấp phát trực tiếp trên stack. Chi phí cấp phát trên stack gần như bằng không: CPU chỉ cần giảm giá trị con trỏ ngăn xếp (`SP`), và khi hàm kết thúc, con trỏ `SP` được hoàn trả vị trí cũ, giải phóng toàn bộ vùng nhớ mà không gây bất kỳ gánh nặng nào cho bộ thu gom rác. Ngược lại, nếu con trỏ của biến được trả về cho bên ngoài, gán vào biến toàn cục, hoặc đóng gói vào interface, biến đó bắt buộc phải thoát ra heap arena (`runtime.newobject` hoặc `runtime.makeslice`), chịu sự quản lý của cơ chế TCMalloc và GC.
+
+Thí nghiệm kiểm chứng trên Go 1.27.1 với cờ phân tích chuyên sâu `-gcflags=all=-m=2` đối với hàm kết xuất báo cáo cho thấy chi tiết dòng dữ liệu (data flow) dẫn đến quyết định thoát:
+
+~~~text
+./render.go:13:6: cannot inline Render:
+    function too complex: cost 231 exceeds budget 80
+./render.go:16:18: inlining call to
+    strings.(*Builder).WriteString
+./render.go:18:36: inlining call to strconv.FormatInt
+./render.go:13:13: readings does not escape
+./render.go:16:18: append(strings.b.buf, strings.s...)
+    escapes to heap in Render:
+  flow: {heap} <- &{storage for append(...)}:
+    from append(strings.b.buf, strings.s...) (spill)
+    from strings.b.buf = append(...) (assign)
+~~~
+
+Kết quả phân tích từ compiler chứng minh hai sự thật kỹ thuật rõ ràng:
+
+Thứ nhất, tham số `readings []Reading` không hề thoát ra heap (`readings does not escape`). Mặc dù nó là một slice, dữ liệu chỉ được duyệt đọc nội bộ trong hàm nên descriptor của nó tồn tại an toàn trên ngăn xếp của bên gọi.
+
+Thứ hai, bộ đệm byte nội bộ của `strings.Builder` (`strings.b.buf`) bắt buộc phải thoát ra heap vì mảng byte này liên tục tăng trưởng kích thước thông qua lời gọi `append`, vượt quá kích thước cố định có thể dự đoán trước trên stack frame.
+
+## Tối ưu hóa SSA và Loại bỏ Kiểm tra Biên (Bounds Check Elimination)
+
+Một trong những tối ưu hóa mạnh mẽ nhất của backend SSA (Static Single Assignment) trong Go là pass loại bỏ kiểm tra biên (`ssa/prove`). Trong Go, mỗi thao tác truy cập mảng hoặc slice theo chỉ số (như `s[i]`) về nguyên tắc đòi hỏi một phép kiểm tra an toàn tại thời gian chạy: nếu `i >= len(s)`, chương trình phải kích hoạt `runtime.panicIndex`. Phép kiểm tra này chèn thêm các lệnh rẽ nhánh điều kiện `CMPQ` và lệnh nhảy `JAE`, làm phân mảnh pipeline thực thi của CPU.
+
+Bằng cách kích hoạt cờ gỡ lỗi SSA `-gcflags=all=-d=ssa/prove/debug=1`, ta có thể quan sát cách compiler suy luận toán học để triệt tiêu các lệnh kiểm tra thừa:
+
+~~~text
+./render.go:15:20: Induction variable: limits [0,?), increment 1
+./render.go:15:20: Inverted loop iteration
+./render.go:21:19: Disproved Less64
+strings/strings.go:987:27: Proved IsInBounds
+strings/strings.go:988:38: Proved IsSliceInBounds
+~~~
+
+Khi duyệt tập hợp qua `for range`, trình biên dịch nhận diện được biến quy nạp (induction variable) khởi đầu từ 0 và tăng đều đặn 1 đơn vị cho tới khi chạm biên độ dài logic. Bằng chứng toán học đó cho phép pass `ssa/prove` chứng minh tiên nghiệm rằng chỉ số không bao giờ vượt biên (`Proved IsInBounds`), từ đó loại bỏ hoàn toàn các lệnh nhảy kiểm tra lỗi thời gian chạy, cho phép CPU thực thi vòng lặp với tốc độ tối đa của phần cứng.
+
+## Cơ chế Thu gom Rác và Đánh đổi Không gian - Thời gian
+
+Bộ thu gom rác (Garbage Collector) của Go là một hệ thống thu gom rác dấu vết đồng thời (Concurrent Tri-color Mark-Sweep Tracer). Trái ngược với quan niệm phổ biến rằng GC hoạt động hoàn toàn miễn phí hoặc ngược lại là luôn gây tắc nghẽn, tài liệu chính thức Go GC Guide khẳng định bản chất của GC là một sự **đánh đổi giữa tài nguyên bộ nhớ (space) và thời gian xử lý CPU (time)**.
+
+Khi chu kỳ GC kích hoạt, runtime phân bổ chính xác 25% tổng năng lực CPU của hệ thống (tương đương 1 trong mỗi 4 logical processor `P`) để phục vụ các goroutine đánh dấu đối tượng sống (GC background workers). 
+
+Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) vẫn xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha dọn dẹp kết thúc đánh dấu (Mark Termination), nhưng thời gian STW thường được kiểm soát dưới 1 miligiây. Tuy nhiên, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ ép các goroutine của người dùng chuyển sang chế độ **GC Mark Assist**. Khi đó, chính goroutine đang xử lý logic nghiệp vụ sẽ bị tạm dừng để đi quét rác hỗ trợ runtime, dẫn đến hiện tượng trễ đuôi (tail latency P99.99) tăng đột biến.
+
+Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi này:
+
+Tham số `GOGC`: Xác định tỷ lệ phần trăm tăng trưởng của heap trước khi chu kỳ GC tiếp theo được kích hoạt (mặc định là `100`, tức kích hoạt khi heap đạt 200% lượng dữ liệu sống). Tăng `GOGC` giúp giảm tần suất GC và tiết kiệm chu kỳ CPU, nhưng đổi lại tiến trình sẽ chiếm dụng nhiều RAM hơn.
+
+Tham số `GOMEMLIMIT`: Được đưa vào từ Go 1.19, thiết lập ngưỡng giới hạn bộ nhớ mềm cho tiến trình. Trong môi trường container hóa (như Kubernetes pod), `GOMEMLIMIT` bảo đảm khi bộ nhớ chạm ngưỡng an toàn, GC sẽ tự động điều chỉnh chu kỳ chạy dày đặc hơn để thu hồi bộ nhớ, ngăn chặn tiến trình bị nhân Linux tiêu diệt bởi cơ chế OOM-Killer.
+
+## Đo lường Hiệu năng: Benchmark là Hợp đồng Thực nghiệm
+
+Một bài kiểm thử hiệu năng (benchmark) chỉ có giá trị khi nó cô lập được đúng thao tác nghiệp vụ cần đo lường, loại bỏ toàn bộ các công việc chuẩn bị dữ liệu khỏi vòng lặp tính giờ.
+
+Từ phiên bản Go 1.24, cú pháp chuẩn mực cho benchmark sử dụng phương thức `b.Loop()`. Cơ chế này tự động kích hoạt bộ đếm thời gian sau khi giai đoạn khởi tạo hoàn tất và tự ngắt bộ đếm khi hoàn thành số vòng lặp mục tiêu:
 
 ~~~go
 func BenchmarkRender(b *testing.B) {
@@ -24,45 +108,25 @@ func BenchmarkRender(b *testing.B) {
 }
 ~~~
 
-Chạy benchmark với allocation metric:
+Lệnh thực thi đo đạc thống kê nhiều lần:
 
 ~~~powershell
 go test -bench BenchmarkRender -benchmem -count=6 ./fixed
 ~~~
 
-`ns/op` là thời gian trung bình của operation trong lần chạy đó. `B/op` và `allocs/op` cho biết bộ khung benchmark đã đo được bao nhiêu byte và lần cấp phát trên mỗi operation. Chúng không phải latency p99 của một HTTP service, cũng không phải lời hứa giữ nguyên khi đổi CPU, version Go, `GOMAXPROCS`, input hoặc load nền của máy. Sáu lần chạy không biến dữ liệu thành chân lý phổ quát; nó giúp anh thấy một thay đổi có bền qua các lần chạy hay chỉ là nhiễu.
+Chỉ số `ns/op` phản ánh thời gian trung bình để hoàn thành một lượt xử lý. Chỉ số `B/op` và `allocs/op` ghi nhận chính xác khối lượng byte và số lần yêu cầu cấp phát bộ nhớ lên heap. Một kết quả đo lường đơn lẻ không đại diện cho chân lý phổ quát; việc chạy 6 lượt liên tiếp (`-count=6`) giúp kỹ sư nhận diện được độ biến thiên (nhiễu đo lường) trước khi đưa ra kết luận.
 
-Vì thế đừng copy một con số benchmark vào sách hoặc PR rồi gọi nó là “nhanh hơn” mà không giữ lại command, version Go, input và phạm vi. Với một thay đổi có ý nghĩa, hãy so sánh nhiều lần chạy trên cùng máy hoặc dùng công cụ so sánh thống kê phù hợp. Còn trước mắt, điều đáng học là discipline: output phải được giữ đúng trước, rồi mới quan sát chi phí.
+| Công cụ chẩn đoán | Câu hỏi kỹ thuật được giải đáp | Giới hạn phân tích |
+| :--- | :--- | :--- |
+| Kiểm thử đơn vị (Unit test) | Đầu ra và mã lỗi có bảo toàn đúng cam kết logic? | Không chứng minh được mã chạy nhanh hơn hay tốn ít RAM hơn. |
+| Đo lường chuẩn (Benchmark) | Thao tác này tiêu tốn thời gian và phân bổ bộ nhớ ra sao dưới input chuẩn? | Không phản ánh trực tiếp độ trễ mạng hay tải tương tranh thực tế. |
+| Phân tích CPU (CPU profile) | Khi chiếm dụng CPU, hàm nào tích lũy chu kỳ xử lý lớn nhất? | Bỏ qua hoàn toàn thời gian goroutine bị chặn do I/O hoặc khóa Mutex. |
+| Phân tích Bộ nhớ (Heap profile) | Đường dẫn mã nguồn nào chịu trách nhiệm cho các khối cấp phát trên heap? | Dữ liệu mang tính lấy mẫu thống kê, không ghi nhận từng biến riêng lẻ. |
+| Dấu vết thực thi (Execution trace) | Tương tác giữa goroutine, luồng hệ điều hành và scheduler diễn ra theo mốc thời gian nào? | Dung lượng tệp trace rất lớn, gây suy giảm hiệu năng nếu ghi log dài hạn. |
 
-@table Mỗi dụng cụ trả lời một câu khác nhau
+## Phân tích CPU và Bộ nhớ (pprof)
 
-| Dụng cụ | Câu hỏi nó giúp trả lời | Không tự chứng minh được |
-| --- | --- | --- |
-| Unit test | Output và error có còn đúng contract? | Thay đổi nhanh hơn hay dùng ít bộ nhớ hơn. |
-| Benchmark | Operation này thay đổi thế nào dưới input đã chọn? | Request ngoài đời có latency giống hệt. |
-| CPU profile | Khi đang dùng CPU, stack nào tích lũy chi phí? | Thời gian chờ I/O hoặc allocation heap đang là nguyên nhân. |
-| Heap/allocation profile | Đường code nào xuất hiện trong mẫu allocation hoặc heap? | Mỗi allocation cá thể đã được đếm chính xác. |
-| Execution trace | Trong một khoảng thời gian, runtime và goroutine tiến triển ra sao? | Một dòng source là “thủ phạm” nếu chưa đối chiếu workload. |
-
-## Đừng sửa từ vẻ bề ngoài của code
-
-Lab của chương bắt đầu bằng test đỏ: hàm `Render` chưa tồn tại. Contract là output phải giữ nguyên từng byte theo test; input có thể có hàng nghìn reading; người học tự chọn cách dựng chuỗi rồi tự thêm benchmark. Cách cố tình ngây thơ thường là cộng string trong vòng lặp. Cách tham chiếu dùng `strings.Builder` và `strconv.FormatInt`, nhưng đó chỉ là một lời giải cho contract cụ thể, không phải câu thần chú rằng mọi string đều phải dùng Builder.
-
-~~~powershell
-cd labs/part10-measure-first
-go test -tags exercise ./exercise
-go test -race -tags exercise ./exercise
-go test -run '^$' `
-  -bench BenchmarkRenderRepresentativeInput `
-  -benchmem -count=5 -tags exercise ./exercise
-go test -bench . -benchmem ./fixed
-~~~
-
-Test trong exercise chỉ chốt wire format; benchmark đã có sẵn workload 1.000 reading để anh không vô tình đo cả phần dựng input. Trước lượt đo đầu tiên, hãy viết ra một giả thuyết có thể bị bác bỏ, chẳng hạn: “nối string trong vòng lặp tạo allocation tăng theo số reading”. Bắt đầu bằng implementation đơn giản mà anh tự chọn, giữ output xanh, rồi chạy năm lượt benchmark. Chỉ khi đã có baseline mới mở `fixed/` để so cách reference phân bổ công việc. Nếu số thay đổi mà output không còn đúng, anh vừa thắng một cuộc thi khác. Nếu hai bản tương đương trong phạm vi đo, ưu tiên bản dễ đọc hơn. Một tối ưu chỉ đáng giữ khi lợi ích của nó nằm đúng nơi vấn đề cần giải và cái giá về độ phức tạp có thể biện minh.
-
-## Profile để thay “có lẽ” bằng một đường đi có tên
-
-Khi benchmark cho thấy một operation có chi phí đáng quan tâm, profiler giúp xem chi phí tụ lại ở đâu. Thu profile trên workload tương ứng với câu hỏi; đừng lấy profile của một test khởi động program rồi suy luận về đường nóng production.
+Khi benchmark phát hiện điểm nghẽn hiệu năng, công cụ trích xuất profile (`pprof`) giúp định vị chính xác vị trí tích lũy chi phí trong cây gọi hàm:
 
 ~~~powershell
 go test -run '^$' -bench BenchmarkRender `
@@ -70,68 +134,54 @@ go test -run '^$' -bench BenchmarkRender `
 go tool pprof -top cpu.out
 ~~~
 
-CPU profile lấy mẫu những lúc process thực sự dùng CPU. Nó phù hợp để tìm stack đang làm computation; nó không biến thời gian request bị block ở network thành CPU time. Heap profile là profile mẫu của allocation/heap; chạy thêm `go tool pprof -top -alloc_space mem.out` khi hỏi tổng lượng byte đã cấp phát theo đường code. `-inuse_space` gần hơn với câu hỏi “đến cuối profile, cái gì đang còn sống”. Hai góc nhìn có thể chỉ đến hai quyết định khác nhau.
-
-`flat` là chi phí gắn trực tiếp vào function; `cum` gồm cả thời gian bên dưới lời gọi của nó. Một function có `flat` nhỏ nhưng `cum` lớn không phải vô tội: nó có thể là cánh cửa dẫn vào công việc đắt. Hãy chọn một stack nổi bật, đọc source và kiểm tra lại bằng benchmark. Đó là vòng lặp điều tra nhỏ nhất:
+Chỉ số `flat` ghi nhận chi phí tiêu tốn trực tiếp bên trong thân hàm, trong khi chỉ số `cum` (cumulative) ghi nhận tổng chi phí tích lũy của hàm đó cùng toàn bộ các hàm con mà nó triệu gọi. Một hàm có `flat` nhỏ nhưng `cum` lớn là dấu hiệu cho thấy nó đang dẫn lối vào một chuỗi thao tác tiêu tốn nhiều tài nguyên.
 
 ![Đường đi của bằng chứng hiệu năng](../../assets/diagrams/performance-evidence-path.png)
-@figure Một vòng điều tra hiệu năng. Sơ đồ là conceptual; dữ liệu bắt đầu từ workload đại diện, không từ tên một API trông “chậm”.
 
-Profile có overhead và có thể làm méo phép đo. Tài liệu chẩn đoán của Go còn lưu ý một số loại diagnostic có thể ảnh hưởng lẫn nhau. Thu từng loại riêng khi cần chính xác, ghi lại command, và đừng kết luận từ profile lấy trong một môi trường không giống nơi lỗi xuất hiện.
+@figure Chu trình điều tra hiệu năng hoàn chỉnh. Dữ liệu bắt đầu từ một bài toán đo lường có khối lượng công việc đại diện, kiểm chứng qua profiler, sau đó đối chiếu mã nguồn và tối ưu hóa có đo đạc đối chứng.
 
-## Case study cục bộ: một giả thuyết sống sót qua profile
+## Nghiên cứu Điển cứu Thực tế: Phân tích Bài toán Nối Chuỗi
 
-`labs/part10-measure-first` giữ hai implementation cùng một wire format. `baseline.Render` nối string bằng `+=` trong mỗi iteration; `fixed.Render` dùng `strings.Builder` và `strconv.FormatInt`. Workload là đúng 1.000 `Reading`, tên `endpoint-0000` đến `endpoint-0999`, dựng một lần ngoài vòng benchmark. Đây là microbenchmark của renderer; nó không đo JSON, network, scheduler hay latency của một service.
+Thư mục `labs/part10-measure-first` duy trì hai cách hiện thực cho cùng một yêu cầu định dạng văn bản: phương án cơ sở (`baseline`) nối chuỗi bằng toán tử `+=` lặp lại; phương án tối ưu (`fixed`) sử dụng `strings.Builder` và `strconv.FormatInt`.
 
-Lượt điều tra chạy trên máy cục bộ bằng Go 1.27.1, với command sau. So sánh có ý nghĩa khi giữ cùng máy hoặc môi trường, Go version, workload và benchmark contract; `-count=5` giúp tránh đối chiếu một lần chạy đơn lẻ với một lần chạy đơn lẻ:
+Khối lượng công việc đại diện gồm đúng 1.000 đối tượng `Reading`, từ `endpoint-0000` đến `endpoint-0999`, được khởi tạo sẵn ngoài vòng lặp đo. Kết quả thực nghiệm đo đạc bằng Go 1.27.1 trên kiến trúc `windows/amd64` (bộ xử lý 12th Gen Intel Core i5-12500H) ghi nhận sự khác biệt căn bản:
 
-~~~powershell
-cd labs/part10-measure-first
-go test -run '^$' `
-  -bench BenchmarkRender `
-  -benchmem -count=5 `
-  ./baseline ./fixed
+| Phương án hiện thực | Thời gian xử lý trung bình | Chi phí phân bổ vùng nhớ động (Heap) |
+| :--- | :--- | :--- |
+| `baseline` (Toán tử `+=`) | 1.38 – 3.78 ms/op | ~10.44 MB/op trên 1.900 lần cấp phát (`allocs/op`) |
+| `fixed` (`strings.Builder`) | 26.1 – 86.1 µs/op | ~87.6 KB/op trên 917 lần cấp phát (`allocs/op`) |
 
-go test -run '^$' `
-  -bench BenchmarkRender `
-  -cpuprofile baseline-cpu.out `
-  ./baseline
-go tool pprof -top baseline-cpu.out
-~~~
+Bản ghi CPU profile của phương án `baseline` cho thấy hàm runtime `runtime.concatstrings` chiếm tới 25.9% thời gian xử lý lũy kế, và hàm sao chép bộ nhớ `runtime.memmove` chiếm 16.1% thời gian thực thi phẳng. Phép cộng chuỗi bất biến trong vòng lặp buộc runtime phải liên tục cấp phát các mảng byte mới và sao chép toàn bộ nội dung chuỗi cũ sang ô nhớ mới, dẫn đến sự suy giảm thông lượng hơn 40 lần.
 
-Kết quả của năm lượt ngày 22-09-2026 trên Windows amd64, CPU 12th Gen Intel Core i5-12500H, cho thấy nhiễu đáng kể ở `ns/op` nhưng một chênh lệch ổn định về allocation. Các khoảng dưới đây là khoảng quan sát, không phải median hay SLO:
+Bằng chứng thực nghiệm này chỉ ra chính xác nguyên nhân gốc rễ, cho phép kỹ sư thay đổi sang `strings.Builder` dựa trên số liệu định lượng vững chắc.
 
-@table Case study Render: cùng output, cùng input 1.000 reading, Go 1.27.1
+## Tối ưu hóa Dựa trên Hồ sơ Vận hành (PGO)
 
-| Implementation | Thời gian quan sát | Allocation quan sát |
-| --- | --- | --- |
-| `baseline` (`+=`) | 1.38–3.78 ms/op | khoảng 10.44 MB/op; 1.900–1.901 allocs/op |
-| `fixed` (`strings.Builder`) | 26.1–86.1 µs/op | khoảng 87.6 KB/op; 917 allocs/op |
+Từ Go 1.20 và hoàn thiện ở các phiên bản gần đây, Go hỗ trợ kỹ thuật Tối ưu hóa Dựa trên Hồ sơ (Profile-Guided Optimization - PGO).
 
-CPU profile của baseline (1.55 giây, 2.55 giây CPU sample với `GOMAXPROCS=16`) có `runtime.concatstrings` khoảng 25.9% cumulative và `runtime.memmove` 16.1% flat; `baseline.Render` nằm trên 30.6% cumulative sample. Evidence này ủng hộ giả thuyết về intermediate string và copy, thay vì phán đoán từ tên `Render`. Chỉ sau evidence ấy mới đổi implementation; test wire format chạy lại trước benchmark sau thay đổi. Kết luận không phải “luôn dùng `Builder`”. Với output vài byte hoặc code chạy một lần lúc khởi động, lợi ích có thể không đáng đổi cách viết. Ở workload này, profile và benchmark cùng hướng về chi phí dựng string lặp lại; ở workload khác, phải đo lại thay vì mang kết luận đi theo tên API.
+Trong quy trình biên dịch thông thường, compiler chỉ có cái nhìn tĩnh về mã nguồn, không biết nhánh rẽ nào trong câu lệnh `if` hay phương thức nào của `interface` được gọi thường xuyên nhất trong thực tế. Với PGO, kỹ sư thu thập một tệp CPU profile đại diện (`default.pgo`) từ hệ thống production đang chịu tải thực. Trình biên dịch nạp hồ sơ này vào pass phân tích để:
 
-## Trace kể chuyện thời gian, không thay profile
+Một là, mở rộng ngân sách inlining (inlining budget) cho các hàm nằm trên đường dẫn nóng (hot paths), cho phép inline các hàm phức tạp vượt mức ngân sách 80 thông thường.
 
-Khi câu hỏi chuyển từ “CPU đi đâu?” sang “goroutine này chờ ai, scheduler có bị nghẽn, hay syscall kéo dài bao lâu?”, execution trace cho một timeline giàu ngữ cảnh hơn. Nó có thể được tạo từ test:
+Hai là, thực hiện cơ chế hủy ảo hóa (devirtualization): khi một interface method hầu như luôn được hiện thực bởi một kiểu cụ thể duy nhất trong môi trường thực tế, compiler sẽ chuyển đổi lời gọi phương thức ảo gián tiếp qua con trỏ `itab` thành một lời gọi hàm tĩnh trực tiếp, kèm theo kiểm tra kiểu nhanh, giúp CPU dự đoán nhánh rẽ chính xác và kích hoạt tối ưu hóa inline xuyên package.
 
-~~~powershell
-go test -run TestScenario -trace trace.out ./fixed
-go tool trace trace.out
-~~~
+Tuy nhiên, tài liệu chính thức của Go nhấn mạnh ranh giới nghiêm ngặt: **hồ sơ pprof dùng cho PGO bắt buộc phải đại diện cho tải thực tế của toàn bộ chương trình (whole-program workload)**. Việc sử dụng hồ sơ thu được từ một microbenchmark nhân tạo để biên dịch PGO có thể làm sai lệch hoàn toàn trọng số tối ưu hóa của trình biên dịch, khiến các đường dẫn quan trọng khác trên production bị chậm đi đáng kể.
 
-Trace phù hợp với một khoảng thời gian nhỏ và scenario rõ. Mở trace của một process chạy lâu, workload mơ hồ, rồi tìm một vạch màu lạ là cách chắc chắn để có thêm câu hỏi chứ chưa có đáp án. Đặt khoảng trace quanh hành vi cần điều tra, rồi đối chiếu lại với log, benchmark hoặc request trace ở chương sau.
+## Kỷ luật Tối ưu hóa Kỹ thuật
 
-Ở đây cần tách bốn lớp mà người viết performance rất hay trộn lẫn. Contract của `testing.B.Loop` là documented behavior của package `testing`. CPU/heap profile và execution trace là dữ liệu quan sát được trong một lần chạy. Escape analysis từ compiler là chẩn đoán implementation của compiler hiện tại, không phải luật ngôn ngữ. Còn G/M/P, garbage collector và cách runtime xử lý syscall là implementation detail: chúng quan trọng khi evidence dẫn đến đó, nhưng tên của chúng không phải lời giải thích cho mọi chậm trễ.
+Nâng cao hiệu năng không phải là trò chơi đoán mò cú pháp. Trước khi đưa ra bất kỳ đề xuất thay đổi nào, người kỹ sư luôn tuân thủ quy trình bốn bước:
 
-~~~powershell
-go build -gcflags=-m=2 ./fixed
-~~~
+Một là, xác định khối lượng công việc đại diện phản ánh đúng bài toán thực tế.
 
-Thông báo “escapes to heap” giúp tạo giả thuyết về lifetime hoặc interface boxing trong build hiện tại. Nó không cho phép anh xóa allocation bằng cách ép code khó hiểu, và cũng không thay thế `-benchmem`. Trong chương này, hãy xem escape analysis như một kính lúp phụ. Khi runtime thật sự trở thành nguyên nhân, ta sẽ quay lại bằng thí nghiệm và source đúng phiên bản, thay vì biến mô hình runtime thành mê tín.
+Hai là, thiết lập kiểm thử đơn vị để cố định hợp đồng kết quả đầu ra không bị biến dạng.
 
-Lần tới khi ai đó đề nghị “thêm worker cho nhanh”, hãy hỏi trước: workload nào đang bị chậm; request đang dùng CPU, chờ network hay bị giữ bởi quota; contract nào phải giữ nguyên; và phép đo nào có thể bác bỏ đề nghị ấy? Một câu hỏi đo được thường có giá trị hơn năm thay đổi nhìn có vẻ thông minh.
+Ba là, sử dụng benchmark, escape analysis và profiler để thu thập số liệu định lượng trước khi can thiệp mã nguồn.
+
+Bốn là, đối chiếu lại số liệu sau khi sửa đổi; nếu mức cải thiện không đủ lớn để bù đắp cho độ phức tạp gia tăng của mã nguồn, kiên quyết giữ lại giải pháp đơn giản và dễ bảo trì nhất.
 
 @references
 1. Go Team. Package testing, phần Benchmarks và `B.Loop`. pkg.go.dev/testing
 2. Go Team. Diagnostics, phần Profiling và Tracing. go.dev/doc/diagnostics
 3. Go Team. Command trace. go.dev/cmd/trace
+4. Go Team. Go Garbage Collector Guide. go.dev/doc/gc-guide
+5. Go Team. Profile-guided optimization. go.dev/doc/pgo

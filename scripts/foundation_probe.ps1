@@ -214,7 +214,6 @@ switch ($Mode) {
         }
         $resolvedSource = (Resolve-Path $SourceFile).Path
         $baseName = [System.IO.Path]::GetFileNameWithoutExtension($resolvedSource)
-        $mFlag = if ($Verbosity -ge 2) { "-m -m" } else { "-m" }
         $outFile = Join-Path $OutDir "${baseName}_escape_analysis.txt"
 
         if ((Test-Path $outFile) -and (-not $Force)) {
@@ -222,15 +221,23 @@ switch ($Mode) {
             return
         }
 
-        $cmdStr = "$GoExe build -gcflags=`"$mFlag`" -o NUL $resolvedSource"
-        $notes = "ESCAPE ANALYSIS (-gcflags=`"$mFlag`"): Reports compiler escape decisions (stack allocation vs heap escaping),`nparameter flow, and closure capture diagnostics."
+        $sourceDir = [System.IO.Path]::GetDirectoryName($resolvedSource)
+        $fileName = [System.IO.Path]::GetFileName($resolvedSource)
+        $gcflag = if ($Verbosity -ge 2) { "-gcflags=all=-m=2" } else { "-gcflags=all=-m" }
+        $cmdStr = "$GoExe build $gcflag -o NUL $fileName (in $sourceDir)"
+        $notes = "ESCAPE ANALYSIS ($gcflag): Reports compiler escape decisions (stack allocation vs heap escaping),`nparameter flow, and closure capture diagnostics from cmd/compile/internal/escape."
         $header = Write-MetadataHeader -EvidenceKind "COMPILER_ESCAPE_ANALYSIS" -CommandExecuted $cmdStr -TargetSource $resolvedSource -Notes $notes
 
-        $proc = Start-Process -FilePath $GoExe -ArgumentList "build", "-gcflags=$mFlag", "-o", "NUL", "`"$resolvedSource`"" -NoNewWindow -PassThru -RedirectStandardOutput (Join-Path $ScratchDir "temp_escape.stdout") -RedirectStandardError (Join-Path $ScratchDir "temp_escape.stderr")
+        $stdoutFile = Join-Path $ScratchDir "temp_escape.stdout"
+        $stderrFile = Join-Path $ScratchDir "temp_escape.stderr"
+        if (Test-Path $stdoutFile) { Remove-Item $stdoutFile -Force }
+        if (Test-Path $stderrFile) { Remove-Item $stderrFile -Force }
+
+        $proc = Start-Process -FilePath $GoExe -ArgumentList "build", $gcflag, "-o", "NUL", "`"$fileName`"" -WorkingDirectory $sourceDir -NoNewWindow -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
         $proc.WaitForExit()
 
-        $stdout = if (Test-Path (Join-Path $ScratchDir "temp_escape.stdout")) { Get-Content (Join-Path $ScratchDir "temp_escape.stdout") -Raw } else { "" }
-        $stderr = if (Test-Path (Join-Path $ScratchDir "temp_escape.stderr")) { Get-Content (Join-Path $ScratchDir "temp_escape.stderr") -Raw } else { "" }
+        $stdout = if (Test-Path $stdoutFile) { Get-Content $stdoutFile -Raw } else { "" }
+        $stderr = if (Test-Path $stderrFile) { Get-Content $stderrFile -Raw } else { "" }
         $body = $stdout + "`n" + $stderr
 
         $fullOutput = $header + $body.Trim()
@@ -252,17 +259,23 @@ switch ($Mode) {
             return
         }
 
-        # Inlining and SSA prove (bounds check elimination) flags
-        $gcflags = "-m -d=ssa/prove/debug=1"
-        $cmdStr = "$GoExe build -gcflags=`"$gcflags`" -o NUL $resolvedSource"
-        $notes = "SSA OPTIMIZATIONS & BOUNDS CHECK ELIMINATION: Reports inlining decisions and SSA prove pass diagnostic logs`nshowing proven bounds and eliminated runtime panic checks."
+        $sourceDir = [System.IO.Path]::GetDirectoryName($resolvedSource)
+        $fileName = [System.IO.Path]::GetFileName($resolvedSource)
+        $gcflags = "-gcflags=all=-d=ssa/prove/debug=1"
+        $cmdStr = "$GoExe build $gcflags -o NUL $fileName (in $sourceDir)"
+        $notes = "SSA OPTIMIZATIONS & BOUNDS CHECK ELIMINATION: Reports SSA prove pass diagnostic logs`nshowing proven bounds, induction variables, and eliminated runtime panic checks."
         $header = Write-MetadataHeader -EvidenceKind "SSA_OPTIMIZATIONS_PROVE" -CommandExecuted $cmdStr -TargetSource $resolvedSource -Notes $notes
 
-        $proc = Start-Process -FilePath $GoExe -ArgumentList "build", "-gcflags=$gcflags", "-o", "NUL", "`"$resolvedSource`"" -NoNewWindow -PassThru -RedirectStandardOutput (Join-Path $ScratchDir "temp_opt.stdout") -RedirectStandardError (Join-Path $ScratchDir "temp_opt.stderr")
+        $stdoutFile = Join-Path $ScratchDir "temp_opt.stdout"
+        $stderrFile = Join-Path $ScratchDir "temp_opt.stderr"
+        if (Test-Path $stdoutFile) { Remove-Item $stdoutFile -Force }
+        if (Test-Path $stderrFile) { Remove-Item $stderrFile -Force }
+
+        $proc = Start-Process -FilePath $GoExe -ArgumentList "build", $gcflags, "-o", "NUL", "`"$fileName`"" -WorkingDirectory $sourceDir -NoNewWindow -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
         $proc.WaitForExit()
 
-        $stdout = if (Test-Path (Join-Path $ScratchDir "temp_opt.stdout")) { Get-Content (Join-Path $ScratchDir "temp_opt.stdout") -Raw } else { "" }
-        $stderr = if (Test-Path (Join-Path $ScratchDir "temp_opt.stderr")) { Get-Content (Join-Path $ScratchDir "temp_opt.stderr") -Raw } else { "" }
+        $stdout = if (Test-Path $stdoutFile) { Get-Content $stdoutFile -Raw } else { "" }
+        $stderr = if (Test-Path $stderrFile) { Get-Content $stderrFile -Raw } else { "" }
         $body = $stdout + "`n" + $stderr
 
         $fullOutput = $header + $body.Trim()
