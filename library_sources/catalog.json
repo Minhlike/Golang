@@ -569,9 +569,9 @@
     "name": "Google go-github Client",
     "tier": "TIER_A",
     "official_remote": "https://github.com/google/go-github.git",
-    "module_path": "github.com/google/go-github/v68",
+    "module_path": "github.com/google/go-github/v92",
     "module_root": ".",
-    "version_strategy": "GIT_STABLE_TAG",
+    "version_strategy": "GO_MODULE_LATEST_MAJOR",
     "tag_prefix": "v",
     "checkout_scope": "SHALLOW",
     "important_paths": [

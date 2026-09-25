@@ -27,6 +27,7 @@ LOCK_PATH = LIB_SOURCES_DIR / "lock.json"
 STATUS_PATH = LIB_SOURCES_DIR / "status.json"
 PROVENANCE_DIR = LIB_SOURCES_DIR / "provenance"
 SOURCE_MAPS_DIR = LIB_SOURCES_DIR / "source_maps"
+REPORT_PATH = LIB_SOURCES_DIR / "UPDATE_REPORT.md"
 REPOS_DIR = LIB_SOURCES_DIR / "repos"
 
 VALID_TIERS = {"TIER_S", "TIER_A", "TIER_B", "FRONTIER"}
@@ -37,6 +38,7 @@ VALID_STRATEGIES = {
     "MULTI_MODULE",
     "PRE_RELEASE_ALLOWED",
     "HEAD_TRACKING",
+    "GO_MODULE_LATEST_MAJOR",
 }
 VALID_RELEASE_STATUSES = {
     "OFFICIAL_STABLE",
@@ -341,6 +343,49 @@ def validate_local_repos(catalog_map: dict, lock_libs: dict) -> list[str]:
     return errors
 
 
+def validate_report_consistency(catalog_map: dict, lock_libs: dict) -> list[str]:
+    errors = []
+    if not REPORT_PATH.exists():
+        return [f"Missing UPDATE_REPORT.md at {REPORT_PATH}"]
+
+    try:
+        content = REPORT_PATH.read_text(encoding="utf-8")
+    except Exception as e:
+        return [f"Failed to read UPDATE_REPORT.md: {e}"]
+
+    row_pattern = re.compile(
+        r"^\|\s*(\d+)\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)…`\s*\|\s*`([^`]+)…`\s*\|\s*`([^`]+)`\s*\|",
+        re.MULTILINE
+    )
+    matches = row_pattern.findall(content)
+    if len(matches) != len(catalog_map):
+        errors.append(f"UPDATE_REPORT.md table must contain {len(catalog_map)} rows, found {len(matches)}")
+
+    report_libs = set()
+    for rank_str, lid, tier, mod, strat, ver, commit_prefix, sha_prefix, sync in matches:
+        report_libs.add(lid)
+        if lid not in lock_libs:
+            errors.append(f"UPDATE_REPORT.md contains unknown library '{lid}'")
+            continue
+        l_entry = lock_libs[lid]
+        exp_commit = (l_entry.get("resolved_commit") or "")[:10]
+        exp_sha = (l_entry.get("source_tree_sha256") or "0" * 64)[:10]
+        exp_ver = l_entry.get("resolved_version", "")
+
+        if ver != exp_ver:
+            errors.append(f"UPDATE_REPORT.md version mismatch for '{lid}': report has '{ver}', lock.json has '{exp_ver}'")
+        if commit_prefix.lower() != exp_commit.lower():
+            errors.append(f"UPDATE_REPORT.md commit mismatch for '{lid}': report has '{commit_prefix}', lock.json has '{exp_commit}'")
+        if sha_prefix.lower() != exp_sha.lower():
+            errors.append(f"UPDATE_REPORT.md source_tree_sha256 mismatch for '{lid}': report has '{sha_prefix}', lock.json has '{exp_sha}'")
+
+    missing = set(catalog_map.keys()) - report_libs
+    if missing:
+        errors.append(f"UPDATE_REPORT.md missing libraries: {sorted(missing)}")
+
+    return errors
+
+
 def main():
     print("=" * 70)
     print("ZERO-GUESS PROTOCOL VALIDATOR — GO DEVOPS LIBRARY SOURCE LAB")
@@ -399,6 +444,26 @@ def main():
         print(f"[!] repos/ checkouts: FAIL ({len(repo_errors)} errors)")
         for err in repo_errors:
             print(f"    - {err}")
+
+    # 6. UPDATE_REPORT.md consistency with lock.json
+    report_errors = validate_report_consistency(catalog_map, lock_libs)
+    all_errors.extend(report_errors)
+    if not report_errors:
+        print(f"[*] UPDATE_REPORT.md consistency: PASS (exact match with lock.json)")
+    else:
+        print(f"[!] UPDATE_REPORT.md consistency: FAIL ({len(report_errors)} errors)")
+        for err in report_errors:
+            print(f"    - {err}")
+
+    # Summary Metrics
+    catalog_locked = len(catalog_map)
+    impl_verified = sum(1 for e in lock_libs.values() if e.get("source_tree_sha256") and e.get("source_tree_sha256") != "0" * 64)
+    fingerprint_pending = catalog_locked - impl_verified
+
+    print("-" * 70)
+    print(f"CATALOG_LOCKED = {catalog_locked}")
+    print(f"IMPLEMENTATION_SOURCE_VERIFIED = {impl_verified}")
+    print(f"FINGERPRINT_PENDING = {fingerprint_pending}")
             
     print("=" * 70)
     if all_errors:

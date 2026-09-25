@@ -414,6 +414,40 @@ SOURCE_MAP_REGISTRY = {
             "serialization": "SSHv2 wire protocol packet encoding and cryptographic algorithms (ChaCha20, Ed25519, RSA)"
         },
         "verification_tests": ["ssh/client_test.go", "ssh/session_test.go"]
+    },
+    "go-github": {
+        "entrypoints": ["github.NewClient", "github.NewTokenClient", "github.ValidatePayload"],
+        "public_api": ["github.Client", "github.RepositoriesService", "github.PullRequestsService", "github.IssuesService", "github.ActionsService", "github.WebhooksService"],
+        "core_types": [
+            {"name": "Client", "kind": "struct", "description": "GitHub API v3 HTTP client managing authentication, rate limiting, and domain services"},
+            {"name": "Response", "kind": "struct", "description": "Extended http.Response carrying GitHub rate limit and pagination metadata"},
+            {"name": "RateLimits", "kind": "struct", "description": "Snapshot of primary and resource-specific rate limits and reset timestamps"}
+        ],
+        "call_paths": [
+            {"phase": "Request Construction", "path": "Client.NewRequest(method, url, body) -> BaseURL resolution + headers"},
+            {"phase": "Execution & Rate-Limit", "path": "Client.Do(ctx, req, v) -> http.Client.Do() -> checkResponse() -> parseRateLimits()"},
+            {"phase": "Webhook Ingestion", "path": "ValidatePayload(req, secret) -> hmac.Equal() -> ParseWebHook(eventType, payload)"}
+        ],
+        "concurrency_model": {
+            "type": "Stateless Concurrency / Thread-Safe Client Service Instances",
+            "synchronization": "Stateless services sharing underlying thread-safe http.Client and Transport",
+            "bounded_buffer": False
+        },
+        "cancellation_model": {
+            "context_aware": True,
+            "deadline_propagation": "context.Context is first parameter to all API methods and propagates to http.RequestWithContext",
+            "leak_prevention": "Response bodies drained and closed by Client.Do before unmarshaling JSON payloads"
+        },
+        "retry_model": {
+            "strategy": "Delegated to HTTP RoundTripper or caller; detects 403/429 RateLimitError and AbuseRateLimitError",
+            "idempotency_aware": True
+        },
+        "boundaries": {
+            "network": "GitHub REST API v3 HTTPS endpoints (api.github.com or GitHub Enterprise Server)",
+            "os": "In-memory buffers, local git repository hooks, and kernel network sockets",
+            "serialization": "JSON unmarshaling of GitHub API entity models and webhook payloads"
+        },
+        "verification_tests": ["github/github_test.go", "github/repos_test.go", "github/messages_test.go"]
     }
 }
 

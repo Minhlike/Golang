@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v68/github"
+	"github.com/google/go-github/v92/github"
 )
 
 func TestGitHubClientIntegrationWithMockServer(t *testing.T) {

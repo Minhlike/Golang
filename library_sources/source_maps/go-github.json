@@ -3,9 +3,9 @@
   "name": "Google go-github Client",
   "rank": 24,
   "tier": "TIER_A",
-  "module_path": "github.com/google/go-github/v68",
-  "resolved_version": "v68.0.0",
-  "resolved_commit": "98d4f502e28c1de670e319f18a219cfe98dfe4cd",
+  "module_path": "github.com/google/go-github/v92",
+  "resolved_version": "v92.0.0",
+  "resolved_commit": "5149b4d74590b63154fcc43c4dac05e881f9aea3",
   "important_paths": [
     "github",
     "github/actions",
@@ -18,60 +18,71 @@
     "github/repos.go"
   ],
   "entrypoints": [
-    "github.com/google/go-github/v68.New",
-    "github.com/google/go-github/v68.Init"
+    "github.NewClient",
+    "github.NewTokenClient",
+    "github.ValidatePayload"
   ],
   "public_api": [
-    "github.com/google/go-github/v68.Client",
-    "github.com/google/go-github/v68.Config",
-    "github.com/google/go-github/v68.Engine"
+    "github.Client",
+    "github.RepositoriesService",
+    "github.PullRequestsService",
+    "github.IssuesService",
+    "github.ActionsService",
+    "github.WebhooksService"
   ],
   "core_types": [
     {
       "name": "Client",
       "kind": "struct",
-      "description": "Core client implementation for Google go-github Client"
+      "description": "GitHub API v3 HTTP client managing authentication, rate limiting, and domain services"
     },
     {
-      "name": "Config",
+      "name": "Response",
       "kind": "struct",
-      "description": "Configuration specification and parameter validation"
+      "description": "Extended http.Response carrying GitHub rate limit and pagination metadata"
+    },
+    {
+      "name": "RateLimits",
+      "kind": "struct",
+      "description": "Snapshot of primary and resource-specific rate limits and reset timestamps"
     }
   ],
   "call_paths": [
     {
-      "phase": "Bootstrap",
-      "path": "New(cfg) -> validateConfig() -> initializeEngine()"
+      "phase": "Request Construction",
+      "path": "Client.NewRequest(method, url, body) -> BaseURL resolution + headers"
     },
     {
-      "phase": "Runtime Execution",
-      "path": "Execute(ctx) -> processInput() -> handleResponse()"
+      "phase": "Execution & Rate-Limit",
+      "path": "Client.Do(ctx, req, v) -> http.Client.Do() -> checkResponse() -> parseRateLimits()"
     },
     {
-      "phase": "Teardown",
-      "path": "Close() -> drainBuffers() -> releaseHandles()"
+      "phase": "Webhook Ingestion",
+      "path": "ValidatePayload(req, secret) -> hmac.Equal() -> ParseWebHook(eventType, payload)"
     }
   ],
   "concurrency_model": {
-    "type": "Worker Pool / Goroutine Pipeline",
-    "synchronization": "sync.Mutex, sync.RWMutex, channels",
-    "bounded_buffer": true
+    "type": "Stateless Concurrency / Thread-Safe Client Service Instances",
+    "synchronization": "Stateless services sharing underlying thread-safe http.Client and Transport",
+    "bounded_buffer": false
   },
   "cancellation_model": {
     "context_aware": true,
-    "deadline_propagation": "context.Context controls operation lifetimes and propagates to child calls",
-    "leak_prevention": "Explicit Close() and defer cancel() prevent goroutine leaks"
+    "deadline_propagation": "context.Context is first parameter to all API methods and propagates to http.RequestWithContext",
+    "leak_prevention": "Response bodies drained and closed by Client.Do before unmarshaling JSON payloads"
   },
   "retry_model": {
-    "strategy": "Exponential backoff with jitter on transient failures",
+    "strategy": "Delegated to HTTP RoundTripper or caller; detects 403/429 RateLimitError and AbuseRateLimitError",
     "idempotency_aware": true
   },
   "boundaries": {
-    "network": "TCP/HTTPS socket boundaries or IPC/Unix domain sockets",
-    "os": "Kernel syscalls, memory buffers, and OS signal management",
-    "serialization": "JSON, YAML, Protobuf, or native binary codecs"
+    "network": "GitHub REST API v3 HTTPS endpoints (api.github.com or GitHub Enterprise Server)",
+    "os": "In-memory buffers, local git repository hooks, and kernel network sockets",
+    "serialization": "JSON unmarshaling of GitHub API entity models and webhook payloads"
   },
   "verification_tests": [
-    "github/client_test.go"
+    "github/github_test.go",
+    "github/repos_test.go",
+    "github/messages_test.go"
   ]
 }
