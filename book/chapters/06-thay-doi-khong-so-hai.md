@@ -447,14 +447,28 @@ Khi phát hiện một đầu vào làm chương trình panic hoặc vi phạm b
 
 ### Tính Xác thực của Đo lường Hiệu năng với `testing.B`
 
-Viết benchmark đòi hỏi kỷ luật nghiêm ngặt để tránh thu thập số liệu rác. Khi sử dụng `testing.B`, lập trình viên bắt buộc phải gọi `b.ResetTimer()` sau mọi thao tác khởi tạo môi trường tốn kém để đồng hồ đo chỉ ghi nhận đúng đoạn mã cần khảo sát, đồng thời kích hoạt `b.ReportAllocs()` để giám sát mức độ phân bổ ô nhớ trên heap.
-
-Cạm bẫy nguy hiểm nhất trong benchmark là cơ chế tối ưu hóa loại bỏ mã chết (dead-code elimination) của trình biên dịch. Nếu giá trị tính toán trong thân vòng lặp `b.N` không được sử dụng ở bất kỳ đâu, compiler có thể nhận diện đó là phép tính vô ích và xóa sổ toàn bộ vòng lặp khỏi mã máy. Khi đó, phép đo sẽ báo tốc độ phi lý chỉ 0.02 ns/op. Để khắc phục, ta luôn gán kết quả tính toán vào một biến toàn cục ở cấp độ gói (sink variable), buộc compiler phải bảo toàn các chỉ thị tính toán thực tế.
+Viết benchmark đòi hỏi kỷ luật nghiêm ngặt để tránh thu thập số liệu sai lệch. Trong các phiên bản Go hiện đại, cấu trúc benchmark được khuyến nghị ưu tiên sử dụng vòng lặp `for b.Loop() { ... }`. Phương thức `b.Loop()` tự động đặt lại đồng hồ đo (reset timer) ở lần lặp đầu tiên và dừng đồng hồ khi kết thúc quá trình chạy. Bên cạnh đó, trình biên dịch và runtime còn chủ động giữ sống các biến đối số và kết quả phù hợp trong thân vòng lặp, giúp giảm thiểu nguy cơ toàn bộ thân benchmark bị tối ưu hóa biến mất mà không nhất thiết phải dựa hoàn toàn vào biến toàn cục.
 
 ~~~go
-var sinkResult Outcome
+func BenchmarkAppRunLoop(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		res, _ := Run(
+			context.Background(), mockLookup, mockRunner,
+		)
+		if len(res) > 0 && res[0].ID == "" {
+			b.Fatal("unexpected empty outcome")
+		}
+	}
+}
+~~~
 
-func BenchmarkAppRun(b *testing.B) {
+Trước khi `b.Loop()` xuất hiện, các bài kiểm tra hiệu năng thường dùng mẫu lặp truyền thống theo biến đếm `b.N`. Với phong cách `for i := 0; i < b.N; i++` kinh điển này, lời gọi `b.ResetTimer()` chỉ thực sự cần thiết nếu có các thao tác khởi tạo môi trường tốn kém nằm ngay trước vòng lặp nhằm tránh tính thời gian chuẩn bị vào phép đo. Đồng thời, nếu biểu thức tính toán trong vòng lặp `b.N` không sinh hiệu ứng phụ và kết quả không được sử dụng ở đâu, bộ tối ưu hóa loại bỏ mã chết của compiler có thể xóa luôn phép tính, dẫn đến kết quả phi lý chỉ vài phần mười nano giây; khi đó việc gán kết quả vào một biến toàn cục ở cấp gói (sink variable) là kỹ thuật kinh nghiệm để buộc compiler bảo toàn chỉ thị cần đo.
+
+~~~go
+var sinkResult []Outcome
+
+func BenchmarkAppRunLegacy(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -462,7 +476,7 @@ func BenchmarkAppRun(b *testing.B) {
 			context.Background(), mockLookup, mockRunner,
 		)
 		if len(res) > 0 {
-			sinkResult = res[0]
+			sinkResult = res
 		}
 	}
 }
@@ -470,7 +484,7 @@ func BenchmarkAppRun(b *testing.B) {
 
 ### Ranh giới của Bộ Dò Race Detector và Độ bao phủ Mã nguồn
 
-Bộ phát hiện tranh chấp dữ liệu của Go (`go test -race`) vận hành dựa trên thư viện ThreadSanitizer v3. Công cụ này ánh xạ bộ nhớ vật lý sang một vùng nhớ bóng (shadow memory), tiêu tốn dung lượng RAM gấp bốn đến tám lần và làm chậm tốc độ CPU từ hai đến mười lần để theo dõi mọi thao tác đọc ghi đồng thời trên từng ô nhớ tám byte.
+Bộ phát hiện tranh chấp dữ liệu của Go (`go test -race`) dựa trên ThreadSanitizer. Công cụ này ánh xạ bộ nhớ sang vùng shadow memory để theo dõi các truy cập đồng thời. Theo tài liệu chính thức của Go, mức tiêu tốn tài nguyên thông thường làm tăng dung lượng bộ nhớ khoảng 5 đến 10 lần và kéo dài thời gian thực thi khoảng 2 đến 20 lần tùy thuộc vào đặc tính chương trình và khối lượng tải thực tế, không phải là một con số bảo đảm cố định.
 
 Một điều tối quan trọng cần ghi nhớ: Race Detector chỉ có thể phát hiện xung đột dữ liệu trên đúng những nhánh mã nguồn thực sự được thực thi trong quá trình test chạy. Nó hoàn toàn bất lực trước những race condition ẩn nấp trong các nhánh rẽ điều kiện không được kích hoạt, hoặc các kịch bản chạy đua phụ thuộc vào độ trễ mạng ngẫu nhiên trên máy chủ production.
 

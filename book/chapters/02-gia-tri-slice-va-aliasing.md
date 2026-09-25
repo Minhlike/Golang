@@ -63,9 +63,9 @@ b[0] = 99
 
 []int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của underlying array. 
 
-Về mặt biểu diễn nội bộ trong Go runtime (`src/runtime/slice.go`), một slice được cấu thành từ đúng ba từ máy (3-word descriptor, chiếm 24 byte trên kiến trúc 64-bit): con trỏ dữ liệu `array unsafe.Pointer` trỏ tới phần tử đầu tiên của mảng nền, trường độ dài hiện tại `len int`, và trường sức chứa tối đa `cap int`.
+Về mặt biểu diễn nội bộ trong Go runtime (`src/runtime/slice.go`), một slice value thường được mô tả bởi mô hình ba từ máy (three-word descriptor, tương ứng 24 byte trên kiến trúc 64-bit hiện hành): con trỏ `array unsafe.Pointer` trỏ tới phần tử bắt đầu của mảng nền, trường độ dài `len int`, và trường sức chứa `cap int`. Cần lưu ý con số 24 byte là kích thước quan sát được trên các target 64-bit cụ thể, không phải cam kết bất biến của đặc tả ngôn ngữ.
 
-Khi phép gán `b := a` diễn ra, trình biên dịch sao chép nguyên trạng 24 byte của tiêu đề descriptor từ `a` sang `b`. Biến `b` sở hữu một bản sao giá trị riêng biệt về `len` và `cap`, nhưng trường `array` của nó vẫn chứa đúng địa chỉ bộ nhớ trỏ về mảng nền ban đầu.
+Khi phép gán `b := a` diễn ra, ngôn ngữ thực hiện sao chép giá trị theo ngữ nghĩa (copy by value). Trong mô hình ba từ máy, các thành phần của descriptor được sao chép sang `b` với cùng con trỏ dữ liệu, cùng `len` và cùng `cap`. Trình tối ưu hóa có thể giữ các trường này trên thanh ghi mà không bắt buộc phải phát sinh một lệnh chép 24 byte vật lý ở bộ nhớ. Biến `b` sở hữu một bản sao giá trị riêng biệt về cửa sổ nhìn (`len` và `cap`), nhưng con trỏ bên trong vẫn dẫn về cùng mảng nền ban đầu.
 
 ![Hai slice value sau assignment: descriptor được copy, backing storage được chia sẻ.](../../assets/diagrams/slice-sharing.png)
 
@@ -132,9 +132,9 @@ fmt.Println(old) // [99 20]
 fmt.Println(s)   // [99 20 30]
 ~~~
 
-Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Khi một slice cạn sức chứa (`len == cap`), lời gọi `append` kích hoạt hàm nội bộ `runtime.growslice`. Thuật toán cấp phát hiện đại của Go (từ Go 1.18+) chuyển dịch mượt mà thay vì nhân đôi đột ngột: dưới ngưỡng 256 phần tử, dung lượng tăng gấp đôi; trên 256 phần tử, dung lượng tăng dần theo tỷ lệ `newcap += (newcap + 3*256) / 4`. Hơn thế nữa, số byte thực tế được cấp phát sẽ được bộ quản lý heap làm tròn lên kích thước size-class gần nhất, khiến `cap` thực tế sau khi phình to có thể lớn hơn một lượng nhỏ so với công thức toán học.
+Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Về mặt ngữ nghĩa, đặc tả chỉ bảo đảm rằng slice trả về từ `append` sẽ có đủ chỗ chứa cho các phần tử mới. Khi vượt quá capacity hiện tại, runtime tiêu chuẩn thường ủy thác việc cấp phát mảng nền mới cho cơ chế tăng trưởng bộ nhớ heap (như `runtime.growslice`), dù trình biên dịch trong một số kịch bản tĩnh có thể tối ưu trực tiếp. Trong thuật toán tăng trưởng thông thường của runtime tiêu chuẩn từ Go 1.18 trở đi, ngưỡng chuyển dịch diễn ra mượt mà: dưới 256 phần tử dung lượng có xu hướng nhân đôi; vượt ngưỡng 256, dung lượng tăng dần theo tỷ lệ `newcap += (newcap + 3*256) / 4`. Số byte cấp phát thực tế còn được bộ quản lý heap làm tròn lên kích thước size-class phù hợp, khiến `cap` thực tế có thể nhỉnh hơn con số tính toán lý thuyết.
 
-Để chủ động phòng vệ, Go cung cấp cú pháp lát cắt ba chỉ số đầy đủ `s[low:high:max]` (Full Slice Expression). Cú pháp này giới hạn sức chứa của lát cắt mới ở mức `max - low`. Khi ta đặt `max = high`, sức chứa bị khóa chặt bằng đúng độ dài; bất kỳ thao tác `append` nào kế tiếp đều bắt buộc phải cấp phát mảng nền độc lập, ngăn chặn hoàn toàn việc ghi đè lên các phần tử phía sau:
+Để chủ động phòng vệ, Go cung cấp cú pháp lát cắt ba chỉ số đầy đủ `s[low:high:max]` (Full Slice Expression). Cú pháp này giới hạn sức chứa của lát cắt mới ở mức `max - low`. Khi ta đặt `max = high` (như `s[:n:n]`), capacity của lát cắt mới bị giới hạn đúng bằng độ dài nhìn thấy; thao tác `append` thêm phần tử vào lát cắt này sẽ không thể dùng tiếp phần capacity nằm ngoài phạm vi quan sát của lát cắt cũ, loại bỏ nguy cơ vô tình ghi đè lên các phần tử phía sau của mảng nền chung:
 
 ~~~go
 old := []int{10, 20}

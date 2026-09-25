@@ -41,11 +41,11 @@ Ngược lại, khi truyền `&config`, `reflect.ValueOf(&config)` lưu con tr�
 
 `ApplyEnv(nil, nil)` còn có một bẫy nhỏ hơn. `reflect.ValueOf(nil)` trả zero `reflect.Value`, có `Kind` là `Invalid`; nhiều operation khác trên value không hợp lệ có thể panic. Vì vậy boundary phải kiểm tra `IsValid` trước khi làm các operation phụ thuộc shape. Đây là guard cho một value runtime thực sự không tồn tại, không phải một trường hợp `nil` pointer thông thường.
 
-| Cơ chế thực thi | Bậc thời gian tương đối | Cấp phát Heap | Khả năng Compiler Tối ưu |
+| Cơ chế thực thi | Đặc tính điều phối lời gọi | Xu hướng đóng gói và cấp phát | Khả năng Compiler Tối ưu |
 | :--- | :--- | :--- | :--- |
-| Gọi hàm / phương thức tĩnh | Rất nhanh (vài chu kỳ CPU) | 0 B/op (0 allocs) | Tối ưu inlining triệt tiêu lời gọi, phân bổ thanh ghi SSA |
-| Gọi gián tiếp qua Interface | Nhanh (vài lệnh CPU gián tiếp) | 0 B/op nếu đối tượng không thoát | Tra cứu con trỏ qua `itab`, tận dụng CPU branch prediction |
-| Gọi động qua Reflection (`Value.Call`) | Chậm hơn hàng chục đến hàng trăm lần | Thường xuyên cấp phát | Đóng gói tham số vào `[]reflect.Value`, boxing interface, không thể inline |
+| Lời gọi hàm hoặc phương thức tĩnh | Gọi trực tiếp qua địa chỉ cố định đã xác định khi biên dịch | Không phát sinh chi phí bao bọc đối số riêng cho cơ chế gọi | Rộng mở cơ hội inlining triệt tiêu lời gọi, phân bổ thanh ghi SSA |
+| Lời gọi gián tiếp qua Interface | Thường cần điều phối gián tiếp tra cứu phương thức qua `itab` | Phụ thuộc vào việc đối tượng cụ thể có thoát lên heap hay không | Trình biên dịch đôi khi có thể devirtualize thành lời gọi tĩnh nếu chứng minh được kiểu cụ thể |
+| Lời gọi động qua Reflection (`Value.Call`) | Phải giải mã metadata và kiểm tra kiểu động ở runtime | Cần biểu diễn đối số trong `[]reflect.Value` và boxing giao diện | Rất khó tối ưu hóa tĩnh, hầu như không thể inline và chịu thêm chi phí kiểm tra động |
 
 @table Compiler và reflection chia việc khác nhau
 

@@ -82,9 +82,9 @@ Khi duyệt tập hợp qua `for range`, trình biên dịch nhận diện đư�
 
 Bộ thu gom rác (Garbage Collector) của Go là một hệ thống thu gom rác dấu vết đồng thời (Concurrent Tri-color Mark-Sweep Tracer). Trái ngược với quan niệm phổ biến rằng GC hoạt động hoàn toàn miễn phí hoặc ngược lại là luôn gây tắc nghẽn, tài liệu chính thức Go GC Guide khẳng định bản chất của GC là một sự **đánh đổi giữa tài nguyên bộ nhớ (space) và thời gian xử lý CPU (time)**.
 
-Khi chu kỳ GC kích hoạt, runtime phân bổ chính xác 25% tổng năng lực CPU của hệ thống (tương đương 1 trong mỗi 4 logical processor `P`) để phục vụ các goroutine đánh dấu đối tượng sống (GC background workers). 
+Khi chu kỳ GC kích hoạt, công việc background marking được bộ điều tốc (GC pacer) điều phối với một mục tiêu CPU xấp xỉ (khoảng 25% tổng năng lực CPU trong điều kiện bình thường, tương đương 1 trong mỗi 4 logical processor `P`) để phục vụ các goroutine đánh dấu đối tượng sống. 
 
-Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) vẫn xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha dọn dẹp kết thúc đánh dấu (Mark Termination), nhưng thời gian STW thường được kiểm soát dưới 1 miligiây. Tuy nhiên, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ ép các goroutine của người dùng chuyển sang chế độ **GC Mark Assist**. Khi đó, chính goroutine đang xử lý logic nghiệp vụ sẽ bị tạm dừng để đi quét rác hỗ trợ runtime, dẫn đến hiện tượng trễ đuôi (tail latency P99.99) tăng đột biến.
+Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha kết thúc đánh dấu (Mark Termination). Mặc dù kiến trúc Go hướng tới việc tối thiểu hóa thời gian STW đến mức rất ngắn, độ trễ STW thực tế không phải là một cam kết cố định mà phụ thuộc lớn vào tải của chương trình, kích thước heap, cấu hình máy chủ và phiên bản Go; kỹ sư luôn cần đo lường qua công cụ execution trace, gói `runtime/metrics` hoặc cờ `gctrace`. Đồng thời, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ điều động các goroutine của người dùng tham gia hỗ trợ đánh dấu (GC Mark Assist), khiến chính goroutine xử lý nghiệp vụ bị trễ và đẩy tail latency lên cao.
 
 ### Chiến lược Thu gom Hiện đại: Kiến trúc Green Tea GC trong Go 1.27.1
 
@@ -104,7 +104,7 @@ Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi k
 
 Tham số `GOGC`: Xác định tỷ lệ phần trăm tăng trưởng của heap trước khi chu kỳ GC tiếp theo được kích hoạt (mặc định là `100`, tức kích hoạt khi heap đạt 200% lượng dữ liệu sống). Tăng `GOGC` giúp giảm tần suất GC và tiết kiệm chu kỳ CPU, nhưng đổi lại tiến trình sẽ chiếm dụng nhiều RAM hơn.
 
-Tham số `GOMEMLIMIT`: Được đưa vào từ Go 1.19, thiết lập ngưỡng giới hạn bộ nhớ mềm cho tiến trình. Trong môi trường container hóa (như Kubernetes pod), `GOMEMLIMIT` bảo đảm khi bộ nhớ chạm ngưỡng an toàn, GC sẽ tự động điều chỉnh chu kỳ chạy dày đặc hơn để thu hồi bộ nhớ, ngăn chặn tiến trình bị nhân Linux tiêu diệt bởi cơ chế OOM-Killer.
+Tham số `GOMEMLIMIT`: Được đưa vào từ Go 1.19, thiết lập ngưỡng giới hạn bộ nhớ mềm (soft memory limit) của Go runtime. Runtime cố gắng duy trì mức sử dụng bộ nhớ do Go quản lý quanh ngưỡng này bằng cách kích hoạt GC chủ động hơn khi heap chạm giới hạn, nhưng vẫn cho phép vượt ngưỡng trong trường hợp cần thiết để ngăn chặn thảm họa nghẽn GC liên tục (GC thrashing). Không nên nhầm lẫn `GOMEMLIMIT` với giới hạn cứng cgroup hoặc giới hạn Resident Set Size (RSS) của hệ điều hành. Trong môi trường container (như Kubernetes pod), kỹ sư luôn phải dự phòng khoảng đệm an toàn (headroom) giữa `GOMEMLIMIT` và memory limit của container nhằm chừa chỗ cho bộ nhớ ngoài Go heap, binary code và kernel metadata, thay vì coi đây là một bảo đảm tuyệt đối tránh khỏi OOM-Killer.
 
 ## Đo lường Hiệu năng: Benchmark là Hợp đồng Thực nghiệm
 

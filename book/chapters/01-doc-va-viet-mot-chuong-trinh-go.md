@@ -130,7 +130,7 @@ func main() {
 }
 ~~~
 
-Biến `label` được khai báo bên trong khối lệnh `if`. Khi luồng đọc của trình biên dịch vượt ra ngoài dấu ngoặc nhọn đóng `}`, phạm vi từ vựng của tên `label` kết thúc; định danh này không còn tồn tại trong bảng ký hiệu hiện hành, nên mọi câu lệnh bên ngoài cố truy cập `label` đều bị từ chối với lỗi `undefined: label`.
+Biến `label` được khai báo bên trong khối lệnh `if`. Khi luồng đọc của trình biên dịch vượt ra ngoài dấu ngoặc nhọn đóng `}`, phạm vi từ vựng của tên `label` kết thúc; định danh này nằm ngoài lexical scope tại vị trí đó, nên quá trình phân giải tên (name resolution) của compiler không tìm thấy khai báo hợp lệ, từ chối câu lệnh với thông báo: `undefined: label`.
 
 Tuy nhiên, việc định danh hết phạm vi từ vựng không đồng nghĩa với việc giá trị trong bộ nhớ bị hủy bỏ ngay lập tức. Nếu một giá trị được tham chiếu bởi một con trỏ thoát ra ngoài hàm (escape to heap) hoặc được một closure hàm ẩn danh bắt giữ (captured), giá trị đó sẽ tiếp tục tồn tại trên vùng nhớ heap cho đến khi không còn bất kỳ thực thể nào chạm tới và được bộ thu gom rác dọn dẹp. Ngược lại, nếu giá trị chỉ tồn tại cục bộ và không thoát, trình biên dịch có thể tận dụng thanh ghi hoặc vị trí lưu trữ trên stack frame để tái sử dụng ngay khi ngữ cảnh tính toán kết thúc.
 
@@ -159,7 +159,7 @@ Go là ngôn ngữ định kiểu tĩnh khắt khe. Trình biên dịch không c
 
 Kiểu số nguyên gồm `int` và `uint` có kích thước bit co giãn theo kiến trúc máy tính (32 bit trên máy 32-bit, 64 bit trên máy 64-bit), cùng các kiểu có kích thước bit cố định như `int8`, `int16`, `int32`, `int64` và các bản không dấu tương ứng. Kiểu `byte` là bí danh chính thức của `uint8`, và `rune` là bí danh của `int32` đại diện cho một điểm mã Unicode.
 
-Kiểu số thực gồm `float32` và `float64` tuân theo chuẩn IEEE-754. Trong tính toán hạ tầng, lập trình viên ưu tiên `float64` để giảm thiểu sai số tích lũy dấu phẩy động. Ta không bao giờ so sánh bằng tuyệt đối `==` trên số thực; thay vào đó, ta kiểm tra xem khoảng cách hiệu số tuyệt đối có nằm trong biên sai số cho phép hay không.
+Kiểu số thực gồm `float32` và `float64` tuân theo chuẩn IEEE-754. Toán tử so sánh bằng `==` hoàn toàn hợp lệ với số thực khi tính bằng nhau tuyệt đối (exact equality) chính là hợp đồng bài toán đòi hỏi (chẳng hạn so sánh với `0.0` hoặc hằng số cố định). Tuy nhiên, đối với các giá trị sinh ra từ chuỗi phép tính có sai số làm tròn (rounding error), ta thường cần tiêu chí gần bằng phù hợp với từng miền nghiệp vụ cụ thể, thay vì áp đặt máy móc một giá trị epsilon cố định cho mọi bài toán.
 
 Kiểu logic `bool` chỉ nhận một trong hai giá trị `true` hoặc `false`, đồng hành cùng các toán tử logic gồm phép và `&&`, phép hoặc `||`, và phép phủ định `!`.
 
@@ -381,10 +381,12 @@ Thứ ba, các chuỗi ký tự tượng trưng đã được linker cố địn
 
 Khi gặp lỗi biên dịch, kỹ sư không phỏng đoán mơ hồ mà đối chiếu thông báo lỗi với các tầng phân tích tĩnh của compiler:
 
-| Tình huống kiểm chứng | Thao tác tạo lỗi cú pháp | Thông báo từ Go Compiler | Tầng phân tích của Compiler |
+| Tình huống kiểm chứng | Thao tác tạo lỗi cú pháp | Thông báo thực tế từ Go 1.27.1 Compiler | Tầng phân tích của Compiler |
 | :--- | :--- | :--- | :--- |
-| Biến chưa khai báo | Gán `status = 503` mà chưa từng khai báo biến `status`. | `undefined: status` | Tầng phân tích bảng ký hiệu (Symbol table lookup): Định danh không tồn tại trong scope hiện hành. |
-| Xung đột kiểu dữ liệu | Truyền biến `int` vào hàm đòi hỏi tham số `string`. | `cannot use status (type int) as string value in argument` | Tầng kiểm tra kiểu tĩnh (Type checker): Chữ ký hàm từ chối đối số không tương thích. |
-| Vượt ngoài tầm vực | Gọi `fmt.Println(label)` ở ngoài khối lệnh `if`. | `undefined: label` | Tầng phân tích tầm vực (Lexical scoping): Biến đã bị hủy khỏi bảng ký hiệu khi khối con kết thúc. |
+| Định danh chưa khai báo | Gán `status = 503` mà chưa từng khai báo biến. | `undefined: status` | Tầng phân giải tên (Symbol table lookup): Định danh không tồn tại trong bảng ký hiệu hiện hành. |
+| Vượt ngoài tầm vực từ vựng | Gọi `fmt.Println(label)` ngoài khối `if`. | `undefined: label` | Tầng phân tích tầm vực (Lexical scoping): Tên biến nằm ngoài lexical scope tại điểm gọi. |
+| Khai báo lại không có biến mới | Dùng `x := 10; x := 20` liên tiếp. | `no new variables on left side of :=` | Kiểm tra cú pháp khai báo ngắn: Vế trái của `:=` bắt buộc phải có ít nhất một biến mới. |
+| Sai lệch kiểu tham số hàm | Truyền `int` vào hàm nhận `string`. | `cannot use status (variable of type int) as string value in argument to takesString` | Tầng kiểm tra kiểu tĩnh (`types2`): Chữ ký hàm từ chối đối số không tương thích kiểu. |
+| Phép toán lệch kiểu số học | Thực hiện `a + b` giữa `int` và `int64`. | `invalid operation: a + b (mismatched types int and int64)` | Tầng kiểm tra kiểu tĩnh (`types2`): Cấm phép toán hai ngôi ngầm định giữa hai kiểu khác nhau. |
 
 Thông điệp biên dịch là bản chẩn đoán chính xác về mặt toán học đối với cấu trúc của chương trình. Hiểu được nguyên lý phân tích từ token, cú pháp, kiểu dữ liệu, cho đến biểu diễn thanh ghi giúp bạn tiếp cận mọi sự cố mã nguồn với sự tự tin và chuẩn xác. Chương 2 sẽ tiếp nối hành trình bằng việc giải phẫu sâu cấu trúc dữ liệu linh hoạt và quan trọng bậc nhất của Go: lát cắt (slice) và cơ chế chia sẻ bộ nhớ nền.

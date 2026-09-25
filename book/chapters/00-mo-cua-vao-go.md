@@ -62,10 +62,13 @@ Bộ công cụ Go cung cấp hai lệnh cơ bản với vai trò rõ ràng tron
 
 | Câu lệnh | Hợp đồng công cụ (Tool Contract) | Hành vi tệp trên đĩa | Bối cảnh sử dụng |
 | :--- | :--- | :--- | :--- |
-| `go run [packages/files]` | Biên dịch và thực thi ngay package chính được chỉ định. | Tạo file thực thi trong thư mục làm việc tạm thời của tiến trình biên dịch rồi tự động dọn dẹp, không lưu lại binary trong thư mục hiện hành. | Thử nghiệm nhanh cục bộ, chạy kịch bản tự động hóa hoặc kiểm tra logic tức thời. |
+| `go run [packages/files]` | Biên dịch và thực thi ngay main package được chỉ định (`compiles and runs the named main package`). | Không phát sinh tệp nhị phân trong thư mục làm việc hiện hành. | Thử nghiệm nhanh cục bộ, chạy kịch bản tự động hóa hoặc kiểm tra logic tức thời. |
 | `go build [packages/files]` | Biên dịch mã nguồn và liên kết toàn bộ phụ thuộc thành tệp thực thi độc lập. | Phát sinh trực tiếp tệp nhị phân tại thư mục hiện hành (`main.exe` trên Windows, `main` trên Linux/macOS). | Đóng gói bản phát hành, triển khai môi trường máy chủ và hệ thống production. |
 
-Tệp nhị phân sinh ra từ `go build` là mã máy thực thi trực tiếp trên vi kiến trúc CPU đích. Nó không chạy trên máy ảo như bytecode của Java và không dựa vào trình thông dịch như Python. 
+Về mặt chi tiết triển khai (implementation behavior) của toolchain Go 1.27.1, lệnh `go run` tạo file nhị phân tạm thời trong thư mục làm việc tạm của tiến trình xây dựng (`work directory`), chạy tiến trình từ đó rồi tự động xóa sạch khi kết thúc. Cần phân biệt rõ thư mục tạm này với bộ đệm biên dịch (`GOCACHE`) — nơi Go lưu trữ siêu dữ liệu và tệp đối tượng tái sử dụng giữa các lần biên dịch độc lập.
+
+Tệp nhị phân sinh ra từ `go build` là mã máy thực thi trực tiếp trên vi kiến trúc CPU đích. Nó không chạy trên máy ảo như bytecode của Java và không dựa vào trình thông dịch như Python.
+ 
 
 Một tệp nhị phân Go chứa sẵn toàn bộ mã máy của ứng dụng, siêu dữ liệu kiểu, và toàn bộ Go runtime thu nhỏ (bao gồm Garbage Collector và Scheduler). Trên Linux mục tiêu, khi biên dịch với cờ vô hiệu hóa cgo (`CGO_ENABLED=0`), bộ công cụ sẽ ưu tiên các bộ phân giải thuần Go (như thuần Go DNS resolver thay vì gọi hàm `getaddrinfo` của `glibc`), tạo ra một file thực thi định dạng ELF liên kết tĩnh. Tệp nhị phân tĩnh này có thể đặt vào một container rỗng tối giản (`scratch`) trên Linux cùng kiến trúc phần cứng. Tuy nhiên, nếu chương trình cần xác thực chứng chỉ TLS khi gọi dịch vụ bên ngoài hoặc xử lý múi giờ địa phương theo tên, container vẫn cần cung cấp kho chứng chỉ gốc CA (`ca-certificates`) và dữ liệu múi giờ (`tzdata`), hoặc chương trình phải chủ động nhúng các tài nguyên này thông qua gói thư viện chuẩn tương ứng.
 
