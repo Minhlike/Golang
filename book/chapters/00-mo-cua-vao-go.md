@@ -2,13 +2,13 @@
 
 # Mở cửa vào Go
 
-Bạn không cần thuộc ngay danh sách từ khóa để bắt đầu. Điều cần trước tiên là nhìn một tệp Go và hiểu: phần nào đặt tên cho chương trình, phần nào nạp công cụ từ thư viện, phần nào tạo ra giá trị, và nơi nào chỉ dẫn máy tính bắt đầu thực thi.
+Một tệp mã nguồn Go trước hết chỉ là một chuỗi byte văn bản thuần túy được lưu trữ trên hệ thống tệp. Trình biên dịch không có khả năng suy đoán ý định chủ quan của lập trình viên; nó chỉ vận hành như một cỗ máy trạng thái khắt khe: bóc tách văn bản thành các từ vựng cú pháp (tokens), đối chiếu cấu trúc với ngữ pháp chính thức được quy định trong Go Specification, kiểm tra tính hợp lệ của hệ thống kiểu tĩnh, và chuyển đổi logic đó thành chỉ thị mã máy cho bộ xử lý.
 
-Cuốn sách này không đi bằng các mẩu bài học quá ngắn kiểu liệt kê tính năng rời rạc. Nó đi bằng những lần thay đổi cách nhìn: đọc được mã nguồn trước, nhìn được giá trị chuyển dịch trong bộ nhớ sau, rồi mới tiến dần đến những lúc nhiều goroutine, mạng, dữ liệu và môi trường vận hành thực tế khiến trực giác ban đầu không còn đủ. Khi một chủ đề cần một lỗi, một trace hay một thí nghiệm để thấy rõ bản chất, chương đó sẽ bắt đầu từ chính bằng chứng ấy.
+Để bắt đầu, ta không học thuộc lòng danh sách từ khóa trừu tượng. Việc quan trọng nhất là giải phẫu cấu trúc giải tích của một tệp Go: phần nào xác lập không gian tên của gói, phần nào nạp công cụ từ thư viện chuẩn, và cơ chế nào cho phép runtime điều phối quyền thực thi trước khi câu lệnh đầu tiên trong hàm chính bắt đầu vận hành.
 
-## Chương trình Go nhỏ nhất có thể chạy được
+## Chương trình tối thiểu và Luồng thực thi
 
-Hãy bắt đầu bằng chương trình kinh điển nhất: in một dòng chữ ra màn hình console. Bạn tạo một tệp có tên `main.go`:
+Hãy quan sát một chương trình Go nguyên tử có thể biên dịch và thực thi độc lập, được lưu trong tệp `main.go`:
 
 ~~~go
 package main
@@ -16,70 +16,73 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Chào bạn đến với thế giới Go!")
+	fmt.Println("he thong san sang")
 }
 ~~~
 
-Để chạy chương trình này, bạn mở terminal tại thư mục chứa tệp và gõ lệnh:
+Để chỉ thị bộ công cụ biên dịch và chạy tệp mã nguồn trên môi trường dòng lệnh, ta thực thi:
 
 ~~~bash
 go run main.go
 ~~~
 
-Chương trình sẽ in ra dòng chữ: `Chào bạn đến với thế giới Go!`.
+Chương trình xuất ra dòng chữ `he thong san sang` trên thiết bị đầu ra tiêu chuẩn (stdout). Đằng sau bốn dòng mã ngắn gọn này là toàn bộ chuỗi khép kín của mô hình biên dịch tĩnh và khởi tạo thời gian chạy (runtime bootstrap).
 
-Nhưng đằng sau bốn dòng mã ngắn ngủi này là những nguyên lý nền tảng chi phối toàn bộ các hệ thống lớn viết bằng Go như Docker hay Kubernetes. Ta hãy cùng giải phẫu từng token để xây dựng mô hình tinh thần chuẩn xác ngay từ ngày đầu tiên.
+## Bóc tách Cú pháp Nguyên tử
 
-## Bóc tách cú pháp nguyên tử của một chương trình
+Mỗi thành phần trong chương trình trên đại diện cho một vai trò ngữ pháp không thể thay thế trong đồ thị biên dịch của Go.
 
-Trình biên dịch của Go (Go compiler) không đọc mã nguồn như một đoạn văn xuôi. Nó bóc tách tệp thành các **token** (từ vựng cú pháp), kiểm tra xem các token có xếp đúng ngữ pháp hay không, rồi mới tiến hành sinh mã máy.
+### Khai báo gói và Không gian tên: `package main`
 
-1. **`package main`**:
-   - `package`: Từ khóa mở đầu mọi tệp nguồn Go. Nó khai báo rằng các định danh trong tệp này thuộc về một gói mã nguồn có tên là `main`.
-   - `main`: Tên gói đặc biệt được quy định trong Go Specification. Một chương trình hoàn chỉnh có thể chạy được (complete executable program) bắt buộc phải nằm trong gói có tên là `main` và phải chứa hàm `func main()`. Nếu thiếu một trong hai điều kiện này, trình biên dịch sẽ không tạo ra tệp thực thi độc lập (executable binary).
+Từ khóa `package` là chỉ thị bắt buộc mở đầu mọi tệp nguồn Go hợp lệ. Nó xác định rằng mọi định danh nằm trong tệp này thuộc về một đơn vị biên dịch có tên là `main`.
 
-2. **`import "fmt"`**:
-   - `import`: Từ khóa nạp gói thư viện bên ngoài vào tệp hiện tại.
-   - `"fmt"`: Tên gói thư viện chuẩn chuyên trách định dạng nhập xuất dữ liệu (Format I/O). Đường dẫn gói được đặt trong cặp dấu ngoặc kép.
+Theo đặc tả của ngôn ngữ Go, tên gói `main` mang một đặc quyền kiến trúc duy nhất: nó báo hiệu cho trình biên dịch biết rằng đây là một gói hoàn chỉnh có thể phát sinh tệp thực thi độc lập (executable binary), thay vì một thư viện liên kết tĩnh dùng chung. Một tệp thuộc gói khác gói `main` sẽ chỉ được biên dịch thành tệp đối tượng (object file) phục vụ việc liên kết.
 
-3. **`func main() { ... }`**:
-   - `func`: Từ khóa định nghĩa một hàm.
-   - `main`: Tên hàm khởi điểm của toàn bộ chương trình. Khi chương trình khởi chạy, quá trình khởi tạo diễn ra trước: các biến cấp gói được khởi tạo và các hàm `init()` (nếu có) được thực thi tuần tự theo đồ thị phụ thuộc. Sau khi giai đoạn khởi tạo hoàn tất, Go runtime mới chính thức gọi hàm `main()` để bắt đầu thực thi logic chính. Hàm `main` khởi điểm không nhận tham số và không trả về giá trị.
-   - `()`: Cặp ngoặc đơn chứa danh sách tham số (ở đây để trống vì hàm không nhận tham số).
-   - `{ ... }`: Khối lệnh bao bọc thân hàm. Các câu lệnh bên trong cặp ngoặc nhọn này sẽ được thực thi tuần tự từ trên xuống dưới.
+### Nhập thư viện chuẩn: `import "fmt"`
 
-4. **`fmt.Println(...)`**:
-   - `fmt`: Tên của gói thư viện mà ta đã nạp ở phần `import`.
-   - `.`: Toán tử truy cập định danh được xuất (exported identifier). Trong Go, mọi hàm hoặc biến bắt đầu bằng chữ cái in hoa (như `Println`) đều được xuất công khai để các gói khác sử dụng.
-   - `Println`: Tên hàm in ra một chuỗi văn bản và tự động ngắt dòng ở cuối.
-   - `"Chào bạn đến với thế giới Go!"`: Một chuỗi ký tự nguyên văn (string literal) biểu diễn dữ liệu cố định trong bộ nhớ.
+Từ khóa `import` nạp giao diện và kiểu dữ liệu từ gói thư viện bên ngoài vào phạm vi tệp hiện tại. Định danh chuỗi `"fmt"` trỏ tới gói thư viện định dạng dữ liệu vào ra (Format I/O) thuộc Go Standard Library.
 
-## Biên dịch mã máy: `go run` khác `go build` thế nào?
+Trình biên dịch Go thiết lập một quy tắc tối thượng về tối ưu hóa cây phụ thuộc: nếu một gói được nạp qua `import` nhưng không có bất kỳ định danh nào của gói đó được tham chiếu trong mã nguồn, quá trình biên dịch sẽ lập tức bị hủy bỏ với thông báo lỗi. Quy tắc này triệt tiêu hoàn toàn mã rác và ngăn chặn tình trạng phình to cây phụ thuộc trong các dự án lớn.
 
-Khi làm việc với Go, bạn sẽ thường xuyên sử dụng hai câu lệnh cốt lõi của bộ công cụ:
+### Hàm khởi điểm và Giai đoạn Runtime Bootstrap: `func main()`
 
-| Lệnh | Cơ chế thực hiện | Mục đích sử dụng |
-| :--- | :--- | :--- |
-| `go run main.go` | Biên dịch mã nguồn và chạy trực tiếp chương trình mà không tạo tệp nhị phân trong thư mục làm việc hiện tại. | Thử nghiệm nhanh, viết mã thử nghiệm, kiểm tra logic cục bộ. |
-| `go build main.go` | Biên dịch toàn bộ mã nguồn thành tệp thực thi mã máy độc lập (`main.exe` trên Windows hoặc `main` trên Linux/macOS theo nền tảng mục tiêu). | Triển khai lên máy chủ, đóng gói container, chuyển giao sản phẩm. |
+Từ khóa `func` định nghĩa một hàm. Tên hàm `main` đại diện cho điểm nhập cuộc thực thi logic của người dùng. Hàm `main` khởi điểm không nhận bất kỳ tham số nào và không trả về giá trị.
 
-Tệp thực thi do `go build` tạo ra là mã máy thực thi (native machine code). Nó không cần máy ảo (như JVM trong Java) và không cần trình thông dịch (như Python). Tuy nhiên, một tệp nhị phân được biên dịch cho một hệ điều hành và kiến trúc CPU cụ thể (ví dụ Windows amd64) sẽ không thể chạy trực tiếp trên nền tảng khác (như Linux arm64) nếu không biên dịch chéo qua các biến môi trường `GOOS` và `GOARCH`, hoặc nếu chương trình phụ thuộc vào các thư viện C liên kết động (`cgo`). Khi biên dịch thuần Go tĩnh (`CGO_ENABLED=0`), bạn có thể sao chép tệp nhị phân sang môi trường đích tương ứng và chạy mà không cần cài đặt Go.
+Tuy nhiên, hàm `main` của người dùng không phải là thứ đầu tiên chạy khi tiến trình được tải vào bộ nhớ hệ điều hành. Trước khi lệnh đầu tiên trong `func main()` được kích hoạt, Go runtime phải trải qua giai đoạn khởi tạo nền tảng (runtime bootstrap): thiết lập bộ cấp phát bộ nhớ (`mallocgc`), khởi tạo bộ điều phối luồng (`schedinit`), tạo goroutine chính đầu tiên, gán giá trị cho toàn bộ các biến ở cấp độ gói, và gọi tuần tự toàn bộ các hàm khởi tạo `init()` theo thứ tự đồ thị phụ thuộc giữa các package. Chỉ khi mọi ràng buộc khởi tạo đó hoàn tất, runtime mới chính thức chuyển quyền điều khiển sang `main.main()`.
 
-## Vòng lặp phản hồi: Dự đoán → Chạy → Giải thích
+### Truy xuất định danh công khai và Xuất dữ liệu: `fmt.Println`
 
-Học lập trình không phải là học thuộc lòng quy tắc, mà là rèn luyện phản xạ dự đoán hành vi của hệ thống. Trước khi gõ lệnh chạy, hãy tự hỏi: *"Nếu mình đổi một token thì điều gì sẽ xảy ra?"*
+Định danh `fmt` tham chiếu tới gói thư viện đã nạp. Toán tử dấu chấm `.` là toán tử truy xuất thành viên thuộc gói.
+
+Trong Go, quy tắc xuất khẩu định danh (export rule) được mã hóa trực tiếp vào cú pháp: mọi hàm, biến hoặc kiểu dữ liệu bắt đầu bằng chữ cái in hoa (như `Println`) đều được công khai để bên ngoài sử dụng. Ngược lại, những định danh bắt đầu bằng chữ cái in thường là riêng tư cục bộ bên trong gói. Hàm `Println` nhận chuỗi ký tự nguyên văn `"he thong san sang"` và phát tín hiệu ghi dữ liệu ra mô tả tệp số 1 (stdout) của hệ điều hành.
+
+## Biên dịch Mã máy: Phân biệt `go run` và `go build`
+
+Bộ công cụ Go cung cấp hai lệnh cơ bản nhưng khác biệt hoàn toàn về cơ chế vận hành hệ thống:
+
+| Câu lệnh | Bản chất thực thi của Toolchain | Đầu ra trên đĩa | Bối cảnh sử dụng |
+| :--- | :--- | :--- | :--- |
+| `go run main.go` | Biên dịch mã nguồn thành nhị phân tạm trong thư mục đệm hệ thống (`GOCACHE`), thực thi ngay tiến trình rồi dọn dẹp. | Không để lại tệp nhị phân trong thư mục làm việc hiện tại. | Thử nghiệm nhanh cục bộ, kiểm tra cú pháp và logic tức thời. |
+| `go build main.go` | Biên dịch và liên kết toàn bộ mã nguồn cùng Go runtime thành tệp thực thi mã máy độc lập cho hệ điều hành đích. | Sinh tệp nhị phân trực tiếp (`main.exe` trên Windows, `main` trên Linux/macOS). | Triển khai hạ tầng, đóng gói container, phát hành sản phẩm. |
+
+Tệp nhị phân sinh ra từ `go build` là mã máy thực thi trực tiếp trên vi kiến trúc CPU đích. Nó không chạy trên máy ảo như bytecode của Java và không dựa vào trình thông dịch như Python. 
+
+Một tệp nhị phân Go chứa sẵn toàn bộ mã máy của ứng dụng, siêu dữ liệu kiểu, và toàn bộ Go runtime thu nhỏ (bao gồm Garbage Collector và Scheduler). Khi biên dịch với cờ liên kết tĩnh hoàn toàn (`CGO_ENABLED=0`), tệp nhị phân hoàn toàn độc lập với các thư viện `libc` của hệ điều hành, cho phép sao chép trực tiếp vào một container rỗng (`scratch`) và vận hành mà không cần bất kỳ công cụ phụ trợ nào.
+
+## Vòng lặp Phản hồi: Giả thuyết, Đo đạc và Giải thích
+
+Học kỹ thuật hệ thống đòi hỏi thói quen xây dựng mô hình dự đoán trước khi thực thi lệnh. Thay vì sửa mã nguồn một cách ngẫu nhiên, kỹ sư luôn đặt câu hỏi: nếu ta làm sai lệch một quy tắc ngữ pháp hoặc kiểu dữ liệu, trình biên dịch sẽ phát hiện lỗi ở tầng phân tích nào?
 
 ![Vòng lặp phản hồi khi học và viết Go](../../assets/diagrams/feedback-loop.png)
 
-@figure Vòng lặp phản hồi giả thuyết - đo đạc - sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là người cộng tác phản hồi nhanh nhất cho dự đoán của bạn.
+@figure Vòng lặp phản hồi giả thuyết - đo đạc - sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là công cụ kiểm định tĩnh sớm nhất cho các dự đoán của bạn.
 
-Hãy làm thử hai thí nghiệm nhỏ ngay bây giờ:
+Bảng dưới đây minh họa ba thí nghiệm nhỏ về ranh giới kiểm tra tĩnh của Go compiler:
 
-1. **Thí nghiệm 1:** Đổi `package main` thành `package hello`, rồi gõ `go run main.go`.
-   - *Kết quả:* Compiler từ chối chạy và báo lỗi: `package command-line-arguments is not a main package`. Trình biên dịch khẳng định rằng nó không thể tìm thấy điểm khởi đầu của chương trình nếu gói không mang tên `main`.
-2. **Thí nghiệm 2:** Thêm dòng `import "time"` nhưng không dùng hàm nào của gói `time` trong thân hàm `main`.
-   - *Kết quả:* Compiler báo lỗi ngay tại lúc biên dịch: `imported and not used: "time"`.
+| Thí nghiệm kiểm chứng | Thao tác thay đổi mã nguồn | Phản hồi từ trình biên dịch | Cơ chế phân tích của Compiler |
+| :--- | :--- | :--- | :--- |
+| Đổi tên gói khởi điểm | Đổi `package main` thành `package worker`, sau đó chạy `go run main.go`. | `package command-line-arguments is not a main package` | Giai đoạn phân tích ngữ nghĩa (semantic analysis) xác định gói đích không thỏa mãn điều kiện tạo tệp thực thi độc lập. |
+| Nạp thư viện không sử dụng | Thêm dòng `import "time"` nhưng không gọi hàm nào của gói `time`. | `imported and not used: "time"` | Trình phân tích AST kiểm tra việc sử dụng định danh; từ chối mọi gói thừa nhằm giữ cây phụ thuộc tinh gọn. |
+| Khai báo biến cục bộ thừa | Khai báo `workerID := 1` trong thân hàm `main` nhưng không đọc lại. | `workerID declared and not used` | Phân tích dòng dữ liệu xác định biến cục bộ không đóng góp vào kết quả chương trình, phát hiện mã chết ngay lúc biên dịch. |
 
-Triết lý của Go là không khoan nhượng với mã thừa. Một gói thư viện được nạp mà không dùng (`imported and not used`), hoặc một biến cục bộ trong thân hàm được khai báo mà không đọc (`declared and not used`) đều dẫn đến lỗi biên dịch. (Ngược lại, các khai báo biến ở cấp gói không gây lỗi biên dịch nếu chưa được dùng). Sự khắt khe này giúp các dự án hàng triệu dòng mã của Go luôn tinh gọn, sạch sẽ và biên dịch với tốc độ chớp nhoáng.
-
-> **Cách đọc cuốn sách này:** Đừng lướt qua các khối mã nguồn. Mỗi khi gặp một đoạn mã, hãy thử nói thành lời nó tạo ra giá trị gì, giá trị đó được lưu trữ ở đâu và điều gì sẽ thay đổi nếu ta thay thế một toán tử. Bây giờ, cánh cửa đã mở, ta hãy bước vào Chương 1 để học cách đọc và viết những chương trình Go thực thụ.
+Sự khắt khe của trình biên dịch không phải là sự phiền toái ngẫu nhiên. Bằng cách ngăn chặn mã thừa, biến chết và sai lệch không gian tên ngay tại thời điểm biên dịch, Go loại bỏ phần lớn các lỗi vận hành tiềm ẩn trước khi chương trình có cơ hội chạm tới môi trường production. Chương tiếp theo sẽ dẫn dắt bạn đi sâu vào từng khối xây dựng cốt lõi của một chương trình Go: định danh, kiểu dữ liệu, phạm vi biến, và biểu diễn hợp ngữ thực tế của máy tính.
