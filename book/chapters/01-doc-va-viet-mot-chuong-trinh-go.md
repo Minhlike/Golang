@@ -106,7 +106,9 @@ Khai báo ngắn trong thân hàm bằng `:=`: Cú pháp `name := value` kết h
 | Chuỗi ký tự (`string`) | `""` | Chuỗi rỗng với độ dài bằng 0. |
 | Con trỏ, slice, map, channel, func, interface | `nil` | Giá trị rỗng không trỏ tới bất kỳ thực thể dữ liệu nào. |
 
-Trong các bản phân phối trình biên dịch Go chuẩn hiện tại trên kiến trúc x86 và ARM, việc cấp phát biến chưa khởi tạo được thực hiện bằng cách điền sạch các byte bộ nhớ tương ứng về số 0. Tuy nhiên, lập trình viên cần hiểu zero value là một cam kết ngữ nghĩa ở cấp độ đặc tả ngôn ngữ, bảo đảm an toàn dữ liệu và loại bỏ hoàn toàn các lỗi đọc giá trị rác bộ nhớ ngẫu nhiên (uninitialized memory reads) thường gặp trong các ngôn ngữ không có bộ nhớ an toàn.
+Đặc tả ngôn ngữ Go bảo đảm mỗi biến chưa được khởi tạo tường minh luôn nhận zero value tương ứng với kiểu dữ liệu của nó (Zero Value = Language Guarantee). Cam kết ngữ nghĩa này loại bỏ hoàn toàn nguy cơ đọc phải giá trị rác bộ nhớ ngẫu nhiên (uninitialized memory reads) thường thấy trong các ngôn ngữ không quản lý an toàn bộ nhớ.
+
+Cam kết ngữ nghĩa này không đồng nghĩa với việc mỗi biến đều bắt buộc phải chiếm một ô nhớ vật lý trong RAM và trình biên dịch luôn phải thực hiện lệnh memset xóa sạch các byte về số 0. Tùy thuộc vào chiến lược tối ưu hóa, trình biên dịch có thể xóa giá trị trên thanh ghi CPU, gấp hằng số (constant-fold), hoặc thậm chí loại bỏ hoàn toàn việc cấp phát lưu trữ nếu biến không còn được dùng đến. Việc xóa các byte bộ nhớ về 0 chỉ là một cơ chế triển khai (implementation mechanism) trong các trường hợp vùng nhớ lưu trữ thực sự được hiện thực hóa (materialized) trên stack frame hoặc heap.
 
 Khi sử dụng toán tử khai báo ngắn, vế trái bắt buộc phải giới thiệu ít nhất một biến mới vào phạm vi hiện tại. Phép gán thuần túy `=` chỉ ghi đè giá trị lên biến đã tồn tại và không sinh ra định danh mới.
 
@@ -197,7 +199,7 @@ Gói thư viện chuẩn `fmt` cung cấp ba cơ chế xuất dữ liệu chủ 
 | :---: | :--- | :--- |
 | `%v` | Biểu diễn giá trị mặc định theo kiểu dữ liệu tự nhiên. | `fmt.Printf("%v", 503)` xuất `503`. |
 | `%+v` | Mở rộng biểu diễn struct kèm theo tên từng trường dữ liệu. | `fmt.Printf("%+v", req)` xuất `{Path:/ ID:1}`. |
-| `%#v` | Biểu diễn giá trị dưới dạng cú pháp mã nguồn Go hợp lệ. | `fmt.Printf("%#v", "ok")` xuất `"ok"`. |
+| `%#v` | Biểu diễn theo cú pháp Go của giá trị (Go-syntax representation); không phải mọi kết quả đều là biểu thức compile trực tiếp được. | `fmt.Printf("%#v", "ok")` xuất `"ok"`. |
 | `%T` | Xuất tên định danh của kiểu dữ liệu. | `fmt.Printf("%T", 503)` xuất `int`. |
 | `%t` | Xuất giá trị logic (`true` hoặc `false`). | `fmt.Printf("%t", true)` xuất `true`. |
 | `%d` | Xuất số nguyên theo hệ thập phân cơ số 10. | `fmt.Printf("%d", 255)` xuất `255`. |
@@ -205,7 +207,7 @@ Gói thư viện chuẩn `fmt` cung cấp ba cơ chế xuất dữ liệu chủ 
 | `%f` | Xuất số thực dấu phẩy động (có thể định dạng độ rộng như `%.2f`). | `fmt.Printf("%.2f", 3.14159)` xuất `3.14`. |
 | `%s` | Xuất chuỗi ký tự hoặc mảng byte dưới dạng văn bản. | `fmt.Printf("%s", "ready")` xuất `ready`. |
 | `%q` | Xuất chuỗi được bao bọc an toàn trong cặp dấu ngoặc kép. | `fmt.Printf("%q", "ready")` xuất `"ready"`. |
-| `%p` | Xuất địa chỉ bộ nhớ thực tế dưới dạng con trỏ hệ thập lục phân. | `fmt.Printf("%p", &status)` xuất `0xc000014088`. |
+| `%p` | Xuất giá trị con trỏ ở dạng thập lục phân có tiền tố 0x (địa chỉ trong không gian địa chỉ tiến trình, không phải địa chỉ RAM vật lý). | `fmt.Printf("%p", &status)` xuất `0xc000014088`. |
 
 ## Điều khiển Luồng: Rẽ nhánh và Lặp
 
@@ -303,9 +305,9 @@ fmt.Println("Cong mang:", port)
 
 ## Nhập môn Con trỏ: Địa chỉ Ô nhớ và Phép Giải Tham chiếu
 
-Biến là tên gọi đại diện cho một vị trí lưu trữ trong bộ nhớ. Con trỏ (pointer) là một giá trị đặc biệt chứa địa chỉ bộ nhớ của một biến khác.
+Biến là tên gọi đại diện cho một vị trí lưu trữ giá trị. Con trỏ (pointer) là một giá trị chứa địa chỉ trong không gian địa chỉ của tiến trình trỏ tới một vị trí lưu trữ khác.
 
-Toán tử lấy địa chỉ `&` trích xuất địa chỉ ô nhớ của biến đứng sau nó. Toán tử giải tham chiếu `*` đặt trước một biến con trỏ để đọc hoặc ghi đè giá trị tại ô nhớ mà con trỏ đang tham chiếu.
+Toán tử lấy địa chỉ `&` trích xuất giá trị con trỏ trỏ tới biến đứng sau nó. Toán tử giải tham chiếu `*` đặt trước một biến con trỏ để đọc hoặc ghi đè giá trị tại vị trí mà con trỏ đang tham chiếu. Giá trị con trỏ in ra qua `%p` đại diện cho địa chỉ trong không gian địa chỉ ảo của tiến trình theo quy ước của nền tảng, không phải địa chỉ RAM vật lý.
 
 ~~~go
 func main() {
