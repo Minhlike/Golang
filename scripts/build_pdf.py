@@ -389,9 +389,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             flush_paragraph()
             in_references = True
             continue
-        if line.strip() == "<!-- pagebreak -->":
-            flush_paragraph()
-            story.append(PageBreak())
+        if line.strip().startswith("<!--") and line.strip().endswith("-->"):
+            if line.strip() == "<!-- pagebreak -->":
+                flush_paragraph()
+                story.append(PageBreak())
             continue
         image = re.fullmatch(r"!\[[^]]*\]\(([^)]+)\)", line)
         if image:

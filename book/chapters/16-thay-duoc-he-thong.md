@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 16 — Thấy được hệ thống
 
 Sau Chương 15, `opsprobe` có thể kể lại một lần chạy: command nào được gọi, exit code nào quay về, deadline có hết không. Nhưng một incident hiếm khi chỉ hỏi về một lần chạy. “Từ 9 giờ đến giờ dependency có đang tệ dần không?”, “lỗi nằm ở một target hay mọi target?”, “request chậm đi qua những bước nào?” là những câu hỏi khác hẳn. Nếu chỉ giữ một dòng log cuối cùng, ta có chi tiết mà không có xu hướng. Nếu chỉ giữ một biểu đồ tổng, ta có xu hướng mà mất câu chuyện của lần fail cụ thể.

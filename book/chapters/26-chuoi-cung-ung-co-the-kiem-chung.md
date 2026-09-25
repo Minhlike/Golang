@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng
 
 Trong phát triển phần mềm hiện đại, ứng dụng của bạn hiếm khi được viết từ con số không. Một dịch vụ Go thông thường có thể chỉ chứa vài nghìn dòng code nghiệp vụ, nhưng lại kéo theo hàng chục thư viện bên ngoài (dependencies), hàng trăm module gián tiếp và vận hành bên trong một container image chứa hàng nghìn gói nhị phân của hệ điều hành.

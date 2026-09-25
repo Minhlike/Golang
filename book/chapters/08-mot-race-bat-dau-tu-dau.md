@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Chương 8 — Một race bắt đầu từ đâu
 
 Một chương trình kiểm tra nhiều endpoint thường có một người thu thập kết quả và một người trình bày. Bản chạy thử có thể luôn in đúng trên laptop, nên ta rất dễ gọi nó là “chạy song song được”. Nhưng kết quả đúng trong một lượt không tạo ra một lời hứa đúng cho lượt kế tiếp.

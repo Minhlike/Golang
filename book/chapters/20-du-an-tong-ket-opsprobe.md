@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành
 
 Một chương trình Go không bắt đầu bằng Kubernetes hay kiến trúc microservice phức tạp. Nó bắt đầu từ một câu hỏi thực tế rất khiêm tốn: một endpoint dependency của hệ thống hiện còn sống không, và nếu nó chết thì chết ở chặng nào? Ở Chương 1, ta đã viết những dòng lệnh đầu tiên để đọc một URL. Trải qua mười chín chương, câu hỏi ấy dần được đặt vào những áp lực khắc nghiệt nhất của thực tế: áp lực đồng thời, ranh giới lỗi, tính nguyên tử của dữ liệu, rò rỉ socket mạng, khả năng quan sát không suy đoán, và kỷ luật phát hành an toàn ra production.

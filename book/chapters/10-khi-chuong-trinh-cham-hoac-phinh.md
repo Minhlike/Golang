@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Chương 10 — Khi chương trình chậm hoặc phình
 
 Một chương trình bị gọi là “chậm” rất dễ kéo theo một cuộc săn tối ưu hóa vô ích. Có người thay `fmt` bằng nối chuỗi, có người thêm goroutine, có người nhìn một dòng trông có vẻ đắt rồi sửa nó. Mọi thay đổi ấy có thể làm code khó đọc hơn mà vẫn không chạm vào thời gian người dùng đang chờ.

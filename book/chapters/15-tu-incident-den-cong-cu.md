@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_BRIDGE -->
+
 # Chương 15 — Từ incident đến công cụ
 
 Một incident nhỏ thường không thiếu lệnh để gõ. Thiếu là một lời kể đáng tin về điều lệnh đó đã làm. Một người vận hành có thể chạy `curl`, `nslookup`, `git`, hay một tool nội bộ rồi nhìn thấy một dòng lỗi. Nhưng dòng lỗi ấy không nói command nào đã thật sự được chạy, nó có nhận đủ thời gian không, có in chẩn đoán ra `stderr` không, hay process kết thúc bằng exit status nào. Gõ lại cùng một lệnh nhiều lần chỉ làm lịch sử mờ hơn.

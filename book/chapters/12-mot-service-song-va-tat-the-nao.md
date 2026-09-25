@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_BRIDGE -->
+
 # Chương 12 — Một service sống và tắt thế nào
 
 Một service nhỏ thường bắt đầu bằng `http.ListenAndServe(":8080", handler)`. Dòng đó đủ để mở port, nhưng chưa đủ để nói service đang hứa điều gì với người gọi, với deploy system, hay với người vận hành. Khi process nhận tín hiệu dừng, nếu `main` kết thúc ngay thì request đang xử lý bị cắt. Khi một client gửi header chậm, nếu server không có policy đọc header thì connection có thể giữ tài nguyên lâu hơn dự kiến. Khi handler nhận JSON lạ và cứ cố đoán, boundary giữa input không tin cậy và state nội bộ đã biến mất.

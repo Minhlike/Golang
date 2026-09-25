@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền
 
 Trong bức tranh công nghệ hiện đại, các mô hình ngôn ngữ lớn (LLMs) và Tác tử Trí tuệ Nhân tạo (AI Agents) không còn dừng lại ở vai trò trợ lý hỏi đáp thụ động. Các hệ thống vận hành tự động (AIOps) thế hệ mới bắt đầu giao phó cho tác tử quyền điều tra các cảnh báo từ hệ thống giám sát Prometheus, truy vấn Kubernetes API để thu thập nhật ký của các Pod gặp lỗi vòng lặp sập đổ (`CrashLoopBackOff`), gọi AWS SDK kiểm tra dung lượng máy chủ, và thậm chí kích hoạt các hành động khắc phục sự cố như khởi động lại tiến trình dịch vụ hoặc điều phối lưu lượng mạng.

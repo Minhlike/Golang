@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Mở cửa vào Go
 
 Bạn không cần thuộc ngay danh sách từ khóa để bắt đầu. Điều cần trước tiên là nhìn một tệp Go và hiểu: phần nào đặt tên cho chương trình, phần nào nạp công cụ từ thư viện, phần nào tạo ra giá trị, và nơi nào chỉ dẫn máy tính bắt đầu thực thi.

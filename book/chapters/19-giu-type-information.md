@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Chương 19 — Giữ type information khi abstraction lớn lên
 
 Một service có hai danh sách target: tên miền và port. Cả hai đều cần cùng một thao tác: giữ lại phần tử đầu tiên của mỗi giá trị, theo đúng thứ tự ban đầu. Nếu viết thẳng, ta có hai function gần như giống nhau. Sự lặp này chưa nguy hiểm; nó làm câu hỏi thiết kế hiện ra rõ: phần nào trong operation thực sự khác theo type, và phần nào là quy luật chung?

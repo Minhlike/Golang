@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Chương 9 — Dòng công việc có áp suất
 
 Mô hình tinh thần của chương này là **một send trên channel là một lần bàn giao còn dang dở cho tới khi bên nhận nhận nó, buffer giữ nó, hoặc người gửi chọn dừng**. Channel không biến công việc thành “song song an toàn” chỉ bằng một dấu `<-`. Nó buộc ta viết rõ ai còn nợ ai một giá trị, ai báo không còn giá trị nào nữa, và điều gì xảy ra khi người nhận không còn chờ.

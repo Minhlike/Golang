@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 22 — Từ watch đến một controller Kubernetes thật
 
 Trong Chương 21, chúng ta đã tự tay dựng một vòng lặp điều hòa tối giản bằng Mutex, Channel và slice trong bộ nhớ. Mô hình đó giúp ta nắm vững tinh thần cốt lõi: *quan sát thực tế, đo lường sai lệch và hội tụ về trạng thái mong muốn*. Nhưng khi bước ra hạ tầng phân tán thật — nơi hàng chục nghìn Pod, Node và Service biến đổi liên tục qua mạng — việc dùng một channel thô để lắng nghe sự kiện sẽ nhanh chóng dẫn đến thảm họa.

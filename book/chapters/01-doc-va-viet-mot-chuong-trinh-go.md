@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_CORE -->
+
 # Chương 1 — Đọc và viết một chương trình Go
 
 Một tệp mã nguồn Go có cấu trúc hình học rất chặt chẽ: phần đầu xác định tệp thuộc về gói nào, vài dòng khai báo đặt ở cấp tệp, rồi đến các khối lệnh lồng nhau bằng những cặp ngoặc nhọn. Ta sẽ bắt đầu từ một chương trình thực tế: nó tiếp nhận một mã trạng thái HTTP của dịch vụ mạng, xác định tình trạng hoạt động và in ra thông báo chẩn đoán cho kỹ sư vận hành. Ví dụ này có đủ dữ liệu, phép tính, nhánh rẽ và thông điệp thực thi, nhưng không bị che lấp bởi sự phức tạp của một dự án lớn.

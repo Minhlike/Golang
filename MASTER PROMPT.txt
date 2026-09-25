@@ -2164,7 +2164,54 @@ BÀI HỌC VỀ TÍNH CHÍNH XÁC VÀ KIỂM CHỨNG (VERIFICATION LESSONS LEARN
    - Mở đầu chương bằng vấn đề thật, câu hỏi trung tâm và mental model (không mở bằng bullet "Bạn sẽ học").
    - Kết thúc chương bằng đúc kết kỹ thuật điềm đạm và giới hạn thực tế (không kết bằng "Bạn đã chinh phục").
 
+==================================================
+41. FOUNDATION DEPTH CONTRACT
+==================================================
+
+Sách chính thức xác nhận thay đổi định hướng chiến lược so với các phiên bản MASTER PROMPT trước:
+- Trước đây: Khối kiến thức nền tảng (Foundation) được thiết kế ở mức độ vừa đủ để học viên nhanh chóng tiến lên các chương thực chiến Systems và DevOps/SRE.
+- Từ bây giờ: Khối nền tảng phải đủ sâu sắc, khúc chiết và chặt chẽ để người học có thể lần vết từ cú pháp Go bề mặt xuống tận các pass của trình biên dịch (compiler), biểu diễn trung gian (IR/SSA), cơ chế cấp phát và điều phối của runtime, cho tới các chỉ thị máy (machine instructions) thực tế ở những nơi điều đó mang lại giá trị sư phạm.
+
+CÁC LUẬT VĨNH VIỄN CỦA BẢN GIAO KÈO NỀN TẢNG:
+
+1. FOUNDATION-FIRST DEPTH:
+   Khối chương nền tảng là linh hồn kiến trúc của cuốn sách. Không bao giờ được xem nền tảng là phần nhập môn giản lược; mỗi chương phải xây dựng một mô hình tư duy (mental model) vững chắc từ gốc rễ máy tính.
+
+2. FIRST-PRINCIPLES EXPLANATION:
+   Mọi khái niệm ngôn ngữ phải được phân tích từ các nguyên lý sơ cấp: cấu trúc bộ nhớ cache L1/L2/L3, cache line, thanh ghi CPU, trang nhớ ảo của hệ điều hành, chuyển đổi ngữ cảnh, và chi phí lời gọi hệ thống.
+
+3. SOURCE-TO-MACHINE EVIDENCE:
+   Khi khảo sát mã nguồn, phải vạch rõ đường đi từ Go source qua phân tích từ vựng, cú pháp, kiểm tra kiểu, cây cú pháp trừu tượng, SSA, phát sinh mã assembly Plan 9, liên kết nhị phân, tới các chỉ thị mã máy thực thi.
+
+4. CRITICAL GO ANALYSIS:
+   Không dừng ở việc nêu Go vận hành ra sao, mà phải trả lời tường tận tại sao các tác giả ngôn ngữ lại chọn thiết kế đó, họ đánh đổi điều gì, và điểm gãy của thiết kế xuất hiện ở đâu.
+
+5. NO LANGUAGE FANBOYISM:
+   Nghiêm cấm thái độ thần thánh hóa Go. Mọi so sánh ngôn ngữ phải đặt trong bối cảnh khối lượng công việc (workload), ràng buộc tài nguyên, mô hình an toàn bộ nhớ và chi phí bảo trì thực tế. Tuyệt đối không xếp hạng ngôn ngữ hay tuyên bố người chiến thắng chung chung.
+
+6. NO AI-SLOP:
+   Loại bỏ hoàn toàn các câu từ sáo rỗng, kịch tính hóa vô căn cứ hoặc các mẫu câu khuôn sáo của LLM. Mọi câu văn trong sách phải truyền tải thông tin kỹ thuật thực chất hoặc dẫn dắt lập luận trực diện.
+
+7. NO AI-BIAS:
+   Không lặp lại các ngộ nhận phổ biến như "Go nhanh hơn C++", "goroutine không tốn bộ nhớ", "channel luôn tốt hơn mutex", hoặc "GC không gây trễ". Mọi luận điểm phải được thử thách qua các trường hợp phản ví dụ (counterexamples).
+
+8. ZERO BULLET IN MAIN MANUSCRIPT:
+   Chính văn phân tích trong các chương sách (book/chapters) tuyệt đối không dùng danh sách gạch đầu dòng (unordered bullets) hoặc danh sách số (numbered list) làm công cụ giải thích kiến thức. Mọi lập luận phải được thể hiện bằng văn xuôi liên tục (continuous prose), bảng đối chiếu, hoặc sơ đồ kỹ thuật.
+
+9. VIETNAMESE-DOMINANT PROSE:
+   Văn phong chính văn hướng tới chuẩn mực ~99% tiếng Việt chuyên nghiệp, mạch lạc, đanh thép. Chỉ bảo lưu nguyên dạng các định danh mã nguồn, tên thanh ghi, cờ biên dịch và thuật ngữ kỹ thuật lõi không thể thay thế.
+
+10. EVIDENCE-BEFORE-IMPLEMENTATION-CLAIM:
+    Không đưa ra bất kỳ khẳng định nào về hành vi bên trong của trình biên dịch hay runtime mà không có bằng chứng từ log biên dịch thực tế (`-m`, `-S`, objdump) hoặc trích dẫn trực tiếp mã nguồn GOROOT hiện hành.
+
+11. IMPLEMENTATION-DETAILS-MUST-BE-VERSIONED:
+    Mọi chi tiết triển khai nội bộ của runtime và compiler phải gắn rõ phiên bản Go toolchain (ví dụ Go 1.27.1), hệ điều hành và kiến trúc phần cứng mục tiêu (ví dụ windows/amd64 hoặc linux/amd64).
+
+12. NON-FOUNDATION-CONTENT-SHOULD-NOT-DUPLICATE-FOUNDATIONS:
+    Các chương ứng dụng và hệ thống (Ch11–Ch28) không được giải thích lại từ đầu các kiến thức nền tảng đã được hoàn thiện ở khối Foundation; thay vào đó, chỉ giữ lại các hệ quả đặc thù miền và sử dụng tham chiếu chéo về chương nền tảng tương ứng.
+
 QUY TẮC DỪNG:
 Sau khi hoàn thành Chương 28, DỪNG LẠI. Tuyệt đối không tự ý viết Chương 29.
+
 
 

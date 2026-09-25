@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 18 — Đưa thay đổi ra production
 
 Sau Chương 17, ta có thể đặt một artifact có digest vào desired state. Nhưng một digest không tự trả lời artifact ấy đến từ source nào, đã đi qua test nào, job nào có quyền deploy, hay rollout xong có nghĩa gì với người dùng. Một pipeline xanh chỉ là tín hiệu về những bước nó đã chạy; nếu các bước không nói rõ contract, màu xanh tạo cảm giác an toàn mạnh hơn bằng chứng thực tế.

@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: FOUNDATION_BRIDGE -->
+
 # Chương 11 — Lần theo một request HTTP
 
 Ở log, một HTTP call thường chỉ còn lại một dòng: `GET https://api.example/... 1.8s`. Dòng ấy có ích, nhưng nó che gần như toàn bộ câu chuyện. 1.8 giây có thể là DNS, chờ một connection rảnh, TCP dial, TLS handshake, server xử lý, đọc response body, proxy, hoặc deadline của chính caller. Nếu chỉ có một timeout lớn và một log cuối cùng, ta biết request thất bại nhưng chưa biết cần sửa lớp nào.

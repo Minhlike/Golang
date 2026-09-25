@@ -1,3 +1,5 @@
+<!-- BOOK_ROLE: APPLICATION_SYSTEMS -->
+
 # Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa
 
 Trong kỷ nguyên GitOps và tự động hóa hạ tầng (Infrastructure as Code), Git không chỉ là công cụ lưu trữ lịch sử mã nguồn của lập trình viên, mà đã trở thành **Nguồn chân lý duy nhất (Single Source of Truth)** điều khiển toàn bộ hệ thống sản xuất. 
