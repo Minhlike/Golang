@@ -72,12 +72,14 @@ Chỉ owner của phía gửi mới nên close channel. Trong một worker pool,
 
 Lab `labs/part9-workflow-pressure` không nối thẳng vào `opsprobe`. Ta chưa có requirement production nào buộc CLI ấy phải chạy nhiều endpoint cùng lúc. Dùng reproducer độc lập giữ một câu hỏi đủ sắc: một producer, nhiều worker và một consumer kết thúc với bao nhiêu result, ở thời điểm nào?
 
-Mở `exercise/pool_test.go` trước. Test không cho sẵn hiện thực; nó chỉ đòi các type `Job`, `Result`, `Work` và function `Run`. Contract của `Run` có bốn phần:
+Mở `exercise/pool_test.go` trước. Test không cho sẵn hiện thực; nó chỉ đòi các type `Job`, `Result`, `Work` và function `Run`. Bốn cam kết kỹ thuật cấu thành hợp đồng thực thi của `Run` bao gồm:
 
-- Mỗi job hoàn tất bình thường sinh đúng một `Result`.
-- Không quá `workers` lời gọi `Work` chạy đồng thời.
-- Khi context bị hủy trong lúc output không được tiêu thụ, output vẫn phải đóng; worker không được mắc kẹt ở send.
-- Khi dispatcher không còn job và mọi worker đã return, output đóng đúng một lần để consumer có thể kết thúc `range`.
+| Điều khoản hợp đồng | Mục tiêu kiểm chứng | Rủi ro hệ thống nếu vi phạm |
+| :--- | :--- | :--- |
+| Bảo toàn kết quả đơn trị | Mỗi job hoàn tất bình thường sinh ra đúng một `Result`. | Mất mát dữ liệu hoặc lặp kết quả xử lý. |
+| Giới hạn tài nguyên song song | Số lượng lời gọi hàm `Work` thực thi đồng thời không bao giờ vượt quá ngưỡng `workers`. | Tràn bộ đệm, quá tải kết nối cơ sở dữ liệu hoặc cạn kiệt CPU. |
+| Cơ chế giải phóng khi hủy bỏ | Khi context bị hủy mà output không được đọc, kênh output vẫn đóng và worker không bị treo ở lệnh gửi. | Rò rỉ goroutine vĩnh viễn (goroutine leak) làm cạn RAM máy chủ. |
+| Chu kỳ đóng kênh duy nhất | Khi dispatcher hết job và toàn bộ worker đã thoát, kênh output đóng đúng một lần. | Panic do đóng kênh nhiều lần hoặc deadlock vòng lặp `for range`. |
 
 Có một biên nhỏ nhưng đáng giữ ngay từ đầu: nếu `ctx` đã bị hủy trước khi dispatcher kịp bàn giao job, `Work` không được bắt đầu chỉ vì một worker vừa được tạo. Cancellation là policy dừng nhận việc mới; đưa một `Job` vào `Work` với context đã hết hạn chỉ tạo thêm một kết quả không còn người sở hữu.
 
@@ -128,7 +130,18 @@ func consume(in <-chan Job, out chan<- Result)
 
 Khi đọc code channel, đừng bắt đầu bằng câu “channel này buffered hay không?”. Hỏi theo thứ tự khó hơn nhưng hữu ích hơn: value nào đang được bàn giao, bên nào phải còn sống để receive nó, ai có quyền nói không còn send nữa, và cancellation có mở đường thoát cho mọi lần block không. Trả lời được bốn câu ấy trước khi chọn capacity thường ngăn được cả leak, deadlock và queue vô hạn.
 
+## Mô hình Điều phối G/M/P và Giới hạn Thực tế của Concurrency
+
+Để vận hành worker pool ở quy mô lớn, kỹ sư phải hiểu rõ mô hình điều phối của Go Runtime thay vì xem goroutine là những chiếc luồng ma thuật miễn phí. 
+
+Trong runtime Go hiện hành (được định nghĩa tại `src/runtime/proc.go` và `src/runtime/chan.go`), hệ thống điều phối theo mô hình đa ghép nối M:N với ba thực thể: `G` đại diện cho một goroutine (chứa trạng thái thực thi và ngăn xếp co giãn khởi điểm khoảng 2KB); `M` đại diện cho một luồng hệ điều hành thực tế (OS thread do nhân quản lý); và `P` đại diện cho một ngữ cảnh bộ vi xử lý logic (Processor context, với số lượng tối đa bằng `GOMAXPROCS`, sở hữu hàng đợi chạy cục bộ `runq`). Mô hình này thuần túy là chi tiết triển khai thời gian chạy của Go toolchain, không phải là một cam kết trong đặc tả ngôn ngữ Go Specification.
+
+Goroutine có chi phí khởi tạo rẻ hơn nhiều so với luồng hệ điều hành (vốn tốn từ 1MB đến 8MB bộ nhớ stack cố định), nhưng chúng tuyệt đối **không miễn phí**. Việc tạo ra hàng triệu goroutine vô tội vạ mà không có cơ chế giới hạn áp suất (unbounded goroutines) sẽ nhanh chóng gây cạn kiệt RAM thực tế khi các stack buộc phải mở rộng, đồng thời làm tăng vọt gánh nặng quét con trỏ cho bộ thu gom rác (GC stop-the-world scanning).
+
+Bên cạnh đó, Channel trong Go thực chất là một cấu trúc dữ liệu `hchan` nằm trên heap, được bảo vệ nội bộ bởi một khóa `hchan.lock`. Mỗi thao tác gửi và nhận trên channel đều đòi hỏi chi phí khóa và điều phối hàng đợi `waitq`. Đối với những đường ống dữ liệu yêu cầu thông lượng hàng chục triệu thao tác mỗi giây với độ trễ microgiây, việc lạm dụng Channel thường chậm hơn đáng kể so với việc sử dụng `sync.Mutex` cục bộ hoặc các thao tác nguyên tử `sync/atomic`. Channel tỏa sáng ở việc chuyển giao quyền sở hữu luồng công việc và phối hợp sự kiện vòng đời, không phải là giải pháp vạn năng cho mọi bài toán đồng bộ hóa hiệu năng cao.
+
 ## Ghi chú kiểm chứng
 
+@references
 1. Go Team. The Go Programming Language Specification, mục Channel types, Send statements, Receive operator, Close và Select statements. go.dev/ref/spec
 2. Go Team. The Go Memory Model, mục Channel communication; và Package context. go.dev/ref/mem, pkg.go.dev/context

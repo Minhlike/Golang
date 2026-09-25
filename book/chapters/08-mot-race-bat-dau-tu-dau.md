@@ -50,11 +50,19 @@ Hai tầng đầu là lời hứa để thiết kế. Tầng thứ ba chỉ hữ
 
 ## Vẽ chứng minh thay vì đoán lịch chạy
 
-Chương 6 đã dùng race detector để tìm một lần truy cập thực sự xung đột. Ở đây bước kế tiếp không phải chạy lại cùng báo cáo, mà là viết được lời giải thích cho phiên bản đúng trước khi chạy. Ta sẽ dùng ba mũi tên:
+Chương 6 đã dùng race detector để tìm một lần truy cập thực sự xung đột. Ở đây bước kế tiếp không phải chạy lại cùng báo cáo, mà là viết được lời giải thích cho phiên bản đúng trước khi chạy. Ta phân tích trật tự bộ nhớ thông qua ba quan hệ định chuẩn được xác định trong Go Memory Model:
 
-- **sequenced-before**: thứ tự của code trong một goroutine. `append` xong rồi mới `Done` là một mũi tên loại này.
-- **synchronized-before**: mũi tên mà ngôn ngữ hoặc API công bố. Ví dụ `Mutex.Unlock` và một `Mutex.Lock` về sau, hoặc `Done` và `Wait` mà nó mở khóa.
-- **happens-before**: đường đi tạo bởi hai loại mũi tên trên. Nếu lần ghi đi đến lần đọc qua đường này, người đọc có một lý do được cam kết để thấy giá trị đó.
+| Quan hệ thứ tự | Bản chất ngữ nghĩa trong Go | Ví dụ áp dụng thực tế |
+| :--- | :--- | :--- |
+| **Sequenced-before** | Trật tự thực thi tuần tự của các câu lệnh bên trong cùng một goroutine đơn lẻ. | Thao tác `append` vào slice bắt buộc phải hoàn tất trước khi gọi `wg.Done()`. |
+| **Synchronized-before** | Cạnh đồng bộ hóa liên goroutine do ngôn ngữ hoặc thư viện runtime công bố. | Lệnh `mu.Unlock()` được đồng bộ hóa trước lệnh `mu.Lock()` diễn ra kế tiếp trên cùng một Mutex; hoặc `wg.Done()` trước lệnh `wg.Wait()` mở khóa. |
+| **Happens-before** | Quan hệ bao đóng bắc cầu giữa sequenced-before và synchronized-before. | Nếu thao tác ghi dữ liệu có đường dẫn happens-before tới thao tác đọc, bên đọc được ngôn ngữ bảo đảm nhìn thấy giá trị ghi mới nhất. |
+
+Cần phân biệt rạch ròi hai cặp khái niệm thường bị nhầm lẫn trong môi trường đồng thời:
+
+Tính đồng thời (Concurrency) và Tính song song (Parallelism): Đồng thời là đặc tính cấu trúc của chương trình, chia bài toán thành nhiều phần việc có thể xử lý độc lập về mặt logic; trong khi song song là đặc tính phần cứng khi nhiều dòng chỉ thị thực sự chạy cùng một lúc trên các lõi CPU vật lý khác nhau. Go goroutines mang lại mô hình đồng thời, nhưng việc chúng có chạy song song hay không phụ thuộc hoàn toàn vào số luồng `M`, số logical CPU `GOMAXPROCS`, và quyết định điều phối của nhân hệ điều hành.
+
+Xung đột truy cập bộ nhớ (Data Race) và Lỗi điều kiện tranh chấp logic (Race Condition): Data race là lỗi xảy ra ở mức vi kiến trúc khi hai goroutine cùng truy xuất một ô nhớ mà không có quan hệ happens-before bảo vệ, trong đó có ít nhất một thao tác ghi; đây là hành vi sinh lỗi không xác định (undefined behavior). Ngược lại, Race Condition là lỗi logic nghiệp vụ khi thứ tự hoàn thành giữa các tác vụ độc lập dẫn tới kết quả không mong muốn (ví dụ kiểm tra số dư rồi mới rút tiền, nhưng hai giao dịch cùng vượt qua bước kiểm tra), ngay cả khi toàn bộ các biến đều được bảo vệ bằng Mutex và hoàn toàn sạch data race.
 
 Đừng biến ba tên thành câu thần chú. Với mỗi kết quả cần đọc, hãy vẽ đường cụ thể. Trong ví dụ `ready`, không có cạnh nào từ `latest = ...` sang việc `show` đọc `latest`; vì vậy lời giải không thể chỉ là thêm một vòng lặp chờ.
 
