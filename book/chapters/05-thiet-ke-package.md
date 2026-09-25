@@ -8,11 +8,13 @@ Ta sẽ không mở đầu bằng cây thư mục “chuẩn”. Ta bắt đầu
 
 ## Một dependency graph có thể đọc từ ngoài vào trong
 
-Refactor đầu tiên của `opsprobe` có ba vai:
+Refactor đầu tiên của `opsprobe` phân định ba vai trò kiến trúc rõ rệt:
 
-- `cmd/opsprobe` là command: nhận các dependency, gọi use case và trình bày kết quả.
-- `probe` là package importable: sở hữu model cho một lần kiểm tra và không in ra terminal.
-- `internal/config` là implementation detail của application: biết target mặc định hôm nay, nhưng không trở thành API công khai mà module khác được hứa hỗ trợ.
+Package `cmd/opsprobe` đóng vai trò điểm khởi đầu (command entrypoint): tiếp nhận các phụ thuộc, điều phối các ca sử dụng và trình bày kết quả ra console.
+
+Package `probe` là thư viện có thể tái sử dụng (importable package): sở hữu mô hình nghiệp vụ cho một lần kiểm tra và hoàn toàn độc lập với thiết bị đầu ra.
+
+Package `internal/config` là chi tiết triển khai nội bộ của ứng dụng (internal implementation detail): quản lý cấu hình mặc định nhưng được compiler bảo vệ không cho phép bất kỳ module bên ngoài nào import.
 
 ![Dependency đi một chiều: command phối hợp config nội bộ và package probe; probe không import ngược command hay config.](../../assets/diagrams/package-boundary-graph.png)
 
@@ -110,13 +112,21 @@ Mapping này trông như boilerplate nhỏ, nhưng nó giữ dependency directio
 
 ## Một refactor có kiểm chứng, không phải một lần dời file
 
-Lab kiểm tra ba điều có thể bị hỏng khi tách package:
+Lab kiểm tra ba cam kết kỹ thuật trọng yếu khi phân tách package nhằm bảo vệ ranh giới kiến trúc:
 
-- `probe.Check` chuyển cancellation thành error có thể nhận diện bằng `errors.Is`, và không chạy runner khi context đã bị cancel.
-- Result thành công mang đúng service name.
-- `internal/config` trả dữ liệu độc lập theo từng lần gọi; caller sửa slice nhận được không làm thay default của lần sau.
+| Thành phần kiểm thử | Hành vi kỳ vọng của hệ thống | Rủi ro nếu thiết kế sai ranh giới |
+| :--- | :--- | :--- |
+| Điều phối hủy bỏ (`probe.Check`) | Chuyển `ctx.Err()` thành lỗi nhận diện được bằng `errors.Is`, không kích hoạt runner khi context đã bị hủy. | Tiếp tục tiêu tốn tài nguyên mạng dù bên gọi đã phát tín hiệu dừng. |
+| Toàn vẹn kết quả | Đối tượng kết quả mang chính xác tên định danh dịch vụ đã cấu hình. | Trộn lẫn trạng thái giữa các dịch vụ trong quá trình duyệt danh sách. |
+| Độc lập dữ liệu (`internal/config`) | Trả về một slice độc lập theo từng lần gọi factory. | Caller sửa slice nhận được làm đột biến giá trị cấu hình mặc định dùng chung. |
 
 Test cuối không phải để khẳng định “mọi slice đều dangerous”. Nó chứng minh ownership của config factory: `DefaultTargets` tạo dữ liệu mới cho caller thay vì phát một slice dùng chung. Đây là cùng câu hỏi value semantics của Chương 2, nay được đặt vào một package boundary.
+
+### Khởi tạo Gói và Ràng buộc Đồ thị Phụ thuộc (Initialization DAG)
+
+Khi phân tách mã nguồn thành nhiều package, Go runtime thực thi một quy trình khởi tạo cực kỳ nghiêm ngặt dựa trên đồ thị có hướng không chu trình (Directed Acyclic Graph - DAG). Trình biên dịch Go từ chối hoàn toàn các phụ thuộc vòng (`import cycle not allowed`) ngay tại thời điểm build.
+
+Nếu package `A` import `B`, thì `B` bắt buộc phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng package, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc dữ liệu tĩnh, tiếp theo là các hàm `init()` được thực thi tuần tự trên một goroutine duy nhất trước khi hàm `main` khởi chạy. Việc thấu hiểu đồ thị phụ thuộc giúp ta tránh hoàn toàn các lỗi phụ thuộc ẩn và giữ thời gian khởi động của ứng dụng luôn ở mức dự đoán được.
 
 Lần này không bắt đầu từ implementation đã tách. Mở `labs/part5-package-refactor` trong VS Code: điểm xuất phát là một `main.go` monolithic đang chạy. Chạy `go run .` để giữ behavior làm mốc, rồi chạy `go test -tags exercise ./...`. Lỗi compiler vì package `probe` chưa tồn tại là tín hiệu bắt đầu, không phải lỗi để lờ đi: test đang đòi một public boundary mà code chưa có. Từ requirement và test, anh tự quyết định file nào đi vào `probe`, file nào là `internal/config`, và command map hai model ở đâu. Khi xong, `go run ./cmd/opsprobe` phải giữ output, còn `go test -tags exercise ./...` và `go vet ./...` phải xanh.
 
