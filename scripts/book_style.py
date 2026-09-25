@@ -145,7 +145,7 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
         "reference": ParagraphStyle(
             "Reference", parent=base["BodyText"], fontName=FONT_SANS, fontSize=9.5,
             leading=12.8, textColor=COLOR_TEXT_MUTED, leftIndent=14,
-            firstLineIndent=-12, spaceAfter=4,
+            firstLineIndent=-12, spaceAfter=4, bulletFontName=FONT_SANS,
         ),
 
         # Table of Contents
