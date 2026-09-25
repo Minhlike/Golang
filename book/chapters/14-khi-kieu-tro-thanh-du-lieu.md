@@ -25,9 +25,27 @@ fmt.Println(target.Kind())   // struct
 fmt.Println(target.CanSet()) // true
 ~~~
 
-`ValueOf(config)` giữ struct value đã copy vào interface; nó không phải variable `config` mà caller có thể gán qua reflection. `ValueOf(&config)` giữ pointer value, và `Elem()` dereference nó để lấy variable struct. `CanSet` không phải một permission system mới: nó cho biết value cụ thể này có addressable và được phép set qua reflection hay không. Nếu nó false, gọi `SetString` sẽ panic. Vì API của ta hứa trả `error` cho input shape sai, guard phải xuất hiện trước setter.
+Bản chất của `reflect.Value` trong runtime (`src/reflect/value.go`) là một struct gồm ba trường: con trỏ siêu dữ liệu kiểu `typ_ *abi.Type`, con trỏ dữ liệu `ptr_ unsafe.Pointer`, và một trường cờ bit `flag uintptr`:
+
+~~~go
+type Value struct {
+	typ_ *abi.Type
+	ptr_ unsafe.Pointer
+	flag
+}
+~~~
+
+Cờ `flag` chứa thông tin về `Kind`, trạng thái chỉ đọc (`flagStickyRO`, `flagEmbedRO`), và đặc biệt là cờ địa chỉ hóa `flagAddr`. Khi truyền `config` vào `reflect.ValueOf(config)`, biến được đóng gói qua tham số `any`, tạo ra một bản sao giá trị độc lập trên stack hoặc heap; `reflect.Value` được sinh ra không có cờ `flagAddr`, do đó `CanSet()` trả về `false`.
+
+Ngược lại, khi truyền `&config`, `reflect.ValueOf(&config)` lưu con trỏ trỏ tới chính biến `config` gốc. Lệnh `pointer.Elem()` giải tham chiếu con trỏ đó và sinh ra một `reflect.Value` mới được bật cờ `flagAddr`. `CanSet()` chỉ trả về `true` khi cả hai điều kiện cùng thỏa mãn: giá trị có cờ `flagAddr` (tức có ô nhớ gốc xác định để ghi đè) và trường mục tiêu được export công khai.
 
 `ApplyEnv(nil, nil)` còn có một bẫy nhỏ hơn. `reflect.ValueOf(nil)` trả zero `reflect.Value`, có `Kind` là `Invalid`; nhiều operation khác trên value không hợp lệ có thể panic. Vì vậy boundary phải kiểm tra `IsValid` trước khi làm các operation phụ thuộc shape. Đây là guard cho một value runtime thực sự không tồn tại, không phải một trường hợp `nil` pointer thông thường.
+
+| Cơ chế thực thi | Chi phí trung bình | Cấp phát Heap | Khả năng Compiler Tối ưu |
+| :--- | :--- | :--- | :--- |
+| Gọi hàm / phương thức tĩnh | ~1.2 ns/op | 0 B/op (0 allocs) | Tối ưu inlining, SSA register allocation |
+| Gọi gián tiếp qua Interface | ~2.3 ns/op | 0 B/op (0 allocs) | Tra cứu itab, CPU branch prediction tốt |
+| Gọi động qua Reflection (`Value.Call`) | 60 – 140 ns/op | Phân bổ slice tham số và boxing | Không thể inline, thoát ra heap |
 
 @table Compiler và reflection chia việc khác nhau
 
@@ -174,7 +192,7 @@ fmt.Println(unsafe.Offsetof(Header{}.ID))
 
 ### Code review: đừng giữ địa chỉ trong `uintptr`
 
-Đoạn dưới là code xấu để review, không phải mẹo cần chép. Nó lấy `Data` từ `reflect.StringHeader` rồi trả `uintptr` ra khỏi scope của string:
+Đoạn dưới là mã nguồn tiêu cực để phân tích, không phải kỹ thuật nên áp dụng trong thực tế. Nó trích xuất địa chỉ mảng byte nền tảng từ kiểu cũ `reflect.StringHeader` rồi trả về `uintptr` ra ngoài phạm vi chuỗi:
 
 ~~~go
 func badDataAddress(s string) uintptr {
@@ -183,11 +201,42 @@ func badDataAddress(s string) uintptr {
 }
 ~~~
 
-Trước khi chấp nhận code kiểu này, hãy hỏi: typed pointer nào còn giữ object sống, lifetime proof nằm ở đâu, representation proof nào cho phép dùng header này, và GC còn nhìn thấy reference typed hay chỉ còn một số nguyên? `uintptr` không tự giữ object sống. Package `unsafe` cũng nêu các pattern chuyển đổi pointer hợp lệ rất hẹp; tách conversion ra để giữ địa chỉ lâu hơn không phải cùng một proof. Nếu một use case đòi pointer arithmetic, hãy dừng trước khi viết code và ghi được owner của memory, offset/alignment được chứng minh ở đâu, cùng test trên mọi target hỗ trợ. Không trả lời được chúng thì chưa có lý do dùng `unsafe`.
+Trước khi chấp nhận đoạn mã này, hãy phân tích bản chất cơ chế của Go Runtime:
+
+Thứ nhất, con trỏ `unsafe.Pointer` là một thực thể được hệ thống thu gom rác (GC) theo dõi trực tiếp. Trong pha đánh dấu (mark phase) và khi runtime co giãn ngăn xếp (stack growth / reallocation), mọi `unsafe.Pointer` hợp lệ đều được duyệt và cập nhật nếu địa chỉ ô nhớ bị dịch chuyển.
+
+Thứ hai, `uintptr` chỉ là một kiểu số nguyên thông thường (`uint64` trên kiến trúc 64-bit). Trình thu gom rác coi `uintptr` hoàn toàn là một con số, không phải một con trỏ. Nếu địa chỉ được lưu vào một biến kiểu `uintptr` rồi tách rời khỏi đối tượng gốc, GC có thể thu hồi vùng nhớ đó ngay lập tức, hoặc khi stack của goroutine mở rộng, vùng nhớ cũ bị giải phóng khiến giá trị `uintptr` trỏ vào một vùng nhớ rác nguy hiểm.
+
+Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (pointer arithmetic) chỉ được phép xuất hiện trong **một biểu thức hợp thành duy nhất**:
+
+~~~go
+p = unsafe.Pointer(uintptr(p) + offset)
+~~~
+
+Trình biên dịch nhận diện mẫu hình biểu thức đơn này để bảo đảm đối tượng không bị GC thu hồi trong khoảnh khắc tính toán địa chỉ. Việc tách `uintptr` ra một biến trung gian hoặc trả về từ hàm vi phạm trực tiếp cam kết này.
+
+Thứ tư, hai kiểu `reflect.StringHeader` và `reflect.SliceHeader` đã bị Go chính thức đánh dấu deprecated kể từ Go 1.20 vì chúng khuyến khích việc thao tác sai lệch trên trường `uintptr Data`. Trong Go hiện đại, các thao tác chuyển đổi tầng thấp phải sử dụng các hàm chuẩn mực do package `unsafe` cung cấp:
+
+~~~go
+// Trích xuất con trỏ byte nền tảng an toàn
+ptr := unsafe.StringData(s)
+
+// Tái tạo chuỗi từ con trỏ byte và độ dài
+str := unsafe.String(ptr, len(s))
+
+// Lấy con trỏ phần tử đầu của slice
+slicePtr := unsafe.SliceData(buf)
+
+// Tạo slice từ con trỏ và độ dài
+slice := unsafe.Slice(slicePtr, count)
+~~~
+
+Các hàm nguyên thủy này bảo đảm con trỏ luôn mang kiểu con trỏ có định kiểu, giúp GC theo dõi chính xác vòng đời dữ liệu trên cả ngăn xếp và vùng nhớ động.
 
 Chương này không dạy cách “né Go”. Nó dạy một boundary có trách nhiệm khi type chỉ xuất hiện lúc runtime. Reflection có thể giữ code generic nhỏ và thành thật nếu contract về shape, metadata và mutation được viết lộ ra. Khi proof ấy không đủ, quay lại type tĩnh, interface nhỏ hoặc API cụ thể thường là thiết kế tốt hơn.
 
 @references
 1. Go Team. Package `reflect`: `Value`, `CanSet`, `Type`, `TypeFor`, `StructField` và `StructTag`. pkg.go.dev/reflect
-2. Go Team. Package `unsafe`: `Pointer`, `Sizeof`, `Alignof`, `Offsetof` và quy tắc sử dụng pointer. pkg.go.dev/unsafe
+2. Go Team. Package `unsafe`: `Pointer`, `Sizeof`, `Alignof`, `Offsetof`, `String`, `StringData`, `Slice`, `SliceData`. pkg.go.dev/unsafe
 3. Go Team. The Go Programming Language Specification: struct tags, type identity và address operators. go.dev/ref/spec
+4. Go Team. Go Runtime: Garbage Collection Invariants and Stack Copying. go.dev/doc/gc-guide

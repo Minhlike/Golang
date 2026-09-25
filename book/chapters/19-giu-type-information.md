@@ -120,6 +120,22 @@ labels := Batch[int]{2, 4}.Map(func(port int) string {
 
 Đây là generic method của Go 1.27, khác với method thông thường trên generic receiver như `Set[T].Has`. Generic method được instantiate khi dùng. Nó không biến interface method thành generic: interface method không được tự khai báo type parameter, và một generic method không phải cách để implement một interface method generic. Nếu consumer chỉ cần gọi `Map` trên một concrete `Batch`, method giúp tổ chức code; nếu consumer cần một behavior thay thế được, một interface nhỏ với signature cụ thể thường rõ hơn.
 
+## Mô hình Biên dịch Generics: GCShape Stenciling và Runtime Dictionary
+
+Cách tiếp cận của Go đối với generics giải quyết bài toán nan giải giữa kích thước tệp nhị phân và tốc độ thực thi mà các ngôn ngữ đi trước từng đối mặt:
+
+| Mô hình biên dịch | Ngôn ngữ tiêu biểu | Cơ chế sinh mã | Đánh đổi hiệu năng / bộ nhớ |
+| :--- | :--- | :--- | :--- |
+| Đơn hình hóa (Monomorphization) | C++, Rust | Nhân bản mã máy riêng cho mọi kiểu tham số | Tốc độ tối đa, phình to kích thước file nhị phân |
+| Xóa kiểu (Type Erasure) | Java | Xóa về `Object`, chèn ép kiểu và boxing | Mã máy gọn, tổn hao cache và cấp phát heap |
+| GCShape Stenciling & Dictionary | Go | Chia sẻ mã máy theo footprint GC (`go.shape`) | Cân bằng kích thước nhị phân và tốc độ thực thi |
+
+Thay vì nhân bản mã máy độc lập cho từng kiểu như C++ (gây bùng nổ kích thước nhị phân) hoặc xóa toàn bộ thông tin kiểu về con trỏ generic như Java (gây cấp phát bộ nhớ động liên tục và cache miss), trình biên dịch Go sử dụng cơ chế lai: **GCShape Stenciling kết hợp Runtime Dictionary Passing**.
+
+Hai kiểu dữ liệu được coi là có cùng một "GC shape" nếu chúng có cùng kích thước (size), cùng độ căn chỉnh (alignment), và cùng vị trí các con trỏ bộ nhớ (pointer layout) dưới góc nhìn của bộ thu gom rác. Ví dụ, toàn bộ các kiểu con trỏ (`*int`, `*string`, `*Config`) đều có cùng một hình thái GC shape đại diện bởi ký hiệu nội bộ của compiler là `go.shape.pointer`. Trình biên dịch chỉ sinh đúng một khối mã máy duy nhất cho tất cả các instantiation kiểu con trỏ đó.
+
+Để thực thi các thao tác phụ thuộc vào kiểu cụ thể bên trong khối mã máy dùng chung (như hàm so sánh bình đẳng, tính toán băm cho map, hoặc gọi phương thức), compiler tự động chèn thêm một tham số con trỏ ẩn: **runtime dictionary** (`*runtime.dict`). Con trỏ từ điển này chứa bảng con trỏ hàm nghiệp vụ và con trỏ siêu dữ liệu kiểu (`*abi.Type`) tương ứng với instantiation cụ thể tại vị trí gọi, loại bỏ hoàn toàn chi phí đóng gói heap mà vẫn bảo toàn tính toàn vẹn của mã nhị phân.
+
 ## Interface thay vì generics khi câu hỏi là “ai làm được việc này?”
 
 Một probe HTTP, một probe TCP và fake dùng trong test có thể trả outcome bằng các implementation khác nhau. Caller không cần giữ concrete type của chúng; caller cần gọi một behavior. Interface ghi contract đó ở compile time.
@@ -178,7 +194,18 @@ fmt.Println(problem == nil)
 fmt.Println(result == nil)
 ~~~
 
-Kết quả là `true`, rồi `false`. `problem` là nil pointer. Khi gán nó vào `error`, interface value vẫn mang dynamic type `*ProbeError`; dynamic value của type đó là nil pointer. Interface chỉ bằng `nil` khi cả dynamic type lẫn dynamic value đều không được đặt. Đây là language semantics của interface value, không phải mẹo về layout nội bộ runtime.
+Kết quả là `true`, rồi `false`. `problem` là nil pointer. Khi gán nó vào `error`, interface value vẫn mang dynamic type `*ProbeError`; dynamic value của type đó là nil pointer.
+
+Bản chất của interface value trong runtime (`src/runtime/iface.go`) là một cấu trúc nhị từ gồm hai con trỏ 64-bit: con trỏ bảng phương thức `tab *itab` (hoặc con trỏ kiểu `_type *abi.Type` đối với `any`) và con trỏ dữ liệu `data unsafe.Pointer`:
+
+~~~go
+type iface struct {
+	tab  *itab
+	data unsafe.Pointer
+}
+~~~
+
+Một biến interface chỉ bằng `nil` khi và chỉ khi **cả hai con trỏ `tab` và `data` đều mang giá trị 0**. Khi gán con trỏ nil `problem` vào `result`, runtime điền địa chỉ bảng `itab` của cặp `(*ProbeError, error)` vào `result.tab`, trong khi `result.data` là `nil`. Phép kiểm tra `result == nil` đối chiếu trường `tab`; vì `tab != nil`, biểu thức đánh giá thành `false`.
 
 Bug thường gặp nằm ở đường return:
 
