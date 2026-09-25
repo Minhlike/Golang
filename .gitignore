@@ -3,4 +3,9 @@ tmp/
 __pycache__/
 *.pyc
 library_sources/repos/
-
+.workspace/
+*.exe
+*.test
+*.prof
+*.pprof
+*.out
