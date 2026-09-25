@@ -143,11 +143,13 @@ func applyProbe(
 
 Nhánh thiếu config trả sớm: không có `Service` để mutate, nên registry không đổi. Nhánh probe thất bại vẫn ghi state `Healthy=false` và tăng retry, rồi trả failure có nguyên nhân. Đây không phải hai cơ chế báo lỗi cạnh tranh; state trả lời “lần quan sát gần nhất ra sao”, còn error trả lời “operation vừa gọi không hoàn tất vì sao”. Nhánh thành công ghi state rồi trả `nil`.
 
-Khi kiểm thử code này, có ba contract cần chứng minh thay vì chỉ kiểm tra message:
+Khi kiểm thử mã nguồn này, hệ thống tập trung chứng minh ba cam kết hợp đồng cụ thể thay vì chỉ so khớp chuỗi thông báo:
 
-- Với service thiếu, `errors.Is(err, ErrUnknownService)` là true và probe function không được gọi.
-- Với probe thất bại, `errors.As` lấy được `*ProbeFailure`, `errors.Is` vẫn thấy nguyên nhân gốc, và state đã được ghi lại.
-- Với probe thành công, error là `nil` và endpoint truyền vào probe đúng với config.
+| Tình huống kiểm thử | Điều kiện xác minh trạng thái | Điều kiện xác minh lỗi (Error Contract) |
+| :--- | :--- | :--- |
+| Dịch vụ không tồn tại trong cấu hình | Hàm kiểm tra probe tuyệt đối không được gọi. | `errors.Is(err, ErrUnknownService)` trả về `true`. |
+| Thao tác probe thất bại | Trạng thái dịch vụ cập nhật `Healthy=false` và tăng số lần thử lại. | `errors.As` trích xuất thành công `*ProbeFailure`, đồng thời `errors.Is` bảo toàn nguyên nhân gốc. |
+| Thao tác probe thành công | Trạng thái dịch vụ cập nhật `Healthy=true` tại đúng endpoint cấu hình. | Giá trị lỗi trả về là `nil`. |
 
 Lab `part4-error-boundaries` biến ba contract này thành test. `ProbeFunc` được thay bằng function nhỏ trong test; không cần mở socket thật để chứng minh error boundary. Hãy mở `main_test.go` trước `main.go`, đổi riêng `%w` thành `%v` ở return cuối của nhánh probe lỗi, rồi chạy `TestApplyProbePreservesFailureCauseAndContext`. Message vẫn gần như cũ, nhưng test phải đỏ vì `errors.Is` không còn thấy nguyên nhân. Khôi phục `%w`, sau đó tạm bỏ nhánh cancellation đặc biệt và chạy `TestApplyProbeCancellationDoesNotChangeHealthState`: lúc này feedback của test cho thấy cancellation đã bị viết nhầm thành health failure. Hai failure injection này đáng làm hơn là chép lại error chain đã có sẵn.
 
@@ -282,9 +284,11 @@ Một error boundary tốt không cố làm mọi failure giống nhau. `ErrUnkn
 
 ### Bốn câu hỏi trước khi merge một error boundary
 
-- Caller có một quyết định khác nhau cho từng outcome không? Nếu có, hãy giữ identity bằng sentinel hoặc type có dữ liệu; đừng bắt caller parse message.
-- Failure này có phải quan sát về domain không? Timeout hay cancellation của caller không tự động là bằng chứng endpoint unhealthy.
-- Resource được acquire ở đâu, và cleanup có được đăng ký ngay sau acquisition không? Mỗi `defer` nên chỉ rõ scope nào đang nhận ownership.
-- Nếu cleanup cũng lỗi, primary failure nào không được phép biến mất? Policy có thể khác giữa hệ thống, nhưng cần được kiểm thử như một contract.
+| Tiêu chí kiểm định ranh giới lỗi | Yêu cầu kỹ thuật bắt buộc |
+| :--- | :--- |
+| Nhận diện định danh lỗi (Error Identity) | Bên gọi có cần rẽ nhánh quyết định theo từng loại lỗi cụ thể không? Nếu có, phải bảo toàn identity bằng sentinel error hoặc custom type có cấu trúc; cấm bắt caller parse chuỗi văn bản. |
+| Bản chất quan sát miền nghiệp vụ | Lỗi này có phản ánh trạng thái thực của dịch vụ đích không? Timeout hoặc cancellation từ Context của caller không tự động đồng nghĩa với việc endpoint bị unhealthy. |
+| Quyền sở hữu tài nguyên (Resource Ownership) | Tài nguyên được cấp phát ở đâu, và lệnh dọn dẹp qua defer có được đặt ngay sau đó không? Mỗi defer phải gắn trực tiếp với scope chịu trách nhiệm giải phóng. |
+| Chính sách bảo toàn lỗi gốc (Primary Error Policy) | Nếu thao tác dọn dẹp trong defer cũng phát sinh lỗi, lỗi ban đầu có bị nuốt mất không? Cần bảo toàn lỗi gốc để không làm gián đoạn việc điều tra sự cố. |
 
-Khi bốn câu trả lời hiện ngay trong signature, error chain, state transition và test, người đọc sau không cần đoán error có bị nuốt, retry có bị tăng sai, hay resource có bị bỏ quên. Đó là chuẩn bị cần thiết trước khi tách code thành package.
+Khi bốn câu trả lời hiện ngay trong chữ ký hàm, chuỗi bọc lỗi, chuyển dịch trạng thái và kiểm thử tự động, người đọc sau không cần phỏng đoán lỗi có bị che lấp, số lần thử lại có bị tăng sai, hay tài nguyên hệ thống có bị rò rỉ hay không. Đó là sự chuẩn bị cần thiết trước khi tách mã nguồn thành các package độc lập.

@@ -38,13 +38,13 @@ Nếu function cần tạo một value mới, cách trên rất tốt: giá tr�
 
 ## Pointer: con đường tới một variable
 
-Với operand addressable `x` có type `T`, `&x` tạo pointer value type `*T` trỏ tới variable `x`. Nếu `p` có type `*T`, `*p` là variable type `T` mà pointer đó trỏ tới. Hai câu này phân biệt năm thứ thường bị gộp làm một:
-
-- **variable** là nơi chương trình có thể đọc hoặc gán value, như `balance`.
-- **value** là dữ liệu đang được lưu, như `100`.
-- **address** là kết quả của phép lấy địa chỉ `&balance` trong ngữ cảnh Go.
-- **pointer value** là value có type như `*int`; nó có thể trỏ tới một variable hoặc là `nil`.
-- **pointee** là variable mà pointer hiện trỏ tới.
+| Khái niệm trong Go Semantics | Định nghĩa kỹ thuật chuẩn xác | Ví dụ tương ứng |
+| :--- | :--- | :--- |
+| **Variable** | Vị trí lưu trữ dữ liệu được cấp phát, có thể đọc hoặc gán giá trị mới. | Biến `balance` |
+| **Value** | Dữ liệu bit cụ thể được diễn giải theo kiểu dữ liệu quy định. | Giá trị số nguyên `100` |
+| **Address** | Kết quả của phép toán trích xuất địa chỉ ô nhớ bằng toán tử `&`. | Biểu thức `&balance` |
+| **Pointer value** | Giá trị mang kiểu con trỏ (như `*int`), chứa địa chỉ của một biến hoặc `nil`. | Biến con trỏ `p` |
+| **Pointee** | Biến đích tại ô nhớ mà con trỏ đang trỏ tới. | Ô nhớ chứa `balance` |
 
 Ta không cần giả định variable ấy nằm cố định trên stack hay heap. Đó là quyết định implementation có thể thay đổi. Điều cần dùng khi đọc code là quan hệ ngôn ngữ: pointer value có đang trỏ tới một variable hợp lệ hay không.
 
@@ -474,16 +474,35 @@ markFailed(&billing) // *Service thỏa ProbeRecorder
 // markFailed(billing) // sai: Service thiếu Record
 ~~~
 
-> **Bài tập - chọn contract nhỏ:** `renderSummary` cần biết `Name`, `Port`, `Healthy` và `Retries` hay chỉ cần `Summary() string`? Viết một type thứ hai có thể đi qua `renderSummary` mà không phải là `Service`, rồi giải thích vì sao interface đặt ở consumer thay vì được nhét sẵn vào mọi type.
+### Bản chất Thời gian chạy của Interface và Cạm bẫy Typed Nil
 
-**Đáp án.** Consumer chỉ cần `Summary() string`, nên interface nên giữ đúng một method đó. `StaticTarget` ở ví dụ trên là một provider thứ hai: nó có thể là dữ liệu đọc từ một report thay vì service sống. Đặt interface cạnh `renderSummary` khiến contract phản ánh nhu cầu thật của consumer; `Service` không phải biết trước mọi interface mà code khác sẽ cần.
+Để không biến interface thành một khái niệm trừu tượng mơ hồ, ta cần nhìn vào cấu trúc dữ liệu thực tế mà trình biên dịch tạo ra. Trong đặc tả ngôn ngữ Go, một giá trị interface đại diện cho một cặp giá trị gồm kiểu động (dynamic type) và giá trị động (dynamic value). 
 
-## Một API nhỏ, đủ để đọc bằng semantics
+Ở tầng triển khai thực tế của Go 1.27.1 (mã nguồn tại `src/runtime/iface.go`), một interface có chứa method như `SummarySource` được biểu diễn bằng cấu trúc `iface` gồm hai con trỏ 64-bit: con trỏ thứ nhất `tab *itab` trỏ tới bảng thông tin kiểu (chứa mô tả kiểu cụ thể, bảng con trỏ hàm thỏa mãn interface, và hash định danh kiểu); con trỏ thứ hai `data unsafe.Pointer` trỏ tới dữ liệu thực tế của đối tượng. Đối với interface rỗng (`any` hoặc `interface{}`), runtime sử dụng cấu trúc `eface` với con trỏ `_type *_type` và con trỏ `data`.
 
-Ở cuối mạch này, `opsprobe` có thể diễn đạt ba ý định khác nhau mà không cần dựa vào danh từ mơ hồ như "reference type":
+Biểu diễn hai con trỏ này giải thích trực diện cạm bẫy kinh điển mang tên **typed nil**:
 
-- `func (service Service) Summary() string` nhận snapshot receiver và tạo mô tả.
-- `func (service *Service) Record(bool)` nhận pointer value, rồi sửa pointee có chủ ý.
-- `func renderSummary(SummarySource) string` nhận interface value và chỉ phụ thuộc vào hành vi mà consumer cần.
+~~~go
+var s *Service = nil
+var src SummarySource = s
 
-Composition giữ data model có đường đi rõ ràng; methods đặt behavior cạnh type; interface tạo ranh giới khi có một consumer thực sự cần thay thế provider. Từ đây, chương về errors có thể cho những API này một cách báo thất bại rõ ràng: lỗi probe không nên chỉ đổi `Healthy` rồi biến mất, mà phải đi qua ranh giới function với thông tin đủ để caller quyết định.
+if src == nil {
+	fmt.Println("Interface la nil")
+} else {
+	fmt.Println("Interface KHONG nil") // Ket qua thuc te
+}
+~~~
+
+Một giá trị interface chỉ được đánh giá là `nil` khi và chỉ khi **cả kiểu động và giá trị động đều chưa được thiết lập** (tức `tab == nil` và `data == nil`). Khi gán một con trỏ `s` có giá trị `nil` kiểu `*Service` vào `src`, con trỏ `tab` được điền thông tin của kiểu `*Service`, trong khi `data` mang giá trị 0. Vì `tab` khác `nil`, biểu thức `src == nil` trả về `false`. Nếu sau đó chương trình gọi `src.Summary()`, method vẫn được kích hoạt với receiver mang giá trị `nil`, và nếu method cố truy cập các trường dữ liệu bên trong thì một cơn hoảng loạn (panic) giải tham chiếu con trỏ rỗng sẽ lập tức nổ ra.
+
+## Một API nhỏ, Đủ để Đọc bằng Semantics
+
+Ở cuối mạch thiết kế này, công cụ `opsprobe` đã có thể diễn đạt ba ý định kiến trúc khác nhau một cách mạch lạc mà không cần dựa vào những danh xưng mơ hồ:
+
+Hàm `func (service Service) Summary() string` tiếp nhận receiver dưới dạng snapshot giá trị độc lập, bảo đảm an toàn tuyệt đối khỏi mọi tác dụng phụ khi đọc dữ liệu để sinh chuỗi mô tả.
+
+Hàm `func (service *Service) Record(bool)` tiếp nhận receiver dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
+
+Hàm `func renderSummary(SummarySource) string` tiếp nhận một giá trị interface, chỉ phụ thuộc vào hành vi tối thiểu mà bên tiêu thụ thực sự cần, tách rời hoàn toàn việc hiển thị khỏi cấu trúc dữ liệu cụ thể của bên cung cấp.
+
+Mô hình cấu thành (composition) giúp dữ liệu có đường đi rõ ràng; method đặt hành vi cạnh kiểu dữ liệu; interface xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi nhà cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.
