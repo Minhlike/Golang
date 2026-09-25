@@ -36,13 +36,13 @@ Mỗi thành phần trong chương trình trên đại diện cho một vai trò
 
 Từ khóa `package` là chỉ thị bắt buộc mở đầu mọi tệp nguồn Go hợp lệ. Nó xác định rằng mọi định danh nằm trong tệp này thuộc về một đơn vị biên dịch có tên là `main`.
 
-Theo đặc tả của ngôn ngữ Go, tên gói `main` mang một đặc quyền kiến trúc duy nhất: nó báo hiệu cho trình biên dịch biết rằng đây là một gói hoàn chỉnh có thể phát sinh tệp thực thi độc lập (executable binary), thay vì một thư viện liên kết tĩnh dùng chung. Một tệp thuộc gói khác gói `main` sẽ chỉ được biên dịch thành tệp đối tượng (object file) phục vụ việc liên kết.
+Theo đặc tả chính thức của Go, một chương trình hoàn chỉnh có thể thực thi độc lập (complete program) được tạo thành bằng cách liên kết một package không được package nào khác import, gọi là main package, cùng toàn bộ các package phụ thuộc bắc cầu của nó. Main package này bắt buộc phải có tên package là `main` và phải chứa một khai báo hàm `main` không nhận tham số và không trả về kết quả (`func main()`). Khai báo `package main` đơn thuần chưa đủ để sinh ra file thực thi nếu thiếu định nghĩa hàm `main`. Ngược lại, một package không phải `main` đại diện cho một thư viện; khi chạy lệnh `go build` trên một thư viện như vậy, bộ công cụ Go sẽ biên dịch mã nguồn để kiểm tra tính hợp lệ về cú pháp và kiểu dữ liệu nhưng mặc định không phát sinh tệp thực thi nào trên đĩa.
 
 ### Nhập thư viện chuẩn: `import "fmt"`
 
 Từ khóa `import` nạp giao diện và kiểu dữ liệu từ gói thư viện bên ngoài vào phạm vi tệp hiện tại. Định danh chuỗi `"fmt"` trỏ tới gói thư viện định dạng dữ liệu vào ra (Format I/O) thuộc Go Standard Library.
 
-Trình biên dịch Go thiết lập một quy tắc tối thượng về tối ưu hóa cây phụ thuộc: nếu một gói được nạp qua `import` nhưng không có bất kỳ định danh nào của gói đó được tham chiếu trong mã nguồn, quá trình biên dịch sẽ lập tức bị hủy bỏ với thông báo lỗi. Quy tắc này triệt tiêu hoàn toàn mã rác và ngăn chặn tình trạng phình to cây phụ thuộc trong các dự án lớn.
+Trình biên dịch Go thiết lập một quy tắc khắt khe về độ sạch của mã nguồn tại thời điểm biên dịch: mọi package được khai báo trong mệnh đề `import` đều bắt buộc phải được sử dụng thông qua tên package đó trong mã nguồn, ngoại trừ các trường hợp nhập khẩu đặc biệt như định danh trống `_` để kích hoạt hiệu ứng khởi tạo (`init()`) hoặc dấu chấm `.` để đưa định danh vào phạm vi cục bộ. Nếu một gói được nạp nhưng không có mã nào tham chiếu tới, trình biên dịch sẽ lập tức báo lỗi và từ chối phát sinh mã máy. Đây là quy tắc giữ gìn vệ sinh mã nguồn ở tầng cú pháp, giúp lập trình viên không tích tụ các import thừa trong quá trình tái cấu trúc.
 
 ### Hàm khởi điểm và Giai đoạn Runtime Bootstrap: `func main()`
 
@@ -58,16 +58,16 @@ Trong Go, quy tắc xuất khẩu định danh (export rule) được mã hóa t
 
 ## Biên dịch Mã máy: Phân biệt `go run` và `go build`
 
-Bộ công cụ Go cung cấp hai lệnh cơ bản nhưng khác biệt hoàn toàn về cơ chế vận hành hệ thống:
+Bộ công cụ Go cung cấp hai lệnh cơ bản với vai trò rõ ràng trong vòng đời phát triển:
 
-| Câu lệnh | Bản chất thực thi của Toolchain | Đầu ra trên đĩa | Bối cảnh sử dụng |
+| Câu lệnh | Hợp đồng công cụ (Tool Contract) | Hành vi tệp trên đĩa | Bối cảnh sử dụng |
 | :--- | :--- | :--- | :--- |
-| `go run main.go` | Biên dịch mã nguồn thành nhị phân tạm trong thư mục đệm hệ thống (`GOCACHE`), thực thi ngay tiến trình rồi dọn dẹp. | Không để lại tệp nhị phân trong thư mục làm việc hiện tại. | Thử nghiệm nhanh cục bộ, kiểm tra cú pháp và logic tức thời. |
-| `go build main.go` | Biên dịch và liên kết toàn bộ mã nguồn cùng Go runtime thành tệp thực thi mã máy độc lập cho hệ điều hành đích. | Sinh tệp nhị phân trực tiếp (`main.exe` trên Windows, `main` trên Linux/macOS). | Triển khai hạ tầng, đóng gói container, phát hành sản phẩm. |
+| `go run [packages/files]` | Biên dịch và thực thi ngay package chính được chỉ định. | Tạo file thực thi trong thư mục làm việc tạm thời của tiến trình biên dịch rồi tự động dọn dẹp, không lưu lại binary trong thư mục hiện hành. | Thử nghiệm nhanh cục bộ, chạy kịch bản tự động hóa hoặc kiểm tra logic tức thời. |
+| `go build [packages/files]` | Biên dịch mã nguồn và liên kết toàn bộ phụ thuộc thành tệp thực thi độc lập. | Phát sinh trực tiếp tệp nhị phân tại thư mục hiện hành (`main.exe` trên Windows, `main` trên Linux/macOS). | Đóng gói bản phát hành, triển khai môi trường máy chủ và hệ thống production. |
 
 Tệp nhị phân sinh ra từ `go build` là mã máy thực thi trực tiếp trên vi kiến trúc CPU đích. Nó không chạy trên máy ảo như bytecode của Java và không dựa vào trình thông dịch như Python. 
 
-Một tệp nhị phân Go chứa sẵn toàn bộ mã máy của ứng dụng, siêu dữ liệu kiểu, và toàn bộ Go runtime thu nhỏ (bao gồm Garbage Collector và Scheduler). Khi biên dịch với cờ liên kết tĩnh hoàn toàn (`CGO_ENABLED=0`), tệp nhị phân hoàn toàn độc lập với các thư viện `libc` của hệ điều hành, cho phép sao chép trực tiếp vào một container rỗng (`scratch`) và vận hành mà không cần bất kỳ công cụ phụ trợ nào.
+Một tệp nhị phân Go chứa sẵn toàn bộ mã máy của ứng dụng, siêu dữ liệu kiểu, và toàn bộ Go runtime thu nhỏ (bao gồm Garbage Collector và Scheduler). Trên Linux mục tiêu, khi biên dịch với cờ vô hiệu hóa cgo (`CGO_ENABLED=0`), bộ công cụ sẽ ưu tiên các bộ phân giải thuần Go (như thuần Go DNS resolver thay vì gọi hàm `getaddrinfo` của `glibc`), tạo ra một file thực thi định dạng ELF liên kết tĩnh. Tệp nhị phân tĩnh này có thể đặt vào một container rỗng tối giản (`scratch`) trên Linux cùng kiến trúc phần cứng. Tuy nhiên, nếu chương trình cần xác thực chứng chỉ TLS khi gọi dịch vụ bên ngoài hoặc xử lý múi giờ địa phương theo tên, container vẫn cần cung cấp kho chứng chỉ gốc CA (`ca-certificates`) và dữ liệu múi giờ (`tzdata`), hoặc chương trình phải chủ động nhúng các tài nguyên này thông qua gói thư viện chuẩn tương ứng.
 
 ## Vòng lặp Phản hồi: Giả thuyết, Đo đạc và Giải thích
 

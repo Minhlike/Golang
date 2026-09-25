@@ -102,6 +102,37 @@ func save(w io.WriteCloser, targets []Target) error {
 
 Lab đầy đủ vẫn đóng tài nguyên trên mọi đường return. Đoạn trên chỉ làm policy lộ ra: giữ write error trước, rồi mới trả close error. Writer giả giữ contract ấy mà không cần filesystem thật.
 
+## Ranh giới Dữ liệu: Short Write, Bộ đệm và Ngộ nhận về Syscall
+
+Khi làm việc với các dòng nhập xuất dữ liệu, trực giác bề mặt thường dẫn tới hai ngộ nhận tai hại: đánh đồng hành vi của Reader với Writer, và cho rằng mỗi thao tác đọc ghi đều kích hoạt một lời gọi hệ thống xuống nhân hệ điều hành.
+
+### Ràng buộc Khắt khe của `io.Writer` và Khái niệm Short Write
+
+Nếu như `io.Reader` cho phép trả về số byte đọc được `n < len(p)` kèm theo `err == nil` trong các tình huống bình thường (chẳng hạn khi đường ống mạng chưa nhận đủ dữ liệu), thì giao diện `io.Writer` lại áp đặt một hợp đồng nghiêm ngặt hơn nhiều. Theo đặc tả của thư viện chuẩn Go, một hàm `Write(p)` bắt buộc phải trả về một lỗi khác `nil` nếu nó không thể ghi trọn vẹn toàn bộ lát cắt dữ liệu (`n < len(p)`).
+
+Lỗi chuẩn được quy ước cho tình huống này là `io.ErrShortWrite`. Nếu một đối tượng triển khai `io.Writer` chỉ ghi được một phần dữ liệu mà vẫn trả về `err == nil`, đối tượng đó đã vi phạm nghiêm trọng hợp đồng ngôn ngữ, khiến bên gọi ngộ nhận rằng toàn bộ thông điệp đã được gửi đi an toàn trong khi thực tế dữ liệu đã bị rơi rụng ngầm.
+
+### Bộ đệm User-space với `bufio`
+
+Mỗi lần một chương trình gửi yêu cầu đọc hoặc ghi trực tiếp xuống mô tả tệp của hệ điều hành, CPU phải thực hiện một quá trình chuyển đổi ngữ cảnh tốn kém từ không gian người dùng (user space) sang không gian nhân (kernel space), kèm theo chi phí lưu và khôi phục các thanh ghi phần cứng. Nếu một ứng dụng ghi một tệp log một megabyte bằng cách gọi hàm `Write` riêng rẽ cho từng byte đơn lẻ, nó sẽ phát sinh một triệu lời gọi hệ thống, làm suy sụp thông lượng của toàn bộ máy chủ.
+
+Các gói công cụ như `bufio.Reader` và `bufio.Writer` giải quyết bài toán này bằng cách thiết lập một vùng đệm trung gian trong bộ nhớ người dùng (mặc định là 4096 byte, tương thích với kích thước một trang nhớ ảo tiêu chuẩn của hệ điều hành). Khi ta ghi vào `bufio.Writer`, các byte được tích lũy tuần tự vào mảng đệm nội bộ mà không cần chạm vào kernel. Chỉ khi bộ đệm đầy hoặc khi lập trình viên chủ động kích hoạt lệnh `Flush()`, toàn bộ khối dữ liệu lớn mới được đẩy xuống hệ thống tệp trong một lời gọi hệ thống duy nhất.
+
+### Lời gọi `Read` không đồng nghĩa với Syscall
+
+Một ngộ nhận kỹ thuật phổ biến là mặc định rằng mọi lệnh `r.Read(p)` trong mã nguồn Go đều tương ứng với một chỉ thị CPU `SYSCALL` trực tiếp xuống kernel.
+
+Trong thực tế, ranh giới giữa việc xử lý trong không gian người dùng và lời gọi hệ thống phụ thuộc hoàn toàn vào kiểu cụ thể ẩn sau giao diện:
+
+| Kiểu cụ thể của Reader | Bản chất cơ chế khi gọi `Read(p)` | Có phát sinh Syscall xuống OS không? |
+| :--- | :--- | :--- |
+| `*bytes.Buffer` hoặc `*strings.Reader` | Sao chép byte trực tiếp từ mảng nhớ này sang mảng nhớ khác trong RAM qua hàm `runtime.memmove`. | Không. Toàn bộ thao tác diễn ra trong user-space với tốc độ băng thông bộ nhớ. |
+| `*bufio.Reader` (khi còn dữ liệu trong đệm) | Cắt lát cắt byte từ bộ đệm nội bộ 4KB có sẵn trong RAM và chuyển cho bên gọi. | Không. Chỉ truy cập bộ nhớ người dùng thuần túy. |
+| `*bufio.Reader` (khi bộ đệm đã cạn) | Phát sinh một lệnh đọc khối lớn từ mô tả tệp để nạp đầy lại bộ đệm 4KB. | Có. Kích hoạt một syscall duy nhất để phục vụ cho nhiều lần `Read` kế tiếp. |
+| `*os.File` hoặc `*net.TCPConn` chưa đệm | Gửi yêu cầu I/O trực tiếp tới kernel qua bảng mô tả tệp (file descriptor). | Có. Thực hiện syscall đọc (`read` trên Linux hoặc `ReadFile`/`WSARecv` trên Windows). |
+
+Đối với kết nối mạng, Go runtime tích hợp sẵn cơ chế Network Poller dựa trên các giao diện thông báo sự kiện hiệu năng cao của hệ điều hành (`epoll` trên Linux, `kqueue` trên macOS, `IOCP` trên Windows). Khi một thao tác đọc mạng chưa có dữ liệu, thay vì khóa chết luồng hệ điều hành, runtime sẽ đưa goroutine đó vào trạng thái chờ và chuyển quyền sử dụng luồng CPU cho goroutine khác. Khi dữ liệu cập bến card mạng, runtime đánh thức goroutine tiếp tục xử lý mà không làm lãng phí tài nguyên của hệ thống.
+
 ## Tự kiểm tra trước khi tích hợp
 
 Chạy từ `labs/part7-stream-boundaries`:

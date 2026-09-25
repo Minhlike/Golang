@@ -61,7 +61,11 @@ b := a
 b[0] = 99
 ~~~
 
-[]int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của underlying array. Ngôn ngữ định nghĩa slice value có length, capacity và một reference tới underlying array. Đó là mental model hữu ích cho semantics; nó không phải lời hứa rằng mọi Go implementation phải dùng đúng một struct hay ABI như hình.
+[]int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của underlying array. 
+
+Về mặt biểu diễn nội bộ trong Go runtime (`src/runtime/slice.go`), một slice được cấu thành từ đúng ba từ máy (3-word descriptor, chiếm 24 byte trên kiến trúc 64-bit): con trỏ dữ liệu `array unsafe.Pointer` trỏ tới phần tử đầu tiên của mảng nền, trường độ dài hiện tại `len int`, và trường sức chứa tối đa `cap int`.
+
+Khi phép gán `b := a` diễn ra, trình biên dịch sao chép nguyên trạng 24 byte của tiêu đề descriptor từ `a` sang `b`. Biến `b` sở hữu một bản sao giá trị riêng biệt về `len` và `cap`, nhưng trường `array` của nó vẫn chứa đúng địa chỉ bộ nhớ trỏ về mảng nền ban đầu.
 
 ![Hai slice value sau assignment: descriptor được copy, backing storage được chia sẻ.](../../assets/diagrams/slice-sharing.png)
 
@@ -73,8 +77,8 @@ Vì vậy hai câu sau cùng đúng, và không mâu thuẫn:
 
 | Câu nói | Đúng ở đâu? |
 | --- | --- |
-| Assignment copy value. | b nhận một slice value riêng: đổi len của b bằng reslice không tự đổi len của a. |
-| Hai slice có thể cùng đổi dữ liệu. | Slice value có thể cùng reference một underlying array; mutation một element hiện ra qua mọi slice cùng nhìn element đó. |
+| Assignment copy value. | b nhận một slice descriptor riêng: đổi len của b bằng reslice không tự đổi len của a. |
+| Hai slice có thể cùng đổi dữ liệu. | Slice descriptor cùng tham chiếu một backing array; mutation một element hiện ra qua mọi slice cùng nhìn element đó. |
 
 Từ aliasing dùng cho tình huống nhiều đường tham chiếu đến cùng dữ liệu. Nó không phải lỗi tự thân. Aliasing giúp cắt một cửa sổ trên buffer mà không copy cả buffer. Nó thành bug khi một người đọc tưởng mình có dữ liệu riêng nhưng thực tế lại đang sửa vùng dùng chung.
 
@@ -128,7 +132,9 @@ fmt.Println(old) // [99 20]
 fmt.Println(s)   // [99 20 30]
 ~~~
 
-Ở đây s còn capacity. old và s có length khác nhau, nhưng vẫn có thể cùng nhìn hai element đầu của backing array. Ngược lại, full slice expression bên dưới giới hạn capacity của view ở 2, nên append buộc phải có storage khác cho grown:
+Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Khi một slice cạn sức chứa (`len == cap`), lời gọi `append` kích hoạt hàm nội bộ `runtime.growslice`. Thuật toán cấp phát hiện đại của Go (từ Go 1.18+) chuyển dịch mượt mà thay vì nhân đôi đột ngột: dưới ngưỡng 256 phần tử, dung lượng tăng gấp đôi; trên 256 phần tử, dung lượng tăng dần theo tỷ lệ `newcap += (newcap + 3*256) / 4`. Hơn thế nữa, số byte thực tế được cấp phát sẽ được bộ quản lý heap làm tròn lên kích thước size-class gần nhất, khiến `cap` thực tế sau khi phình to có thể lớn hơn một lượng nhỏ so với công thức toán học.
+
+Để chủ động phòng vệ, Go cung cấp cú pháp lát cắt ba chỉ số đầy đủ `s[low:high:max]` (Full Slice Expression). Cú pháp này giới hạn sức chứa của lát cắt mới ở mức `max - low`. Khi ta đặt `max = high`, sức chứa bị khóa chặt bằng đúng độ dài; bất kỳ thao tác `append` nào kế tiếp đều bắt buộc phải cấp phát mảng nền độc lập, ngăn chặn hoàn toàn việc ghi đè lên các phần tử phía sau:
 
 ~~~go
 old := []int{10, 20}
@@ -202,7 +208,9 @@ Lab chạy đoạn này với kết quả:
 
 V và i mỗi chiếm một byte. ệ được mã hóa bằng ba byte UTF-8, vì vậy rune tiếp theo bắt đầu ở byte index 5. range trên string decode UTF-8: giá trị thứ hai là rune, thường dùng để biểu diễn Unicode code point. byte là alias của uint8; rune là alias của int32. Code point vẫn không đồng nghĩa với “một ký tự người dùng nhìn thấy”: một grapheme có thể gồm nhiều code point. Ta chưa cần giải quyết segmentation ở đây; chỉ cần không nhầm len với số ký tự hiển thị.
 
-String không cho gán trực tiếp text[0] = 'v'. Khi cần dữ liệu byte có thể sửa, chuyển sang []byte, thao tác, rồi tạo string mới nếu cần. Việc chuyển đổi đó diễn đạt một thay đổi ý định: từ text immutable sang buffer mutable.
+String không cho phép gán trực tiếp `text[0] = 'v'`. Khi cần dữ liệu byte có thể sửa đổi, ta bắt buộc phải chuyển đổi sang `[]byte`, thao tác, rồi tạo chuỗi mới nếu cần. 
+
+Về mặt bộ nhớ, phép chuyển đổi `b := []byte(text)` hoặc `s := string(b)` theo đặc tả Go luôn sao chép toàn bộ dữ liệu byte sang một vùng nhớ mới. Việc sao chép này là bắt buộc để bảo vệ tính bất biến của chuỗi: nếu chia sẻ cùng mảng nền, một thao tác ghi đè `b[0] = 'v'` sẽ làm biến đổi giá trị của chuỗi `text` ban đầu. Mặc dù có chi phí cấp phát, trình biên dịch Go cung cấp cơ chế tối ưu hóa không cấp phát (zero-allocation optimization) trong các ngữ cảnh tra cứu cục bộ: khi tra cứu map dạng `lookup[string(b)]` hoặc so sánh `string(b) == "target"`, compiler phát hiện chuỗi tạm không thoát khỏi biểu thức và tái sử dụng trực tiếp con trỏ của lát cắt byte mà không sinh ra bất kỳ lệnh cấp phát heap nào.
 
 ## Pointer là câu hỏi khác
 

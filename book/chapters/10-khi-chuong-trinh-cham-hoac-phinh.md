@@ -86,7 +86,21 @@ Khi chu kỳ GC kích hoạt, runtime phân bổ chính xác 25% tổng năng l�
 
 Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) vẫn xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha dọn dẹp kết thúc đánh dấu (Mark Termination), nhưng thời gian STW thường được kiểm soát dưới 1 miligiây. Tuy nhiên, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ ép các goroutine của người dùng chuyển sang chế độ **GC Mark Assist**. Khi đó, chính goroutine đang xử lý logic nghiệp vụ sẽ bị tạm dừng để đi quét rác hỗ trợ runtime, dẫn đến hiện tượng trễ đuôi (tail latency P99.99) tăng đột biến.
 
-Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi này:
+### Chiến lược Thu gom Hiện đại: Kiến trúc Green Tea GC trong Go 1.27.1
+
+Ở tầng trừu tượng cao, Go tiếp tục duy trì mô hình toán học ba màu đồng thời (Tri-color Mark-Sweep). Tuy nhiên, về mặt triển khai thực tế trong runtime của Go 1.27.1, chiến lược quét và đánh dấu đã chuyển dịch sang dòng kiến trúc **Green Tea GC** (được kích hoạt mặc định qua `goexperiment.GreenTeaGC`).
+
+Trong mô hình thu gom truyền thống trước đây, runtime sử dụng các bộ đệm công việc kiểu LIFO (`workbuf`) và thực hiện quét từng đối tượng riêng lẻ (object-at-a-time). Mỗi khi một con trỏ được phát hiện, đối tượng đích chuyển sang màu xám và được đẩy vào hàng đợi; khi lấy ra, CPU phải nhảy tới vùng nhớ của đối tượng đó để quét tiếp. Trên các heap chứa hàng chục triệu đối tượng nhỏ, việc nhảy ngẫu nhiên giữa các địa chỉ nhớ phân tán làm phá vỡ tính cục bộ của bộ nhớ đệm CPU (cache thrashing), khiến các lõi xử lý liên tục bị nghẽn do chờ nạp dữ liệu từ RAM.
+
+Green Tea GC giải quyết điểm nghẽn này bằng chiến lược gom cụm theo từng phân đoạn bộ nhớ (span locality):
+
+Nguyên lý trì hoãn và gom cụm (Batch Scanning): Thay vì quét ngay lập tức từng đối tượng khi vừa tìm thấy, runtime trì hoãn việc quét để tích lũy nhiều đối tượng sống nằm trong cùng một `mspan` (đơn vị quản lý trang nhớ của Go heap). Khi một phân đoạn tích lũy đủ đối tượng, CPU sẽ quét toàn bộ các đối tượng trong phân đoạn đó trong một lượt duy nhất. Việc quét dồn dập trên một dải địa chỉ liên tục tận dụng tối đa đường truyền của cache line L1/L2, giảm thiểu chi phí truy xuất siêu dữ liệu và mở đường cho phần cứng CPU kích hoạt kỹ thuật nạp trước (prefetching).
+
+Cặp bitset kép (`marks` và `scans`): Để quản lý việc gom cụm mà vẫn bảo đảm tính chính xác tuyệt đối của GC, Green Tea nhúng trực tiếp hai tập hợp bit vào từng span (`spanInlineMarkBits`). Tập hợp `marks` ghi nhận các đối tượng vừa được phát hiện con trỏ trỏ tới (pre-mark). Tập hợp `scans` ghi nhận các đối tượng đã thực sự được quét xong nội dung. Khi lấy một span từ hàng đợi FIFO ra xử lý, runtime thực hiện phép toán logic tìm hợp và giao giữa hai bitset để xác định chính xác danh sách đối tượng cần quét, thậm chí áp dụng các tập lệnh SIMD (như AVX2) để tăng tốc độ quét bit trên các size class đồng nhất.
+
+Đánh đổi kỹ thuật: Green Tea GC không phải là giải pháp đem lại hiệu năng vượt trội cho mọi trường hợp. Nó tối ưu hóa vượt bậc cho các ứng dụng web và vi dịch vụ sở hữu mật độ đối tượng nhỏ cao và thời gian sống tập trung. Ngược lại, đối với các khối lượng công việc có đồ thị con trỏ thưa thớt hoặc các hệ thống bị ép chặt dung lượng bộ nhớ, cơ chế trì hoãn có thể tạo áp lực nhất thời lên bộ điều tốc chu kỳ (GC Pacer). Hiểu được kiến trúc phân đoạn giúp kỹ sư không xem GC như một chiếc hộp đen thần bí, mà là một hệ thống gom cụm bộ nhớ có chủ đích.
+
+Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi không gian và thời gian này:
 
 Tham số `GOGC`: Xác định tỷ lệ phần trăm tăng trưởng của heap trước khi chu kỳ GC tiếp theo được kích hoạt (mặc định là `100`, tức kích hoạt khi heap đạt 200% lượng dữ liệu sống). Tăng `GOGC` giúp giảm tần suất GC và tiết kiệm chu kỳ CPU, nhưng đổi lại tiến trình sẽ chiếm dụng nhiều RAM hơn.
 

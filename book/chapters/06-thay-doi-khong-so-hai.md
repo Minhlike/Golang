@@ -415,6 +415,63 @@ Test phía failure cũng phải hẹp như vậy. Đưa vào một port không h
 
 Contract test này không thay thế một end-to-end test khởi động binary thật. Khi sau này command nhận flag, file config, signal hoặc network thật, một số luồng cần được kiểm chứng qua process thật. Nhưng dùng binary test để assert mọi dấu cách và mọi nhánh validation sẽ chậm, khó đọc và trùng với unit test. Ranh giới tốt là: logic có dependency thay thế được kiểm tra ở package bên trong; vài lời hứa mà process công bố được giữ ở `run`; chỉ một số đường đi quan trọng mới cần vượt ra integration test.
 
-Vì vậy, việc tách `run` không phải là đổi thiết kế chỉ để làm test pass. Nó làm chính sách vốn đã tồn tại trong `main` có tên, input và output rõ. Code review có thể hỏi một câu cụ thể: “thay đổi này có làm automation nhận stdout, stderr hoặc exit code khác không?” Nếu có, tác giả phải chủ động quyết định đó là compatibility change, chứ không để nó lọt qua dưới vỏ bọc refactor nội bộ.
-
 Đây là điểm dừng của mốc hiện tại: testability không đồng nghĩa phủ một lớp mock lên mọi package. Nó là khả năng đặt từng policy vào một boundary đủ nhỏ để ta tạo input, quan sát kết quả và biết chính xác thay đổi nào đang được bảo vệ.
+
+## Giới hạn của Kiểm thử: Bằng chứng Thực nghiệm và Ranh giới Công cụ
+
+Khi xây dựng hệ thống kiểm thử, kỹ sư trưởng thành không bao giờ coi test là một sự bảo đảm tuyệt đối về mặt toán học. Nhà khoa học máy tính Edsger W. Dijkstra từng đúc kết một nguyên lý kinh điển: kiểm thử phần mềm chỉ có thể chứng minh sự hiện diện của lỗi, chứ không bao giờ có thể chứng minh sự vắng mặt của chúng. Một bộ test xanh một trăm phần trăm chỉ xác nhận rằng chương trình chạy đúng trên đúng tập hợp dữ liệu đầu vào và chuỗi kịch bản mà lập trình viên đã nghĩ tới.
+
+Để mở rộng biên độ kiểm chứng vượt khỏi thiên kiến chủ quan của con người (confirmation bias), kỹ sư kết hợp ba công cụ cốt lõi trong bộ công cụ Go: kiểm thử đột biến (fuzzing), đo lường chuẩn mực (benchmark), và dò tìm xung đột bộ nhớ (race detection).
+
+### Kiểm thử Đột biến với `testing.F`
+
+Kiểm thử hộp trắng thông thường chỉ kiểm tra các ca biên do người viết tưởng tượng ra. Ngược lại, kỹ thuật kiểm thử đột biến định hướng độ phủ (coverage-guided fuzzing) tích hợp sẵn trong Go (`testing.F`) sử dụng một động cơ sinh dữ liệu tự động. Động cơ này liên tục đột biến các chuỗi byte ngẫu nhiên, theo dõi các khối mã máy mới được kích hoạt trong luồng thực thi, và dồn dập đưa hàng triệu tổ hợp đầu vào quái dị vào hàm mục tiêu.
+
+~~~go
+func FuzzParseEndpoint(f *testing.F) {
+	f.Add("localhost:8080")
+	f.Add("10.0.0.1:9000")
+	f.Fuzz(func(t *testing.T, orig string) {
+		ep, err := config.ParseEndpoint(orig)
+		if err != nil {
+			return
+		}
+		if ep.Port < 1 || ep.Port > 65535 {
+			t.Fatalf("Port vuot nguong: %d", ep.Port)
+		}
+	})
+}
+~~~
+
+Khi phát hiện một đầu vào làm chương trình panic hoặc vi phạm bất biến logic, công cụ fuzzing sẽ tự động cô đọng chuỗi byte gây lỗi (crasher) và lưu vĩnh viễn vào thư mục `testdata/fuzz`. Tệp này trở thành một ca kiểm thử hồi quy cố định, ngăn chặn lỗi tái diễn trong tương lai.
+
+### Tính Xác thực của Đo lường Hiệu năng với `testing.B`
+
+Viết benchmark đòi hỏi kỷ luật nghiêm ngặt để tránh thu thập số liệu rác. Khi sử dụng `testing.B`, lập trình viên bắt buộc phải gọi `b.ResetTimer()` sau mọi thao tác khởi tạo môi trường tốn kém để đồng hồ đo chỉ ghi nhận đúng đoạn mã cần khảo sát, đồng thời kích hoạt `b.ReportAllocs()` để giám sát mức độ phân bổ ô nhớ trên heap.
+
+Cạm bẫy nguy hiểm nhất trong benchmark là cơ chế tối ưu hóa loại bỏ mã chết (dead-code elimination) của trình biên dịch. Nếu giá trị tính toán trong thân vòng lặp `b.N` không được sử dụng ở bất kỳ đâu, compiler có thể nhận diện đó là phép tính vô ích và xóa sổ toàn bộ vòng lặp khỏi mã máy. Khi đó, phép đo sẽ báo tốc độ phi lý chỉ 0.02 ns/op. Để khắc phục, ta luôn gán kết quả tính toán vào một biến toàn cục ở cấp độ gói (sink variable), buộc compiler phải bảo toàn các chỉ thị tính toán thực tế.
+
+~~~go
+var sinkResult Outcome
+
+func BenchmarkAppRun(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res, _ := Run(
+			context.Background(), mockLookup, mockRunner,
+		)
+		if len(res) > 0 {
+			sinkResult = res[0]
+		}
+	}
+}
+~~~
+
+### Ranh giới của Bộ Dò Race Detector và Độ bao phủ Mã nguồn
+
+Bộ phát hiện tranh chấp dữ liệu của Go (`go test -race`) vận hành dựa trên thư viện ThreadSanitizer v3. Công cụ này ánh xạ bộ nhớ vật lý sang một vùng nhớ bóng (shadow memory), tiêu tốn dung lượng RAM gấp bốn đến tám lần và làm chậm tốc độ CPU từ hai đến mười lần để theo dõi mọi thao tác đọc ghi đồng thời trên từng ô nhớ tám byte.
+
+Một điều tối quan trọng cần ghi nhớ: Race Detector chỉ có thể phát hiện xung đột dữ liệu trên đúng những nhánh mã nguồn thực sự được thực thi trong quá trình test chạy. Nó hoàn toàn bất lực trước những race condition ẩn nấp trong các nhánh rẽ điều kiện không được kích hoạt, hoặc các kịch bản chạy đua phụ thuộc vào độ trễ mạng ngẫu nhiên trên máy chủ production.
+
+Tương tự, chỉ số độ bao phủ dòng lệnh (statement coverage) đạt một trăm phần trăm không bảo đảm một chương trình không có lỗi. Nó chỉ chứng minh mọi dòng mã đã được luồng điều khiển đi qua ít nhất một lần, nhưng hoàn toàn bỏ qua độ bao phủ nhánh rẽ (branch coverage), các tổ hợp điều kiện boolean phức tạp, và sự tương tác giữa các luồng đồng thời. Kiểm thử vì thế là một công cụ thu thập bằng chứng thực nghiệm có định hướng, không phải là sự chứng minh toán học hoàn hảo cho một hệ thống vận hành.

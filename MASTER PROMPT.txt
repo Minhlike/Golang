@@ -2181,7 +2181,16 @@ CÁC LUẬT VĨNH VIỄN CỦA BẢN GIAO KÈO NỀN TẢNG:
    Mọi khái niệm ngôn ngữ phải được phân tích từ các nguyên lý sơ cấp: cấu trúc bộ nhớ cache L1/L2/L3, cache line, thanh ghi CPU, trang nhớ ảo của hệ điều hành, chuyển đổi ngữ cảnh, và chi phí lời gọi hệ thống.
 
 3. SOURCE-TO-MACHINE EVIDENCE:
-   Khi khảo sát mã nguồn, phải vạch rõ đường đi từ Go source qua phân tích từ vựng, cú pháp, kiểm tra kiểu, cây cú pháp trừu tượng, SSA, phát sinh mã assembly Plan 9, liên kết nhị phân, tới các chỉ thị mã máy thực thi.
+   Khi khảo sát mã nguồn, phải vạch rõ đường đi phản ánh đúng kiến trúc trình biên dịch Go 1.27.1 (`cmd/compile/README.md`):
+   Mã nguồn Go
+   -> Phân tích từ vựng và cú pháp (`cmd/compile/internal/syntax`) tạo Syntax Tree
+   -> Kiểm tra kiểu tĩnh (`cmd/compile/internal/types2`)
+   -> Xây dựng Compiler IR ("Noding" & Unified IR qua `cmd/compile/internal/noder`, `ir`, `types`)
+   -> Tối ưu hóa Middle-End: Dead code elimination, Devirtualization, Inlining (`inline`), Escape analysis (`escape`)
+   -> Khử đường biểu diễn ("Walk" qua `cmd/compile/internal/walk`: chuẩn hóa thứ tự tính toán, desugar map/channel/switch thành lời gọi runtime)
+   -> Biểu diễn SSA trừu tượng (`cmd/compile/internal/ssagen`, `ssa`: generic SSA rewrite rules, BCE, nil check elimination)
+   -> Hạ tầng SSA chuyên biệt phần cứng & Phát sinh chỉ thị mã máy (`ssa` lowering, register allocation, stack layout, `cmd/internal/obj` phát sinh `obj.Prog` sang object file)
+   -> Liên kết nhị phân (`cmd/link`) xuất file thực thi hoàn chỉnh.
 
 4. CRITICAL GO ANALYSIS:
    Không dừng ở việc nêu Go vận hành ra sao, mà phải trả lời tường tận tại sao các tác giả ngôn ngữ lại chọn thiết kế đó, họ đánh đổi điều gì, và điểm gãy của thiết kế xuất hiện ở đâu.

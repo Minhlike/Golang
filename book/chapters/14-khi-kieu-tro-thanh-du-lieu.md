@@ -41,11 +41,11 @@ Ngược lại, khi truyền `&config`, `reflect.ValueOf(&config)` lưu con tr�
 
 `ApplyEnv(nil, nil)` còn có một bẫy nhỏ hơn. `reflect.ValueOf(nil)` trả zero `reflect.Value`, có `Kind` là `Invalid`; nhiều operation khác trên value không hợp lệ có thể panic. Vì vậy boundary phải kiểm tra `IsValid` trước khi làm các operation phụ thuộc shape. Đây là guard cho một value runtime thực sự không tồn tại, không phải một trường hợp `nil` pointer thông thường.
 
-| Cơ chế thực thi | Chi phí trung bình | Cấp phát Heap | Khả năng Compiler Tối ưu |
+| Cơ chế thực thi | Bậc thời gian tương đối | Cấp phát Heap | Khả năng Compiler Tối ưu |
 | :--- | :--- | :--- | :--- |
-| Gọi hàm / phương thức tĩnh | ~1.2 ns/op | 0 B/op (0 allocs) | Tối ưu inlining, SSA register allocation |
-| Gọi gián tiếp qua Interface | ~2.3 ns/op | 0 B/op (0 allocs) | Tra cứu itab, CPU branch prediction tốt |
-| Gọi động qua Reflection (`Value.Call`) | 60 – 140 ns/op | Phân bổ slice tham số và boxing | Không thể inline, thoát ra heap |
+| Gọi hàm / phương thức tĩnh | Rất nhanh (vài chu kỳ CPU) | 0 B/op (0 allocs) | Tối ưu inlining triệt tiêu lời gọi, phân bổ thanh ghi SSA |
+| Gọi gián tiếp qua Interface | Nhanh (vài lệnh CPU gián tiếp) | 0 B/op nếu đối tượng không thoát | Tra cứu con trỏ qua `itab`, tận dụng CPU branch prediction |
+| Gọi động qua Reflection (`Value.Call`) | Chậm hơn hàng chục đến hàng trăm lần | Thường xuyên cấp phát | Đóng gói tham số vào `[]reflect.Value`, boxing interface, không thể inline |
 
 @table Compiler và reflection chia việc khác nhau
 
@@ -203,9 +203,9 @@ func badDataAddress(s string) uintptr {
 
 Trước khi chấp nhận đoạn mã này, hãy phân tích bản chất cơ chế của Go Runtime:
 
-Thứ nhất, con trỏ `unsafe.Pointer` là một thực thể được hệ thống thu gom rác (GC) theo dõi trực tiếp. Trong pha đánh dấu (mark phase) và khi runtime co giãn ngăn xếp (stack growth / reallocation), mọi `unsafe.Pointer` hợp lệ đều được duyệt và cập nhật nếu địa chỉ ô nhớ bị dịch chuyển.
+Thứ nhất, phân biệt rạch ròi giữa việc di dời ngăn xếp (stack movement) và thu gom rác trên heap (heap GC). Bộ thu gom rác của Go là một non-moving collector đối với vùng nhớ heap: các đối tượng sau khi cấp phát trên heap sẽ cố định tại một địa chỉ nhớ cho đến khi bị thu hồi. Tuy nhiên, ngăn xếp của goroutine lại có thể dịch chuyển: khi ngăn xếp phình to (`runtime.morestack`), runtime sẽ cấp phát một vùng nhớ stack mới lớn hơn, sao chép dữ liệu và cập nhật lại toàn bộ các con trỏ trỏ vào stack cũ. Con trỏ `unsafe.Pointer` là thực thể được runtime và GC theo dõi: trên heap, nó giữ cho đối tượng đích không bị giải phóng; trên stack, runtime tự động hiệu chỉnh địa chỉ của nó khi stack di dời.
 
-Thứ hai, `uintptr` chỉ là một kiểu số nguyên thông thường (`uint64` trên kiến trúc 64-bit). Trình thu gom rác coi `uintptr` hoàn toàn là một con số, không phải một con trỏ. Nếu địa chỉ được lưu vào một biến kiểu `uintptr` rồi tách rời khỏi đối tượng gốc, GC có thể thu hồi vùng nhớ đó ngay lập tức, hoặc khi stack của goroutine mở rộng, vùng nhớ cũ bị giải phóng khiến giá trị `uintptr` trỏ vào một vùng nhớ rác nguy hiểm.
+Thứ hai, `uintptr` chỉ là một kiểu số nguyên không dấu (`uint64` trên kiến trúc 64-bit). Trình thu gom rác coi `uintptr` hoàn toàn là một con số vô tri, không phải là một con trỏ tham chiếu sống. Nếu địa chỉ ô nhớ được gán vào một biến `uintptr` rồi tách rời khỏi con trỏ gốc, GC có thể thu hồi đối tượng trên heap ngay lập tức. Đồng thời, nếu đối tượng từng nằm trên stack, runtime sẽ không cập nhật giá trị số nguyên `uintptr` khi stack di dời, biến nó thành một con số trỏ vào vùng nhớ rác nguy hiểm.
 
 Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (pointer arithmetic) chỉ được phép xuất hiện trong **một biểu thức hợp thành duy nhất**:
 
@@ -213,12 +213,12 @@ Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (poin
 p = unsafe.Pointer(uintptr(p) + offset)
 ~~~
 
-Trình biên dịch nhận diện mẫu hình biểu thức đơn này để bảo đảm đối tượng không bị GC thu hồi trong khoảnh khắc tính toán địa chỉ. Việc tách `uintptr` ra một biến trung gian hoặc trả về từ hàm vi phạm trực tiếp cam kết này.
+Trình biên dịch nhận diện mẫu hình biểu thức đơn này để bảo đảm đối tượng gốc không bị GC thu hồi trong khoảnh khắc tính toán địa chỉ. Việc tách `uintptr` ra một biến trung gian hoặc trả về từ hàm vi phạm trực tiếp cam kết này.
 
 Thứ tư, hai kiểu `reflect.StringHeader` và `reflect.SliceHeader` đã bị Go chính thức đánh dấu deprecated kể từ Go 1.20 vì chúng khuyến khích việc thao tác sai lệch trên trường `uintptr Data`. Trong Go hiện đại, các thao tác chuyển đổi tầng thấp phải sử dụng các hàm chuẩn mực do package `unsafe` cung cấp:
 
 ~~~go
-// Trích xuất con trỏ byte nền tảng an toàn
+// Trích xuất con trỏ byte nền tảng
 ptr := unsafe.StringData(s)
 
 // Tái tạo chuỗi từ con trỏ byte và độ dài
@@ -231,7 +231,7 @@ slicePtr := unsafe.SliceData(buf)
 slice := unsafe.Slice(slicePtr, count)
 ~~~
 
-Các hàm nguyên thủy này bảo đảm con trỏ luôn mang kiểu con trỏ có định kiểu, giúp GC theo dõi chính xác vòng đời dữ liệu trên cả ngăn xếp và vùng nhớ động.
+Cần lưu ý đặc biệt về vòng đời dữ liệu: các hàm như `unsafe.StringData` và `unsafe.SliceData` chỉ trích xuất địa chỉ byte đầu tiên, chúng **không tự động bảo đảm vòng đời** cho khối dữ liệu bên dưới nếu biến chuỗi hoặc slice gốc bị mất tham chiếu. Lập trình viên có trách nhiệm bảo đảm đối tượng gốc vẫn còn sống (sử dụng `runtime.KeepAlive` khi cần thiết) trong suốt khoảng thời gian con trỏ được sử dụng.
 
 Chương này không dạy cách “né Go”. Nó dạy một boundary có trách nhiệm khi type chỉ xuất hiện lúc runtime. Reflection có thể giữ code generic nhỏ và thành thật nếu contract về shape, metadata và mutation được viết lộ ra. Khi proof ấy không đủ, quay lại type tĩnh, interface nhỏ hoặc API cụ thể thường là thiết kế tốt hơn.
 

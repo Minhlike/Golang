@@ -29,12 +29,26 @@ doc = fitz.open("Golang_Master.pdf")
 # Ch01 start and table/code pages
 # Devops Library Atlas start
 # Error Atlas start and last page (290)
-pages_to_render = [1, 2, 4, 8, 14, 15]
+target_chapters = [
+    "Trước khi viết dòng Go đầu tiên",
+    "Mở cửa vào Go",
+    "Chương 1 —",
+    "Chương 2 —",
+    "Chương 6 —",
+    "Chương 7 —",
+    "Chương 10 —",
+    "Chương 14 —",
+    "Chương 19 —",
+    "ATLAS MÃ NGUỒN",
+    "ATLAS LỖI GO",
+]
 
-# Add specific section starts
+pages_to_render = [1, 2]
 for title, p in section_pages.items():
-    if "ATLAS MÃ NGUỒN" in title or "ATLAS LỖI GO" in title:
-        pages_to_render.append(p)
+    for target in target_chapters:
+        if target in title:
+            pages_to_render.append(p)
+            break
 
 pages_to_render.append(len(doc))  # Last page
 pages_to_render = sorted(list(set(pages_to_render)))
