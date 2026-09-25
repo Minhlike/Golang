@@ -120,9 +120,17 @@ GitHub / Quản trị viên / API         Máy chủ Webhook (Go)
       │  <── HTTP 200 OK (duplicate) ─────────┴─ BỎ QUA!
 ~~~
 
-Việc kiểm soát chặt chẽ tính lũy đẳng dựa trên `X-GitHub-Delivery` bảo đảm an toàn tuyệt đối cho các tác vụ thay đổi trạng thái hạ tầng. Khi một delivery được redeliver qua giao diện quản trị hoặc qua REST API, hệ thống tự động nhận diện ID đã qua xử lý để bỏ qua một cách an toàn, ngăn chặn việc bot phát hành nhiều bản release trùng lặp, gửi bình luận lặp trên Pull Request hoặc kích hoạt triển khai hạ tầng ngoài ý muốn.
+Mã định danh `X-GitHub-Delivery` là khóa hữu ích để khử trùng lặp (deduplicate), xử lý redelivery và ngăn ngừa phát lại (replay). Khi một delivery được người vận hành kích hoạt lại (redeliver) qua giao diện quản trị hoặc qua REST API, GitHub giữ nguyên cùng một mã GUID, cho phép ứng dụng nhận diện ID đã qua xử lý để bỏ qua an toàn mà không phát hành release trùng lặp hay kích hoạt triển khai kép.
 
-Thiết kế bộ tiếp nhận có kiểm tra trùng lặp:
+Tuy nhiên, cần nhận thức rõ ranh giới bền bỉ: trong mã nguồn lab thực hành, danh sách delivery ID chỉ được lưu tạm thời trên bộ nhớ RAM thông qua cấu trúc `map[string]time.Time`. Do đó, cam kết khử trùng lặp chỉ tồn tại trong vòng đời của tiến trình (process lifetime). Ngay khi tiến trình khởi động lại hoặc container bị điều phối lại, toàn bộ trạng thái khử trùng lặp trong bộ nhớ sẽ bị mất.
+
+Trên môi trường production thực tế, một hệ thống tự động hóa chịu lỗi đòi hỏi phải kết hợp một trong các cơ chế sau:
+1. **Durable idempotency store**: Lưu trữ delivery ID vào kho dữ liệu phân tán có TTL (như Redis hoặc DynamoDB).
+2. **Ràng buộc duy nhất trong cơ sở dữ liệu (Database uniqueness/transaction)**: Ghi delivery ID vào bảng sự kiện với ràng buộc khóa duy nhất (unique constraint) trong cùng transaction xử lý nghiệp vụ.
+3. **Mã định danh thao tác (Operation identity)**: Sinh token lũy đẳng gắn với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện webhook.
+4. **Bản chất nghiệp vụ tự lũy đẳng (Idempotent domain mutation)**: Thiết kế các tác vụ thay đổi hạ tầng theo dạng khai báo (declarative desired-state) để việc thực thi lặp lại nhiều lần vẫn tạo ra cùng một kết quả hội tụ duy nhất.
+
+Thiết kế bộ tiếp nhận có kiểm tra trùng lặp trong bộ nhớ:
 
 ~~~go
 type WebhookReceiver struct {
