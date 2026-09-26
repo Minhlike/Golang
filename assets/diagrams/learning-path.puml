@@ -31,25 +31,25 @@ mindmapDiagram {
   }
 }
 </style>
-* **LỘ TRÌNH\nHỌC GOLANG**
-** NỀN TẢNG & DỮ LIỆU
-*** Cú pháp & Kiểu nguyên tử
-*** Mảng & Lát cắt (Slice)
-*** Con trỏ & Cấu trúc (Struct)
-*** Bọc lỗi có cấu trúc
-** ĐỒNG THỜI & RUNTIME
-*** Goroutine & Kênh truyền (Channel)
-*** Bối cảnh Context & Hủy thực thi
-*** Bộ điều phối G/M/P Scheduler
-*** Phát hiện xung đột Race Detector
-** DỊCH VỤ & MẠNG
-*** HTTP Client & Máy chủ Server
-*** Bắt tay mã hóa TLS Handshake
-*** Vòng đời tắt dịch vụ an toàn
-*** Cơ sở dữ liệu Transaction SQL
-** HỆ THỐNG & DEVOPS
-*** Công cụ dòng lệnh CLI
-*** Bộ tứ Quan sát Observability
-*** Đóng gói Container & Phối hợp
-*** Vòng lặp điều hòa Controller K8s
+* **Lá»˜ TRÃŒNH\nHá»ŒC GOLANG**
+** Ná»€N Táº¢NG & Dá»® LIá»†U
+*** CÃº phÃ¡p & Kiá»ƒu nguyÃªn tá»­
+*** Máº£ng & LÃ¡t cáº¯t (Slice)
+*** Con trá» & Cáº¥u trÃºc (Struct)
+*** Bá»c lá»—i cÃ³ cáº¥u trÃºc
+** Äá»’NG THá»œI & RUNTIME
+*** Goroutine & KÃªnh truyá»n (Channel)
+*** Bá»‘i cáº£nh Context & Há»§y thá»±c thi
+*** Bá»™ Ä‘iá»u phá»‘i G/M/P Scheduler
+*** PhÃ¡t hiá»‡n xung Ä‘á»™t Race Detector
+** Dá»ŠCH Vá»¤ & Máº NG
+*** HTTP Client & MÃ¡y chá»§ Server
+*** Báº¯t tay mÃ£ hÃ³a TLS Handshake
+*** VÃ²ng Ä‘á»i táº¯t dá»‹ch vá»¥ an toÃ n
+*** CÆ¡ sá»Ÿ dá»¯ liá»‡u Transaction SQL
+** Há»† THá»NG & DEVOPS
+*** CÃ´ng cá»¥ dÃ²ng lá»‡nh CLI
+*** Bá»™ tá»© Quan sÃ¡t Observability
+*** ÄÃ³ng gÃ³i Container & Phá»‘i há»£p
+*** VÃ²ng láº·p Ä‘iá»u hÃ²a Controller K8s
 @endmindmap

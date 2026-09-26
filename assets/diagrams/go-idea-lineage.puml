@@ -31,22 +31,22 @@ mindmapDiagram {
   }
 }
 </style>
-* **GOLANG\n(Hội tụ ý tưởng)**
-** DÒNG DÕI C
-*** Cú pháp biểu thức
-*** Quản lý con trỏ ô nhớ
-*** Tốc độ thực thi mã máy
-** DÒNG DÕI PASCAL
+* **GOLANG\n(Há»™i tá»¥ Ã½ tÆ°á»Ÿng)**
+** DÃ’NG DÃ•I C
+*** CÃº phÃ¡p biá»ƒu thá»©c
+*** Quáº£n lÃ½ con trá» Ã´ nhá»›
+*** Tá»‘c Ä‘á»™ thá»±c thi mÃ£ mÃ¡y
+** DÃ’NG DÃ•I PASCAL
 *** Modula-2
-**** Khai báo module
+**** Khai bÃ¡o module
 *** Oberon-2
-**** Khai báo tên trước kiểu
-**** Hệ thống package gọn nhẹ
-** TIẾN TRÌNH CSP
+**** Khai bÃ¡o tÃªn trÆ°á»›c kiá»ƒu
+**** Há»‡ thá»‘ng package gá»n nháº¹
+** TIáº¾N TRÃŒNH CSP
 *** Tony Hoare (1978)
-**** Tiến trình tuần tự giao tiếp
+**** Tiáº¿n trÃ¬nh tuáº§n tá»± giao tiáº¿p
 *** Newsqueak & Alef
-**** Thử nghiệm channel & select
-*** Limbo (Hệ điều hành Inferno)
-**** Kênh truyền channel kiểu mạnh
+**** Thá»­ nghiá»‡m channel & select
+*** Limbo (Há»‡ Ä‘iá»u hÃ nh Inferno)
+**** KÃªnh truyá»n channel kiá»ƒu máº¡nh
 @endmindmap

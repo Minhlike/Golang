@@ -1,6 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
+skinparam note {
+  BackgroundColor #F5F5F2
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 21
 skinparam defaultFontColor #000000
@@ -21,19 +26,19 @@ skinparam note {
 }
 top to bottom direction
 
-rectangle "Mã nguồn .go\ntệp văn bản bạn viết" as source
-rectangle "Token từ vựng\npackage · định danh · số · toán tử" as tokens
-rectangle "Cú pháp ngữ pháp (AST)\nkhai báo · biểu thức · khối lệnh" as syntax
-rectangle "Kiểm tra kiểu (Type Check)\nint, string, bool, chữ ký hàm" as types
-rectangle "Mã máy thực thi\nchương trình khởi chạy" as run
+rectangle "MÃ£ nguá»“n .go\ntá»‡p vÄƒn báº£n báº¡n viáº¿t" as source
+rectangle "Token tá»« vá»±ng\npackage Â· Ä‘á»‹nh danh Â· sá»‘ Â· toÃ¡n tá»­" as tokens
+rectangle "CÃº phÃ¡p ngá»¯ phÃ¡p (AST)\nkhai bÃ¡o Â· biá»ƒu thá»©c Â· khá»‘i lá»‡nh" as syntax
+rectangle "Kiá»ƒm tra kiá»ƒu (Type Check)\nint, string, bool, chá»¯ kÃ½ hÃ m" as types
+rectangle "MÃ£ mÃ¡y thá»±c thi\nchÆ°Æ¡ng trÃ¬nh khá»Ÿi cháº¡y" as run
 
-source -right-> tokens : tách từ vựng
-tokens -down-> syntax : dựng cây cú pháp
-syntax -left-> types : phân tích ngữ nghĩa
-types -down-> run : hợp lệ thực thi
+source -right-> tokens : tÃ¡ch tá»« vá»±ng
+tokens -down-> syntax : dá»±ng cÃ¢y cÃº phÃ¡p
+syntax -left-> types : phÃ¢n tÃ­ch ngá»¯ nghÄ©a
+types -down-> run : há»£p lá»‡ thá»±c thi
 
 note bottom of types
-  Mô hình tinh thần trừu tượng.
-  Compiler thực tế có thêm SSA, inlining và tối ưu mã.
+  MÃ´ hÃ¬nh tinh tháº§n trá»«u tÆ°á»£ng.
+  Compiler thá»±c táº¿ cÃ³ thÃªm SSA, inlining vÃ  tá»‘i Æ°u mÃ£.
 end note
 @enduml

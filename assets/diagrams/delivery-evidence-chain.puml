@@ -1,6 +1,11 @@
 @startuml
 left to right direction
 skinparam shadowing false
+skinparam note {
+  BackgroundColor #F5F5F2
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam defaultFontName "Source Sans 3"
 skinparam rectangle {
   BackgroundColor #F7F7F4
@@ -9,16 +14,16 @@ skinparam rectangle {
   RoundCorner 8
 }
 skinparam note {
-  BackgroundColor #FFFCE1
+  BackgroundColor #F5F5F2
   BorderColor #777777
 }
 
-rectangle "phiên bản nguồn\ncommit đã chọn" as source
-rectangle "biên dịch\nmã định danh gói (digest)" as build
-rectangle "bằng chứng\nkiểm thử + nguồn gốc" as evidence
-rectangle "chính sách phê duyệt\nquyền hạn + cổng kiểm tra" as policy
-rectangle "trạng thái mong muốn\ngói được triển khai" as deploy
-rectangle "quan sát phát hành\ntrạng thái + tín hiệu" as observe
+rectangle "phiÃªn báº£n nguá»“n\ncommit Ä‘Ã£ chá»n" as source
+rectangle "biÃªn dá»‹ch\nmÃ£ Ä‘á»‹nh danh gÃ³i (digest)" as build
+rectangle "báº±ng chá»©ng\nkiá»ƒm thá»­ + nguá»“n gá»‘c" as evidence
+rectangle "chÃ­nh sÃ¡ch phÃª duyá»‡t\nquyá»n háº¡n + cá»•ng kiá»ƒm tra" as policy
+rectangle "tráº¡ng thÃ¡i mong muá»‘n\ngÃ³i Ä‘Æ°á»£c triá»ƒn khai" as deploy
+rectangle "quan sÃ¡t phÃ¡t hÃ nh\ntráº¡ng thÃ¡i + tÃ­n hiá»‡u" as observe
 
 source --> build
 build --> evidence
@@ -27,7 +32,7 @@ policy --> deploy
 deploy --> observe
 
 note bottom of policy
-  Mỗi bước chỉ chứng minh
-  cam kết (contract) của chính nó.
+  Má»—i bÆ°á»›c chá»‰ chá»©ng minh
+  cam káº¿t (contract) cá»§a chÃ­nh nÃ³.
 end note
 @enduml

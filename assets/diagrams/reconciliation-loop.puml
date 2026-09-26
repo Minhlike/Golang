@@ -1,6 +1,11 @@
 @startuml
 left to right direction
 skinparam shadowing false
+skinparam note {
+  BackgroundColor #F5F5F2
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam defaultFontName "Source Sans 3"
 skinparam rectangle {
   BackgroundColor #F7F7F4
@@ -9,21 +14,21 @@ skinparam rectangle {
   RoundCorner 8
 }
 skinparam note {
-  BackgroundColor #FFFCE1
+  BackgroundColor #F5F5F2
   BorderColor #777777
 }
 
-rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao, chính sách" as desired
-rectangle "bộ điều khiển (Controller)\nquan sát -> phán đoán -> hành động" as controller
-rectangle "trạng thái thực tế (Status)\nPod, tiến trình, độ sẵn sàng" as current
+rectangle "tráº¡ng thÃ¡i mong muá»‘n (Spec)\nmÃ£ Ä‘á»‹nh danh gÃ³i, sá»‘ báº£n sao, chÃ­nh sÃ¡ch" as desired
+rectangle "bá»™ Ä‘iá»u khiá»ƒn (Controller)\nquan sÃ¡t -> phÃ¡n Ä‘oÃ¡n -> hÃ nh Ä‘á»™ng" as controller
+rectangle "tráº¡ng thÃ¡i thá»±c táº¿ (Status)\nPod, tiáº¿n trÃ¬nh, Ä‘á»™ sáºµn sÃ ng" as current
 
-desired --> controller : cấu hình khai báo (Spec)
-current --> controller : dữ liệu quan trắc thực tế
-controller --> current : tác động điều chỉnh
+desired --> controller : cáº¥u hÃ¬nh khai bÃ¡o (Spec)
+current --> controller : dá»¯ liá»‡u quan tráº¯c thá»±c táº¿
+controller --> current : tÃ¡c Ä‘á»™ng Ä‘iá»u chá»‰nh
 
 note bottom of controller
-  Một vòng lặp không cam kết đưa hệ thống về
-  trạng thái cuối cùng ngay tức thì.
-  Nó là quá trình hội tụ liên tục qua thời gian.
+  Má»™t vÃ²ng láº·p khÃ´ng cam káº¿t Ä‘Æ°a há»‡ thá»‘ng vá»
+  tráº¡ng thÃ¡i cuá»‘i cÃ¹ng ngay tá»©c thÃ¬.
+  NÃ³ lÃ  quÃ¡ trÃ¬nh há»™i tá»¥ liÃªn tá»¥c qua thá»i gian.
 end note
 @enduml

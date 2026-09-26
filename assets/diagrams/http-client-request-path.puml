@@ -3,6 +3,11 @@ skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam shadowing false
+skinparam note {
+  BackgroundColor #F5F5F2
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam activity {
   BackgroundColor #FFFFFF
   BorderColor #222222
@@ -11,18 +16,18 @@ skinparam activity {
 skinparam ArrowColor #222222
 
 start
-:Yêu cầu có context và deadline;
-if (Có kết nối rảnh (idle) phù hợp?) then (có)
-  :Tái sử dụng kết nối cũ;
-else (không)
-  :Phân giải tên miền (DNS)\nđổi host thành địa chỉ IP;
-  :Khởi tạo kết nối TCP (Dial);
-  if (URL là HTTPS?) then (có)
-    :Bắt tay TLS\nvà xác minh danh tính host;
+:YÃªu cáº§u cÃ³ context vÃ  deadline;
+if (CÃ³ káº¿t ná»‘i ráº£nh (idle) phÃ¹ há»£p?) then (cÃ³)
+  :TÃ¡i sá»­ dá»¥ng káº¿t ná»‘i cÅ©;
+else (khÃ´ng)
+  :PhÃ¢n giáº£i tÃªn miá»n (DNS)\nÄ‘á»•i host thÃ nh Ä‘á»‹a chá»‰ IP;
+  :Khá»Ÿi táº¡o káº¿t ná»‘i TCP (Dial);
+  if (URL lÃ  HTTPS?) then (cÃ³)
+    :Báº¯t tay TLS\nvÃ  xÃ¡c minh danh tÃ­nh host;
   endif
 endif
-:Gửi yêu cầu HTTP;
-:Nhận headers và thân phản hồi;
-:Bên gọi đọc luồng dữ liệu\nvà đóng thân phản hồi (body);
+:Gá»­i yÃªu cáº§u HTTP;
+:Nháº­n headers vÃ  thÃ¢n pháº£n há»“i;
+:BÃªn gá»i Ä‘á»c luá»“ng dá»¯ liá»‡u\nvÃ  Ä‘Ã³ng thÃ¢n pháº£n há»“i (body);
 stop
 @enduml

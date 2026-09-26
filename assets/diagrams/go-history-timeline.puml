@@ -1,6 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
+skinparam note {
+  BackgroundColor #F5F5F2
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
@@ -16,14 +21,14 @@ skinparam nodesep 55
 skinparam ranksep 38
 top to bottom direction
 
-rectangle "2007\nMục tiêu được phác thảo\nTên Go được đề xuất" as y2007
-rectangle "2008\nTrình biên dịch thử nghiệm\nBộ tiền xử lý GCC và bộ công cụ" as y2008
-rectangle "2009\nMở mã nguồn chính thức\nNgày 10 tháng 11" as y2009
-rectangle "2012\nGo 1 phát hành\nCam kết tương thích dài hạn" as y2012
-rectangle "2015\nGo 1.5 tự thân\nToolchain/runtime thuần Go\nBộ gom rác GC đồng thời" as y2015
-rectangle "2018\nGo 1.11\nKhởi đầu quản lý Go Modules" as y2018
-rectangle "2022\nGo 1.18\nTham số kiểu (Generics)" as y2022
-rectangle "2026\nGo 1.27\nPhương thức tổng quát (Generic methods)" as y2026
+rectangle "2007\nMá»¥c tiÃªu Ä‘Æ°á»£c phÃ¡c tháº£o\nTÃªn Go Ä‘Æ°á»£c Ä‘á» xuáº¥t" as y2007
+rectangle "2008\nTrÃ¬nh biÃªn dá»‹ch thá»­ nghiá»‡m\nBá»™ tiá»n xá»­ lÃ½ GCC vÃ  bá»™ cÃ´ng cá»¥" as y2008
+rectangle "2009\nMá»Ÿ mÃ£ nguá»“n chÃ­nh thá»©c\nNgÃ y 10 thÃ¡ng 11" as y2009
+rectangle "2012\nGo 1 phÃ¡t hÃ nh\nCam káº¿t tÆ°Æ¡ng thÃ­ch dÃ i háº¡n" as y2012
+rectangle "2015\nGo 1.5 tá»± thÃ¢n\nToolchain/runtime thuáº§n Go\nBá»™ gom rÃ¡c GC Ä‘á»“ng thá»i" as y2015
+rectangle "2018\nGo 1.11\nKhá»Ÿi Ä‘áº§u quáº£n lÃ½ Go Modules" as y2018
+rectangle "2022\nGo 1.18\nTham sá»‘ kiá»ƒu (Generics)" as y2022
+rectangle "2026\nGo 1.27\nPhÆ°Æ¡ng thá»©c tá»•ng quÃ¡t (Generic methods)" as y2026
 
 y2007 --> y2008
 y2008 --> y2009

@@ -149,11 +149,12 @@ def register_fonts() -> tuple[str, str, str, str, str]:
 
 def inline(text: str, mono: str) -> str:
     escaped = html.escape(text)
-    escaped = re.sub(
-        r"`([^`]+)`",
-        lambda m: f'<font name="{mono}" color="#111111">{m.group(1)}</font>',
-        escaped,
-    )
+    def _mono_span(m: re.Match) -> str:
+        # Replace spaces with non-breaking space (U+00A0) so ReportLab
+        # cannot break the token mid-content inside a table cell.
+        content = m.group(1).replace(" ", "\u00a0")
+        return f'<font name="{mono}" color="#111111">{content}</font>'
+    escaped = re.sub(r"`([^`]+)`", _mono_span, escaped)
     return re.sub(
         r"\*\*(.+?)\*\*",
         r'<font name="BookSansBold">\1</font>',
@@ -285,23 +286,46 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             data.append([Paragraph(inline(cell, mono), style) for cell in row])
 
         avail_width = PRINTABLE_WIDTH
-        col_max_lens = [max(len(row[c]) for row in [rows[0], *rows[2:]]) for c in range(columns)]
-        total_len = sum(col_max_lens) or 1
-        # Minimum column width: 2.2cm ensures short-label columns (format verbs,
-        # command names) always render as readable words, never character-wrapping.
-        min_col_w = 2.2 * cm
-        if columns > 2 and total_len > 0:
-            weights = [max(l, 8) for l in col_max_lens]
-            sum_w = sum(weights)
-            col_widths = [avail_width * (w / sum_w) for w in weights]
-            # Enforce minimum: iteratively clamp and redistribute excess from wider cols
-            for _ in range(columns):
-                clamped = [max(w, min_col_w) for w in col_widths]
+        # Token-aware column weight: mono content (~6.6pt/char) is wider than
+        # serif (~5.5pt/char). Weight mono segments at 1.4× to avoid narrow
+        # columns that force code tokens to wrap mid-token.
+        MONO_FACTOR = 1.4
+        def _cell_weight(cell: str) -> float:
+            codes = re.findall(r"`([^`]+)`", cell)
+            plain = re.sub(r"`[^`]+`", "", cell)
+            return len(plain) + sum(len(c) * MONO_FACTOR for c in codes)
+
+        col_weights = [
+            max(_cell_weight(row[c]) for row in [rows[0], *rows[2:]])
+            for c in range(columns)
+        ]
+        # Token-aware minimum: ensure column is wide enough for longest
+        # unbreakable mono token (JetBrains Mono 11pt ≈ 6.6pt/char + 14pt padding)
+        MONO_CHAR_PT = 6.6
+        COL_PAD_PT = 14.0
+        def _token_min(c: int) -> float:
+            codes_in_col = []
+            for row in [rows[0], *rows[2:]]:
+                codes_in_col.extend(re.findall(r"`([^`]+)`", row[c]))
+            if not codes_in_col:
+                return 2.2 * cm
+            longest = max(len(t) for t in codes_in_col)
+            needed = longest * MONO_CHAR_PT + COL_PAD_PT
+            return min(max(needed, 2.2 * cm), 6.0 * cm)  # cap at 6cm
+
+        col_mins = [_token_min(c) for c in range(columns)]
+
+        if columns > 2:
+            sum_w = sum(max(w, 8) for w in col_weights) or 1
+            col_widths = [avail_width * (max(w, 8) / sum_w) for w in col_weights]
+            # Enforce per-column minimum iteratively
+            for _ in range(columns + 1):
+                clamped = [max(col_widths[c], col_mins[c]) for c in range(columns)]
                 excess = sum(clamped) - avail_width
                 if excess <= 0.5:
                     col_widths = clamped
                     break
-                above = [(i, clamped[i]) for i in range(columns) if clamped[i] > min_col_w]
+                above = [(i, clamped[i]) for i in range(columns) if clamped[i] > col_mins[i]]
                 total_above = sum(w for _, w in above) or 1
                 for i, w in above:
                     clamped[i] -= excess * (w / total_above)
@@ -331,9 +355,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ])
         flowables.append(table)
         flowables.append(Spacer(1, 10))
-        # KeepTogether up to 12 rows: covers most tables including format-verb tables
-        # (~11 rows). Larger tables use repeatRows=1 so header repeats on each page.
-        if len(rows) <= 12:
+        # Fix #2: use len(data) — actual rendered rows (header + data, no separator).
+        # len(rows) includes the Markdown separator row causing off-by-one.
+        # Threshold 14: format-verb table has 13 rendered rows (1 header + 12 verbs).
+        if len(data) <= 14:
             story.append(KeepTogether(flowables))
         else:
             story.extend(flowables)
@@ -342,18 +367,20 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
 
 
     def add_code_block() -> None:
-        """Make tabs deterministic, keep code distinct, and split long blocks across pages.
+        """Render code blocks as a single box where possible; split only when necessary.
 
-        Uses equal-split chunking instead of fixed 28-line windows so that no chunk
-        is a dangling fragment (e.g. a lone closing brace or 2-line orphan).
+        Blocks ≤ PAGE_FIT lines: always one box (KeepTogether moves it to a new page
+        rather than splitting, eliminating two-box-on-same-page artifacts).
+        Blocks > PAGE_FIT lines: equal-split into balanced halves/thirds.
         """
         nonlocal code_lines
-        PAGE_FIT = 27  # approx lines that fit comfortably in one page column
+        # At 11pt/15pt leading + 20pt padding: ~36 lines fit in one page column.
+        PAGE_FIT = 36
         n = len(code_lines)
         if n <= PAGE_FIT:
             chunks = [code_lines]
         else:
-            # Split into roughly equal parts to avoid tiny dangling fragments
+            # Equal split — no tiny dangling fragments
             n_parts = max(2, (n + PAGE_FIT - 1) // PAGE_FIT)
             base = n // n_parts
             remainder = n % n_parts
@@ -375,7 +402,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                 ("TOPPADDING", (0, 0), (-1, -1), 10),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
             ]))
-            if len(chunks) == 1 and len(chunk) <= 22:
+            if len(chunks) == 1:
+                # Single block: always KeepTogether regardless of line count
                 story.append(KeepTogether([Spacer(1, 6), box, Spacer(1, 13)]))
             else:
                 top_spacer = 6 if idx == 0 else 2
@@ -591,10 +619,8 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                 story.append(KeepTogether(current_entry))
                 current_entry = []
             g_title = ls[3:].upper()
-            # Insert a column break before the last group (J — Container/K8s/CI-CD)
-            # to balance the two columns on the final Atlas page.
-            if g_title.startswith("J"):
-                story.append(FrameBreak())
+            # Do NOT insert FrameBreak before entire group J — it forces all 11
+            # entries into one column. Balance is done mid-J at entry J06 instead.
             story.append(KeepTogether([
                 Spacer(1, 4),
                 Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
@@ -610,6 +636,10 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             m = re.match(r"^###\s+([A-J]\d{2})\s+(.+)$", ls)
             if m:
                 eid, raw_title = m.group(1), m.group(2).strip()
+                # Fix #4: insert FrameBreak before J06 to split group J's 11 entries
+                # into [J01-J05] col1 + [J06-J11] col2 for balanced final Atlas page.
+                if eid == "J06":
+                    story.append(FrameBreak())
                 if raw_title.startswith("`") and raw_title.endswith("`"):
                     clean_title = raw_title.strip("`")
                     p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font name=\"{mono}\" color=\"#111111\"><b>{html.escape(clean_title)}</b></font>", s["atlas_id"])
@@ -617,6 +647,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                     p = Paragraph(f"<b>{eid}</b>&nbsp;&nbsp;<font color=\"#111111\"><b>{html.escape(raw_title)}</b></font>", s["atlas_id"])
                 current_entry.extend([p, Spacer(1, 1)])
             continue
+
 
         if ls.startswith(("* ", "- ")):
             bullet_raw = ls[2:].strip()
