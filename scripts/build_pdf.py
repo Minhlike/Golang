@@ -311,8 +311,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
             ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
+            ("INNERGRID", (0, 0), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_HAIRLINE),
             ("LINEBELOW", (0, 0), (-1, 0), LINE_WEIGHT_RULE, COLOR_BORDER_MEDIUM),
-            ("LINEBELOW", (0, 1), (-1, -2), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_HAIRLINE),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 7),
             ("RIGHTPADDING", (0, 0), (-1, -1), 7),
