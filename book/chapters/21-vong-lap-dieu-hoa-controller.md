@@ -242,7 +242,7 @@ Bộ kiểm thử tự động xác thực ba đặc tính kỹ thuật quan tr�
 
 Hiểu và làm chủ Controller Pattern là bước ngoặt đưa kỹ sư Go từ vai trò người xây dựng công cụ đơn lẻ trở thành kiến trúc sư của các hệ thống tự trị (*autonomous control systems*). Bằng cách kết hợp khả năng thu thập tín hiệu của `opsprobe` (Chương 20) với cơ chế điều hòa cấp độ mức của Controller (Chương 21), hệ thống không chỉ biết nói cho ta biết nó đang đau ở đâu, mà còn có thể tự chữa lành vết thương trước khi người dùng kịp nhận ra.
 
-Đây chính là nền tảng trực tiếp để ta mở rộng sang việc xây dựng các Custom Controller và Operator tiêu chuẩn trong hệ sinh thái Kubernetes bằng `client-go` ở các chương chuyên sâu tiếp theo.
+Đây là nền tảng trực tiếp cho Chương 22, nơi cùng các câu hỏi ấy gặp List/Watch, cache và workqueue của `client-go`; Chương 23 mới thêm API riêng, status, ownership và finalizer của một operator. Hàng đợi trong chương này là mô hình tái lập để đọc cơ chế, không phải bản thay thế cho implementation của Kubernetes.
 
 @references
 1. Kubernetes Authors. Controller pattern and declarative state management. kubernetes.io/docs/concepts/architecture/controller/

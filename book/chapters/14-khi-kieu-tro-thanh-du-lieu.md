@@ -62,6 +62,8 @@ Reflection vì thế không thay generics. Nếu function chỉ cần một oper
 
 Interface là abstraction theo behavior: concrete type có thể thay đổi lúc runtime, nhưng compiler vẫn kiểm tra method contract. Generics hay type parameter là abstraction ở compile time trên một tập type có constraint; compiler vẫn biết type information cần thiết cho bài toán phù hợp. Reflection inspect hoặc thao tác `Type` và `Value` ở runtime khi metadata hay shape mới là input. `unsafe` là escape hatch vượt ra ngoài một phần type safety thông thường; nó chỉ có chỗ khi representation và lifetime đã có proof cụ thể. Bốn công cụ có thể cùng xuất hiện trong một codebase, nhưng không phải bốn cách thay thế cho nhau.
 
+Đây chỉ là cầu nối để đặt reflection vào đúng ranh giới, chưa phải bài học về tham số kiểu. Chương 19 sẽ bắt đầu lại từ một phép lặp cụ thể, rồi xây type parameter, constraint và cách giữ thông tin kiểu mà không biến mọi API thành `any`. Đến lúc đó, câu hỏi không còn là “reflection có linh hoạt hơn không?”, mà là contract nào compiler vẫn có thể giữ giúp ta.
+
 ## Struct tag là schema nhỏ, không phải comment bí mật
 
 Một struct tag là metadata gắn vào declaration. Compiler lưu nó trong type; `reflect.StructField.Tag.Lookup` có thể đọc nó ở runtime. Tag không tự parse environment hay validate domain. Nó chỉ cho loader biết field nào đã tham gia vào schema này.

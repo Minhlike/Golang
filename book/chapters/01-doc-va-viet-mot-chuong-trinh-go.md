@@ -25,6 +25,17 @@ func main() {
 }
 ~~~
 
+## Chạy chương trình trong một module nhỏ
+
+Lưu đoạn mã trên thành `main.go` trong một thư mục trống. Trước khi chạy, tạo một module cục bộ cho thư mục ấy. Module chưa phải là một package, cũng không có nghĩa mã phải được công bố lên mạng; ở bước này nó chỉ cho công cụ Go biết ranh giới của một chương trình và nơi sẽ ghi nhận phụ thuộc khi chương trình có phụ thuộc.
+
+~~~powershell
+go mod init example.com/first-go
+go run .
+~~~
+
+Lệnh đầu tạo `go.mod`; `example.com/first-go` là tên định danh minh họa, không phải một địa chỉ mà anh phải sở hữu. Lệnh sau yêu cầu Go xây package `main` trong thư mục hiện tại rồi chạy executable tạm. Ta sẽ trở lại module, đường dẫn import, đồ thị phụ thuộc và cách một package trở thành ranh giới ở Chương 5. Hiện tại chỉ cần giữ một mốc thực hành: mỗi lab nằm trong một thư mục có `go.mod` riêng, và terminal phải đứng đúng thư mục của lab trước khi chạy lệnh được ghi trong bài.
+
 <!-- pagebreak -->
 
 ![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
