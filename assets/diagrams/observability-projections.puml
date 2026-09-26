@@ -5,7 +5,7 @@ skinparam defaultFontSize 14
 <style>
 mindmapDiagram {
   node {
-    BackgroundColor #F4F4F2
+    BackgroundColor #F4F4F4
     LineColor #000000
     LineThickness 1.2
     FontColor #000000
@@ -22,7 +22,7 @@ mindmapDiagram {
     Padding 12
   }
   :depth(1) {
-    BackgroundColor #E5E5E0
+    BackgroundColor #E5E5E5
     FontColor #000000
     FontSize 14
     LineThickness 1.8
@@ -31,25 +31,25 @@ mindmapDiagram {
   }
 }
 </style>
-* **Sá»° KIá»†N Há»† THá»NG\n(Event / Probe)**
-** NHáº¬T KÃ (LOGS)
-*** Äá»‹nh danh chi tiáº¿t
-*** Dá»¯ liá»‡u cÃ³ cáº¥u trÃºc (JSON)
-*** Bá»‘i cáº£nh lá»—i nguyÃªn nhÃ¢n
-** CHá»ˆ Sá» (METRICS)
-*** Sá»‘ liá»‡u thá»‘ng kÃª tá»•ng há»£p
-*** Bá»™ Ä‘áº¿m Counter & ThÆ°á»›c Ä‘o Gauge
-*** PhÃ¢n bá»‘ thá»i gian Histogram
-** Dáº¤U Váº¾T (TRACES)
-*** ÄÆ°á»ng Ä‘i yÃªu cáº§u phÃ¢n tÃ¡n
-*** MÃ£ váº¿t TraceID & SpanID
-*** Äiá»ƒm ngháº½n Ä‘á»™ trá»… máº¡ng
-** TRáº NG THÃI (STATE)
-*** Hiá»‡n tráº¡ng tÃ i nguyÃªn bá»™ nhá»›
-*** Sá»‘ lÆ°á»£ng Goroutine hoáº¡t Ä‘á»™ng
-*** Táº£i CPU & Táº§n suáº¥t GC
-** Sá»¨C KHá»ŽE (HEALTH)
-*** Kiá»ƒm tra sá»‘ng (Liveness)
-*** Sáºµn sÃ ng nháº­n viá»‡c (Readiness)
-*** BÃ¡o hiá»‡u cho Orchestrator
+* **SỰ KIỆN HỆ THỐNG\n(Event / Probe)**
+** NHẬT KÝ (LOGS)
+*** Định danh chi tiết
+*** Dữ liệu có cấu trúc (JSON)
+*** Bối cảnh lỗi nguyên nhân
+** CHỈ SỐ (METRICS)
+*** Số liệu thống kê tổng hợp
+*** Bộ đếm Counter & Thước đo Gauge
+*** Phân bố thời gian Histogram
+** DẤU VẾT (TRACES)
+*** Đường đi yêu cầu phân tán
+*** Mã vết TraceID & SpanID
+*** Điểm nghẽn độ trễ mạng
+** TRẠNG THÁI (STATE)
+*** Hiện trạng tài nguyên bộ nhớ
+*** Số lượng Goroutine hoạt động
+*** Tải CPU & Tần suất GC
+** SỨC KHỎE (HEALTH)
+*** Kiểm tra sống (Liveness)
+*** Sẵn sàng nhận việc (Readiness)
+*** Báo hiệu cho Orchestrator
 @endmindmap

@@ -1,16 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
   RoundCorner 5
@@ -26,7 +21,7 @@ skinparam note {
 left to right direction
 rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 0" as original
 rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 0" as copy
-original --> copy : candidate := billing\nsao chÃ©p toÃ n bá»™ cÃ¡c trÆ°á»ng
-note bottom of original : billing.Healthy váº«n giá»¯ true
-note bottom of copy : candidate.Healthy Ä‘á»•i thÃ nh false
+original --> copy : candidate := billing\nsao chép toàn bộ các trường
+note bottom of original : billing.Healthy vẫn giữ true
+note bottom of copy : candidate.Healthy đổi thành false
 @enduml

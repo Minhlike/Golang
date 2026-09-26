@@ -4,7 +4,7 @@ skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam shadowing false
 skinparam note {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
@@ -16,14 +16,14 @@ skinparam rectangle {
 skinparam ArrowColor #222222
 left to right direction
 
-rectangle "cmd/opsprobe\ngá»‘c láº¯p ghÃ©p (composition root)\nin káº¿t quáº£" as cmd
-rectangle "internal/config\ncáº¥u hÃ¬nh má»¥c tiÃªu" as config
-rectangle "probe\nkiá»ƒm tra Check, mÃ´ hÃ¬nh, ranh giá»›i lá»—i" as probe
+rectangle "cmd/opsprobe\ngốc lắp ghép (composition root)\nin kết quả" as cmd
+rectangle "internal/config\ncấu hình mục tiêu" as config
+rectangle "probe\nkiểm tra Check, mô hình, ranh giới lỗi" as probe
 
-cmd --> config : náº¡p cáº¥u hÃ¬nh
-cmd --> probe : khá»Ÿi táº¡o Service, gá»i Check
+cmd --> config : nạp cấu hình
+cmd --> probe : khởi tạo Service, gọi Check
 note bottom of probe
-khÃ´ng import ngÆ°á»£c cmd hoáº·c config
-(nguyÃªn táº¯c phá»¥ thuá»™c má»™t chiá»u)
+không import ngược cmd hoặc config
+(nguyên tắc phụ thuộc một chiều)
 end note
 @enduml

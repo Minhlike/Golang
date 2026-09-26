@@ -5,7 +5,7 @@ skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
   RoundCorner 5

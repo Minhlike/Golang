@@ -4,7 +4,7 @@ skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam shadowing false
 skinparam note {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
@@ -16,23 +16,23 @@ skinparam activity {
 skinparam ArrowColor #222222
 
 start
-if (ctx Ä‘Ã£ bá»‹ há»§y (cancel)?) then (cÃ³)
-  :tráº£ vá» ctx.Err();
-  note right: chÆ°a chiáº¿m dá»¥ng tÃ i nguyÃªn session
+if (ctx đã bị hủy (cancel)?) then (có)
+  :trả về ctx.Err();
+  note right: chưa chiếm dụng tài nguyên session
   stop
-else (khÃ´ng)
-  :má»Ÿ káº¿t ná»‘i endpoint;
-  if (káº¿t ná»‘i thÃ nh cÃ´ng?) then (cÃ³)
+else (không)
+  :mở kết nối endpoint;
+  if (kết nối thành công?) then (có)
     :defer session.Close();
     :run(ctx, endpoint, session);
-    :Close() luÃ´n cháº¡y trÆ°á»›c khi return;
-    if (run() phÃ¡t sinh lá»—i?) then (cÃ³)
-      :báº£o toÃ n lá»—i chÃ­nh (primary error);
-    else (khÃ´ng)
-      :tráº£ lá»—i Ä‘Ã³ng káº¿t ná»‘i náº¿u cÃ³;
+    :Close() luôn chạy trước khi return;
+    if (run() phát sinh lỗi?) then (có)
+      :bảo toàn lỗi chính (primary error);
+    else (không)
+      :trả lỗi đóng kết nối nếu có;
     endif
-  else (khÃ´ng)
-    :tráº£ lá»—i má»Ÿ káº¿t ná»‘i;
+  else (không)
+    :trả lỗi mở kết nối;
   endif
 endif
 stop

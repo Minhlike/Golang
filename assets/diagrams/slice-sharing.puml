@@ -1,16 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
   RoundCorner 5
@@ -24,11 +19,11 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "a: []int\nlen 3 Â· cap 3" as a
-rectangle "b: []int\nlen 3 Â· cap 3" as b
-rectangle "máº£ng ná»n (backing array)\n[99] [20] [30]" as store
+rectangle "a: []int\nlen 3 · cap 3" as a
+rectangle "b: []int\nlen 3 · cap 3" as b
+rectangle "mảng nền (backing array)\n[99] [20] [30]" as store
 a --> store
 b --> store
-note bottom of b : b := a sao chÃ©p slice header (con trá», len, cap)
-note bottom of store : thay Ä‘á»•i qua b[0] pháº£n Ã¡nh trá»±c tiáº¿p sang a[0]
+note bottom of b : b := a sao chép slice header (con trỏ, len, cap)
+note bottom of store : thay đổi qua b[0] phản ánh trực tiếp sang a[0]
 @enduml

@@ -1,16 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 19
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F4F4F1
+  BackgroundColor #F4F4F4
   BorderColor #000000
   FontColor #000000
   RoundCorner 4
@@ -23,17 +18,17 @@ skinparam note {
   FontName "Source Sans 3"
   FontSize 15
 }
-frame "Khá»‘i lá»‡nh main (pháº¡m vi hÃ m)" as main {
-  rectangle "status\n(sá»‘ng trong main)" as status
-  frame "Khá»‘i lá»‡nh if (pháº¡m vi con)" as ifblock {
-    rectangle "label\n(sá»‘ng trong if)" as label
+frame "Khối lệnh main (phạm vi hàm)" as main {
+  rectangle "status\n(sống trong main)" as status
+  frame "Khối lệnh if (phạm vi con)" as ifblock {
+    rectangle "label\n(sống trong if)" as label
   }
 }
 note right of label
-  label chá»‰ há»£p lá»‡
-  á»Ÿ trong khá»‘i if
+  label chỉ hợp lệ
+  ở trong khối if
 end note
 note bottom of main
-  Sau dáº¥u ngoáº·c Ä‘Ã³ng }, label hoÃ n toÃ n biáº¿n máº¥t khá»i scope.
+  Sau dấu ngoặc đóng }, label hoàn toàn biến mất khỏi scope.
 end note
 @enduml

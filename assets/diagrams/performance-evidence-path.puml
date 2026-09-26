@@ -2,34 +2,34 @@
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam note {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #333333
   RoundCorner 8
 }
 skinparam arrowColor #333333
 left to right direction
 
-rectangle "Triá»‡u chá»©ng\ncháº­m hoáº·c phÃ¬nh bá»™ nhá»›" as symptom
-rectangle "CÃ¢u há»i + táº£i thá»­ nghiá»‡m\nÄ‘áº¡i diá»‡n thá»±c táº¿" as question
-rectangle "Kiá»ƒm thá»­ giá»¯ cam káº¿t\nBenchmark Ä‘o tá»«ng thao tÃ¡c" as measure
-rectangle "Dá»¯ liá»‡u profile / trace\nthu háº¹p pháº¡m vi giáº£ thuyáº¿t" as evidence
-rectangle "Má»™t thay Ä‘á»•i nhá»\nÄ‘Æ°á»£c Ä‘o Ä‘áº¡c láº¡i" as change
+rectangle "Triệu chứng\nchậm hoặc phình bộ nhớ" as symptom
+rectangle "Câu hỏi + tải thử nghiệm\nđại diện thực tế" as question
+rectangle "Kiểm thử giữ cam kết\nBenchmark đo từng thao tác" as measure
+rectangle "Dữ liệu profile / trace\nthu hẹp phạm vi giả thuyết" as evidence
+rectangle "Một thay đổi nhỏ\nđược đo đạc lại" as change
 
 symptom --> question
 question --> measure
 measure --> evidence
 evidence --> change
-change --> measure : cÃ¹ng cam káº¿t há»£p Ä‘á»“ng
+change --> measure : cùng cam kết hợp đồng
 
 note bottom of evidence
-  KhÃ´ng vÃµ Ä‘oÃ¡n tá»« tÃªn API
-  hay tá»« cáº£m tÃ­nh mÃ£ nguá»“n.
+  Không võ đoán từ tên API
+  hay từ cảm tính mã nguồn.
 end note
 @enduml

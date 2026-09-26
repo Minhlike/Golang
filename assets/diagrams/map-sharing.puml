@@ -1,16 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
   RoundCorner 5
@@ -26,9 +21,9 @@ skinparam note {
 left to right direction
 rectangle "registry\nmap[string]int" as registry
 rectangle "alias\nmap[string]int" as alias
-rectangle "dá»¯ liá»‡u map (báº£ng bÄƒm)\nbilling â†’ 2" as data
+rectangle "dữ liệu map (bảng băm)\nbilling → 2" as data
 registry --> data
 alias --> data
-note bottom of alias : alias := registry\nsao chÃ©p con trá» header map
-note bottom of data : alias[\"billing\"]++\nhiá»ƒn thá»‹ ngay khi Ä‘á»c registry
+note bottom of alias : alias := registry\nsao chép con trỏ header map
+note bottom of data : alias[\"billing\"]++\nhiển thị ngay khi đọc registry
 @enduml

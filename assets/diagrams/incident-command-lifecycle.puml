@@ -2,7 +2,7 @@
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam note {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
@@ -11,28 +11,31 @@ skinparam defaultFontSize 20
 skinparam arrowColor #333333
 hide footbox
 skinparam sequence {
-  ParticipantBackgroundColor #F5F5F2
+  ActorBackgroundColor #F5F5F5
+  ActorBorderColor #333333
+  ActorFontColor #000000
+  ParticipantBackgroundColor #F5F5F5
   ParticipantBorderColor #333333
   ParticipantFontColor #000000
   LifeLineBorderColor #777777
   LifeLineBackgroundColor #FFFFFF
 }
 
-actor "ngÆ°á»i váº­n hÃ nh" as operator
-participant "lá»‡nh sá»± cá»‘\nkiá»ƒm tra + ghi nháº­n" as command
-participant "bá»™ Ä‘iá»u phá»‘i runner\nkhá»Ÿi cháº¡y + chá» + phÃ¢n loáº¡i" as runner
-participant "tiáº¿n trÃ¬nh con\nstdout / stderr / mÃ£ thoÃ¡t" as child
+actor "người vận hành" as operator
+participant "lệnh sự cố\nkiểm tra + ghi nhận" as command
+participant "bộ điều phối runner\nkhởi chạy + chờ + phân loại" as runner
+participant "tiến trình con\nstdout / stderr / mã thoát" as child
 
-operator -> command : má»¥c tiÃªu + thá»i háº¡n deadline
-command -> runner : Ä‘áº·c táº£ Spec + bá»‘i cáº£nh cha
-runner -> child : tá»‡p thá»±c thi + Ä‘á»‘i sá»‘
-child --> runner : káº¿t quáº£ xuáº¥t + mÃ£ thoÃ¡t
-runner --> command : káº¿t quáº£ Result + lá»›p lá»—i
-command --> operator : báº£n ghi cháº©n Ä‘oÃ¡n
+operator -> command : mục tiêu + thời hạn deadline
+command -> runner : đặc tả Spec + bối cảnh cha
+runner -> child : tệp thực thi + đối số
+child --> runner : kết quả xuất + mã thoát
+runner --> command : kết quả Result + lớp lỗi
+command --> operator : bản ghi chẩn đoán
 
 note over runner
-  Context bá»‹ cancel sáº½ ngáº¯t
-  tiáº¿n trÃ¬nh con theo máº·c Ä‘á»‹nh.
-  ChÃ­nh sÃ¡ch cho cÃ¢y tiáº¿n trÃ¬nh (process tree) lÃ  cÆ¡ cháº¿ riÃªng.
+  Context bị cancel sẽ ngắt
+  tiến trình con theo mặc định.
+  Chính sách cho cây tiến trình (process tree) là cơ chế riêng.
 end note
 @enduml

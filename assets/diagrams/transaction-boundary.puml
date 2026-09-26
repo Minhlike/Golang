@@ -2,14 +2,14 @@
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam note {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 22
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #333333
   FontColor #000000
   RoundCorner 8
@@ -17,20 +17,20 @@ skinparam rectangle {
 skinparam arrowColor #333333
 top to bottom direction
 
-rectangle "Báº®T Äáº¦U (BEGIN)\nkhá»Ÿi táº¡o giao dá»‹ch" as begin
-rectangle "Cáº¬P NHáº¬T\nchecks.enabled = false" as update
-rectangle "GHI NHáº¬T KÃ\ncheck_events: disabled" as audit
-rectangle "XÃC NHáº¬N (COMMIT)\ntráº¡ng thÃ¡i má»›i cÃ³ hiá»‡u lá»±c" as committed
-rectangle "HOÃ€N NGUYÃŠN (ROLLBACK)\nbáº£o toÃ n tráº¡ng thÃ¡i cÅ©" as rolled
+rectangle "BẮT ĐẦU (BEGIN)\nkhởi tạo giao dịch" as begin
+rectangle "CẬP NHẬT\nchecks.enabled = false" as update
+rectangle "GHI NHẬT KÝ\ncheck_events: disabled" as audit
+rectangle "XÁC NHẬN (COMMIT)\ntrạng thái mới có hiệu lực" as committed
+rectangle "HOÀN NGUYÊN (ROLLBACK)\nbảo toàn trạng thái cũ" as rolled
 
 begin --> update
 update --> audit
-audit --> committed : má»i cÃ¢u lá»‡nh\nthÃ nh cÃ´ng
-begin ..> rolled : lá»—i á»Ÿ báº¥t ká»³ bÆ°á»›c nÃ o
+audit --> committed : mọi câu lệnh\nthành công
+begin ..> rolled : lỗi ở bất kỳ bước nào
 
 note bottom of audit
-  SÆ¡ Ä‘á»“ khÃ¡i niá»‡m vá» tÃ­nh nguyÃªn tá»­ (Atomicity).
-  Má»©c cÃ´ láº­p (Isolation) cá»¥ thá»ƒ do cÆ¡ sá»Ÿ dá»¯ liá»‡u
-  vÃ  cáº¥u hÃ¬nh TxOptions quyáº¿t Ä‘á»‹nh.
+  Sơ đồ khái niệm về tính nguyên tử (Atomicity).
+  Mức cô lập (Isolation) cụ thể do cơ sở dữ liệu
+  và cấu hình TxOptions quyết định.
 end note
 @enduml

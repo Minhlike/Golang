@@ -3,11 +3,6 @@ skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 28
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam rectangle {
   BackgroundColor #FFFFFF
   BorderColor #222222
@@ -21,16 +16,16 @@ skinparam note {
 skinparam ArrowColor #222222
 top to bottom direction
 
-rectangle "ProbeFunc\ntráº£ nguyÃªn nhÃ¢n gá»‘c" as run
-rectangle "ProbeFailure\nservice + endpoint + nguyÃªn nhÃ¢n" as failure
-rectangle "applyProbe\nbá»‘i cáº£nh operation vá»›i %w" as boundary
-rectangle "bÃªn gá»i (caller)\nerrors.Is / errors.As" as caller
+rectangle "ProbeFunc\ntrả nguyên nhân gốc" as run
+rectangle "ProbeFailure\nservice + endpoint + nguyên nhân" as failure
+rectangle "applyProbe\nbối cảnh operation với %w" as boundary
+rectangle "bên gọi (caller)\nerrors.Is / errors.As" as caller
 
-run -down-> failure : nguyÃªn nhÃ¢n
-failure -down-> boundary : lá»—i Ä‘Æ°á»£c bá»c (%w)
-boundary -down-> caller : lá»—i tráº£ vá»
+run -down-> failure : nguyên nhân
+failure -down-> boundary : lỗi được bọc (%w)
+boundary -down-> caller : lỗi trả về
 note bottom of caller
-errors.Is: nháº­n diá»‡n theo loáº¡i lá»—i sentinel
-errors.As: trÃ­ch xuáº¥t bá»‘i cáº£nh probe cÃ³ cáº¥u trÃºc
+errors.Is: nhận diện theo loại lỗi sentinel
+errors.As: trích xuất bối cảnh probe có cấu trúc
 end note
 @enduml

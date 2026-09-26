@@ -1,16 +1,11 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F2
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
 skinparam rectangle {
-  BackgroundColor #F5F5F2
+  BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
   RoundCorner 5
@@ -24,10 +19,10 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "bÃªn gá»i (caller)\nbalance: int\n100" as caller
-rectangle "tham sá»‘ hÃ m\nx: int\n100" as parameter
+rectangle "bên gọi (caller)\nbalance: int\n100" as caller
+rectangle "tham số hàm\nx: int\n100" as parameter
 rectangle "sau x += 20\nx: int\n120" as changed
-caller --> parameter : sao chÃ©p giÃ¡ trá»‹ 100
-parameter --> changed : gÃ¡n cá»¥c bá»™ x
-note bottom of caller : biáº¿n balance gá»‘c váº«n giá»¯ nguyÃªn 100
+caller --> parameter : sao chép giá trị 100
+parameter --> changed : gán cục bộ x
+note bottom of caller : biến balance gốc vẫn giữ nguyên 100
 @enduml
