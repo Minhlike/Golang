@@ -169,15 +169,15 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
         ),
         "toc_entry": ParagraphStyle(
             "TOCEntry", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=10.5,
-            leading=15.0, textColor=COLOR_TEXT_PRIMARY,
+            leading=13.5, textColor=COLOR_TEXT_PRIMARY,
         ),
         "toc_entry_bold": ParagraphStyle(
             "TOCEntryBold", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=10.5,
-            leading=15.0, textColor=COLOR_BLACK,
+            leading=13.5, textColor=COLOR_BLACK,
         ),
         "toc_page": ParagraphStyle(
             "TOCPage", parent=base["BodyText"], fontName=FONT_SANS, fontSize=10.5,
-            leading=15.0, alignment=TA_RIGHT, textColor=COLOR_TEXT_MUTED,
+            leading=13.5, alignment=TA_RIGHT, textColor=COLOR_TEXT_MUTED,
         ),
 
         # ── Error Atlas 2-column styles ───────────────────────────────────────

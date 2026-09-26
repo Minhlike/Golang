@@ -286,19 +286,33 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         avail_width = PRINTABLE_WIDTH
         col_max_lens = [max(len(row[c]) for row in [rows[0], *rows[2:]]) for c in range(columns)]
         total_len = sum(col_max_lens) or 1
+        # Minimum column width: prevents any column being squashed to character-wrapping
+        min_col_w = 1.6 * cm
         if columns > 2 and total_len > 0:
-            weights = [max(l, 4) for l in col_max_lens]
+            weights = [max(l, 6) for l in col_max_lens]
             sum_w = sum(weights)
             col_widths = [avail_width * (w / sum_w) for w in weights]
+            # Enforce minimum: clamp and take excess from widest columns
+            for _ in range(columns):
+                clamped = [max(w, min_col_w) for w in col_widths]
+                excess = sum(clamped) - avail_width
+                if excess <= 0.5:
+                    col_widths = clamped
+                    break
+                above = [(i, clamped[i]) for i in range(columns) if clamped[i] > min_col_w]
+                total_above = sum(w for _, w in above) or 1
+                for i, w in above:
+                    clamped[i] -= excess * (w / total_above)
+                col_widths = clamped
         else:
             col_widths = [avail_width / columns] * columns
 
         table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
+            ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
             ("LINEBELOW", (0, 0), (-1, 0), LINE_WEIGHT_RULE, COLOR_BORDER_MEDIUM),
-            ("LINEBELOW", (0, 1), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_HAIRLINE),
-            ("LINEABOVE", (0, 0), (-1, 0), 0.4, COLOR_BORDER_MEDIUM),
+            ("LINEBELOW", (0, 1), (-1, -2), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_HAIRLINE),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 7),
             ("RIGHTPADDING", (0, 0), (-1, -1), 7),
@@ -315,7 +329,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ])
         flowables.append(table)
         flowables.append(Spacer(1, 10))
-        if len(rows) <= 6:
+        if len(rows) <= 8:
             story.append(KeepTogether(flowables))
         else:
             story.extend(flowables)
@@ -711,11 +725,11 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
     )
     toc_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.35, COLOR_BORDER_SUBTLE),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.3, COLOR_BORDER_SUBTLE),
     ]))
     story.append(toc_table)
     story.append(PageBreak())
