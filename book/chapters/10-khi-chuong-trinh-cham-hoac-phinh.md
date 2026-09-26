@@ -169,7 +169,7 @@ Một là, profile có thể giúp compiler ưu tiên một số cơ hội inlin
 
 Hai là, profile có thể mở ra cơ hội devirtualization khi compiler chứng minh được điều kiện phù hợp. Đó là tối ưu hóa có thể có, không phải lời hứa rằng mọi interface call nóng sẽ thành lời gọi tĩnh hay luôn inline xuyên package.
 
-Tuy nhiên, PGO chỉ đáng tin khi profile đại diện cho workload muốn tối ưu. Một profile từ microbenchmark có thể không đại diện cho chương trình thật; hãy giữ benchmark micro để kiểm contract nhỏ, còn profile PGO phải đến từ tải production hoặc staging đủ tương đồng, rồi kiểm chứng lại kết quả end-to-end.
+Tuy nhiên, PGO chỉ đáng tin khi profile đại diện cho workload muốn tối ưu. Ưu tiên profile từ production; khi không thể, staging hoặc benchmark đủ đại diện cũng có thể dùng. Microbenchmark hẹp thường mô tả quá ít chương trình để làm profile PGO tốt; hãy giữ nó để kiểm contract nhỏ. Dù dùng nguồn nào, vẫn phải đo lại kết quả end-to-end.
 
 ## Kỷ luật Tối ưu hóa Kỹ thuật
 

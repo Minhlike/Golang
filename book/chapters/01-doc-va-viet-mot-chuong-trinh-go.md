@@ -27,7 +27,7 @@ func main() {
 
 ## Chạy chương trình trong một module nhỏ
 
-Lưu đoạn mã trên thành `main.go` trong một thư mục trống. Trước khi chạy, tạo một module cục bộ cho thư mục ấy. Module chưa phải là một package, cũng không có nghĩa mã phải được công bố lên mạng; ở bước này nó chỉ cho công cụ Go biết ranh giới của một chương trình và nơi sẽ ghi nhận phụ thuộc khi chương trình có phụ thuộc.
+Lưu đoạn mã trên thành `main.go` trong một thư mục trống. Trước khi chạy, tạo một module cục bộ cho thư mục ấy. Lệnh `go mod init` tạo tệp `go.mod` và khai báo module path; một module quản lý một hoặc nhiều package cùng các dependency của chúng. Module chưa phải là một package, cũng không có nghĩa mã phải được công bố lên mạng. Ở bài đầu này, chỉ cần biết thư mục đang thuộc một module và công cụ Go dùng `go.mod` để xác định module ấy cùng các dependency khi cần.
 
 ~~~powershell
 go mod init example.com/first-go
@@ -83,7 +83,7 @@ Câu lệnh (Statement): Là đơn vị thực thi hoàn chỉnh chỉ dẫn má
 
 Kiểu dữ liệu (Type): Là định nghĩa trừu tượng quy định tập hợp các giá trị hợp lệ và tập hợp các phép toán được phép thực hiện trên các giá trị đó. Kiểu cho compiler biết các operation hợp lệ; representation vật lý, kích thước và cách mã máy dùng giá trị còn phụ thuộc implementation và kiến trúc.
 
-Giá trị (Value): Là dữ liệu cụ thể được ghi nhận trong bộ nhớ hoặc thanh ghi, mang ngữ nghĩa do kiểu dữ liệu tương ứng quy định. Vị trí lưu trữ thực tế của giá trị (trong thanh ghi CPU, trên stack slot hay vùng nhớ heap) là quyết định tối ưu hóa của trình biên dịch dựa trên phân tích dòng dữ liệu và escape analysis, không phải là thuộc tính cú pháp tĩnh.
+Giá trị (Value): Là dữ liệu hoặc kết quả cụ thể thuộc một kiểu. Kiểu quyết định những phép toán có nghĩa đối với giá trị đó. Việc trình biên dịch có phải hiện thực giá trị trong thanh ghi, bộ nhớ hay loại bỏ chỗ lưu trữ khi tối ưu là quyết định triển khai, không phải một phần của định nghĩa giá trị ở tầng ngôn ngữ.
 
 Lời gọi hàm (Function call): Là cơ chế chuyển giao quyền thực thi từ hàm gọi sang hàm được gọi, kèm theo việc đánh giá các biểu thức đối số và truyền các giá trị đó theo ngữ nghĩa truyền giá trị của Go. Một Go compiler có thể inline thân hàm hoặc truyền tham số qua thanh ghi/ngăn xếp theo ABI nội bộ, nhưng đó là quyết định triển khai cần được đo hay quan sát ở đúng toolchain, không phải contract của source code.
 
