@@ -23,6 +23,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
+    FrameBreak,
     Image,
     KeepTogether,
     NextPageTemplate,
@@ -286,13 +287,14 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         avail_width = PRINTABLE_WIDTH
         col_max_lens = [max(len(row[c]) for row in [rows[0], *rows[2:]]) for c in range(columns)]
         total_len = sum(col_max_lens) or 1
-        # Minimum column width: prevents any column being squashed to character-wrapping
-        min_col_w = 1.6 * cm
+        # Minimum column width: 2.2cm ensures short-label columns (format verbs,
+        # command names) always render as readable words, never character-wrapping.
+        min_col_w = 2.2 * cm
         if columns > 2 and total_len > 0:
-            weights = [max(l, 6) for l in col_max_lens]
+            weights = [max(l, 8) for l in col_max_lens]
             sum_w = sum(weights)
             col_widths = [avail_width * (w / sum_w) for w in weights]
-            # Enforce minimum: clamp and take excess from widest columns
+            # Enforce minimum: iteratively clamp and redistribute excess from wider cols
             for _ in range(columns):
                 clamped = [max(w, min_col_w) for w in col_widths]
                 excess = sum(clamped) - avail_width
@@ -329,21 +331,37 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ])
         flowables.append(table)
         flowables.append(Spacer(1, 10))
-        if len(rows) <= 8:
+        # KeepTogether up to 12 rows: covers most tables including format-verb tables
+        # (~11 rows). Larger tables use repeatRows=1 so header repeats on each page.
+        if len(rows) <= 12:
             story.append(KeepTogether(flowables))
         else:
             story.extend(flowables)
         table_lines = []
         table_caption = None
 
+
     def add_code_block() -> None:
-        """Make tabs deterministic, keep code distinct, and split long blocks across pages."""
+        """Make tabs deterministic, keep code distinct, and split long blocks across pages.
+
+        Uses equal-split chunking instead of fixed 28-line windows so that no chunk
+        is a dangling fragment (e.g. a lone closing brace or 2-line orphan).
+        """
         nonlocal code_lines
-        chunk_size = 28
-        if len(code_lines) <= chunk_size:
+        PAGE_FIT = 27  # approx lines that fit comfortably in one page column
+        n = len(code_lines)
+        if n <= PAGE_FIT:
             chunks = [code_lines]
         else:
-            chunks = [code_lines[i : i + chunk_size] for i in range(0, len(code_lines), chunk_size)]
+            # Split into roughly equal parts to avoid tiny dangling fragments
+            n_parts = max(2, (n + PAGE_FIT - 1) // PAGE_FIT)
+            base = n // n_parts
+            remainder = n % n_parts
+            chunks, start = [], 0
+            for i in range(n_parts):
+                size = base + (1 if i < remainder else 0)
+                chunks.append(code_lines[start: start + size])
+                start += size
 
         for idx, chunk in enumerate(chunks):
             code = Preformatted("\n".join(chunk).expandtabs(4), s["code"])
@@ -573,6 +591,10 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
                 story.append(KeepTogether(current_entry))
                 current_entry = []
             g_title = ls[3:].upper()
+            # Insert a column break before the last group (J — Container/K8s/CI-CD)
+            # to balance the two columns on the final Atlas page.
+            if g_title.startswith("J"):
+                story.append(FrameBreak())
             story.append(KeepTogether([
                 Spacer(1, 4),
                 Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
