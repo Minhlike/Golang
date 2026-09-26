@@ -25,7 +25,7 @@ fmt.Println(target.Kind())   // struct
 fmt.Println(target.CanSet()) // true
 ~~~
 
-Bản chất của `reflect.Value` trong runtime (`src/reflect/value.go`) là một struct gồm ba trường: con trỏ siêu dữ liệu kiểu `typ_ *abi.Type`, con trỏ dữ liệu `ptr_ unsafe.Pointer`, và một trường cờ bit `flag uintptr`:
+Trong source của Go 1.27.1, `reflect.Value` hiện có các trường nội bộ sau. Chúng chỉ giúp giải thích một quan sát của toolchain này; contract mà code application được dựa vào là các method document như `CanSet`, `Kind` và `Elem`, không phải tên field hay bit flag:
 
 ~~~go
 type Value struct {
@@ -35,17 +35,17 @@ type Value struct {
 }
 ~~~
 
-Cờ `flag` chứa thông tin về `Kind`, trạng thái chỉ đọc (`flagStickyRO`, `flagEmbedRO`), và đặc biệt là cờ địa chỉ hóa `flagAddr`. Khi truyền `config` vào `reflect.ValueOf(config)`, biến được đóng gói qua tham số `any`, tạo ra một bản sao giá trị độc lập trên stack hoặc heap; `reflect.Value` được sinh ra không có cờ `flagAddr`, do đó `CanSet()` trả về `false`.
+Cờ nội bộ hiện giữ thông tin về `Kind`, trạng thái chỉ đọc và addressability. Ở tầng API, điều cần nhớ đơn giản hơn: `reflect.ValueOf(config)` nhận một bản sao value nên không cho phép ghi ngược vào biến của caller; `CanSet()` trả về `false`.
 
-Ngược lại, khi truyền `&config`, `reflect.ValueOf(&config)` lưu con trỏ trỏ tới chính biến `config` gốc. Lệnh `pointer.Elem()` giải tham chiếu con trỏ đó và sinh ra một `reflect.Value` mới được bật cờ `flagAddr`. `CanSet()` chỉ trả về `true` khi cả hai điều kiện cùng thỏa mãn: giá trị có cờ `flagAddr` (tức có ô nhớ gốc xác định để ghi đè) và trường mục tiêu được export công khai.
+Ngược lại, `reflect.ValueOf(&config).Elem()` nhìn vào variable gốc qua pointer. Với struct field, `CanSet()` còn phụ thuộc việc field có thể được sửa theo quy tắc export/visibility. Đây là guard API cần dùng thay vì suy luận từ flag nội bộ.
 
 `ApplyEnv(nil, nil)` còn có một bẫy nhỏ hơn. `reflect.ValueOf(nil)` trả zero `reflect.Value`, có `Kind` là `Invalid`; nhiều operation khác trên value không hợp lệ có thể panic. Vì vậy boundary phải kiểm tra `IsValid` trước khi làm các operation phụ thuộc shape. Đây là guard cho một value runtime thực sự không tồn tại, không phải một trường hợp `nil` pointer thông thường.
 
 | Cơ chế thực thi | Đặc tính điều phối lời gọi | Xu hướng đóng gói và cấp phát | Khả năng Compiler Tối ưu |
 | :--- | :--- | :--- | :--- |
-| Lời gọi hàm hoặc phương thức tĩnh | Gọi trực tiếp qua địa chỉ cố định đã xác định khi biên dịch | Không phát sinh chi phí bao bọc đối số riêng cho cơ chế gọi | Rộng mở cơ hội inlining triệt tiêu lời gọi, phân bổ thanh ghi SSA |
-| Lời gọi gián tiếp qua Interface | Thường cần điều phối gián tiếp tra cứu phương thức qua `itab` | Phụ thuộc vào việc đối tượng cụ thể có thoát lên heap hay không | Trình biên dịch đôi khi có thể devirtualize thành lời gọi tĩnh nếu chứng minh được kiểu cụ thể |
-| Lời gọi động qua Reflection (`Value.Call`) | Phải giải mã metadata và kiểm tra kiểu động ở runtime | Cần biểu diễn đối số trong `[]reflect.Value` và boxing giao diện | Rất khó tối ưu hóa tĩnh, hầu như không thể inline và chịu thêm chi phí kiểm tra động |
+| Lời gọi hàm hoặc phương thức tĩnh | Compiler biết target từ type tĩnh | Không cần cơ chế reflection riêng | Có thể inline hay tối ưu thêm tùy toolchain. |
+| Lời gọi qua interface | Target phụ thuộc dynamic type | Representation và allocation là quyết định triển khai | Có thể được devirtualize khi compiler chứng minh được điều kiện; không có bảo đảm. |
+| Lời gọi qua reflection (`Value.Call`) | Metadata và kiểm tra động là một phần thao tác | API nhận/trả `reflect.Value` | Thường đắt hơn đường tĩnh; nếu chi phí quan trọng, phải benchmark contract cụ thể. |
 
 @table Compiler và reflection chia việc khác nhau
 
@@ -205,9 +205,9 @@ func badDataAddress(s string) uintptr {
 
 Trước khi chấp nhận đoạn mã này, hãy phân tích bản chất cơ chế của Go Runtime:
 
-Thứ nhất, phân biệt rạch ròi giữa việc di dời ngăn xếp (stack movement) và thu gom rác trên heap (heap GC). Bộ thu gom rác của Go là một non-moving collector đối với vùng nhớ heap: các đối tượng sau khi cấp phát trên heap sẽ cố định tại một địa chỉ nhớ cho đến khi bị thu hồi. Tuy nhiên, ngăn xếp của goroutine lại có thể dịch chuyển: khi ngăn xếp phình to (`runtime.morestack`), runtime sẽ cấp phát một vùng nhớ stack mới lớn hơn, sao chép dữ liệu và cập nhật lại toàn bộ các con trỏ trỏ vào stack cũ. Con trỏ `unsafe.Pointer` là thực thể được runtime và GC theo dõi: trên heap, nó giữ cho đối tượng đích không bị giải phóng; trên stack, runtime tự động hiệu chỉnh địa chỉ của nó khi stack di dời.
+Thứ nhất, phân biệt rạch ròi giữa việc di dời ngăn xếp (stack movement) và thu gom rác trên heap (heap GC). Go runtime hiện tại dùng heap non-moving và có thể copy stack khi stack goroutine lớn lên; đó là implementation detail, không phải permission để giữ địa chỉ theo ý mình. Một `unsafe.Pointer` vẫn được GC nhận diện là pointer trong những pattern mà package `unsafe` cho phép; hãy chỉ dựa vào các conversion được tài liệu hóa.
 
-Thứ hai, `uintptr` chỉ là một kiểu số nguyên không dấu (`uint64` trên kiến trúc 64-bit). Trình thu gom rác coi `uintptr` hoàn toàn là một con số vô tri, không phải là một con trỏ tham chiếu sống. Nếu địa chỉ ô nhớ được gán vào một biến `uintptr` rồi tách rời khỏi con trỏ gốc, GC có thể thu hồi đối tượng trên heap ngay lập tức. Đồng thời, nếu đối tượng từng nằm trên stack, runtime sẽ không cập nhật giá trị số nguyên `uintptr` khi stack di dời, biến nó thành một con số trỏ vào vùng nhớ rác nguy hiểm.
+Thứ hai, `uintptr` là số nguyên đủ lớn để chứa bit của địa chỉ trên kiến trúc đang chạy, không phải một tham chiếu sống. Nếu tách địa chỉ khỏi `unsafe.Pointer` gốc và giữ nó trong `uintptr`, GC không có reason để coi số đó là giữ object sống; stack growth cũng không thể sửa một số nguyên đã chép. Vì vậy object có thể bị thu hồi khi liveness của pointer gốc kết thúc, còn địa chỉ stack có thể trở nên stale.
 
 Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (pointer arithmetic) chỉ được phép xuất hiện trong **một biểu thức hợp thành duy nhất**:
 

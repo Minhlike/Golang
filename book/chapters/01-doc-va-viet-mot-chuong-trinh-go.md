@@ -36,8 +36,6 @@ go run .
 
 Lệnh đầu tạo `go.mod`; `example.com/first-go` là tên định danh minh họa, không phải một địa chỉ mà anh phải sở hữu. Lệnh sau yêu cầu Go xây package `main` trong thư mục hiện tại rồi chạy executable tạm. Ta sẽ trở lại module, đường dẫn import, đồ thị phụ thuộc và cách một package trở thành ranh giới ở Chương 5. Hiện tại chỉ cần giữ một mốc thực hành: mỗi lab nằm trong một thư mục có `go.mod` riêng, và terminal phải đứng đúng thư mục của lab trước khi chạy lệnh được ghi trong bài.
 
-<!-- pagebreak -->
-
 ![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
 
 @figure Giải phẫu trực quan cấu trúc một tệp nguồn Go. Tên gói, các khai báo cấp tệp và hàm khởi điểm có ranh giới rõ ràng.
@@ -83,11 +81,11 @@ Biểu thức (Expression): Là sự kết hợp giữa các toán hạng (toán
 
 Câu lệnh (Statement): Là đơn vị thực thi hoàn chỉnh chỉ dẫn máy tính thực hiện một hành động cụ thể, chẳng hạn như rẽ nhánh điều kiện (`if`), lặp vòng (`for`), gán giá trị (`=`), hoặc trả về từ hàm (`return`). Câu lệnh cấu thành luồng chảy động của chương trình.
 
-Kiểu dữ liệu (Type): Là định nghĩa trừu tượng quy định tập hợp các giá trị hợp lệ và tập hợp các phép toán được phép thực hiện trên các giá trị đó. Kiểu dữ liệu xác định kích thước bộ nhớ (tính bằng byte) và cách CPU diễn giải các bit nhị phân trong ô nhớ.
+Kiểu dữ liệu (Type): Là định nghĩa trừu tượng quy định tập hợp các giá trị hợp lệ và tập hợp các phép toán được phép thực hiện trên các giá trị đó. Kiểu cho compiler biết các operation hợp lệ; representation vật lý, kích thước và cách mã máy dùng giá trị còn phụ thuộc implementation và kiến trúc.
 
 Giá trị (Value): Là dữ liệu cụ thể được ghi nhận trong bộ nhớ hoặc thanh ghi, mang ngữ nghĩa do kiểu dữ liệu tương ứng quy định. Vị trí lưu trữ thực tế của giá trị (trong thanh ghi CPU, trên stack slot hay vùng nhớ heap) là quyết định tối ưu hóa của trình biên dịch dựa trên phân tích dòng dữ liệu và escape analysis, không phải là thuộc tính cú pháp tĩnh.
 
-Lời gọi hàm (Function call): Là cơ chế chuyển giao quyền thực thi từ hàm gọi sang hàm được gọi, kèm theo việc đánh giá các biểu thức đối số và truyền các giá trị đó theo ngữ nghĩa truyền giá trị của Go. Trình biên dịch có thể nội suy (inline) thân hàm để triệt tiêu hoàn toàn chi phí phân nhánh, hoặc phát sinh các chỉ thị truyền tham số qua thanh ghi/ngăn xếp theo quy ước gọi nội bộ (Go Internal ABI).
+Lời gọi hàm (Function call): Là cơ chế chuyển giao quyền thực thi từ hàm gọi sang hàm được gọi, kèm theo việc đánh giá các biểu thức đối số và truyền các giá trị đó theo ngữ nghĩa truyền giá trị của Go. Một Go compiler có thể inline thân hàm hoặc truyền tham số qua thanh ghi/ngăn xếp theo ABI nội bộ, nhưng đó là quyết định triển khai cần được đo hay quan sát ở đúng toolchain, không phải contract của source code.
 
 ## Định danh và Từ khóa
 
@@ -145,7 +143,7 @@ func main() {
 
 Biến `label` được khai báo bên trong khối lệnh `if`. Khi luồng đọc của trình biên dịch vượt ra ngoài dấu ngoặc nhọn đóng `}`, phạm vi từ vựng của tên `label` kết thúc; định danh này nằm ngoài lexical scope tại vị trí đó, nên quá trình phân giải tên (name resolution) của compiler không tìm thấy khai báo hợp lệ, từ chối câu lệnh với thông báo: `undefined: label`.
 
-Tuy nhiên, việc định danh hết phạm vi từ vựng không đồng nghĩa với việc giá trị trong bộ nhớ bị hủy bỏ ngay lập tức. Nếu một giá trị được tham chiếu bởi một con trỏ thoát ra ngoài hàm (escape to heap) hoặc được một closure hàm ẩn danh bắt giữ (captured), giá trị đó sẽ tiếp tục tồn tại trên vùng nhớ heap cho đến khi không còn bất kỳ thực thể nào chạm tới và được bộ thu gom rác dọn dẹp. Ngược lại, nếu giá trị chỉ tồn tại cục bộ và không thoát, trình biên dịch có thể tận dụng thanh ghi hoặc vị trí lưu trữ trên stack frame để tái sử dụng ngay khi ngữ cảnh tính toán kết thúc.
+Tuy nhiên, việc định danh hết phạm vi từ vựng không đồng nghĩa với việc giá trị bị hủy ngay lập tức. Nếu một con trỏ hoặc closure vẫn làm giá trị có thể quan sát được, compiler sẽ chọn representation đủ dài cho lifetime đó; trong một lần build nó có thể là heap. Nếu không, compiler có thể dùng thanh ghi, stack hoặc bỏ hẳn storage. Scope là quy tắc tên của ngôn ngữ; vị trí lưu trữ là chi tiết tối ưu hóa, nên đừng suy ra cái sau chỉ từ cái trước.
 
 ![Vết của scope: label nằm trong if block, còn status sống ở main block.](../../assets/diagrams/go-scope-trace.png)
 

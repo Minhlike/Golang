@@ -16,11 +16,11 @@ Hiệu năng của một chương trình Go là kết quả của sự tương t
 [Mã nguồn Go]
        │
        ▼
-[Pass Inlining (Budget = 80)]
-       │ Triệt tiêu chi phí gọi hàm, mở rộng ngữ cảnh
+[Inlining và các heuristic]
+       │ Có thể bỏ lời gọi, mở rộng ngữ cảnh
        ▼
-[Pass Escape Analysis]
-       │ Phân tích vòng đời: Cấp phát Stack vs Heap
+[Escape analysis]
+       │ Chọn representation và nơi lưu trữ khi cần
        ▼
 [Pass SSA & Bounds Elimination]
        │ Chứng minh biến quy nạp, loại bỏ kiểm tra biên
@@ -29,16 +29,16 @@ Hiệu năng của một chương trình Go là kết quả của sự tương t
        │ Thanh ghi vi kiến trúc, tập lệnh CPU
        ▼
 [Go Runtime Subsystems]
-         Bộ cấp phát mallocgc (TCMalloc), Tracing GC
+         Bộ cấp phát, GC và scheduler
 ```
 
-Một quyết định ở tầng trình biên dịch (như hàm có được inline hay không) sẽ làm thay đổi kết quả phân tích thoát bộ nhớ (escape analysis), từ đó quyết định xem đối tượng được cấp phát tức thì trên ngăn xếp (stack) hay phải gọi vào bộ quản lý bộ nhớ động (`mallocgc`), và cuối cùng tác động trực tiếp lên tần suất chạy của bộ thu gom rác (Garbage Collector).
+Các bước này là mô hình để đặt câu hỏi, không phải pipeline hay ngưỡng ổn định của ngôn ngữ. Inlining có thể làm thay đổi thông tin mà escape analysis nhìn thấy; compiler cũng có thể đặt một value vào thanh ghi, stack, heap hoặc bỏ hẳn nó. Chỉ khi chi phí đã được đo, output của compiler và profiler mới cho biết điều gì xảy ra với phiên bản, kiến trúc và workload đang xét.
 
 ## Phân tích Thoát Bộ nhớ: Ngăn xếp đối đầu Vùng nhớ Động
 
-Trình biên dịch Go sử dụng phân tích thoát bộ nhớ tĩnh (`cmd/compile/internal/escape`) để xác định xem vòng đời của một biến có vượt ra khỏi khung ngăn xếp (stack frame) của hàm khởi tạo hay không.
+Trình biên dịch Go dùng escape analysis để suy luận liệu một value có cần tồn tại sau scope mà compiler đang xét hay không. Đây là heuristic triển khai, không phải tính chất cú pháp của một biến hay lời hứa rằng một dòng code luôn cấp phát ở một nơi.
 
-Nếu biến không thoát, nó được cấp phát trực tiếp trên stack. Chi phí cấp phát trên stack gần như bằng không: CPU chỉ cần giảm giá trị con trỏ ngăn xếp (`SP`), và khi hàm kết thúc, con trỏ `SP` được hoàn trả vị trí cũ, giải phóng toàn bộ vùng nhớ mà không gây bất kỳ gánh nặng nào cho bộ thu gom rác. Ngược lại, nếu con trỏ của biến được trả về cho bên ngoài, gán vào biến toàn cục, hoặc đóng gói vào interface, biến đó bắt buộc phải thoát ra heap arena (`runtime.newobject` hoặc `runtime.makeslice`), chịu sự quản lý của cơ chế TCMalloc và GC.
+Một value không escape có thể ở stack, thanh ghi hoặc bị tối ưu hóa mất; nó không mặc nhiên có một allocation đo được. Ngược lại, trả con trỏ, lưu vào global hoặc đóng gói vào interface là tín hiệu để compiler phân tích lifetime, không phải luật “chắc chắn heap”. Kết quả còn phụ thuộc thân hàm, inlining, kiến trúc và version. Vì vậy, `-gcflags=all=-m=2` là bằng chứng cho một lần biên dịch cụ thể; benchmark `allocs/op` mới cho biết contract đo có allocation quan sát được hay không.
 
 Thí nghiệm kiểm chứng trên Go 1.27.1 với cờ phân tích chuyên sâu `-gcflags=all=-m=2` đối với hàm kết xuất báo cáo cho thấy chi tiết dòng dữ liệu (data flow) dẫn đến quyết định thoát:
 
@@ -56,15 +56,15 @@ Thí nghiệm kiểm chứng trên Go 1.27.1 với cờ phân tích chuyên sâu
     from strings.b.buf = append(...) (assign)
 ~~~
 
-Kết quả phân tích từ compiler chứng minh hai sự thật kỹ thuật rõ ràng:
+Output này ghi nhận hai quan sát cho source artifact và toolchain của thí nghiệm:
 
-Thứ nhất, tham số `readings []Reading` không hề thoát ra heap (`readings does not escape`). Mặc dù nó là một slice, dữ liệu chỉ được duyệt đọc nội bộ trong hàm nên descriptor của nó tồn tại an toàn trên ngăn xếp của bên gọi.
+Thứ nhất, tham số `readings []Reading` được báo `does not escape`. Slice không tự quyết định nơi dữ liệu hay descriptor nằm; kết quả chỉ nói rằng compiler ở lần này không cần kéo value đó ra heap vì việc dùng trong hàm.
 
-Thứ hai, bộ đệm byte nội bộ của `strings.Builder` (`strings.b.buf`) bắt buộc phải thoát ra heap vì mảng byte này liên tục tăng trưởng kích thước thông qua lời gọi `append`, vượt quá kích thước cố định có thể dự đoán trước trên stack frame.
+Thứ hai, storage tạo bởi `append` trong `strings.Builder` được báo escape. Đó là dữ liệu thực nghiệm hữu ích để giải thích `allocs/op`, không phải quy tắc rằng mọi `append` hoặc mọi `Builder` đều heap-allocate.
 
 ## Tối ưu hóa SSA và Loại bỏ Kiểm tra Biên (Bounds Check Elimination)
 
-Một trong những tối ưu hóa mạnh mẽ nhất của backend SSA (Static Single Assignment) trong Go là pass loại bỏ kiểm tra biên (`ssa/prove`). Trong Go, mỗi thao tác truy cập mảng hoặc slice theo chỉ số (như `s[i]`) về nguyên tắc đòi hỏi một phép kiểm tra an toàn tại thời gian chạy: nếu `i >= len(s)`, chương trình phải kích hoạt `runtime.panicIndex`. Phép kiểm tra này chèn thêm các lệnh rẽ nhánh điều kiện `CMPQ` và lệnh nhảy `JAE`, làm phân mảnh pipeline thực thi của CPU.
+Một tối ưu hóa quan trọng của backend SSA là loại bỏ kiểm tra biên khi compiler chứng minh được chỉ số hợp lệ. Ở ngữ nghĩa Go, truy cập ngoài biên phải panic; instruction cụ thể dùng để bảo vệ điều đó phụ thuộc compiler và kiến trúc. Output `ssa/prove` dưới đây là quan sát của thí nghiệm Go 1.27.1, không phải hình dạng mã máy mà mọi bản build phải có.
 
 Bằng cách kích hoạt cờ gỡ lỗi SSA `-gcflags=all=-d=ssa/prove/debug=1`, ta có thể quan sát cách compiler suy luận toán học để triệt tiêu các lệnh kiểm tra thừa:
 
@@ -76,7 +76,7 @@ strings/strings.go:987:27: Proved IsInBounds
 strings/strings.go:988:38: Proved IsSliceInBounds
 ~~~
 
-Khi duyệt tập hợp qua `for range`, trình biên dịch nhận diện được biến quy nạp (induction variable) khởi đầu từ 0 và tăng đều đặn 1 đơn vị cho tới khi chạm biên độ dài logic. Bằng chứng toán học đó cho phép pass `ssa/prove` chứng minh tiên nghiệm rằng chỉ số không bao giờ vượt biên (`Proved IsInBounds`), từ đó loại bỏ hoàn toàn các lệnh nhảy kiểm tra lỗi thời gian chạy, cho phép CPU thực thi vòng lặp với tốc độ tối đa của phần cứng.
+Với vòng lặp của artifact này, output cho thấy compiler nhận diện biến quy nạp và chứng minh một số điều kiện `IsInBounds`. Khi điều kiện tương tự được chứng minh trong một build, compiler có thể bỏ kiểm tra biên tương ứng. Đừng viết vòng lặp vòng vèo chỉ để ép tối ưu hóa: giữ invariant dễ đọc, benchmark khi cần, và xác nhận bằng diagnostic hoặc assembly của đúng target nếu việc bỏ kiểm tra thực sự quan trọng.
 
 ## Cơ chế Thu gom Rác và Đánh đổi Không gian - Thời gian
 
@@ -86,23 +86,13 @@ Khi chu kỳ GC kích hoạt, công việc background marking được bộ đi�
 
 Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha kết thúc đánh dấu (Mark Termination). Mặc dù kiến trúc Go hướng tới việc tối thiểu hóa thời gian STW đến mức rất ngắn, độ trễ STW thực tế không phải là một cam kết cố định mà phụ thuộc lớn vào tải của chương trình, kích thước heap, cấu hình máy chủ và phiên bản Go; kỹ sư luôn cần đo lường qua công cụ execution trace, gói `runtime/metrics` hoặc cờ `gctrace`. Đồng thời, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ điều động các goroutine của người dùng tham gia hỗ trợ đánh dấu (GC Mark Assist), khiến chính goroutine xử lý nghiệp vụ bị trễ và đẩy tail latency lên cao.
 
-### Chiến lược Thu gom Hiện đại: Kiến trúc Green Tea GC trong Go 1.27.1
+### Green Tea GC là bối cảnh triển khai, không phải contract
 
-Ở tầng trừu tượng cao, Go tiếp tục duy trì mô hình toán học ba màu đồng thời (Tri-color Mark-Sweep). Tuy nhiên, về mặt triển khai thực tế trong runtime của Go 1.27.1, chiến lược quét và đánh dấu đã chuyển dịch sang dòng kiến trúc **Green Tea GC** (được kích hoạt mặc định qua `goexperiment.GreenTeaGC`).
-
-Trong mô hình thu gom truyền thống trước đây, runtime sử dụng các bộ đệm công việc kiểu LIFO (`workbuf`) và thực hiện quét từng đối tượng riêng lẻ (object-at-a-time). Mỗi khi một con trỏ được phát hiện, đối tượng đích chuyển sang màu xám và được đẩy vào hàng đợi; khi lấy ra, CPU phải nhảy tới vùng nhớ của đối tượng đó để quét tiếp. Trên các heap chứa hàng chục triệu đối tượng nhỏ, việc nhảy ngẫu nhiên giữa các địa chỉ nhớ phân tán làm phá vỡ tính cục bộ của bộ nhớ đệm CPU (cache thrashing), khiến các lõi xử lý liên tục bị nghẽn do chờ nạp dữ liệu từ RAM.
-
-Green Tea GC giải quyết điểm nghẽn này bằng chiến lược gom cụm theo từng phân đoạn bộ nhớ (span locality):
-
-Nguyên lý trì hoãn và gom cụm (Batch Scanning): Thay vì quét ngay lập tức từng đối tượng khi vừa tìm thấy, runtime trì hoãn việc quét để tích lũy nhiều đối tượng sống nằm trong cùng một `mspan` (đơn vị quản lý trang nhớ của Go heap). Khi một phân đoạn tích lũy đủ đối tượng, CPU sẽ quét toàn bộ các đối tượng trong phân đoạn đó trong một lượt duy nhất. Việc quét dồn dập trên một dải địa chỉ liên tục tận dụng tối đa đường truyền của cache line L1/L2, giảm thiểu chi phí truy xuất siêu dữ liệu và mở đường cho phần cứng CPU kích hoạt kỹ thuật nạp trước (prefetching).
-
-Cặp bitset kép (`marks` và `scans`): Để quản lý việc gom cụm mà vẫn bảo đảm tính chính xác tuyệt đối của GC, Green Tea nhúng trực tiếp hai tập hợp bit vào từng span (`spanInlineMarkBits`). Tập hợp `marks` ghi nhận các đối tượng vừa được phát hiện con trỏ trỏ tới (pre-mark). Tập hợp `scans` ghi nhận các đối tượng đã thực sự được quét xong nội dung. Khi lấy một span từ hàng đợi FIFO ra xử lý, runtime thực hiện phép toán logic tìm hợp và giao giữa hai bitset để xác định chính xác danh sách đối tượng cần quét, thậm chí áp dụng các tập lệnh SIMD (như AVX2) để tăng tốc độ quét bit trên các size class đồng nhất.
-
-Đánh đổi kỹ thuật: Green Tea GC không phải là giải pháp đem lại hiệu năng vượt trội cho mọi trường hợp. Nó tối ưu hóa vượt bậc cho các ứng dụng web và vi dịch vụ sở hữu mật độ đối tượng nhỏ cao và thời gian sống tập trung. Ngược lại, đối với các khối lượng công việc có đồ thị con trỏ thưa thớt hoặc các hệ thống bị ép chặt dung lượng bộ nhớ, cơ chế trì hoãn có thể tạo áp lực nhất thời lên bộ điều tốc chu kỳ (GC Pacer). Hiểu được kiến trúc phân đoạn giúp kỹ sư không xem GC như một chiếc hộp đen thần bí, mà là một hệ thống gom cụm bộ nhớ có chủ đích.
+Go 1.27.1 có Green Tea GC trong runtime. Ý tưởng chính của thiết kế này là ưu tiên xử lý theo page/span thay vì coi từng object là đơn vị work duy nhất; mục tiêu là cải thiện locality của một số heap. Nó là implementation detail có thể tiếp tục thay đổi giữa các bản Go và không dự báo kết quả cho một service cụ thể. Khi GC xuất hiện trong profile, câu hỏi vận hành vẫn là: allocation rate, live heap, root set, pointer density và latency của workload đang là bao nhiêu? Đo trước, rồi mới suy luận liệu upgrade Go version, giảm allocation hay đổi cấu trúc dữ liệu có ích.
 
 Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi không gian và thời gian này:
 
-Tham số `GOGC`: Xác định tỷ lệ phần trăm tăng trưởng của heap trước khi chu kỳ GC tiếp theo được kích hoạt (mặc định là `100`, tức kích hoạt khi heap đạt 200% lượng dữ liệu sống). Tăng `GOGC` giúp giảm tần suất GC và tiết kiệm chu kỳ CPU, nhưng đổi lại tiến trình sẽ chiếm dụng nhiều RAM hơn.
+Tham số `GOGC`: Chọn một điểm trên trade-off CPU/bộ nhớ. Với Go hiện đại, target heap còn tính cả GC roots: gần đúng là `live heap + (live heap + roots) * GOGC / 100`. `GOGC=100` không luôn có nghĩa tổng heap bằng đúng hai lần live heap. Tăng nó thường giảm tần suất GC và tăng memory overhead; đó là xu hướng phải xác minh bằng workload thật.
 
 Tham số `GOMEMLIMIT`: Được đưa vào từ Go 1.19, thiết lập ngưỡng giới hạn bộ nhớ mềm (soft memory limit) của Go runtime. Runtime cố gắng duy trì mức sử dụng bộ nhớ do Go quản lý quanh ngưỡng này bằng cách kích hoạt GC chủ động hơn khi heap chạm giới hạn, nhưng vẫn cho phép vượt ngưỡng trong trường hợp cần thiết để ngăn chặn thảm họa nghẽn GC liên tục (GC thrashing). Không nên nhầm lẫn `GOMEMLIMIT` với giới hạn cứng cgroup hoặc giới hạn Resident Set Size (RSS) của hệ điều hành. Trong môi trường container (như Kubernetes pod), kỹ sư luôn phải dự phòng khoảng đệm an toàn (headroom) giữa `GOMEMLIMIT` và memory limit của container nhằm chừa chỗ cho bộ nhớ ngoài Go heap, binary code và kernel metadata, thay vì coi đây là một bảo đảm tuyệt đối tránh khỏi OOM-Killer.
 
@@ -128,7 +118,7 @@ Lệnh thực thi đo đạc thống kê nhiều lần:
 go test -bench BenchmarkRender -benchmem -count=6 ./fixed
 ~~~
 
-Chỉ số `ns/op` phản ánh thời gian trung bình để hoàn thành một lượt xử lý. Chỉ số `B/op` và `allocs/op` ghi nhận chính xác khối lượng byte và số lần yêu cầu cấp phát bộ nhớ lên heap. Một kết quả đo lường đơn lẻ không đại diện cho chân lý phổ quát; việc chạy 6 lượt liên tiếp (`-count=6`) giúp kỹ sư nhận diện được độ biến thiên (nhiễu đo lường) trước khi đưa ra kết luận.
+Chỉ số `ns/op` là thời gian bình quân theo contract benchmark. `B/op` và `allocs/op` là các metric allocation mà benchmark runner báo cho workload đó; chúng không tự nói tổng RSS hay mọi chi phí của service. Một kết quả đo lường đơn lẻ không đại diện cho chân lý phổ quát; việc chạy 6 lượt liên tiếp (`-count=6`) giúp kỹ sư nhận diện được độ biến thiên (nhiễu đo lường) trước khi đưa ra kết luận.
 
 | Công cụ chẩn đoán | Câu hỏi kỹ thuật được giải đáp | Giới hạn phân tích |
 | :--- | :--- | :--- |
@@ -175,11 +165,11 @@ Từ Go 1.20 và hoàn thiện ở các phiên bản gần đây, Go hỗ trợ 
 
 Trong quy trình biên dịch thông thường, compiler chỉ có cái nhìn tĩnh về mã nguồn, không biết nhánh rẽ nào trong câu lệnh `if` hay phương thức nào của `interface` được gọi thường xuyên nhất trong thực tế. Với PGO, kỹ sư thu thập một tệp CPU profile đại diện (`default.pgo`) từ hệ thống production đang chịu tải thực. Trình biên dịch nạp hồ sơ này vào pass phân tích để:
 
-Một là, mở rộng ngân sách inlining (inlining budget) cho các hàm nằm trên đường dẫn nóng (hot paths), cho phép inline các hàm phức tạp vượt mức ngân sách 80 thông thường.
+Một là, profile có thể giúp compiler ưu tiên một số cơ hội inlining ở đường nóng. Heuristic, ngưỡng và kết quả không phải API ổn định; hãy xem diagnostic hay benchmark của đúng version thay vì mặc định một hàm chắc chắn sẽ được inline.
 
-Hai là, thực hiện cơ chế hủy ảo hóa (devirtualization): khi một interface method hầu như luôn được hiện thực bởi một kiểu cụ thể duy nhất trong môi trường thực tế, compiler sẽ chuyển đổi lời gọi phương thức ảo gián tiếp qua con trỏ `itab` thành một lời gọi hàm tĩnh trực tiếp, kèm theo kiểm tra kiểu nhanh, giúp CPU dự đoán nhánh rẽ chính xác và kích hoạt tối ưu hóa inline xuyên package.
+Hai là, profile có thể mở ra cơ hội devirtualization khi compiler chứng minh được điều kiện phù hợp. Đó là tối ưu hóa có thể có, không phải lời hứa rằng mọi interface call nóng sẽ thành lời gọi tĩnh hay luôn inline xuyên package.
 
-Tuy nhiên, tài liệu chính thức của Go nhấn mạnh ranh giới nghiêm ngặt: **hồ sơ pprof dùng cho PGO bắt buộc phải đại diện cho tải thực tế của toàn bộ chương trình (whole-program workload)**. Việc sử dụng hồ sơ thu được từ một microbenchmark nhân tạo để biên dịch PGO có thể làm sai lệch hoàn toàn trọng số tối ưu hóa của trình biên dịch, khiến các đường dẫn quan trọng khác trên production bị chậm đi đáng kể.
+Tuy nhiên, PGO chỉ đáng tin khi profile đại diện cho workload muốn tối ưu. Một profile từ microbenchmark có thể không đại diện cho chương trình thật; hãy giữ benchmark micro để kiểm contract nhỏ, còn profile PGO phải đến từ tải production hoặc staging đủ tương đồng, rồi kiểm chứng lại kết quả end-to-end.
 
 ## Kỷ luật Tối ưu hóa Kỹ thuật
 

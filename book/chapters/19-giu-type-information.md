@@ -120,21 +120,11 @@ labels := Batch[int]{2, 4}.Map(func(port int) string {
 
 Đây là generic method của Go 1.27, khác với method thông thường trên generic receiver như `Set[T].Has`. Generic method được instantiate khi dùng. Nó không biến interface method thành generic: interface method không được tự khai báo type parameter, và một generic method không phải cách để implement một interface method generic. Nếu consumer chỉ cần gọi `Map` trên một concrete `Batch`, method giúp tổ chức code; nếu consumer cần một behavior thay thế được, một interface nhỏ với signature cụ thể thường rõ hơn.
 
-## Mô hình Biên dịch Generics: GCShape Stenciling và Runtime Dictionary
+## Compiler có thể chia sẻ hoặc chuyên biệt hóa mã — đừng biến nó thành lý do chọn API
 
-Cách tiếp cận của Go đối với generics giải quyết bài toán nan giải giữa kích thước tệp nhị phân và tốc độ thực thi mà các ngôn ngữ đi trước từng đối mặt:
+Tại ngữ nghĩa ngôn ngữ, một generic function được instantiate sau khi type argument thỏa constraint. Đặc tả không hứa cách compiler sinh mã, kích thước binary hay số allocation. Bản Go toolchain hiện tại có những tên nội bộ như `go.shape` và dictionary; chúng giúp kỹ sư đọc assembly hoặc source compiler, nhưng không phải contract cho application và có thể đổi theo version, kiến trúc, PGO và thân hàm.
 
-| Mô hình biên dịch | Ngôn ngữ tiêu biểu | Cơ chế sinh mã | Đánh đổi hiệu năng / bộ nhớ |
-| :--- | :--- | :--- | :--- |
-| Đơn hình hóa (Monomorphization) | C++, Rust | Nhân bản mã máy riêng cho mọi kiểu tham số | Tốc độ tối đa, phình to kích thước file nhị phân |
-| Xóa kiểu (Type Erasure) | Java | Xóa về `Object`, chèn ép kiểu và boxing | Mã máy gọn, tổn hao cache và cấp phát heap |
-| GCShape Stenciling & Dictionary | Go | Chia sẻ mã máy theo footprint GC (`go.shape`) | Cân bằng kích thước nhị phân và tốc độ thực thi |
-
-Thay vì nhân bản mã máy độc lập cho từng kiểu cụ thể như C++ (gây phình to kích thước file nhị phân) hoặc xóa toàn bộ thông tin kiểu về con trỏ generic như Java (gây chi phí boxing và ép kiểu runtime), trình biên dịch Go sử dụng chiến lược dung hòa: **GCShape Stenciling kết hợp Runtime Dictionary Passing** (triển khai trong `cmd/compile/internal/noder`).
-
-Về nguyên lý, hai kiểu dữ liệu được coi là có cùng một "GC shape" nếu chúng có cùng kích thước, cùng độ căn chỉnh và cùng bố cục con trỏ dưới góc nhìn của bộ thu gom rác. Cụ thể, khi một kiểu con trỏ được dùng để khởi tạo một tham số kiểu có ràng buộc là basic interface, trình biên dịch nhận diện rằng kiểu phần tử của con trỏ không làm thay đổi luồng thực thi của mã máy; do đó, compiler gộp chúng vào cùng một hình thái đại diện chung (như `*uint8`) để sinh mã máy duy nhất (stenciling). Đối với các kiểu giá trị vô hướng (như `int`, `float64`), shape chính là underlying type tương ứng của chúng.
-
-Khi một hàm generic dùng chung mã máy cần thực hiện các thao tác phụ thuộc kiểu cụ thể (như phép so sánh, tính băm map, hoặc gọi phương thức của interface), trình biên dịch sẽ truyền ngầm một con trỏ **runtime dictionary** (`*runtime.dict`). Từ điển này chứa các con trỏ hàm nghiệp vụ và con trỏ siêu dữ liệu kiểu (`*abi.Type`) tương ứng với instantiation tại vị trí gọi. Cơ chế này là một sự đánh đổi có chủ đích: nó kiểm soát sự phình to của file nhị phân mà không ép toàn bộ giá trị phải thoát ra heap như reflection, nhưng việc tra cứu gián tiếp qua dictionary cũng đồng nghĩa mã generic dùng chung không nhất thiết có tốc độ ngang bằng với hàm được chuyên biệt hóa hoàn toàn bằng tay.
+Vì thế, đừng chọn generic vì tin nó luôn nhanh hơn interface, cũng đừng loại nó chỉ vì nghe rằng compiler “có dictionary”. Hãy chọn generic khi operation và constraint làm API đúng hơn. Khi chi phí là lý do quyết định, hãy đo hai implementation dưới cùng Go version, cùng máy/môi trường, workload và benchmark contract; sau đó kiểm tra allocation và profile thay vì suy ra từ representation nội bộ.
 
 ## Interface thay vì generics khi câu hỏi là “ai làm được việc này?”
 
@@ -196,16 +186,7 @@ fmt.Println(result == nil)
 
 Kết quả là `true`, rồi `false`. `problem` là nil pointer. Khi gán nó vào `error`, interface value vẫn mang dynamic type `*ProbeError`; dynamic value của type đó là nil pointer.
 
-Bản chất của interface value trong runtime (`src/runtime/iface.go`) là một cấu trúc nhị từ gồm hai con trỏ 64-bit: con trỏ bảng phương thức `tab *itab` (hoặc con trỏ kiểu `_type *abi.Type` đối với `any`) và con trỏ dữ liệu `data unsafe.Pointer`:
-
-~~~go
-type iface struct {
-	tab  *itab
-	data unsafe.Pointer
-}
-~~~
-
-Một biến interface chỉ bằng `nil` khi và chỉ khi **cả hai con trỏ `tab` và `data` đều mang giá trị 0**. Khi gán con trỏ nil `problem` vào `result`, runtime điền địa chỉ bảng `itab` của cặp `(*ProbeError, error)` vào `result.tab`, trong khi `result.data` là `nil`. Phép kiểm tra `result == nil` đối chiếu trường `tab`; vì `tab != nil`, biểu thức đánh giá thành `false`.
+Không cần suy ra layout runtime để giải thích kết quả. Theo ngữ nghĩa interface, `result` giữ dynamic type `*ProbeError` và dynamic value nil của type đó, nên interface value ấy không phải nil interface. Representation hai word mà một Go runtime trên một kiến trúc có thể dùng chỉ là chi tiết triển khai; đừng dùng nó làm contract, cũng đừng dựa vào kích thước hay field nội bộ của interface trong production code.
 
 Bug thường gặp nằm ở đường return:
 
