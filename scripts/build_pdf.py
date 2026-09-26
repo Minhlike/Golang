@@ -49,11 +49,13 @@ from book_style import (
     COLOR_BORDER_MEDIUM,
     COLOR_BORDER_STRONG,
     COLOR_BORDER_SUBTLE,
+    COLOR_TEXT_PRIMARY,
     FONT_MONO,
     FONT_SANS,
     FONT_SANS_BOLD,
     FONT_SERIF,
     FONT_SERIF_BOLD,
+    LINE_WEIGHT_ACCENT,
     LINE_WEIGHT_BORDER,
     LINE_WEIGHT_RULE,
     LINE_WEIGHT_TABLE_GRID,
@@ -294,12 +296,14 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), COLOR_BG_HEADER),
-            ("GRID", (0, 0), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_MEDIUM),
+            ("LINEBELOW", (0, 0), (-1, 0), LINE_WEIGHT_RULE, COLOR_BORDER_MEDIUM),
+            ("LINEBELOW", (0, 1), (-1, -1), LINE_WEIGHT_TABLE_GRID, COLOR_BORDER_HAIRLINE),
+            ("LINEABOVE", (0, 0), (-1, 0), 0.4, COLOR_BORDER_MEDIUM),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
         flowables = []
         if table_caption:
@@ -332,17 +336,18 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             box = Table([[code]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
             box.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_LIGHT),
-                ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_MEDIUM),
-                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("BOX", (0, 0), (-1, -1), LINE_WEIGHT_BORDER, COLOR_BORDER_LIGHT),
+                ("LINEBEFORE", (0, 0), (0, -1), LINE_WEIGHT_ACCENT, COLOR_BORDER_STRONG),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 9),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
             ]))
             if len(chunks) == 1 and len(chunk) <= 22:
-                story.append(KeepTogether([Spacer(1, 5), box, Spacer(1, 12)]))
+                story.append(KeepTogether([Spacer(1, 6), box, Spacer(1, 13)]))
             else:
-                top_spacer = 5 if idx == 0 else 2
-                bottom_spacer = 12 if idx == len(chunks) - 1 else 4
+                top_spacer = 6 if idx == 0 else 2
+                bottom_spacer = 13 if idx == len(chunks) - 1 else 4
                 story.extend([Spacer(1, top_spacer), box, Spacer(1, bottom_spacer)])
         code_lines = []
 
@@ -412,13 +417,13 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                          colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
             note.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_CALLOUT),
-                ("LINEBEFORE", (0, 0), (0, -1), 2.0, COLOR_BLACK),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("LINEBEFORE", (0, 0), (0, -1), LINE_WEIGHT_ACCENT, COLOR_BORDER_MEDIUM),
+                ("LEFTPADDING", (0, 0), (-1, -1), 14),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ]))
-            story.extend([Spacer(1, 4), note, Spacer(1, 11)])
+            story.extend([Spacer(1, 5), note, Spacer(1, 12)])
             continue
         if not line.strip():
             flush_paragraph()
@@ -429,6 +434,10 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             in_references = False
             level = len(heading.group(1))
             story.append(Paragraph(inline(heading.group(2), mono), s[f"h{level}"]))
+            if level == 1:
+                # Chapter opener: thin rule below title + generous whitespace
+                story.append(HRFlowable(width="100%", thickness=LINE_WEIGHT_RULE,
+                             color=COLOR_BORDER_STRONG, spaceAfter=14))
             continue
         if line.strip() == "---":
             flush_paragraph()
