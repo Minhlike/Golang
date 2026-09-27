@@ -113,7 +113,7 @@ Toàn bộ quy trình phức tạp này được tổ chức thành một pipeli
 
 Điểm sáng kỹ thuật nằm ở chiến lược chống thảm họa phân tán tại `aws/retry/standard.go` (`type Standard`). Khi một vùng của AWS gặp sự cố gián đoạn mạng, hàng nghìn container của bạn sẽ đồng loạt thử lại (retry). Nếu dùng thuật toán cấp số nhân đơn thuần (`2^t`), tất cả các client sẽ thức dậy và gửi request tại cùng một tích tắc, tạo ra cơn bão lưu lượng (thundering herd) đánh sập hoàn toàn khả năng hồi phục của hạ tầng. AWS SDK v2 triển khai thuật toán **Full Jitter**: khoảng thời gian ngủ giữa các lần thử lại là một giá trị ngẫu nhiên đồng đều trong đoạn `[0, backoff]`.
 
-Hơn thế nữa, SDK quản lý một **Retry Quota** nội bộ. Nó khởi tạo một "kho điểm" (token bucket) cố định (mặc định 500 điểm). Mỗi lần request thành công, kho được hồi phục 1 điểm; nhưng mỗi lần thử lại do lỗi mạng, SDK tiêu tốn 5 điểm. Nếu mạng downstream chập chờn liên tục, kho điểm sẽ cạn kiệt và SDK lập tức **fail-fast**, trả lỗi ngay về cho ứng dụng thay vì tiếp tục gửi thêm request retry. Đây là bài học sống còn về việc bảo vệ hệ thống đối tác khi viết SDK hạ tầng.
+Ở phiên bản được ghim `github.com/aws/aws-sdk-go-v2` v1.47.0, `retry.Standard` mặc định dùng rate limiter dạng quota. Cấu hình mặc định của retryer có capacity 500; retry thường tiêu `RetryCost` 5 token, retry do timeout tiêu `RetryTimeoutCost` 10 token, và một operation thành công ngay lượt đầu tăng `NoRetryIncrement` 1 token. `ThrottlingRetryCost` là một tùy chọn riêng, nên không thể gộp mọi retry mạng thành “5 token”. Các giá trị này là chi tiết cấu hình của Standard retryer: ứng dụng có thể thay rate limiter, thay các cost, hoặc vô hiệu quota. Khi quota không đủ, retryer trả lỗi quota thay vì tiếp tục thử lại; đó là hàng rào giảm áp lực retry, không phải hợp đồng ổn định của mọi SDK hay mọi cấu hình AWS.
 
 ---
 
@@ -738,7 +738,7 @@ log.Printf(
 
 Mỗi lần ghi log, các biến số nguyên và số thực bị đóng gói vào `interface{}` (boxing), khiến chúng thoát ra bộ nhớ heap (heap escape). Năm trăm nghìn log entries mỗi giây đồng nghĩa với hàng triệu đối tượng rác bị vứt vào heap, buộc Go Garbage Collector phải dừng thế giới (Stop-The-World) liên tục để quét dọn, làm latency của ứng dụng tăng vọt không kiểm soát.
 
-Uber thiết kế `zap` với một tôn chỉ duy nhất: **Zero-Allocation Logging** (Ghi log với không một byte cấp phát rác trên heap).
+`zap` hướng tới logging có ít cấp phát ở các đường nóng; kết quả còn phụ thuộc encoder, field, output và phiên bản thư viện.
 
 Bí mật nằm ở cấu trúc `zap.Field` (`zapcore/field.go`):
 
@@ -754,21 +754,17 @@ type Field struct {
 
 Khi bạn ghi log: `logger.Info("transfer", zap.Int64("from", fromID), zap.Float64("amount", amount))`, `zap.Int64` không hề đưa số nguyên vào `interface{}`! Nó gán thẳng giá trị vào trường `Integer int64` bên trong struct `Field`.
 
-Toàn bộ quá trình mã hóa log thành chuỗi JSON trong `zapcore/json_encoder.go` sử dụng một bộ đệm byte tái sử dụng thông qua hồ chứa đối tượng `sync.Pool`. Chuỗi log JSON được nối ghép bằng cách ghi trực tiếp các mã ASCII vào mảng byte của bộ đệm mà không cấp phát bất kỳ chuỗi `string` trung gian nào. Kết quả: Việc ghi log tiêu tốn dưới 100 nano-giây và hoàn toàn đạt mức **0 allocs/op**, giải phóng ứng dụng khỏi gánh nặng của Garbage Collector.
+`zapcore/json_encoder.go` dùng bộ đệm tái sử dụng qua `sync.Pool` và ghi trực tiếp nhiều trường vào buffer. Điều đó giảm allocation trong những đường đi phù hợp, nhưng không cho phép suy ra một ngưỡng nano-giây hay `0 allocs/op` cho ứng dụng khác. Muốn so sánh với logger khác, cần benchmark cùng Go version, encoder, destination và tập field.
 
 ---
 
 ### 29. `go.uber.org/automaxprocs` (v1.6.0 — `1ea14c35`)
 
-Đây là một trong những thư viện Go quan trọng nhất nhưng lại bị lãng quên nhiều nhất trong thế giới Kubernetes. Sự cố mà nó giải quyết đã từng làm tiêu tốn hàng nghìn giờ gãi đầu của các kỹ sư SRE trên toàn cầu.
+`automaxprocs` quan trọng nhất trong bối cảnh lịch sử của các binary Go cũ chạy trong container có CPU limit thấp. Trước Go 1.25, mặc định `GOMAXPROCS` không xét cgroup CPU bandwidth limit, nên một process có thể chọn số lượng song song gần số CPU host thay vì giới hạn CPU của container.
 
-Hiện tượng xảy ra như sau: Bạn có một Pod Go được cấp hạn ngạch CPU rất nhỏ trong manifest: `resources.limits.cpu: "1"` (tương đương 1 CPU core). Pod này được lập lịch chạy trên một máy chủ vật lý cỡ lớn của cụm máy chủ với 64 CPU cores.
+Edition này dùng Go 1.27.1, vì vậy cần dùng mental model hiện hành. Khi `GOMAXPROCS` không bị đặt thủ công, Go trên Linux chọn mặc định từ số CPU logic, CPU affinity và giới hạn throughput trung bình của cgroup; runtime còn kiểm tra thay đổi định kỳ. CPU limit khác CPU request: limit là quota throughput mà runtime có thể xét, còn request là thông tin lập lịch của Kubernetes. `GOMAXPROCS` giới hạn mức song song chạy Go code, không thay thế quota CPU của cgroup.
 
-Khi tiến trình Go khởi động, runtime Go mặc định gọi hàm `runtime.NumCPU()` để xác định số lượng luồng thực thi hệ điều hành chạy song song (`GOMAXPROCS`). Hàm `NumCPU()` hỏi kernel số lõi CPU của máy chủ vật lý và nhận được câu trả lời: **64 cores**. Do đó, Go runtime tự động cấu hình `GOMAXPROCS = 64`!
-
-Điều gì xảy ra tiếp theo? Sáu mươi tư luồng OS threads của Go đồng loạt chạy các goroutines và tranh giành nhau thực thi. Nhưng Linux CFS (Completely Fair Scheduler) nhìn vào cgroups của container và thấy: Container này chỉ được phép sử dụng tối đa 100 mili-giây CPU trong mỗi chu kỳ 100ms. Sáu mươi tư luồng ngốn sạch hạn ngạch 100ms chỉ trong vỏn vẹn **1.5 mili-giây đầu tiên**!
-
-Trong 98.5 mili-giây còn lại của chu kỳ, Linux kernel **bóp nghẹt hoàn toàn CPU của container (CPU Throttling)**. Ứng dụng Go bị đóng băng toàn tập, không thể xử lý request, khiến tail latency tăng vọt từ 5ms lên 200ms mặc dù mức sử dụng CPU thực tế chỉ khoảng 30%!
+Vì vậy không thể kết luận rằng đặt `GOMAXPROCS` bằng quota sẽ loại bỏ throttling. Nó có thể giảm các đỉnh song song bất lợi cho một workload, nhưng GC, syscall, loại workload, quota phân số và chính sách scheduler đều còn ảnh hưởng đến độ trễ. Runtime Go 1.27 cũng có các quy tắc làm tròn và không hạ mặc định xuống dưới hai chỉ vì cgroup quota.
 
 `automaxprocs` sửa chữa thảm họa này tự động ngay khi import thư viện tại `maxprocs/maxprocs.go`:
 
@@ -776,11 +772,11 @@ Trong 98.5 mili-giây còn lại của chu kỳ, Linux kernel **bóp nghẹt ho�
 import _ "go.uber.org/automaxprocs"
 ```
 
-Khi được nạp, thư viện tự động đọc cấu hình cgroups của container tại `/sys/fs/cgroup/cpu/cpu.cfs_quota_us` và `cpu.cfs_period_us` (trên cgroups v1) hoặc `cpu.max` (trên cgroups v2). Nó tính toán hạn ngạch CPU thực tế:
+Khi được nạp, thư viện đọc cấu hình cgroup và gọi `runtime.GOMAXPROCS` theo chính sách của nó. Đây vẫn có thể hữu ích cho Go cũ, cho chính sách cấu hình rõ ràng, hoặc các cạnh môi trường cần kiểm chứng. Với Go 1.27 chạy mặc định, không nên xem nó là phụ thuộc bắt buộc chỉ để runtime hiểu Kubernetes CPU limit.
 
 `Quota = cfs_quota_us / cfs_period_us`
 
-Nếu kết quả tính ra là `1.0`, thư viện lập tức gọi `runtime.GOMAXPROCS(1)`. Số luồng thực thi của Go được đưa về khớp chính xác với hạn ngạch thực tế của container, loại bỏ hoàn toàn hiện tượng thread contention và xóa sạch 100% tình trạng CPU Throttling vô lý trên Kubernetes.
+Biểu thức này mô tả quota throughput của cgroup v1, không phải CPU request và cũng không phải cam kết throughput thực tế của ứng dụng. Hãy đo latency, CPU throttling và `runtime.GOMAXPROCS(0)` trên đúng workload trước khi quyết định giữ một override.
 
 ---
 
@@ -788,7 +784,7 @@ Nếu kết quả tính ra là `1.0`, thư viện lập tức gọi `runtime.GOM
 
 Một sự cố rò rỉ socket nghiêm trọng mà các kỹ sư DevOps thường gặp phải: Một microservice thực hiện gọi API ra bên ngoài, cấu hình tự động thử lại 3 lần khi gặp mã lỗi 503 hoặc 500. Sau vài giờ chạy dưới tải cao, hệ thống bỗng nhiên lăn đùng ra chết với lỗi: `dial tcp: lookup ...: socket: too many open files`.
 
-Nguyên nhân sâu xa nằm ở cách Go tái sử dụng kết nối HTTP tại `net/http.Transport`. Để một kết nối TCP có thể được đưa trở lại hồ chứa kết nối (connection pool) phục vụ cho request tiếp theo, **ứng dụng bắt buộc phải đọc hết toàn bộ dữ liệu trong `response.Body` cho đến khi gặp `io.EOF`, rồi mới gọi `Close()`**.
+Một nguyên nhân cần điều tra là vòng đời `response.Body` trong `net/http.Transport`. Caller phải luôn đóng `response.Body`; việc đọc đến EOF có thể là điều kiện hữu ích cho một số đường tái sử dụng kết nối, nhưng không phải bảo đảm tái sử dụng. Transport, giao thức, kích thước body, server và kết nối hiện có đều ảnh hưởng kết quả.
 
 Nếu bạn chỉ đơn thuần viết:
 
@@ -800,7 +796,7 @@ if resp.StatusCode >= 500 {
 }
 ```
 
-Kết nối TCP bên dưới vẫn còn dữ liệu chưa đọc. `net/http.Transport` không thể tái sử dụng một socket đang chứa dữ liệu cũ lơ lửng, vì vậy nó buộc phải đóng socket đó một cách cưỡng bức (hoặc để nó rơi vào trạng thái `TIME_WAIT`), và phải mở một kết nối TCP hoàn toàn mới cho lần retry tiếp theo. Dưới tải cao, hàng nghìn socket mới được mở liên tục trong khi socket cũ chưa kịp dọn dẹp, dẫn đến cạn kiệt file descriptors của hệ điều hành.
+Kết nối có thể không đủ điều kiện để tái sử dụng khi body bị bỏ dở. Tùy tình trạng kết nối và Transport, client có thể đóng kết nối thay vì giữ nó trong idle pool. Dưới tải cao, một pattern retry sai hoặc giới hạn connection không phù hợp có thể làm số file descriptor tăng; cần đo `httptrace`, connection metrics và lỗi thực tế trước khi kết luận nguyên nhân.
 
 `go-retryablehttp` ngăn chặn thảm họa này tại `client.go` bằng cơ chế xả bộ đệm an toàn:
 
@@ -814,7 +810,7 @@ func drainBody(resp *http.Response) {
 }
 ```
 
-Trước mỗi lần thử lại, thư viện sử dụng một `io.LimitReader` (giới hạn tối đa một lượng byte nhất định, ví dụ 4KB, để tránh bị tấn công DDOS nếu máy chủ trả về một body vô hạn) đọc sạch toàn bộ dữ liệu dư thừa vào `io.Discard`, rồi mới đóng body. Hành động này giúp socket TCP được thanh tẩy hoàn toàn và quay trở lại connection pool an toàn, bảo đảm hiệu năng tối đa cho các chu kỳ retry tự động.
+Trước mỗi lần thử lại, thư viện có thể dùng `io.LimitReader` để giới hạn lượng dữ liệu bỏ đi trước khi đóng body. Đây là trade-off giữa lượng đọc thêm, bộ nhớ và khả năng giữ kết nối; nó không chứng minh TCP đã được “thanh tẩy” hoặc connection chắc chắn quay lại pool.
 
 ---
 

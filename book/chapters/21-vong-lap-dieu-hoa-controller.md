@@ -19,7 +19,7 @@ Trong mô hình **Edge-Triggered**, hệ thống chỉ phát tín hiệu khi có
 
 Ngược lại, mô hình **Level-Triggered** không quan tâm quá khứ đã xảy ra bao nhiêu lần chuyển trạng thái hay bao nhiêu thông điệp bị thất lạc. Ở mỗi chu kỳ, Controller chỉ quan sát **Trạng thái thực tế (Actual State)** hiện hành và so sánh với **Trạng thái mong muốn (Desired State)**. Khi trạng thái mong muốn đòi hỏi 3 bản sao `payment-service` khỏe mạnh nhưng trạng thái thực tế chỉ có 1 bản sao phản hồi thành công, Controller nhận diện mức sai lệch là thiếu 2 bản sao và lập tức kích hoạt hành động khởi chạy bổ sung.
 
-Ngay cả khi controller bị tắt đột ngột lúc đang khởi động bản sao thứ hai, ở lần thức dậy kế tiếp, nó lại tiếp tục so sánh và nhận ra sai lệch vẫn còn (hiện có 2 bản sao, vẫn thiếu 1). Nó lặp lại hành động cho đến khi sai lệch triệt tiêu hoàn toàn. Đặc tính này gọi là **sự hội tụ trạng thái (State Convergence)**.
+Ngay cả khi controller bị tắt đột ngột lúc đang khởi động bản sao thứ hai, ở lần thức dậy kế tiếp, nó lại tiếp tục so sánh và nhận ra sai lệch còn tồn tại. Nó có thể yêu cầu hành động tiếp, nhưng chỉ một quan sát mới mới xác nhận được sự hội tụ. Đặc tính hướng về trạng thái mong muốn này gọi là **sự hội tụ trạng thái (State Convergence)**.
 
 ## Bốn pha của Vòng lặp điều hòa
 
@@ -30,7 +30,7 @@ Một chu trình điều hòa chuẩn mực luôn diễn ra theo 4 bước khép
 | **1** | **Observe** | Đọc trạng thái thực tế từ hệ thống hoặc store. |
 | **2** | **Diff** | So sánh trạng thái thực tế với trạng thái mong muốn. |
 | **3** | **Act** | Thực thi hành động khắc phục để triệt tiêu sai lệch. |
-| **4** | **Requeue** | Xếp lịch kiểm tra lại hoặc backoff nếu gặp lỗi. |
+| **4** | **Schedule / Observe again** | Chờ sự kiện, resync hoặc lịch thử lại để đọc một quan sát mới; không suy diễn trạng thái từ kết quả lời gọi. |
 
 Trong Go, ta đóng gói hành vi này thành một interface nhỏ gọn:
 
@@ -59,7 +59,7 @@ Hai là, xung đột điều hòa song song (Parallel Race): Nếu hai worker tr
 
 Ba là, bão thử lại (Retry Storm): Nếu tài nguyên đích bị sập hoàn toàn, hàm `Act` sẽ liên tục trả về lỗi. Đẩy lại channel ngay lập tức sẽ khiến worker pool quay cuồng trong vòng lặp thử lại vô tận (spin-lock), vắt kiệt CPU và đánh sập chính dịch vụ đang hấp hối.
 
-Để giải quyết triệt để ba bài toán trên, ta thiết kế cấu trúc `WorkQueue` chuyên dụng:
+Để nhìn rõ ba bài toán đó, lab dùng một `WorkQueue` tối giản. Nó mô phỏng các ý tưởng `dirty`, `processing` và đưa lại key sau `Done`, chứ không phải bản sao chính xác của `client-go/util/workqueue`.
 
 ~~~go
 type WorkQueue struct {
@@ -119,7 +119,7 @@ func (q *WorkQueue) Done(item string) {
 }
 ~~~
 
-Nhờ cơ chế này, tại bất kỳ thời điểm nào, mỗi tài nguyên chỉ có tối đa một worker chịu trách nhiệm điều hòa. Mọi biến động xảy ra trong khi worker đang làm việc đều được ghi nhận vào `dirty` để xử lý ngay sau đó mà không bao giờ bị bỏ sót.
+Trong mô hình này, một key không được hai worker xử lý đồng thời. Nếu `Add` xuất hiện khi key đang xử lý, `dirty` ghi nhận rằng cần có một lượt sau `Done`. Đây là cơ chế gộp lịch xử lý, không phải cam kết exactly-once: worker có thể lỗi, tiến trình có thể dừng, và trạng thái có thẩm quyền vẫn phải được đọc lại ở lần reconcile sau.
 
 ## Kiểm soát giãn cách lũy thừa khi có sự cố
 
@@ -156,11 +156,11 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 
 Nếu lần thử đầu tiên thất bại sau 50ms, lần kế tiếp sẽ diễn ra sau 100ms, rồi 200ms, 400ms, cho đến khi chạm trần `MaxDelay`. Khoảng thời gian giãn cách này tạo điều kiện cho hạ tầng mạng hoặc cơ sở dữ liệu có đủ thời gian tự hồi phục, ngăn ngừa triệt để hiện tượng bão retry. Khi đợt reconcile thành công, controller gọi `q.Forget(item)` để xóa bộ đếm thất bại, sẵn sàng cho các chu kỳ trong tương lai.
 
-## Tính lũy thừa: Hợp đồng sống còn của Reconciler
+## Tính lũy thừa: hành động có thể thử lại, quan sát luôn được đọc lại
 
-Vì một tài nguyên có thể được đưa vào hàng đợi nhiều lần do sự kiện lặp, resync định kỳ hoặc retry sau lỗi, hàm `Reconcile` bắt buộc phải có **tính lũy thừa (Idempotency)** theo nguyên lý: `f(f(x)) = f(x)`.
+Vì một tài nguyên có thể được đưa vào hàng đợi nhiều lần do sự kiện lặp, resync định kỳ hoặc retry sau lỗi, reconcile phải được thiết kế để an toàn khi gọi lại. Công thức `f(f(x)) = f(x)` chỉ là một trực giác về trạng thái thuần; nó không mô tả đầy đủ hợp đồng production, nơi lời gọi ra bên ngoài có thể thành công nhưng phản hồi bị mất, còn cache có thể cũ.
 
-Điều này có nghĩa: nếu trạng thái thực tế đã thỏa mãn trạng thái mong muốn, việc chạy lại `Reconcile` không được phép tạo thêm bất kỳ tác dụng phụ (side-effect) nào.
+Khi quan sát mới đã khớp trạng thái mong muốn, reconcile nên là no-op. Khi cần hành động, actuator phải có precondition hoặc idempotency key phù hợp với hệ thống đích. Sau khi `Act` trả về `nil`, controller mới biết lời gọi đã kết thúc mà không báo lỗi; nó chưa biết thế giới bên ngoài đã hội tụ. Sự xác nhận chỉ đến từ lần `Observe` kế tiếp.
 
 Hãy xem xét một Reconciler tự chữa lành cụ thể:
 
@@ -187,13 +187,14 @@ func (r *SelfHealingReconciler) Reconcile(
 		return Result{}, fmt.Errorf("heal %s: %w", key, err)
 	}
 
-	// 4. Cập nhật trạng thái sau khi chữa lành
-	r.markHealthy(key, r.desiredReplicas)
+	// 4. Không tự sửa actual state.
+	// Event hoặc resync sẽ đưa key quay lại
+	// khi lớp quan sát thấy trạng thái bên ngoài đã đổi.
 	return Result{}, nil
 }
 ~~~
 
-Nếu `payment-service` đang có 1 replica trong khi yêu cầu là 3, hàm sẽ gọi `healHook` để nâng lên 3. Nếu ngay sau đó một sự kiện khác kích hoạt `Reconcile("payment-service")`, bước kiểm tra `!isDegraded` lập tức trả về `Result{}, nil`. Không có lệnh spawn thừa thãi nào được phát ra, loại bỏ hoàn toàn nguy cơ mất kiểm soát tài nguyên.
+Nếu `payment-service` đang có 1 replica trong khi yêu cầu là 3, hàm gọi actuator với `context.Context`. Một test cố ý để actuator trả `nil` nhưng giữ quan sát cũ vẫn cho thấy target chưa khỏe; reconciler không được gán `Healthy=true` chỉ để làm bài kiểm thử xanh. Khi quan sát sau đó phản ánh 3 replica khỏe, lượt reconcile kế tiếp mới là no-op. Lab cũng chặn actuator bằng channel rồi thay quan sát trong lúc action đang chạy, để chứng minh action cũ không được ghi đè quan sát mới.
 
 ## Tắt nguồn mềm mại cho Controller
 
@@ -223,7 +224,7 @@ func (c *Controller) Run(ctx context.Context) error {
 }
 ~~~
 
-Phương thức `queue.ShutDown()` giải phóng các goroutine đang bị block ở lệnh `cond.Wait()`. Vòng lặp `for c.processNextWorkItem(ctx)` nhận được tín hiệu `shutdown == true` khi hàng đợi đã cạn, kết thúc vòng lặp và thông báo qua `wg.Done()`. Quá trình này bảo đảm không có thao tác ghi dữ liệu nào bị đứt gánh giữa chừng.
+Phương thức `queue.ShutDown()` giải phóng các goroutine đang bị block ở lệnh `cond.Wait()`. Vòng lặp `for c.processNextWorkItem(ctx)` nhận được tín hiệu `shutdown == true` khi hàng đợi đã cạn, kết thúc vòng lặp và thông báo qua `wg.Done()`. Việc đóng queue chỉ giúp worker thoát; nó không tự bảo đảm ghi bên ngoài hoàn tất. Actuator phải tôn trọng `ctx`, và tác dụng phụ đã gửi sang hệ thống khác cần idempotency hoặc quan sát lại riêng.
 
 ## Thực hành Lab: Kiểm chứng Controller và WorkQueue
 
@@ -236,11 +237,11 @@ go test -race ./...  # Kiểm tra race condition
 go vet ./...        # Phân tích tĩnh cú pháp
 ~~~
 
-Bộ kiểm thử tự động xác thực ba đặc tính kỹ thuật quan trọng: hàm `TestWorkQueue_Deduplication` kiểm tra việc gộp nhiều sự kiện cùng key thành một lượt xử lý duy nhất trong queue; hàm `TestController_SelfHealing_Success` kiểm tra khả năng tự động điều hòa dịch vụ hỏng về trạng thái chuẩn và bảo đảm tính lũy thừa khi enqueue lặp lại; và hàm `TestController_HealFailure_RateLimitedBackoff` xác thực cơ chế tự động lùi lịch thử lại bằng exponential backoff khi hành động chữa lành bị lỗi.
+Bộ kiểm thử dùng đồng bộ hóa bằng channel thay vì suy luận từ `Sleep`: nó xác nhận actuator nhận được hủy context, một action thành công không tự bịa observation, và observation mới xuất hiện khi action đang chạy không bị ghi đè. Test backoff vẫn kiểm tra rằng lỗi actuator tạo lượt thử lại có giãn cách.
 
 ## Bước phát triển tiếp theo
 
-Hiểu và làm chủ Controller Pattern là bước ngoặt đưa kỹ sư Go từ vai trò người xây dựng công cụ đơn lẻ trở thành kiến trúc sư của các hệ thống tự trị (*autonomous control systems*). Bằng cách kết hợp khả năng thu thập tín hiệu của `opsprobe` (Chương 20) với cơ chế điều hòa cấp độ mức của Controller (Chương 21), hệ thống không chỉ biết nói cho ta biết nó đang đau ở đâu, mà còn có thể tự chữa lành vết thương trước khi người dùng kịp nhận ra.
+Chương này chỉ xây mô hình điều hòa tối giản: quan sát, so sánh, hành động, rồi quan sát lại. Kết hợp với tín hiệu từ `opsprobe` (Chương 20), nó cho ta một nơi để thấy rõ vì sao action result và observed state là hai bằng chứng khác nhau.
 
 Đây là nền tảng trực tiếp cho Chương 22, nơi cùng các câu hỏi ấy gặp List/Watch, cache và workqueue của `client-go`; Chương 23 mới thêm API riêng, status, ownership và finalizer của một operator. Hàng đợi trong chương này là mô hình tái lập để đọc cơ chế, không phải bản thay thế cho implementation của Kubernetes.
 

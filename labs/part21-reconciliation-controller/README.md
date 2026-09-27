@@ -9,7 +9,8 @@ Lab này hiện thực hóa hoàn chỉnh mô hình **Controller Pattern** và *
 
 2. **`controller/` (Controller Runtime & Self-Healing Reconciler):**
    - Worker pool cố định, nhận tín hiệu từ queue và thực thi hàm `Reconcile(ctx, key)`.
-   - Tính Lũy Thừa (Idempotency): Reconcile đưa hệ thống từ Actual State về Desired State; nếu trạng thái đã chuẩn thì là no-op.
+   - Action và observation tách biệt: actuator trả về thành công không tự đổi Actual State; một quan sát mới mới xác nhận hội tụ.
+   - Actuator nhận `context.Context`, nên có thể dừng một tác vụ biết lắng nghe hủy thực thi.
    - Graceful shutdown đồng bộ qua `sync.WaitGroup` và `sync.Cond`.
 
 ## Kiểm thử và vận hành

@@ -22,10 +22,10 @@ func DefaultRateLimiterConfig() RateLimiterConfig {
 }
 
 // WorkQueue là hàng đợi công việc hỗ trợ deduplication, rate limiting và xử lý song song an toàn.
-// Kiến trúc này phản ánh chính xác thiết kế lõi của Kubernetes client-go workqueue:
-// 1. Deduplication: Nhiều sự kiện dồn về cùng một resource key chỉ sinh ra một lượt reconcile.
-// 2. Serialized processing per key: Tại một thời điểm, chỉ có tối đa một worker xử lý một key cụ thể.
-// 3. Rate-limited backoff: Tránh bão retry (retry storm) khi tài nguyên đích gặp sự cố kéo dài.
+// Lab này mô phỏng các ý tưởng dirty/processing của client-go workqueue:
+// 1. Nhiều Add cùng key đang đợi được gộp vào một lịch xử lý.
+// 2. Trong mô hình này, một key không được hai worker xử lý cùng lúc.
+// 3. Backoff giới hạn nhịp retry khi tài nguyên đích gặp sự cố kéo dài.
 type WorkQueue struct {
 	mu           sync.Mutex
 	cond         *sync.Cond

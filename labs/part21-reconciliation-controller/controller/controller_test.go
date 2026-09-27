@@ -10,142 +10,104 @@ import (
 	"example.com/golang-master/part21-reconciliation-controller/queue"
 )
 
-func TestController_SelfHealing_Success(t *testing.T) {
+func TestSelfHealingReconciler_ActionSuccessDoesNotInventObservation(t *testing.T) {
 	var healCalls int64
-
-	reconciler := NewSelfHealingReconciler(3, func(key string) error {
+	reconciler := NewSelfHealingReconciler(3, func(context.Context, string) error {
 		atomic.AddInt64(&healCalls, 1)
 		return nil
 	})
 
-	// Thiết lập trạng thái ban đầu bị hỏng: unhealthy, 1 replica (desired là 3)
-	reconciler.SetActualState(TargetState{
-		ID:       "payment-service",
-		Healthy:  false,
-		Replicas: 1,
-	})
+	reconciler.SetActualState(TargetState{ID: "payment-service", Replicas: 1})
+	if _, err := reconciler.Reconcile(context.Background(), "payment-service"); err != nil {
+		t.Fatalf("Reconcile() error = %v", err)
+	}
 
-	ctrl := NewController(Config{
-		Name:        "test-healer",
-		Reconciler:  reconciler,
-		RateLimiter: queue.DefaultRateLimiterConfig(),
-		Concurrency: 2,
+	state, ok := reconciler.GetActualState("payment-service")
+	if !ok || state.Healthy || state.Replicas != 1 {
+		t.Fatalf("actuator success must not overwrite observation, got %+v", state)
+	}
+
+	// Một quan sát độc lập sau đó xác nhận hội tụ. Lần reconcile kế tiếp là no-op.
+	reconciler.SetActualState(TargetState{ID: "payment-service", Healthy: true, Replicas: 3})
+	if _, err := reconciler.Reconcile(context.Background(), "payment-service"); err != nil {
+		t.Fatalf("Reconcile() after observation error = %v", err)
+	}
+	if got := atomic.LoadInt64(&healCalls); got != 1 {
+		t.Fatalf("expected one action after convergence observation, got %d", got)
+	}
+}
+
+func TestSelfHealingReconciler_ActuatorReceivesCancellation(t *testing.T) {
+	started := make(chan struct{})
+	reconciler := NewSelfHealingReconciler(1, func(ctx context.Context, _ string) error {
+		close(started)
+		<-ctx.Done()
+		return ctx.Err()
 	})
+	reconciler.SetActualState(TargetState{ID: "worker-1"})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Khởi chạy controller trong nền
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- ctrl.Run(ctx)
+		_, err := reconciler.Reconcile(ctx, "worker-1")
+		errCh <- err
 	}()
-
-	// Đưa key vào hàng đợi điều hòa
-	ctrl.Enqueue("payment-service")
-
-	// Chờ điều hòa hoàn tất
-	time.Sleep(50 * time.Millisecond)
-
-	// Kiểm tra trạng thái đã được đưa về desired state
-	state, ok := reconciler.GetActualState("payment-service")
-	if !ok {
-		t.Fatalf("expected state to exist")
-	}
-	if !state.Healthy || state.Replicas != 3 {
-		t.Fatalf("expected healthy state with 3 replicas, got: %+v", state)
-	}
-
-	if atomic.LoadInt64(&healCalls) != 1 {
-		t.Fatalf("expected exactly 1 heal action, got %d", atomic.LoadInt64(&healCalls))
-	}
-
-	// Kiểm tra tính Lũy Thừa (Idempotency):
-	// Enqueue lại lần nữa khi trạng thái đã chuẩn -> không được gọi heal thêm lần nào
-	ctrl.Enqueue("payment-service")
-	time.Sleep(50 * time.Millisecond)
-
-	if atomic.LoadInt64(&healCalls) != 1 {
-		t.Fatalf("expected heal action to remain 1 after redundant reconcile, got %d", atomic.LoadInt64(&healCalls))
-	}
-
+	<-started
 	cancel()
-	<-errCh
+
+	if err := <-errCh; !errors.Is(err, context.Canceled) {
+		t.Fatalf("Reconcile() error = %v, want context.Canceled", err)
+	}
+}
+
+func TestSelfHealingReconciler_DoesNotOverwriteFreshObservation(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	reconciler := NewSelfHealingReconciler(2, func(context.Context, string) error {
+		close(started)
+		<-release
+		return nil
+	})
+	reconciler.SetActualState(TargetState{ID: "api", Replicas: 0})
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := reconciler.Reconcile(context.Background(), "api")
+		errCh <- err
+	}()
+	<-started
+
+	// Hệ thống bên ngoài hội tụ khi Act đang chạy; quan sát mới không được bị ghi đè.
+	reconciler.SetActualState(TargetState{ID: "api", Healthy: true, Replicas: 2})
+	close(release)
+	if err := <-errCh; err != nil {
+		t.Fatalf("Reconcile() error = %v", err)
+	}
+	state, _ := reconciler.GetActualState("api")
+	if !state.Healthy || state.Replicas != 2 {
+		t.Fatalf("fresh observation was overwritten: %+v", state)
+	}
 }
 
 func TestController_HealFailure_RateLimitedBackoff(t *testing.T) {
 	var failAttempts int64
-
-	reconciler := NewSelfHealingReconciler(2, func(key string) error {
+	reconciler := NewSelfHealingReconciler(2, func(context.Context, string) error {
 		atomic.AddInt64(&failAttempts, 1)
 		return errors.New("underlying infrastructure unavailable")
 	})
-
-	reconciler.SetActualState(TargetState{
-		ID:       "database-cluster",
-		Healthy:  false,
-		Replicas: 0,
-	})
-
-	cfg := queue.RateLimiterConfig{
-		BaseDelay:  20 * time.Millisecond,
-		MaxDelay:   100 * time.Millisecond,
-		MaxRetries: 3,
-	}
+	reconciler.SetActualState(TargetState{ID: "database-cluster"})
 
 	ctrl := NewController(Config{
 		Name:        "fail-backoff-controller",
 		Reconciler:  reconciler,
-		RateLimiter: cfg,
+		RateLimiter: queue.RateLimiterConfig{BaseDelay: 20 * time.Millisecond, MaxDelay: 100 * time.Millisecond, MaxRetries: 3},
 		Concurrency: 1,
 	})
-
 	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
 	defer cancel()
-
 	ctrl.Enqueue("database-cluster")
-
 	_ = ctrl.Run(ctx)
-
-	// Đảm bảo controller đã thử lại có backoff và không bị crash
-	attempts := atomic.LoadInt64(&failAttempts)
-	if attempts < 2 {
+	if attempts := atomic.LoadInt64(&failAttempts); attempts < 2 {
 		t.Fatalf("expected multiple backoff retry attempts, got %d", attempts)
-	}
-}
-
-func TestController_GracefulShutdown(t *testing.T) {
-	reconciler := NewSelfHealingReconciler(1, func(key string) error {
-		time.Sleep(30 * time.Millisecond)
-		return nil
-	})
-	reconciler.SetActualState(TargetState{ID: "worker-1", Healthy: false})
-
-	ctrl := NewController(Config{
-		Name:        "shutdown-controller",
-		Reconciler:  reconciler,
-		Concurrency: 2,
-	})
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	ctrl.Enqueue("worker-1")
-
-	runDone := make(chan error, 1)
-	go func() {
-		runDone <- ctrl.Run(ctx)
-	}()
-
-	// Chờ worker bắt đầu nhận việc rồi hủy context
-	time.Sleep(10 * time.Millisecond)
-	cancel()
-
-	select {
-	case err := <-runDone:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("expected context.Canceled error, got %v", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatalf("controller failed to shutdown gracefully within deadline")
 	}
 }

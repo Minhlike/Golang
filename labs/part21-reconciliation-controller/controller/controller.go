@@ -147,15 +147,18 @@ type TargetState struct {
 type SelfHealingReconciler struct {
 	mu              sync.Mutex
 	desiredReplicas int
-	actualStates    map[string]*TargetState
-	healHook        func(key string) error
+	actualStates    map[string]TargetState
+	healHook        func(ctx context.Context, key string) error
 }
 
 // NewSelfHealingReconciler khởi tạo reconciler tự phục hồi.
-func NewSelfHealingReconciler(desiredReplicas int, healHook func(key string) error) *SelfHealingReconciler {
+func NewSelfHealingReconciler(
+	desiredReplicas int,
+	healHook func(ctx context.Context, key string) error,
+) *SelfHealingReconciler {
 	return &SelfHealingReconciler{
 		desiredReplicas: desiredReplicas,
-		actualStates:    make(map[string]*TargetState),
+		actualStates:    make(map[string]TargetState),
 		healHook:        healHook,
 	}
 }
@@ -164,7 +167,7 @@ func NewSelfHealingReconciler(desiredReplicas int, healHook func(key string) err
 func (r *SelfHealingReconciler) SetActualState(state TargetState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.actualStates[state.ID] = &state
+	r.actualStates[state.ID] = state
 }
 
 // GetActualState truy vấn trạng thái hiện tại của target.
@@ -175,14 +178,14 @@ func (r *SelfHealingReconciler) GetActualState(key string) (TargetState, bool) {
 	if !ok {
 		return TargetState{}, false
 	}
-	return *s, true
+	return s, true
 }
 
 // Reconcile thực hiện 4 bước của Reconciliation Loop:
 // 1. Observe: Đọc trạng thái thực tế của target
 // 2. Diff: So sánh với trạng thái mong muốn (Healthy = true, Replicas = desiredReplicas)
 // 3. Act: Gọi healHook nếu có sai lệch
-// 4. Update: Cập nhật trạng thái mới có tính lũy thừa (idempotency)
+// 4. Return: Chờ một quan sát mới xác nhận trạng thái bên ngoài đã hội tụ.
 func (r *SelfHealingReconciler) Reconcile(ctx context.Context, key string) (Result, error) {
 	r.mu.Lock()
 	state, exists := r.actualStates[key]
@@ -203,17 +206,12 @@ func (r *SelfHealingReconciler) Reconcile(ctx context.Context, key string) (Resu
 
 	// Thực hiện hành động tự chữa lành (Act)
 	if r.healHook != nil {
-		if err := r.healHook(key); err != nil {
+		if err := r.healHook(ctx, key); err != nil {
 			return Result{}, fmt.Errorf("heal target %s failed: %w", key, err)
 		}
 	}
 
-	// Đưa trạng thái thực tế về trạng thái mong muốn
-	r.mu.Lock()
-	state.Healthy = true
-	state.Replicas = r.desiredReplicas
-	state.LastHeal = time.Now()
-	r.mu.Unlock()
-
+	// Một actuator trả về nil chỉ xác nhận lời gọi đã hoàn tất. Nó không chứng minh
+	// trạng thái bên ngoài đã thay đổi. SetActualState chỉ được gọi bởi lớp quan sát.
 	return Result{}, nil
 }
