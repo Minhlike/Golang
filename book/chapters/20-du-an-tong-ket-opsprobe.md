@@ -165,7 +165,7 @@ return tx.Commit()
 
 ### 4. Vòng đời tài nguyên mạng: Bounded Drain và Điều kiện Tái sử dụng
 
-Một trong những sai lầm phổ biến nhất khi viết network client trong Go là ngộ nhận rằng việc chỉ gọi `resp.Body.Close()` là đủ để socket TCP được tái sử dụng. Ngược lại, việc dùng `io.Copy(io.Discard, resp.Body)` mà không giới hạn độ dài lại mở ra nguy cơ bị tấn công cạn kiệt tài nguyên khi gặp target trả về stream vô hạn.
+Caller phải luôn đóng `resp.Body`. Đọc đến EOF có thể giúp một số đường tái sử dụng kết nối, nhưng `Close` hay drain không bảo đảm reuse: Transport, protocol, server và trạng thái kết nối đều tham gia quyết định. Ngược lại, drain không giới hạn cần được cân nhắc khi target có thể trả body rất lớn hoặc không kết thúc.
 
 `opsprobe` thiết lập chính sách bounded drain có kiểm soát:
 
@@ -180,7 +180,7 @@ func drainResponseBody(body io.ReadCloser) bool {
 
 	lr := &io.LimitedReader{R: body, N: MaxDrainBytes + 1}
 	_, err := io.Copy(io.Discard, lr)
-	// Chỉ đủ điều kiện tái sử dụng khi đã đọc cạn tới EOF
+	// Body nhỏ đã chạm EOF; không phải guarantee reuse.
 	return err == nil && lr.N > 0
 }
 ~~~
@@ -193,7 +193,7 @@ Hai là, đọc tối đa 16 KiB: Đủ rộng để xử lý phần lớn body 
 
 Ba là, phát hiện cạn dòng (EOF): Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`). Lưu ý rằng đây là điều kiện cần trên tầng stream HTTP/1.x, không phải bảo đảm tuyệt đối của mọi tầng Transport.
 
-Bốn là, đánh đổi có chủ đích: Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Hệ thống phát hiện luồng bị cắt ngắn và chấp nhận rằng kết nối TCP này không thể tái sử dụng an toàn trên HTTP/1.1; socket sẽ bị đóng để ưu tiên an toàn bộ nhớ.
+Bốn là, đánh đổi có chủ đích: Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Lab ghi nhận body chưa được đọc hết và đóng body để giải phóng tài nguyên; không suy ra chắc chắn Transport sẽ hay sẽ không tái sử dụng một kết nối cụ thể.
 
 Năm là, thời lượng probe phản ánh toàn bộ lifecycle: Đồng hồ đo thời lượng probe bắt đầu từ trước khi phát request tới sau khi quy trình cleanup/drain kết thúc. Nếu target trả về header 200 nhưng luồng body bị nghẽn (stall) vượt quá deadline, probe sẽ kết luận đúng là `OutcomeTimeout` thay vì báo nhầm `OutcomeSuccess`.
 
@@ -244,8 +244,8 @@ Khác với phần mô tả giả định ở trên, kiểm thử tự động t
 
 | Chỉ số thực nghiệm | BuggyProbe (Bỏ quên Close) | FixedProbe (Close + Drain 16 KiB) |
 | --- | --- | --- |
-| **New Conns (`Reused == false`)** | **20** | **1** (chỉ kết nối đầu tiên) |
-| **Reused Conns (`Reused == true`)** | **0** | **19** (95% tái sử dụng) |
+| **New Conns (`Reused == false`)** | **20** | **1** (trong fixture này) |
+| **Reused Conns (`Reused == true`)** | **0** | **19** (trong fixture này) |
 | **Kết quả vận hành** | Mỗi request mở socket mới | Tái sử dụng socket trong pool |
 
 Kiểm thử `TestIncident_BoundedDrainOversizedBody` đồng thời chứng minh rằng khi payload trả về là 32 KiB (vượt giới hạn 16 KiB), hệ thống xác định chính xác `reusedEligible == false` và đóng kết nối, bảo vệ bộ nhớ tiến trình khỏi nguy cơ tràn đệm.
