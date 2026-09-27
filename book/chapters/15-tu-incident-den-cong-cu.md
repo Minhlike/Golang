@@ -128,7 +128,7 @@ Sau `Run`, `ProcessState` chỉ tồn tại nếu process đã thực sự start
 
 Đây là chỗ rất dễ mang trực giác từ Chương 12 sang sai. `CommandContext` mặc định gọi `Kill` cho **command process** khi context done. Một command có thể spawn process khác, để process đó giữ pipe mở, hoặc cần một protocol graceful riêng. `os/exec` còn có `WaitDelay` để giới hạn một số trường hợp process con không chịu kết thúc hoặc pipe I/O không đóng; nhưng process-group, job object, signal sequence và cleanup của tool cụ thể là policy phụ thuộc hệ điều hành.
 
-Vì vậy lab không hứa “cancel là không còn process nào”. Nó hứa điều nhỏ hơn và kiểm chứng được: deadline làm `Run` return, kết quả được gắn nhãn, và code không treo chờ một command giả lập. Nếu sau này product có tool spawn worker tree, requirement mới phải gọi tên target OS và lifecycle mong muốn trước khi thiết kế `SysProcAttr` hay process group. Đó là một chương systems khác, không phải một option bí mật của `CommandContext`.
+Vì vậy lab không hứa “cancel là không còn process nào”. Với helper process của test, vốn không spawn hậu duệ và không giữ pipe mở sau khi bị hủy, test kiểm chứng `Run` trở về khi hết deadline và gắn nhãn kết quả. Với tool có process hậu duệ giữ pipe mở, `Run` vẫn có thể chờ I/O dù command chính đã bị kill; khi đó phải thiết kế `WaitDelay` và cleanup phù hợp. Nếu sau này product có tool spawn worker tree, requirement mới phải gọi tên target OS và lifecycle mong muốn trước khi thiết kế `SysProcAttr` hay process group.
 
 ## Từ runner sang CLI có thể kể lại
 

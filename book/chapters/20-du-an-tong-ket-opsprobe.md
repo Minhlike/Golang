@@ -240,7 +240,7 @@ Lập trình viên đã return mà quên đóng body. Kết nối TCP bị giữ
 
 ### Bằng chứng đo đạc thực nghiệm (Empirical Measurements)
 
-Khác với phần mô tả giả định ở trên, kiểm thử tự động tại `incident/incident_test.go` cung cấp số liệu thực nghiệm đo đạc chính xác qua `httptrace`:
+Trong fixture 20 request tuần tự tới server kiểm thử ở `incident/incident_test.go`, `httptrace` ghi nhận các số đếm sau. Chúng mô tả đúng fixture này, không dự đoán tỷ lệ tái sử dụng kết nối của mọi server hay workload:
 
 | Chỉ số thực nghiệm | BuggyProbe (Bỏ quên Close) | FixedProbe (Close + Drain 16 KiB) |
 | --- | --- | --- |
@@ -248,7 +248,7 @@ Khác với phần mô tả giả định ở trên, kiểm thử tự động t
 | **Reused Conns (`Reused == true`)** | **0** | **19** (trong fixture này) |
 | **Kết quả vận hành** | Mỗi request mở socket mới | Tái sử dụng socket trong pool |
 
-Kiểm thử `TestIncident_BoundedDrainOversizedBody` đồng thời chứng minh rằng khi payload trả về là 32 KiB (vượt giới hạn 16 KiB), hệ thống xác định chính xác `reusedEligible == false` và đóng kết nối, bảo vệ bộ nhớ tiến trình khỏi nguy cơ tràn đệm.
+Kiểm thử `TestIncident_BoundedDrainOversizedBody` xác nhận rằng với body 32 KiB (vượt giới hạn 16 KiB), lab trả `reusedEligible == false` và đóng body. Bounded drain giới hạn lượng dữ liệu mà client chủ động đọc bỏ; nó không phải cơ chế chống tràn bộ đệm hay bảo đảm một kết nối được tái sử dụng.
 
 ## Đóng gói, Điều phối và Delivery có trách nhiệm
 

@@ -154,7 +154,7 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 }
 ~~~
 
-Nếu lần thử đầu tiên thất bại sau 50ms, lần kế tiếp sẽ diễn ra sau 100ms, rồi 200ms, 400ms, cho đến khi chạm trần `MaxDelay`. Khoảng thời gian giãn cách này tạo điều kiện cho hạ tầng mạng hoặc cơ sở dữ liệu có đủ thời gian tự hồi phục, ngăn ngừa triệt để hiện tượng bão retry. Khi đợt reconcile thành công, controller gọi `q.Forget(item)` để xóa bộ đếm thất bại, sẵn sàng cho các chu kỳ trong tương lai.
+Với `BaseDelay=50ms`, lịch thử lại của mô hình này tăng theo 50ms, 100ms, 200ms, 400ms, rồi chạm trần `MaxDelay`. Giãn cách giúp giới hạn nhịp retry khi hệ thống đích gặp lỗi; nó không loại bỏ mọi đợt retry dồn dập giữa nhiều key hay nhiều controller. Khi reconcile thành công, controller gọi `q.Forget(item)` để xóa bộ đếm thất bại.
 
 ## Tính lũy thừa: hành động có thể thử lại, quan sát luôn được đọc lại
 
@@ -237,7 +237,7 @@ go test -race ./...  # Kiểm tra race condition
 go vet ./...        # Phân tích tĩnh cú pháp
 ~~~
 
-Bộ kiểm thử dùng đồng bộ hóa bằng channel thay vì suy luận từ `Sleep`: nó xác nhận actuator nhận được hủy context, một action thành công không tự bịa observation, và observation mới xuất hiện khi action đang chạy không bị ghi đè. Test backoff vẫn kiểm tra rằng lỗi actuator tạo lượt thử lại có giãn cách.
+Bộ kiểm thử dùng channel để xác nhận actuator nhận được hủy context, một action thành công không tự bịa observation, và observation mới xuất hiện khi action đang chạy không bị ghi đè. Test backoff hiện chỉ xác nhận có nhiều lượt thử trong cửa sổ kiểm thử; nó chưa đo hoặc chứng minh chính xác các khoảng giãn cách tăng theo cấp số nhân.
 
 ## Bước phát triển tiếp theo
 

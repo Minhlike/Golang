@@ -106,8 +106,17 @@ giới kỹ thuật cần lưu ý:
 Đọc thư mục `terraform/` (mã nguồn kiểm tra reviewable, không chạy apply thật):
 
 - Không sử dụng static secret `AWS_ACCESS_KEY_ID` hay `AWS_SECRET_ACCESS_KEY`.
-- Token OIDC ngắn hạn được cấp phát dựa trên claim `sub` khóa chặt repo và
-  environment: `repo:Minhlike/Golang:environment:production`.
+- Trust policy dùng `StringEquals` với `github_oidc_subject` bắt buộc nhập: lấy
+  **đúng giá trị `sub` đã quan sát** từ job deploy được bảo vệ trước khi chạy
+  Terraform. Không có subject mặc định vì repo cũ, repo dùng immutable subject
+  (có owner/repo ID) và repo tùy biến claim có thể phát token khác nhau.
+- Với subject mặc định có `environment:production`, AWS kiểm tra repo và
+  environment, **không tự kiểm tra branch**. Lab thêm điều kiện AWS riêng trên
+  claim `ref`, khớp chính xác `github_deploy_ref` (mặc định `refs/heads/main`).
+  Đây là điều kiện độc lập với subject. Cấu hình GitHub Environment vẫn phải
+  giới hạn deployment branch/tag và quy tắc phê duyệt; workflow mẫu cũng chặn
+  job deploy ngoài main. Nếu backend không hỗ trợ claim `ref` riêng, một subject
+  tùy biến có ref là phương án khác, nhưng phải xác minh token và trust thực tế.
 - **Làm rõ về Wildcard trong IAM:** Wildcard `*` trong `Resource = ["*"]` chỉ được
   dùng cho `ecr:GetAuthorizationToken` vì AWS IAM bắt buộc (không hỗ trợ resource
   scoping). Các action khác đều được khóa chặt vào `data.aws_caller_identity.current.account_id`

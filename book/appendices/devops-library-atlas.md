@@ -113,7 +113,7 @@ Toàn bộ quy trình phức tạp này được tổ chức thành một pipeli
 
 Điểm sáng kỹ thuật nằm ở chiến lược chống thảm họa phân tán tại `aws/retry/standard.go` (`type Standard`). Khi một vùng của AWS gặp sự cố gián đoạn mạng, hàng nghìn container của bạn sẽ đồng loạt thử lại (retry). Nếu dùng thuật toán cấp số nhân đơn thuần (`2^t`), tất cả các client sẽ thức dậy và gửi request tại cùng một tích tắc, tạo ra cơn bão lưu lượng (thundering herd) đánh sập hoàn toàn khả năng hồi phục của hạ tầng. AWS SDK v2 triển khai thuật toán **Full Jitter**: khoảng thời gian ngủ giữa các lần thử lại là một giá trị ngẫu nhiên đồng đều trong đoạn `[0, backoff]`.
 
-Ở phiên bản được ghim `github.com/aws/aws-sdk-go-v2` v1.47.0, `retry.Standard` mặc định dùng rate limiter dạng quota. Cấu hình mặc định của retryer có capacity 500; retry thường tiêu `RetryCost` 5 token, retry do timeout tiêu `RetryTimeoutCost` 10 token, và một operation thành công ngay lượt đầu tăng `NoRetryIncrement` 1 token. `ThrottlingRetryCost` là một tùy chọn riêng, nên không thể gộp mọi retry mạng thành “5 token”. Các giá trị này là chi tiết cấu hình của Standard retryer: ứng dụng có thể thay rate limiter, thay các cost, hoặc vô hiệu quota. Khi quota không đủ, retryer trả lỗi quota thay vì tiếp tục thử lại; đó là hàng rào giảm áp lực retry, không phải hợp đồng ổn định của mọi SDK hay mọi cấu hình AWS.
+Ở phiên bản được ghim `github.com/aws/aws-sdk-go-v2` v1.47.0, `retry.Standard` mặc định dùng rate limiter dạng quota với capacity 500 token. Khi `AWS_NEW_RETRIES_2026` không bằng `true`, cấu hình cũ tính `RetryCost` là 5 token cho retry thông thường và `RetryTimeoutCost` là 10 cho retry do timeout. Khi `AWS_NEW_RETRIES_2026=true`, `RetryCost` mặc định là 14 cho lỗi nhất thời, `ThrottlingRetryCost` là 5 cho lỗi throttling, còn `RetryTimeoutCost` không được dùng. Mỗi attempt thành công cộng `NoRetryIncrement` 1 token; retry thành công còn hoàn lại token đã lấy theo đường retry. Đây là hai bộ mặc định của cùng Standard retryer, không phải hai retry mode của SDK. Các cost, capacity và rate limiter đều có thể được cấu hình lại; khi quota không đủ, retry bị chặn. Vì thế không thể gán một chi phí token cố định cho mọi lỗi mạng hoặc mọi cấu hình AWS.
 
 ---
 
@@ -762,11 +762,11 @@ Khi bạn ghi log: `logger.Info("transfer", zap.Int64("from", fromID), zap.Float
 
 `automaxprocs` quan trọng nhất trong bối cảnh lịch sử của các binary Go cũ chạy trong container có CPU limit thấp. Trước Go 1.25, mặc định `GOMAXPROCS` không xét cgroup CPU bandwidth limit, nên một process có thể chọn số lượng song song gần số CPU host thay vì giới hạn CPU của container.
 
-Edition này dùng Go 1.27.1, vì vậy cần dùng mental model hiện hành. Khi `GOMAXPROCS` không bị đặt thủ công, Go trên Linux chọn mặc định từ số CPU logic, CPU affinity và giới hạn throughput trung bình của cgroup; runtime còn kiểm tra thay đổi định kỳ. CPU limit khác CPU request: limit là quota throughput mà runtime có thể xét, còn request là thông tin lập lịch của Kubernetes. `GOMAXPROCS` giới hạn mức song song chạy Go code, không thay thế quota CPU của cgroup.
+Edition và lab dùng toolchain Go 1.27.1 với khai báo `go 1.27`, nên mental model hiện hành áp dụng ở đây. Với Go từ 1.25 trên Linux, khi `GOMAXPROCS` không bị đặt thủ công, runtime chọn mặc định từ số CPU logic, CPU affinity và giới hạn throughput trung bình của cgroup; nó còn kiểm tra thay đổi định kỳ. Nhưng binary biên dịch bằng Go 1.27 vẫn có thể giữ mặc định tương thích cũ nếu main module hoặc workspace khai báo ngôn ngữ Go 1.24 trở xuống. `GODEBUG=containermaxprocs=0` tắt xét quota, `updatemaxprocs=0` tắt cập nhật định kỳ; biến môi trường `GOMAXPROCS` hoặc lời gọi `runtime.GOMAXPROCS` đặt giá trị thủ công cũng vô hiệu cập nhật tự động. CPU limit là quota throughput mà runtime có thể xét, còn CPU request là thông tin lập lịch của Kubernetes. `GOMAXPROCS` giới hạn mức song song chạy Go code, không thay thế quota CPU của cgroup.
 
 Vì vậy không thể kết luận rằng đặt `GOMAXPROCS` bằng quota sẽ loại bỏ throttling. Nó có thể giảm các đỉnh song song bất lợi cho một workload, nhưng GC, syscall, loại workload, quota phân số và chính sách scheduler đều còn ảnh hưởng đến độ trễ. Runtime Go 1.27 cũng có các quy tắc làm tròn và không hạ mặc định xuống dưới hai chỉ vì cgroup quota.
 
-`automaxprocs` sửa chữa thảm họa này tự động ngay khi import thư viện tại `maxprocs/maxprocs.go`:
+Một cách dùng lịch sử của `automaxprocs` là import side effect tại `maxprocs/maxprocs.go`:
 
 ```go
 import _ "go.uber.org/automaxprocs"

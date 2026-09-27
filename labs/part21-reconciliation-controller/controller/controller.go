@@ -18,10 +18,10 @@ type Result struct {
 	RequeueAfter time.Duration
 }
 
-// Reconciler định nghĩa hợp đồng điều hòa trạng thái cho một tài nguyên.
-// Nguyên tắc cốt lõi: Hàm Reconcile phải có tính Lũy Thừa (Idempotent).
-// Việc thực thi Reconcile 1 lần hay nhiều lần với cùng một trạng thái
-// phải đem lại cùng một kết quả mà không sinh ra tác dụng phụ ngoài ý muốn.
+// Reconciler điều hòa một key bằng cách đọc quan sát mới rồi quyết định hành động.
+// Lời gọi có thể lặp lại sau lỗi hoặc sự kiện trùng; action bên ngoài cần
+// retry-safe/idempotent hoặc có precondition phù hợp. Action trả nil chưa chứng minh
+// trạng thái đã hội tụ: lần quan sát tiếp theo mới xác nhận điều đó.
 type Reconciler interface {
 	Reconcile(ctx context.Context, key string) (Result, error)
 }

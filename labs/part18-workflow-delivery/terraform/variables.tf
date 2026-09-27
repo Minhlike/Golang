@@ -1,13 +1,17 @@
-variable "github_org" {
-  description = "GitHub organization or username owner of repository"
+variable "github_oidc_subject" {
+  description = "Exact sub claim observed for the protected GitHub deployment job; no default because legacy, immutable, and customized subjects differ"
   type        = string
-  default     = "Minhlike"
+
+  validation {
+    condition     = length(trimspace(var.github_oidc_subject)) > 0 && !strcontains(var.github_oidc_subject, "*")
+    error_message = "Supply an exact, non-wildcard OIDC subject verified for the deployment job."
+  }
 }
 
-variable "github_repo" {
-  description = "GitHub repository name"
+variable "github_deploy_ref" {
+  description = "Exact Git ref allowed to assume the deployment role"
   type        = string
-  default     = "Golang"
+  default     = "refs/heads/main"
 }
 
 variable "ecr_repository_name" {

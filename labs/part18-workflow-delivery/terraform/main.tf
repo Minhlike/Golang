@@ -23,8 +23,8 @@ resource "aws_iam_openid_connect_provider" "github" {
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1", "1c58a3a8518e8759bf075b76b750d4f2df264fcd"]
 }
 
-# 2. Trust Policy: Khóa chặt repo và environment
-# Chỉ job có claim `repo:org/repo:environment:production` mới có thể assume role
+# 2. Trust Policy: khớp chính xác subject đã xác minh của deployment job.
+# Subject environment không tự ràng buộc branch; bảo vệ branch ở GitHub Environment.
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     effect  = "Allow"
@@ -44,8 +44,14 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      # Khóa chặt repository và environment cụ thể
-      values   = ["repo:${var.github_org}/${var.github_repo}:environment:${var.environment}"]
+      values   = [var.github_oidc_subject]
+    }
+
+    # Claim ref là điều kiện RIÊNG: subject environment mặc định không chứa branch.
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:ref"
+      values   = [var.github_deploy_ref]
     }
   }
 }

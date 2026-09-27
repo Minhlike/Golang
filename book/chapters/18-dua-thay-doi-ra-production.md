@@ -291,7 +291,7 @@ AWS IAM nhằm loại bỏ hoàn toàn các access key dài hạn tĩnh.
 
 Cần hiểu đúng ranh giới của các cơ chế phân quyền trong cấu hình này:
 
-Thứ nhất, khóa chặt claim `sub`: Trust policy bắt buộc claim `sub` phải khớp chính xác `repo:Minhlike/Golang:environment:production`. Bất kỳ workflow nào chạy từ repo fork hoặc branch khác đều bị AWS STS từ chối cấp token.
+Thứ nhất, khóa chặt danh tính: trust policy dùng `StringEquals` với subject thực tế của job deploy, truyền qua biến Terraform bắt buộc `github_oidc_subject`. Với subject mặc định dạng `repo:OWNER/REPO:environment:production`, điều kiện `sub` kiểm tra repo và environment; nó **không tự khóa branch**. Lab thêm điều kiện AWS riêng trên claim `ref`, mặc định khớp `refs/heads/main`; workflow cũng chặn job deploy ngoài main. Đây là hai gate khác nhau. GitHub Environment vẫn cần deployment branch/tag rule và approval phù hợp. Nếu backend không hỗ trợ claim `ref` riêng, subject tùy biến có ref là một phương án khác nhưng phải xác minh claim thực tế. Subject của repo dùng định danh bất biến có thêm owner/repo ID; repo cũ có thể chọn dùng định dạng ấy, nên lab không đoán subject từ tên repo.
 
 Thứ hai, hiểu đúng về Wildcard trong AWS IAM: Ký tự đại diện `*` trong `Resource = ["*"]` **chỉ được chấp nhận duy nhất** cho hành động `ecr:GetAuthorizationToken`. Đây là đặc thù bắt buộc của AWS IAM vì service này không hỗ trợ phân quyền ở cấp độ tài nguyên cho token xác thực ban đầu. Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`) đều bắt buộc phải khóa chặt vào Account ID cụ thể lấy từ `data.aws_caller_identity.current.account_id` và tên repository cụ thể.
 
@@ -304,7 +304,13 @@ data "aws_caller_identity" "current" {}
 condition {
   test     = "StringEquals"
   variable = "token.actions.githubusercontent.com:sub"
-  values   = ["repo:Minhlike/Golang:environment:production"]
+  values   = [var.github_oidc_subject]
+}
+
+condition {
+  test     = "StringEquals"
+  variable = "token.actions.githubusercontent.com:ref"
+  values   = [var.github_deploy_ref]
 }
 ~~~
 

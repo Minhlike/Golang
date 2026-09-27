@@ -77,7 +77,7 @@ type Milliseconds int64
 slowest := Max(Milliseconds(120), Milliseconds(80))
 ~~~
 
-Union `|` nói rằng một type argument thuộc một trong các term. Dấu `~` mở term ra cho mọi defined type có **underlying type** tương ứng. Không có `~int64`, `Milliseconds` không thỏa constraint dù `left > right` có nghĩa hoàn toàn rõ. Ngược lại, `~` không “chuyển đổi ngầm”: `int` và `int64` vẫn là hai type khác, nên `Max(1, int64(2))` không có một `T` duy nhất để infer.
+Union `|` nói rằng một type argument thuộc một trong các term. Dấu `~` mở term ra cho mọi defined type có **underlying type** tương ứng. Không có `~int64`, `Milliseconds` không thỏa constraint dù `left > right` có nghĩa hoàn toàn rõ. Ngược lại, `~` không “chuyển đổi ngầm” giữa hai value đã có type: `int` và `int64` vẫn khác nhau, nên `Max(int(1), int64(2))` không có một `T` duy nhất để infer. Riêng hằng số chưa định kiểu như `1` có thể nhận type từ đối số còn lại.
 
 Constraint có type term như `~int | ~int64` là general interface: nó dùng để giới hạn type parameter, không phải một interface value để truyền quanh chương trình. Một interface nhận value cần mô tả behavior bằng method; một constraint có thể mô tả tập type và các operation compiler cho phép. Đặt cả hai dưới cùng từ “interface” dễ làm mờ hai nhiệm vụ này.
 

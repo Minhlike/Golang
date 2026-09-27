@@ -114,6 +114,9 @@ jobs:
   promote-production:
     name: Promote to Production
     needs: build-artifact
+    # Workflow dispatch từ branch khác không được vào job có quyền OIDC.
+    # Đây là gate của workflow, không phải điều kiện branch trong AWS subject.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     # Chỉ job deploy mới được cấp quyền id-token: write để xác thực OIDC
