@@ -89,7 +89,7 @@ if err := r.Get(ctx, req.NamespacedName, &pod); err != nil {
 }
 ```
 
-Nếu đối tượng đã bị xóa, `client.IgnoreNotFound(err)` trả về `nil` để kết thúc vòng điều hòa êm đẹp. Mô hình này biến toàn bộ logic điều hòa thành một hàm hướng trạng thái mong muốn (level-triggered) và có tính lũy thừa (idempotent), miễn nhiễm hoàn toàn với hiện tượng trễ sự kiện (event lag).
+Nếu đối tượng đã bị xóa, `client.IgnoreNotFound(err)` trả về `nil` để kết thúc vòng điều hòa êm đẹp. Mô hình này biến toàn bộ logic điều hòa thành một hàm hướng trạng thái mong muốn (level-triggered) và có tính lũy thừa (idempotent), giảm thiểu rủi ro từ việc xử lý sự kiện cũ. Tuy nhiên cache Informer có thể stale trong khoảng thời gian ngắn sau khi tài nguyên thay đổi trên cluster, nên Reconciler vẫn cần xử lý trường hợp đối tượng đọc từ cache chưa phản ánh trạng thái mới nhất của etcd.
 
 ---
 
@@ -119,9 +119,9 @@ Toàn bộ quy trình phức tạp này được tổ chức thành một pipeli
 
 ### 04. `github.com/prometheus/client_golang` (v1.24.1 — `d6087ee4`)
 
-Trong một dịch vụ microservice xử lý 200.000 request/giây trên máy chủ 32 CPU cores, việc cập nhật một bộ đếm số lượng request (`http_requests_total`) nếu sử dụng `sync.Mutex` sẽ trở thành cơn ác mộng lớn nhất của CPU. Ba mươi hai lõi vi xử lý sẽ liên tục tranh chấp một khóa độc quyền, làm nóng đường truyền bus của CPU do hiện tượng dội dòng bộ đệm (cache line bouncing), biến một tác vụ tốn 2 nano-giây thành một điểm nghẽn cổ chai micro-giây làm đứng hình ứng dụng.
+Khi nhiều goroutine đồng thời cập nhật một bộ đếm chia sẻ bảo vệ bởi `sync.Mutex`, chi phí tranh chấp khóa tăng theo số core đang cạnh tranh do hiện tượng dội dòng bộ đệm (cache line bouncing). Ở tải cao và nhiều core, điều này có thể trở thành điểm nghẽn đo được.
 
-Thư viện `prometheus/client_golang` giải quyết bài toán này ở tầng vi kiến trúc trong `prometheus/counter.go` (`type counter`). Rất nhiều tài liệu mô tả sai rằng Prometheus luôn dùng vòng lặp CAS (Compare-And-Swap) cho Counter. Thực tế mã nguồn phiên bản khóa cho thấy một thiết kế tinh vi hơn nhiều:
+`prometheus/client_golang` giảm chi phí này ở tầng vi kiến trúc trong `prometheus/counter.go` (`type counter`). Rất nhiều tài liệu mô tả sai rằng Prometheus luôn dùng vòng lặp CAS (Compare-And-Swap) cho Counter. Thực tế mã nguồn phiên bản khóa cho thấy một thiết kế tinh vi hơn:
 
 ```go
 type counter struct {
@@ -139,11 +139,11 @@ Bộ đếm tách giá trị ra làm hai thành phần: số nguyên (`valInt`) 
 atomic.AddUint64(&c.valInt, 1)
 ```
 
-Chỉ thị `atomic.AddUint64` được dịch trực tiếp thành một lệnh phần cứng đơn lẻ (như `LOCK XADD` trên vi kiến trúc x86_64). Nó thực thi trong đúng 1 chu kỳ vi lệnh, không cần vòng lặp kiểm tra lại, và hoàn toàn không gây tranh chấp bộ nhớ phức tạp. Chỉ khi bạn gọi `Add(val)` với một số thực có phần lẻ (ví dụ `c.Add(0.15)`), hàm mới chuyển sang đường dẫn chậm (slow path): đọc `valBits`, chuyển đổi sang số thực bằng `math.Float64frombits`, thực hiện phép cộng số thực, và dùng `atomic.CompareAndSwapUint64` trong một vòng lặp CAS để cập nhật lại bit representation.
+`atomic.AddUint64` trên nhiều kiến trúc (như x86_64 với `LOCK XADD`) tránh được một mutex trong thao tác cập nhật counter, nhưng chi phí thực tế vẫn phụ thuộc vào kiến trúc phần cứng, mức độ tranh chấp, trạng thái cache coherence, compiler và runtime. Không nên gán một con số nanosecond cố định cho mọi môi trường. Chỉ khi bạn gọi `Add(val)` với một số thực có phần lẻ (ví dụ `c.Add(0.15)`), hàm mới chuyển sang đường dẫn chậm (slow path): đọc `valBits`, chuyển đổi sang số thực bằng `math.Float64frombits`, thực hiện phép cộng số thực, và dùng `atomic.CompareAndSwapUint64` trong một vòng lặp CAS để cập nhật lại bit representation.
 
 Độ phức tạp tiếp theo nằm ở việc quản lý metric có nhãn động: `MetricVec` (`prometheus/vec.go`). Để tránh cấp phát bộ nhớ trên heap mỗi khi tra cứu nhãn, thư viện xây dựng một bảng băm hai cấp: một `sync.RWMutex` bảo vệ map ánh xạ từ chuỗi băm của các nhãn (label values) sang đối tượng `Metric` cụ thể. Khi một tập nhãn đã được truy cập lần đầu tiên, các goroutine thực thi sau đó chỉ cần nắm giữ `RLock()`, đọc con trỏ đối tượng có sẵn và cập nhật số liệu.
 
-Khi endpoint `/metrics` được Prometheus server cào dữ liệu qua `promhttp.Handler()`, hàm `Gather()` duyệt qua toàn bộ Collector Registry và tuần tự hóa dữ liệu trực tiếp ra `http.ResponseWriter` dưới dạng văn bản Text 0.0.4 hoặc OpenMetrics. Việc không tạo ra các chuỗi JSON cồng kềnh giúp việc thu thập metric của hàng trăm pod diễn ra nhẹ nhàng mà không tạo ra áp lực dọn rác (GC pressure) đáng kể cho tiến trình Go.
+Khi endpoint `/metrics` được Prometheus server cào dữ liệu qua `promhttp.Handler()`, hàm `Gather()` duyệt qua toàn bộ Collector Registry và tuần tự hóa dữ liệu trực tiếp ra `http.ResponseWriter` dưới dạng văn bản Text 0.0.4 hoặc OpenMetrics. Việc không tạo ra các chuỗi JSON cồng kềnh giảm áp lực cấp phát trong đường đi scrape, nhưng mức GC pressure thực tế phụ thuộc vào số metric, tần suất scrape và encoder đang dùng.
 
 ---
 
@@ -202,9 +202,9 @@ Kiến trúc xử lý của Collector được xây dựng trên mô hình đư�
 2. **Processor:** Áp dụng các quy tắc biến đổi: gom lô (`batch`), lọc dữ liệu (`filter`), hoặc lấy mẫu (`probabilistic_sampler`).
 3. **Exporter:** Dịch `pdata` ngược lại định dạng của hệ thống đích và đẩy qua mạng.
 
-Điểm đắt giá nhất trong mã nguồn của Collector là triết lý quản lý bộ nhớ **Zero-Copy Pipeline Handoff**. Trong môi trường xử lý hàng triệu telemetry spans mỗi giây, việc sao chép sâu (deep copy) các struct dữ liệu qua mỗi chặng pipeline sẽ khiến CPU cạn kiệt vì Go Garbage Collector liên tục phải dọn dẹp các mảng byte rác. Struct `pdata` được thiết kế dựa trên các bộ đệm nhị phân Protobuf dùng chung (shared underlying buffers). Khi một lô dữ liệu đi từ Receiver qua một chuỗi Processor và chỉ có một Exporter duy nhất, Collector truyền thẳng con trỏ dữ liệu mà hoàn toàn không nhân bản bất kỳ byte nào trong RAM. Chỉ khi pipeline cấu hình rẽ nhánh (Fan-Out) tới từ hai Exporter trở lên, cơ chế sao chép khi ghi (Copy-On-Write) mới được kích hoạt để đảm bảo một Exporter chậm chạp không làm biến dạng dữ liệu của Exporter khác.
+Điểm đắt giá nhất trong mã nguồn của Collector là triết lý quản lý bộ nhớ **Zero-Copy Pipeline Handoff**. Trong môi trường xử lý hàng triệu telemetry spans mỗi giây, việc sao chép sâu (deep copy) các struct dữ liệu qua mỗi chặng pipeline sẽ khiến CPU cạn kiệt vì Go Garbage Collector liên tục phải dọn dẹp các mảng byte rác. Struct `pdata` được thiết kế dựa trên các bộ đệm nhị phân Protobuf dùng chung (shared underlying buffers). Khi một lô dữ liệu đi từ Receiver qua một chuỗi Processor và chỉ có một Exporter duy nhất, Collector có thể truyền con trỏ dữ liệu mà không cần sao chép toàn bộ payload. Chỉ khi pipeline cấu hình rẽ nhánh (Fan-Out) tới từ hai Exporter trở lên, cơ chế sao chép khi ghi (Copy-On-Write) mới được kích hoạt để đảm bảo một Exporter chậm chạp không làm biến dạng dữ liệu của Exporter khác.
 
-Ở chặng cuối, trước khi dữ liệu rời khỏi Collector, `queued_retry` (`exporter/exporterhelper/queued_retry.go`) bao bọc mọi Exporter bằng một `queueSender`. Đây là một hàng đợi bộ nhớ có giới hạn cứng (bounded queue). Nếu mạng tới Datadog hoặc Jaeger bị đứt, dữ liệu được giữ trong queue và kích hoạt thuật toán retry có exponential backoff. Nếu bộ đệm RAM đầy, Collector có thể cấu hình để tràn (spillover) dữ liệu tạm thời xuống ổ đĩa cục bộ (disk-backed buffer), ngăn chặn triệt để nguy cơ tiến trình Collector bị hệ điều hành tiêu diệt vì tràn bộ nhớ.
+Ở chặng cuối, trước khi dữ liệu rời khỏi Collector, `queued_retry` (`exporter/exporterhelper/queued_retry.go`) bao bọc mọi Exporter bằng một `queueSender`. Đây là một hàng đợi bộ nhớ có giới hạn cứng (bounded queue). Nếu mạng tới Datadog hoặc Jaeger bị đứt, dữ liệu được giữ trong queue và kích hoạt thuật toán retry có exponential backoff. Nếu bộ đệm RAM đầy, Collector có thể cấu hình để tràn (spillover) dữ liệu tạm thời xuống ổ đĩa cục bộ (disk-backed buffer), giảm nguy cơ OOM kill khi backend tạm thời không phản hồi.
 
 ---
 
@@ -315,7 +315,7 @@ labels:
 
 Toàn bộ thông tin của bản phát hành — bao gồm source chart, file `values.yaml` đã merge, và toàn bộ chuỗi manifest YAML kết quả sinh ra từ `pkg/engine/engine.go` — được gom lại thành một struct `Release`, sau đó được tuần tự hóa JSON, nén bằng thuật toán gzip, mã hóa base64 và nhét trọn vẹn vào trường `data["release"]` của Secret.
 
-Khi người dùng gõ lệnh `helm rollback my-app 1`, Helm chỉ cần truy vấn Secret phiên bản cũ qua Kubernetes REST client, giải nén manifest trong bộ nhớ, tính toán diff so với trạng thái hiện tại, và gửi các lệnh Patch lên API Server. Bằng cách tận dụng các khối nguyên thủy có sẵn của Kubernetes (Secrets và RBAC), Helm 3 vừa tinh gọn mã nguồn, vừa nâng độ bảo mật lên mức tối đa mà không cần bảo trì thêm bất kỳ tiến trình máy chủ nào.
+Khi người dùng gõ lệnh `helm rollback my-app 1`, Helm chỉ cần truy vấn Secret phiên bản cũ qua Kubernetes REST client, giải nén manifest trong bộ nhớ, tính toán diff so với trạng thái hiện tại, và gửi các lệnh Patch lên API Server. Bằng cách tận dụng các khối nguyên thủy có sẵn của Kubernetes (Secrets và RBAC), Helm 3 tinh gọn mã nguồn và loại bỏ daemon Tiller vốn yêu cầu quyền cluster-admin. Quyền hạn thực tế được kiểm soát qua RBAC của từng user, không do Helm quyết định.
 
 ---
 
@@ -337,7 +337,7 @@ r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 })
 ```
 
-Đoạn code trên minh chứng cho sức mạnh tối thượng của kiến trúc: Một controller GitOps có thể clone một repository khổng lồ, đọc nội dung file cấu hình YAML tại commit HEAD, tính toán diff, và kết thúc vòng lặp mà **không hề tạo ra một file rác nào trên ổ đĩa cứng**. Tốc độ thực thi chỉ bị giới hạn bởi băng thông mạng và tốc độ RAM, loại bỏ hoàn toàn chi phí I/O ổ đĩa cục bộ.
+Đoạn code trên minh chứng cho tính linh hoạt của kiến trúc: Một controller GitOps có thể clone một repository khổng lồ, đọc nội dung file cấu hình YAML tại commit HEAD, tính toán diff, và kết thúc vòng lặp mà **không hề tạo ra một file rác nào trên ổ đĩa cứng**. Tốc độ thực thi chỉ bị giới hạn bởi băng thông mạng và tốc độ RAM, loại bỏ hoàn toàn chi phí I/O ổ đĩa cục bộ.
 
 ---
 
@@ -368,7 +368,7 @@ Nếu bạn đặt một lời gọi kiểm tra quyền truy cập (Authorizatio
 
 Tại sao OPA có thể đánh giá các tập luật phức tạp viết bằng ngôn ngữ Rego trong khoảng thời gian tính bằng micro-giây?
 
-Bí mật nằm ở bộ thông dịch đồ thị AST tại `topdown/eval.go` (`func Eval()`) và cách tổ chức bộ nhớ của `ast/compiler.go`. Khi OPA nạp dữ liệu ngữ cảnh (JSON data) vào bộ nhớ RAM, nó không lưu trữ dưới dạng chuỗi thô hay map lồng nhau thông thường, mà xây dựng thành một cấu trúc cây tiền tố (Trie). Khi một truy vấn kiểm tra quyền được gửi tới, thuật toán đánh giá từ trên xuống (top-down evaluation) duyệt qua các nhánh của cây luật mà hoàn toàn không thực hiện bất kỳ phép phân tích cú pháp chuỗi văn bản (regex) nào tại runtime.
+Cơ chế tối ưu nằm ở bộ thông dịch đồ thị AST tại `topdown/eval.go` (`func Eval()`) và cách tổ chức bộ nhớ của `ast/compiler.go`. Khi OPA nạp dữ liệu ngữ cảnh (JSON data) vào bộ nhớ RAM, nó không lưu trữ dưới dạng chuỗi thô hay map lồng nhau thông thường, mà xây dựng thành một cấu trúc cây tiền tố (Trie). Khi một truy vấn kiểm tra quyền được gửi tới, thuật toán đánh giá từ trên xuống (top-down evaluation) duyệt qua các nhánh của cây luật mà hoàn toàn không thực hiện bất kỳ phép phân tích cú pháp chuỗi văn bản (regex) nào tại runtime.
 
 Một nguyên tắc cốt tử khi nhúng OPA vào Go microservices: **Tuyệt đối không gọi `rego.New(...).Eval(ctx)` trong từng HTTP request**. Làm như vậy sẽ buộc OPA phải dịch lại chuỗi truy vấn và khởi tạo lại cây AST từ đầu. Thay vào đó, hãy sử dụng kỹ thuật biên dịch trước:
 
@@ -379,7 +379,7 @@ query, err := rego.New(
 ).PrepareForEval(ctx)
 ```
 
-Hàm `PrepareForEval(ctx)` phân tích cú pháp AST, tối ưu hóa các nhánh điều kiện bất biến, loại bỏ các nhánh cây logic chết (dead branches), và lưu trữ kế hoạch thực thi tối ưu sẵn trong RAM. Khi có request đến, bạn chỉ cần gọi `query.Eval(ctx, rego.EvalInput(input))`. Thao tác đánh giá lúc này chỉ là một chuỗi các phép đối soát con trỏ bộ nhớ, giảm thời gian phản hồi từ ~3ms xuống còn dưới 15 micro-giây.
+Hàm `PrepareForEval(ctx)` phân tích cú pháp AST, tối ưu hóa các nhánh điều kiện bất biến, loại bỏ các nhánh cây logic chết (dead branches), và lưu trữ kế hoạch thực thi tối ưu sẵn trong RAM. Khi có request đến, bạn chỉ cần gọi `query.Eval(ctx, rego.EvalInput(input))`. Thao tác đánh giá lúc này chỉ là một chuỗi các phép đối soát con trỏ bộ nhớ, giảm đáng kể chi phí so với việc biên dịch lại AST trên mỗi request. Độ trễ thực tế phụ thuộc vào độ phức tạp của policy và input.
 
 ---
 
@@ -397,7 +397,7 @@ registry.internal/app:sha256-abc....sig
 
 Image gốc hoàn toàn không bị chạm vào dù chỉ một byte. Registry lưu trữ chữ ký như một đối tượng độc lập gắn liền với digest của image gốc.
 
-Đỉnh cao của Cosign nằm ở chế độ **Ký Không Cần Quản Lý Khóa (Keyless Signing)**: Thay vì lưu trữ private key trên máy chủ CI/CD (nơi rất dễ bị lộ lọt), Cosign tích hợp với hai dịch vụ của Sigstore:
+Tính năng nổi bật của Cosign là chế độ **Ký Không Cần Quản Lý Khóa (Keyless Signing)**: Thay vì lưu trữ private key trên máy chủ CI/CD (nơi rất dễ bị lộ lọt), Cosign tích hợp với hai dịch vụ của Sigstore:
 1. **Fulcio:** Cấp một chứng chỉ số X.509 ngắn hạn (chỉ sống đúng 10 phút) dựa trên danh tính OpenID Connect (OIDC) của GitHub Actions hoặc GitLab CI.
 2. **Rekor:** Ghi nhận chữ ký vào một sổ cái nhật ký minh bạch bất biến (Transparency Log).
 
@@ -530,7 +530,7 @@ Thư viện `cilium/ebpf` mở ra một kỷ nguyên mới: Cho phép lập trì
 
 Mã nguồn trong `prog.go` (`type ProgramSpec`) và `map.go` (`type Map`) tự tay đóng gói các tham số nhị phân và kích hoạt trực tiếp lời gọi hệ thống cấp thấp của Linux thông qua hàm `unix.Syscall(unix.SYS_BPF, ...)`. Chương trình eBPF sau khi vượt qua bộ kiểm định an toàn (Kernel Verifier) sẽ được gắn vào các điểm móc (hook points) như XDP (eXpress Data Path), Traffic Control (TC) hoặc kprobes.
 
-Đặc biệt, kênh truyền thông tin hai chiều tốc độ cao giữa Kernel và Go User Space được hiện thực hóa tại `ringbuf/reader.go` (`type Reader`). Kernel ghi các sự kiện an ninh mạng vào một bộ đệm vòng (circular ring buffer) được ánh xạ bộ nhớ (`mmap`). Phía Go, `Reader` sử dụng cơ chế `epoll` trên file descriptor của ringbuffer để thức dậy và đọc hàng loạt sự kiện (batch read) mà không tiêu tốn chu kỳ CPU nhàn rỗi. Kỹ thuật này giúp các hệ thống bảo vệ hiện đại như Cilium hay Tetragon có thể giám sát hàng triệu sự kiện an ninh mỗi giây với mức tiêu thụ tài nguyên gần như không đáng kể.
+Đặc biệt, kênh truyền thông tin hai chiều tốc độ cao giữa Kernel và Go User Space được hiện thực hóa tại `ringbuf/reader.go` (`type Reader`). Kernel ghi các sự kiện an ninh mạng vào một bộ đệm vòng (circular ring buffer) được ánh xạ bộ nhớ (`mmap`). Phía Go, `Reader` sử dụng cơ chế `epoll` trên file descriptor của ringbuffer để thức dậy và đọc hàng loạt sự kiện (batch read) mà không tiêu tốn chu kỳ CPU nhàn rỗi. Kỹ thuật này giúp các hệ thống như Cilium hay Tetragon có thể xử lý lượng lớn sự kiện an ninh với chi phí context-switch thấp hơn nhiều so với phương pháp đẩy toàn bộ packet lên user space. Throughput và mức tiêu thụ tài nguyên thực tế phụ thuộc vào loại hook, kích thước event và workload cụ thể.
 
 ---
 
@@ -698,7 +698,7 @@ Viper (`viper.go` — `type Viper`) giải quyết triệt để bài toán này
 
 Khi bạn gọi hàm `viper.GetInt("database.port")`, Viper duyệt ngược từ tầng 1 xuống tầng 5. Nếu cờ dòng lệnh `--database.port=5433` được truyền vào, nó trả về ngay lập tức giá trị này. Nếu không có cờ, nó kiểm tra biến môi trường `DATABASE_PORT`. Nếu không có biến môi trường, nó đọc file cấu hình. Chỉ khi tất cả các nguồn trên đều vắng bóng, nó mới trả về giá trị mặc định `5432`.
 
-Cơ chế này mang lại sự linh hoạt tối đa cho các kỹ sư DevOps: Ứng dụng của bạn có thể được triển khai ở bất kỳ đâu mà không cần chạm vào một dòng code, bảo đảm tính nhất quán hoàn hảo giữa môi trường phát triển và môi trường vận hành thực tế.
+Cơ chế này mang lại sự linh hoạt tối đa cho các kỹ sư DevOps: Ứng dụng của bạn có thể được triển khai ở nhiều môi trường mà không cần thay đổi code, chỉ điều chỉnh nguồn cấu hình theo thứ tự ưu tiên.
 
 ---
 
@@ -727,7 +727,7 @@ if event.Op&fsnotify.Write == fsnotify.Write { ... }
 
 ### 28. `go.uber.org/zap` (v1.28.0 — `5b81b37b`)
 
-Nếu ứng dụng của bạn là một hệ thống giao dịch tài chính hoặc cổng thanh toán xử lý 500.000 giao dịch/giây, việc ghi lại log cho mỗi giao dịch có thể trở thành thủ phạm số một đánh sập hệ thống. Nếu sử dụng thư viện log thông thường dựa trên `fmt.Printf` hoặc các thư viện dùng `interface{}`:
+Nếu ứng dụng của bạn xử lý tải cao, việc ghi lại log trên mỗi request có thể trở thành nguồn áp lực cấp phát đáng kể. Nếu sử dụng thư viện log thông thường dựa trên `fmt.Printf` hoặc các thư viện dùng `interface{}`:
 
 ```go
 log.Printf(
@@ -736,11 +736,11 @@ log.Printf(
 )
 ```
 
-Mỗi lần ghi log, các biến số nguyên và số thực bị đóng gói vào `interface{}` (boxing), khiến chúng thoát ra bộ nhớ heap (heap escape). Năm trăm nghìn log entries mỗi giây đồng nghĩa với hàng triệu đối tượng rác bị vứt vào heap, buộc Go Garbage Collector phải dừng thế giới (Stop-The-World) liên tục để quét dọn, làm latency của ứng dụng tăng vọt không kiểm soát.
+Mỗi lần ghi log, các biến số nguyên và số thực bị đóng gói vào `interface{}` (boxing), khiến chúng thoát ra bộ nhớ heap (heap escape). Tần suất boxing cao tạo áp lực GC đo được, ảnh hưởng latency theo cách phụ thuộc vào Go version, heap size, GC tuning và throughput cụ thể.
 
 `zap` hướng tới logging có ít cấp phát ở các đường nóng; kết quả còn phụ thuộc encoder, field, output và phiên bản thư viện.
 
-Bí mật nằm ở cấu trúc `zap.Field` (`zapcore/field.go`):
+Cơ chế cốt lõi nằm ở cấu trúc `zap.Field` (`zapcore/field.go`):
 
 ```go
 type Field struct {
@@ -841,9 +841,9 @@ Cách tiếp cận ngây thơ nhất khi xây dựng bộ giới hạn tốc đ�
 
 Nhược điểm chí mạng của cách làm này là: Nếu ứng dụng của bạn quản lý hàng trăm nghìn người dùng (mỗi người dùng có một rate limiter riêng theo IP), bạn sẽ phải duy trì hàng trăm nghìn goroutines và hàng trăm nghìn bộ đếm thời gian (timers) chạy ngầm, ngốn sạch tài nguyên của Go runtime scheduler.
 
-Mã nguồn của `rate.Limiter` tại `rate/rate.go` (`type Limiter`) chứng minh một tư duy thuật toán đỉnh cao: **Thuật Toán Token Bucket Không Cần Goroutine Chạy Nền**.
+Mã nguồn của `rate.Limiter` tại `rate/rate.go` (`type Limiter`) triển khai **Thuật Toán Token Bucket Không Cần Goroutine Chạy Nền**.
 
-Bên trong struct `Limiter` hoàn toàn không có goroutine hay timer nào cả. Nó chỉ lưu trữ 3 biến số: thời điểm kiểm tra cuối cùng (`last time.Time`), số lượng token hiện có (`tokens float64`), và tốc độ nạp token (`limit Limit`).
+Bên trong struct `Limiter` hoàn toàn không có goroutine hay timer nào cả. Các trường trạng thái quan trọng của implementation hiện tại bao gồm: `sync.Mutex` bảo vệ toàn bộ struct, `limit Limit` (tốc độ nạp token), `burst int` (dung lượng tối đa), `tokens float64` (số token hiện có), `last time.Time` (thời điểm cập nhật cuối), và `lastEvent time.Time` (dùng cho Reserve). Đây là implementation detail của version hiện tại, không phải API contract.
 
 Khi một request gọi vào hàm `AllowN(now, n)`:
 1. Nó lấy thời điểm hiện tại `now`.
@@ -851,7 +851,7 @@ Khi một request gọi vào hàm `AllowN(now, n)`:
 3. Nó tính số token mới được sinh ra bằng một phép nhân số học đơn giản: `newTokens = Δt × limit`.
 4. Nó cộng `newTokens` vào `tokens` (không vượt quá dung lượng tối đa của xô `burst`), trừ đi `n` token yêu cầu, cập nhật lại `last = now`, và trả về `true` nếu số token còn lại không âm.
 
-Bằng cách chuyển đổi một tiến trình thời gian thực thành một bài toán toán học tính toán theo nhu cầu (on-demand delta calculation), `Limiter` chỉ tiêu tốn vài byte RAM, thực thi trong vài nano-giây dưới sự bảo vệ của một `sync.Mutex` nhẹ, phục vụ hàng triệu rate limiters đồng thời mà không hề làm phiền tới Go scheduler.
+Bằng cách chuyển đổi một tiến trình thời gian thực thành một bài toán toán học tính toán theo nhu cầu (on-demand delta calculation), mỗi `Limiter` không tiêu tốn goroutine hay timer nền, cho phép duy trì số lượng lớn instances đồng thời mà không tạo thêm gánh nặng cho Go scheduler. Chi phí thực tế của từng thao tác phụ thuộc vào mức độ tranh chấp mutex và workload cụ thể.
 
 ---
 
@@ -865,10 +865,10 @@ Mỗi plugin của Terraform không phải là một thư viện động nạp v
 
 Quá trình bắt tay diễn ra như sau:
 1. Ứng dụng chính (tiến trình mẹ) fork và exec tiến trình plugin con, truyền một biến môi trường bí mật chứa mã cookie bắt tay (`HandshakeConfig`).
-2. Tiến trình plugin khởi động, mở một Unix Domain Socket cục bộ (hoặc một port TCP ngẫu nhiên), và in ra màn hình stdout dòng thông báo sẵn sàng kèm theo địa chỉ socket.
-3. Tiến trình mẹ đọc stdout, xác nhận đúng mã cookie, thiết lập một kết nối **gRPC** hai chiều bảo mật qua TLS xuyên qua Unix Domain Socket đó.
+2. Tiến trình plugin khởi động, mở một điểm lắng nghe cục bộ (Unix Domain Socket hoặc port TCP ngẫu nhiên tùy cấu hình), và in ra stdout dòng thông báo sẵn sàng kèm theo địa chỉ kết nối.
+3. Tiến trình mẹ đọc stdout, xác nhận đúng mã cookie, thiết lập kết nối RPC qua điểm lắng nghe đó. go-plugin hỗ trợ cả `net/rpc` lẫn gRPC tùy `PluginSet` cấu hình; TLS là tùy chọn và được bật riêng.
 
-Lợi ích của thiết kế này là vô giá: Plugin có thể được viết bằng bất kỳ ngôn ngữ nào (Go, Python, Rust), biên dịch độc lập, và quan trọng nhất: **Cách ly sự cố hoàn toàn (Fault Isolation)**. Nếu một plugin của bên thứ ba bị rò rỉ bộ nhớ hoặc bị panic crash, chỉ có tiến trình con đó bị chết; tiến trình chính của Terraform hay Vault vẫn sống nguyên vẹn và có thể xử lý lỗi êm đẹp.
+Lợi ích của thiết kế này bao gồm: Plugin có thể được viết bằng ngôn ngữ khác nhau và biên dịch độc lập, miễn là phù hợp với transport và protocol được cấu hình (gRPC path hỗ trợ cross-language tốt hơn net/rpc path). Về **cách ly sự cố (Fault Isolation)**: panic xảy ra trong tiến trình con plugin không trực tiếp panic tiến trình mẹ — đây là lợi ích thực sự của kiến trúc out-of-process. Tuy nhiên plugin vẫn có thể làm host treo (hung RPC), tiêu hao CPU/RAM/I/O của máy chủ, hoặc làm hỏng tài nguyên chia sẻ bên ngoài; không nên hiểu là cách ly hoàn toàn.
 
 ---
 
@@ -1045,7 +1045,7 @@ Trọng tâm kiến trúc của `eino` nằm ở `compose/graph.go`: Mô hình h
 
 Mỗi thành phần trong pipeline — bộ thu hồi dữ liệu RAG (`Retriever`), mẫu câu lệnh (`PromptTemplate`), mô hình ngôn ngữ (`ChatModel`), và công cụ (`Tool`) — được coi là một Node trên đồ thị, kết nối với nhau bằng các cạnh (Edges) truyền dữ liệu kiểu mạnh.
 
-Điểm sáng kỹ thuật của `eino` là khả năng **Truyền Luồng Token Song Song (Streaming Fan-Out)** thông qua `schema.StreamReader`. Khi LLM sinh ra từng token, `eino` có khả năng nhân bản luồng token này thành hai nhánh: một nhánh truyền trực tiếp về trình duyệt người dùng qua Server-Sent Events để hiển thị ngay lập tức, nhánh còn lại được đẩy song song vào một mô hình kiểm duyệt an toàn nội dung (Content Moderation Model) chạy ngầm. Thiết kế này vừa bảo đảm an toàn thông tin, vừa triệt tiêu hoàn toàn độ trễ hiển thị cho người dùng cuối.
+Điểm sáng kỹ thuật của `eino` là khả năng **Truyền Luồng Token Song Song (Streaming Fan-Out)** thông qua `schema.StreamReader`. Khi LLM sinh ra từng token, `eino` có khả năng nhân bản luồng token này thành hai nhánh: một nhánh truyền trực tiếp về trình duyệt người dùng qua Server-Sent Events để hiển thị ngay lập tức, nhánh còn lại được đẩy song song vào một mô hình kiểm duyệt an toàn nội dung (Content Moderation Model) chạy ngầm. Thiết kế này vừa cho phép kiểm duyệt nội dung song song, vừa giảm thiểu độ trễ hiển thị cảm nhận được cho người dùng cuối.
 
 ---
 
@@ -1083,7 +1083,7 @@ Khi xây dựng các hệ thống mô phỏng xã hội hoặc giải quyết c�
 
 Mỗi Agent trong hệ thống là một Actor hoàn toàn độc lập, sở hữu một hàng đợi tin nhắn riêng gọi là **Mailbox**. Các Agent tuyệt đối không gọi hàm trực tiếp của nhau và không chia sẻ con trỏ dữ liệu trong bộ nhớ. Thay vào đó, chúng tương tác với nhau 100% bằng cách gửi và nhận các thông điệp có cấu trúc bất đồng bộ (Asynchronous Message Passing).
 
-Thiết kế này tận dụng tối đa sức mạnh của Go Goroutines và Channels. Hàng trăm Agent có thể tự do suy luận, đàm thoại và phản biện lẫn nhau trong bộ nhớ RAM mà hoàn toàn không xảy ra hiện tượng khóa tranh chấp (lock contention), đem lại khả năng mở rộng vô hạn cho các hệ sinh thái AI phân tán của tương lai.
+Thiết kế này tận dụng tối đa sức mạnh của Go Goroutines và Channels. Các Agent suy luận, đàm thoại và phản biện lẫn nhau mà không cần chia sẻ con trỏ trực tiếp, giảm thiểu nguy cơ tranh chấp khóa. Khả năng mở rộng thực tế vẫn bị giới hạn bởi RAM, băng thông mạng LLM và logic điều phối.
 
 ---
 
