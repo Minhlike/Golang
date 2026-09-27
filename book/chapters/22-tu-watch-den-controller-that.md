@@ -19,7 +19,7 @@ Câu trả lời dứt khoát là: **Không**.
 
 Trong các hệ thống phân tán quy mô lớn, **Sự kiện thông báo (Notification Hint)** chỉ là một lời nhắc nhở: *"Tài nguyên X tại namespace Y dường như vừa có biến đổi, hãy kiểm tra lại đi!"*. Bản thân sự kiện không phải là **Trạng thái thẩm quyền (Authoritative State)**. 
 
-Trạng thái thẩm quyền duy nhất của hệ thống nằm tại cơ sở dữ liệu phân tán (etcd) phía sau Kubernetes API Server, và được phản chiếu trung thực nhất qua bộ nhớ đệm cục bộ (**Local Informer Cache**) của controller tại thời điểm hiện hành.
+API Server là boundary thẩm quyền cho Kubernetes object; informer cache là bản sao cục bộ giúp controller điều hòa hiệu quả, không phải nguồn chân lý và có thể trễ. Worker đọc cache để tránh xử lý payload event cũ, nhưng write/read-after-write hoặc quyết định cần freshness phải chọn API read hay cache bằng policy rõ ràng.
 
 ### Bẫy tư duy: Xử lý theo payload của sự kiện
 
@@ -100,11 +100,11 @@ Client                                    API Server
 
 ### Cơ chế hoạt động
 
-Thứ nhất là Pha List (Khởi tạo nền tảng): Khi controller vừa bật, Reflector gọi API `List` để lấy toàn bộ các đối tượng hiện hữu. API Server trả về danh sách đối tượng kèm theo giá trị `resourceVersion` đại diện cho commit log mới nhất của etcd tại thời điểm đó (ví dụ: `1040`). Reflector lưu dữ liệu vào `Indexer`.
+Thứ nhất là Pha List (Khởi tạo nền tảng): Khi controller vừa bật, Reflector gọi API `List` để lấy toàn bộ các đối tượng hiện hữu. API Server trả về danh sách đối tượng kèm một `resourceVersion` **opaque** biểu thị phiên bản mà API server công bố (ví dụ: `1040`); controller không được diễn giải nó như offset hay commit log trực tiếp của etcd. Reflector lưu dữ liệu vào `Indexer`.
 
 Thứ hai là Pha Watch (Đón nhận gia số): Ngay sau khi List thành công, Reflector mở một kết nối HTTP dạng chunked stream với tham số `?watch=true&resourceVersion=1040`. API Server chỉ truyền về những thay đổi diễn ra sau mốc `1040`.
 
-Thứ ba là tự phục hồi sau sự cố mạng: Nếu đường truyền bị đứt ở sự kiện `1042`, Reflector tự động kết nối lại và yêu cầu phát tiếp từ `1042` mà không cần phải tải lại hàng nghìn Pod từ đầu.
+Thứ ba là tự phục hồi sau sự cố mạng: Nếu đường truyền bị đứt ở sự kiện `1042`, Reflector thử kết nối lại từ phiên bản đã biết. Đây là cơ chế bắt kịp thay đổi khi lịch sử còn giữ được, không phải lời hứa rằng mọi lần nối lại đều không cần List.
 
 Thứ tư là xử lý lỗi HTTP 410 Gone: Nếu kết nối bị gián đoạn quá lâu khiến etcd đã dọn dẹp các bản ghi lịch sử (compact log), API Server sẽ trả về mã lỗi `410 Gone (Too old resource version)`. Khi đó, Reflector hiểu rằng khoảng trống dữ liệu không thể bù đắp, nó sẽ tự động kích hoạt một chu kỳ `List` mới từ đầu để tái lập snapshot chuẩn.
 
@@ -140,6 +140,8 @@ func (c *Controller) handleDelete(obj any) {
 
 Hàm này tự động kiểm tra: nếu `obj` là một struct thông thường, nó trích xuất key `namespace/name`. Nếu `obj` là `cache.DeletedFinalStateUnknown`, nó sẽ trích xuất key từ bia mộ lưu trữ bên trong một cách an toàn tuyệt đối.
 
+Key chỉ mang `namespace/name`, nên không phân biệt được một đối tượng cũ đã bị xóa với đối tượng mới cùng tên. Nếu cleanup ngoài Kubernetes cần danh tính bền vững, hãy ghi nhận `metadata.uid` lúc đối tượng còn tồn tại và ràng buộc tài nguyên ngoài với UID đó; đừng suy diễn UID từ một tombstone chỉ còn key.
+
 ---
 
 ## 5. Hàng đợi WorkQueue: Ba tập hợp và Kiểm soát tốc độ
@@ -150,7 +152,7 @@ Trong Go chuẩn, `chan` chỉ là một hàng đợi FIFO đơn thuần. `clien
 | :--- | :--- | :--- |
 | `queue []T` | Danh sách thứ tự chờ | Xác định key nào sẽ được worker lấy ra xử lý kế tiếp. |
 | `dirty set[T]` | Tập hợp các key bị bẩn | Lưu các key có sự kiện phát sinh nhưng chưa hoàn tất điều hòa. Giúp **gộp trùng lặp (deduplication)**. |
-| `processing set[T]` | Tập hợp key đang xử lý | Khóa độc quyền (exclusive lock logic). Bảo đảm **không bao giờ có 2 worker xử lý cùng một key tại một thời điểm**. |
+| `processing set[T]` | Tập hợp key đang xử lý | Cơ chế queue để cùng key không được phân phối song song. Đây không thay thế race detector hay synchronization cho state do Reconciler sở hữu. |
 
 ### Quy trình điều phối của WorkQueue
 
@@ -493,11 +495,12 @@ func (r *CleanUpReconciler) Reconcile(
 	}
 
 	if !exists {
-		// Pod không còn trong cache -> Đã bị xóa trên cụm
-		// Tiến hành dọn dẹp tài nguyên ngoại vi an toàn
-		log.Printf("Pod %s/%s mất. Dọn dẹp...", namespace, name)
-		return r.externalStorage.DeleteArtifacts(
-			ctx, namespace, name,
+		// Key chỉ có namespace/name, không có UID.
+		// Không xóa ngoại vi theo tên.
+		// Một Pod cùng tên có thể đã được tạo lại.
+		return fmt.Errorf(
+			"pod %s/%s absent: cleanup needs recorded UID",
+			namespace, name,
 		)
 	}
 
@@ -506,6 +509,8 @@ func (r *CleanUpReconciler) Reconcile(
 	return nil
 }
 ~~~
+
+Vì thế, đừng đặt external cleanup nguy hiểm sau nhánh `!exists` chỉ dựa vào key. Thiết kế production nên dùng finalizer khi object còn mang `metadata.uid`, hoặc một record durable đã liên kết UID với tài nguyên ngoài. Khi chỉ còn `namespace/name`, lựa chọn an toàn là không xóa và đưa tình huống vào luồng đối soát.
 
 ---
 

@@ -5,8 +5,17 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"testing"
 )
+
+type verifierFunc struct {
+	verify func(string, *Attestation) error
+}
+
+func (v verifierFunc) VerifyProvenance(digest string, att *Attestation) error {
+	return v.verify(digest, att)
+}
 
 func generateTestKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -154,4 +163,28 @@ func TestPolicyGateFailClosedOnMutableTag(t *testing.T) {
 	if res.Decision != DecisionDeny {
 		t.Fatalf("expected DecisionDeny on mutable tag, got %s", res.Decision)
 	}
+}
+
+func TestPolicyGateStopsBeforeProvenanceAfterSignatureFailure(t *testing.T) {
+	engine := NewPolicyEngine(nil, nil)
+	provenanceCalled := false
+	engine.SigVerifier = failingSignatureVerifier{}
+	engine.ProvVerifier = verifierFunc{verify: func(string, *Attestation) error {
+		provenanceCalled = true
+		return nil
+	}}
+
+	res := engine.Evaluate(ComputeContentDigest([]byte("artifact")), nil, nil, nil)
+	if res.Decision != DecisionDeny {
+		t.Fatalf("expected deny, got %s", res.Decision)
+	}
+	if provenanceCalled {
+		t.Fatal("provenance verifier must not run after integrity failure")
+	}
+}
+
+type failingSignatureVerifier struct{}
+
+func (failingSignatureVerifier) VerifySignature(string, *SignatureVerification) error {
+	return errors.New("signature unavailable")
 }

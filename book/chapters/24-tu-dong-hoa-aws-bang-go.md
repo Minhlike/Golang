@@ -14,7 +14,7 @@ Chương này trang bị cho bạn tư duy thiết kế hệ thống tự độn
 
 ## 1. Chuỗi định danh ngầm định và Quyền tạm thời
 
-Thay vì lưu trữ khóa tĩnh dài hạn, nguyên lý bảo mật đám mây hiện đại yêu cầu mọi chương trình chạy trên hạ tầng phải sử dụng **Thông tin xác thực tạm thời (Temporary Credentials)** được cấp phát động bởi dịch vụ AWS Security Token Service (STS).
+Ưu tiên production là thông tin xác thực tạm thời từ role/OIDC; điều đó không làm mọi nguồn trong default chain trở thành temporary credential. Với `config.LoadDefaultConfig`, các nguồn nền tảng gồm static credentials từ biến môi trường, shared config/credentials files, container credentials (ECS) và role credentials qua EC2 IMDS; cấu hình SSO hay web identity chọn provider tương ứng. Chain vẫn có thể nhận static credentials từ environment hoặc shared files, đặc biệt trên máy phát triển và trong test.
 
 Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời lượng phiên của IAM Role có thể cấu hình linh hoạt từ 15 phút tới 12 giờ tùy theo cấu hình vai trò, trong khi các cơ chế phiên liên kết (chained roles) hay `AssumeRoleWithWebIdentity` áp dụng giới hạn riêng. Mỗi bộ thông tin xác thực tạm thời luôn gắn liền với một Session Token (`AWS_SESSION_TOKEN`). Cần đặc biệt lưu ý: nếu khóa tạm thời bị rò rỉ trong thời gian còn hiệu lực, kẻ tấn công vẫn có thể sử dụng hợp lệ cho đến khi hết hạn hoặc cho đến khi quản trị viên chủ động thu hồi phiên (thông qua IAM revocation policy, cập nhật inline policy, hoặc vô hiệu hóa IAM role).
 
@@ -80,7 +80,7 @@ Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật t
 
 Tiếp đó, SDK sử dụng Secret Access Key kết hợp cùng thông tin ngày tháng, phân vùng địa lý (Region) và tên dịch vụ đích để tính toán khóa ký tạm thời (Signing Key) thông qua hàm băm HMAC. Khóa ký này được dùng để tạo mã băm xác thực cuối cùng, đưa trực tiếp vào HTTP Header dưới định dạng `Authorization: AWS4-HMAC-SHA256 Credential=ASIA...`. Bất kỳ thay đổi trái phép nào đối với gói tin trên đường truyền, dù chỉ một byte trong payload hoặc tiêu đề, đều khiến chữ ký tại máy chủ dịch vụ AWS không khớp và bị từ chối ngay lập tức với mã lỗi `403 SignatureDoesNotMatch`.
 
-Bất kỳ kẻ xấu nào chặn bắt gói tin trên đường truyền và sửa đổi dù chỉ 1 byte trong payload hoặc header, chữ ký số sẽ không khớp và máy chủ dịch vụ AWS (AWS service endpoint như S3, DynamoDB, STS) lập tức từ chối với mã lỗi `403 SignatureDoesNotMatch`.
+SigV4 xác thực yêu cầu cho AWS và bảo vệ các phần được ký; nó không tự cung cấp bí mật nội dung, chống phát lại ở mọi ngữ cảnh, hay ký mọi header/payload trong mọi lựa chọn dịch vụ. TLS vẫn bảo vệ kênh truyền, còn caller phải hiểu service và tùy chọn signing của lời gọi mình dùng.
 
 ---
 
@@ -122,7 +122,7 @@ for paginator.HasMorePages() {
 }
 ~~~
 
-Paginator chỉ giữ đúng 1 trang dữ liệu trong RAM tại một thời điểm, cho phép chương trình quét hàng triệu file mà mức tiêu thụ bộ nhớ vẫn phẳng tuyệt đối.
+Paginator chỉ giữ trang đang xử lý; mức nhớ của caller còn phụ thuộc xử lý của nó. `ListAllKeys` trong lab cố ý gom kết quả vào `[]string`, nên dùng O(n) theo tổng số key. Với scan lớn, xử lý từng `page.Contents` hoặc gọi callback thay vì tích lũy toàn bộ.
 
 ---
 
@@ -344,7 +344,7 @@ func WaitForBucketReady(
 }
 ~~~
 
-`BucketExistsWaiter` tự động gửi các yêu cầu `HeadBucket` định kỳ với thuật toán lùi thời gian (backoff jitter). Ngay khi S3 trả về mã 200 OK, hàm `Wait` lập tức trở về thành công mà không làm lãng phí dù chỉ 1 mili-giây.
+`BucketExistsWaiter` lặp `HeadBucket` theo policy waiter của SDK cho đến khi đạt trạng thái chấp nhận được, lỗi hoặc hết `maxWait`. Nó chỉ chứng minh điều kiện tồn tại bucket; không chứng minh DNS, IAM policy hay ứng dụng đã sẵn sàng cho một workflow lớn hơn. Vì vậy timeout và điều kiện chấp nhận phải bám đúng operation đang chờ.
 
 ---
 

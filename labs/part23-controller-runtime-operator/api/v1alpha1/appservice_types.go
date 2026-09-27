@@ -30,9 +30,10 @@ type AppServiceSpec struct {
 
 // AppServiceStatus defines the observed state of AppService.
 type AppServiceStatus struct {
-	AvailableReplicas int32              `json:"availableReplicas"`
-	Phase             string             `json:"phase"`
-	Conditions        []metav1.Condition `json:"conditions,omitempty"`
+	AvailableReplicas  int32              `json:"availableReplicas"`
+	Phase              string             `json:"phase"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // AppService is the Schema for the appservices API.

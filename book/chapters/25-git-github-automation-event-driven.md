@@ -122,7 +122,7 @@ GitHub / Quản trị viên / API         Máy chủ Webhook (Go)
 
 Mã định danh `X-GitHub-Delivery` là khóa hữu ích để khử trùng lặp (deduplicate), xử lý redelivery và ngăn ngừa phát lại (replay). Khi một delivery được người vận hành kích hoạt lại (redeliver) qua giao diện quản trị hoặc qua REST API, GitHub giữ nguyên cùng một mã GUID, cho phép ứng dụng nhận diện ID đã qua xử lý để bỏ qua an toàn mà không phát hành release trùng lặp hay kích hoạt triển khai kép.
 
-Tuy nhiên, cần nhận thức rõ ranh giới bền bỉ: trong mã nguồn lab thực hành, danh sách delivery ID chỉ được lưu tạm thời trên bộ nhớ RAM thông qua cấu trúc `map[string]time.Time`. Do đó, cam kết khử trùng lặp chỉ tồn tại trong vòng đời của tiến trình (process lifetime). Ngay khi tiến trình khởi động lại hoặc container bị điều phối lại, toàn bộ trạng thái khử trùng lặp trong bộ nhớ sẽ bị mất.
+Delivery ID chỉ khử trùng lặp **một lần chuyển giao**; nó không tự là khóa lũy đẳng của nghiệp vụ như “deploy commit X vào môi trường Y”. Cần có state machine tối thiểu `processing → completed`: redelivery đang xử lý bị giữ lại, attempt lỗi phải được đánh fail để có thể thử lại, còn completed mới bị suppress. Business mutation cần operation key riêng và, ở production, durable/transactional store có TTL. Lab giữ ledger trong RAM nên mọi bảo đảm chỉ tồn tại trong process lifetime.
 
 Trên môi trường production thực tế, một hệ thống tự động hóa chịu lỗi đòi hỏi phải kết hợp một trong các cơ chế sau:
 
@@ -407,31 +407,33 @@ func ShouldDeployFromWebhook(payload []byte) bool {
 	}
 
 	// Chỉ kích hoạt tự động hóa trên nhánh chính (main)
-	return push.Ref == "refs/heads/main"
+return push.Ref == "refs/heads/main"
 }
 ~~~
+
+Đây chỉ là bộ lọc tối thiểu để luyện đọc payload, không phải policy triển khai. Endpoint production phải xác thực chữ ký trước khi parse, allowlist cả tên event và action, repository/owner, installation ID (nếu dùng GitHub App) và ref; sau đó ràng buộc các giá trị đó với cấu hình deployment. Chỉ kiểm tra `ref` sẽ cho phép một kho hoặc installation ngoài phạm vi kích hoạt hành động nhạy cảm.
 
 ### Lời giải Thử thách 2: Tính toán Backoff kết hợp Jitter
 
 ~~~go
 func CalculateBackoffWithJitter(
 	baseDelay time.Duration,
-) time.Duration {
-	if baseDelay <= 0 {
-		baseDelay = 5 * time.Second
+	next func() float64,
+) (time.Duration, error) {
+	if next == nil {
+		return 0, errors.New("jitter source is required")
 	}
-
-	// Tạo độ lệch ngẫu nhiên từ 10% đến 25%
-	jitterFactor := 0.10 + rand.Float64()*0.15
-	jitter := time.Duration(
-		float64(baseDelay) * jitterFactor,
-	)
-
-	return baseDelay + jitter
+	value := next() // contract: 0 <= value < 1
+	if value < 0 || value >= 1 {
+		return 0, errors.New("invalid jitter value")
+	}
+	return baseDelay + time.Duration(
+		float64(baseDelay)*(0.10+value*0.15),
+	), nil
 }
 ~~~
 
-Bổ sung Jitter giúp phân tán các lượt thử lại của các worker trên trục thời gian, triệt tiêu hoàn toàn hiện tượng bão yêu cầu đồng thời.
+Jitter chỉ giảm tương quan, không triệt tiêu hoàn toàn bão yêu cầu. Hàm nhận nguồn jitter qua dependency injection; production có thể bọc `crypto/rand` hoặc PRNG được sở hữu riêng, còn test truyền giá trị cố định để tái lập được. Không dùng global RNG như một contract ngầm.
 
 ---
 

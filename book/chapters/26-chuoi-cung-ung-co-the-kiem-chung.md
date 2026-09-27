@@ -41,7 +41,7 @@ Mô hình tư duy cốt lõi của một chuỗi cung ứng có thể kiểm ch�
 [Quyết định Triển khai] (ALLOW hoặc DENY)
 ~~~
 
-Trong mô hình này, mỗi mắt xích phía sau đều đòi hỏi bằng chứng toán học hoặc mật mã học để chứng minh tính hợp lệ của mắt xích phía trước. Tệp `go.sum` bảo chứng tính toàn vẹn của mã nguồn bên thứ ba khi tải về máy chủ phát triển. Bản chứng thực SLSA Provenance xác nhận chính xác hạ tầng và quy trình build nào đã tạo ra tệp nhị phân. Mã băm OCI Digest bảo đảm nội dung container image không bị sai lệch dù chỉ một bit. Cùng với đó, chữ ký mật mã Cosign xác nhận danh tính của thực thể phát hành, cho phép cổng chính sách (Policy Engine) hoạt động như một chốt chặn đóng kín (fail-closed) với nguyên tắc mặc định từ chối (deny by default) trừ khi mọi bằng chứng đều được kiểm chứng trọn vẹn.
+Mỗi mắt xích cần bằng chứng phù hợp, nhưng không một file hay label nào tự chứng minh toàn bộ chuỗi. `go.sum` ghi checksum module mà toolchain đã biết và kiểm tra, chứ không khóa hoàn toàn graph như lockfile. Provenance chỉ hữu ích sau khi verifier kiểm tra subject, identity và expectation của policy. Digest nhận diện nội dung; Cosign keyless verification còn kiểm tra trust root, certificate identity/issuer và claim digest. Lab dưới đây mô hình hóa policy fail-closed, không thực hiện các bước Cosign/SLSA đó.
 
 ---
 
@@ -99,7 +99,7 @@ Cần lưu ý rằng khả năng phân tích tĩnh của `govulncheck` tập tru
 
 ### Thiết kế chính sách thông minh
 
-Từ góc độ cổng kiểm soát chính sách (Gate Policy), hệ thống chia tách hành vi dựa trên kết quả phân tích khả năng vươn tới. Khi một lỗ hổng nghiêm trọng được xác định nằm trực tiếp trên đường thực thi của ứng dụng (`Reachable = true`), cổng lập tức ra quyết định từ chối triển khai (`DENY`). Ngược lại, nếu một thư viện phụ thuộc chứa lỗ hổng nhưng hàm bị tổn thương hoàn toàn không bao giờ được mã nguồn gọi tới (`Reachable = false`), hệ thống ghi nhận cảnh báo kiểm toán (`WARN`) để đội ngũ kỹ sư lên kế hoạch nâng cấp mà không làm đứt gãy tiến độ phát hành sản phẩm.
+`Reachable`, severity, scanner coverage và acceptance threshold đều là input policy. Một tổ chức có thể deny finding reachable high/critical, tổ chức khác có exception có hạn hay deny cả finding chưa chứng minh reachability. Vì vậy `Reachable=false` không có nghĩa “an toàn”; trong lab nó chỉ dẫn tới `WARN` theo policy minh họa và cần được review trong policy thật.
 
 ---
 
@@ -135,7 +135,7 @@ Một là, Ký không cần khóa (Keyless Signing): Không còn nỗi lo lưu t
 
 Hai là, Chứng chỉ ngắn hạn: Fulcio cấp chứng chỉ X.509 có hiệu lực trong vài phút, gắn liền với danh tính workflow (`https://token.actions.githubusercontent.com`).
 
-Ba là, Ký trên Digest: Chữ ký số (ECDSA P-256) được tính toán trực tiếp trên mã băm OCI Digest của image.
+Ba là, Ký và xác minh claim digest: Cosign ký payload có claim về digest image; verifier mặc định kiểm tra claim đó cùng danh tính/certificate theo policy. Đây không tương đương với việc gọi `ecdsa.VerifyASN1` trên chuỗi digest trong lab.
 
 Bốn là, SLSA Provenance Attestation: Ngoài chữ ký, CI còn tạo ra bản chứng thực nguồn gốc (Provenance) ghi rõ: Commit SHA nào, quy trình workflow nào (Builder ID) đã tạo ra artifact.
 

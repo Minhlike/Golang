@@ -8,7 +8,7 @@ Tuy nhiên, tất cả các phương pháp đó đều chia sẻ một điểm y
 
 Hãy hình dung một kịch bản thực chiến trong vận hành cụm container: một tiến trình máy chủ web bị khai thác lỗ hổng thực thi mã từ xa (RCE). Kẻ tấn công mở một phiên shell ngầm `/bin/sh`, tải mã độc về thư mục `/tmp` rồi thực thi trực tiếp. Tiến trình độc hại này hoàn toàn không tích hợp OpenTelemetry SDK, không công bố metric Prometheus và xóa sạch dấu vết tệp tin cấu hình. Khi ấy, các công cụ giám sát APM truyền thống ở tầng người dùng hoàn toàn bất lực vì chúng phụ thuộc vào sự hợp tác tự nguyện của ứng dụng.
 
-Để phát hiện kịp thời các hành vi bất thường, hệ thống giám sát phải đặt trạm quan sát tại tầng nhân hệ điều hành (Linux Kernel) — nơi mọi tiến trình bắt buộc phải đi qua khi yêu cầu tài nguyên phần cứng hoặc cấp phát bộ nhớ. Trước đây, can thiệp vào kernel đồng nghĩa với việc viết Linux Kernel Module (LKM) bằng ngôn ngữ C, tiềm ẩn rủi ro nghiêm trọng làm sập toàn bộ máy chủ (Kernel Panic) nếu xuất hiện lỗi con trỏ. Công nghệ eBPF (Extended Berkeley Packet Filter) kết hợp với thư viện thuần Go `cilium/ebpf` đã mở ra một phương thức tiếp cận an toàn, cho phép nạp mã giám sát có kiểm định vào nhân để thu thập dữ liệu với hiệu năng vượt trội.
+eBPF cho phép đặt điểm quan sát gần kernel cho những hook mà policy và kernel hỗ trợ; nó không nhìn thấy “mọi hành vi” và không thay thế audit log hay kiểm soát truy cập. Trước đây, can thiệp vào kernel thường dùng Linux Kernel Module (LKM) bằng C, có blast radius lớn khi lỗi. eBPF kết hợp `cilium/ebpf` cho phép nạp bytecode qua verifier, nhưng khả năng attach, quyền hạn và overhead vẫn phải được kiểm chứng trên kernel/workload thật.
 
 ---
 
@@ -50,7 +50,7 @@ Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trư
 
 | Tiêu chuẩn an toàn Verifier | Cơ chế kiểm tra | Mục đích bảo vệ Kernel |
 | :--- | :--- | :--- |
-| **Bảo đảm dừng hữu hạn** | Phân tích đồ thị luồng điều khiển (CFG), chỉ cho phép bounded loops. | Loại bỏ hoàn toàn nguy cơ treo hoặc khóa chết CPU của nhân. |
+| **Kiểm tra đường thực thi hữu hạn** | Phân tích CFG, state và các loop mà kernel/version cho phép chứng minh an toàn. | Hạn chế đường chạy không an toàn; không biến mọi program được nạp thành không có overhead. |
 | **Kiểm soát truy cập bộ nhớ** | Bắt buộc kiểm tra biên; truy cập userspace qua `bpf_probe_read_user_str()`. | Chống rò rỉ hoặc ghi đè trái phép lên không gian nhớ kernel. |
 | **Hạn mức ngăn xếp 512 byte** | Giới hạn tổng kích thước stack frame của chương trình eBPF $\le$ 512 bytes. | Ngăn chặn tràn ngăn xếp nhân hệ điều hành. |
 | **Bảo toàn thanh ghi và FP** | Khóa thanh ghi `R10` làm read-only frame pointer, theo dõi kiểu R0–R9. | Đảm bảo tính toàn vẹn ngữ cảnh thanh ghi vi xử lý. |
@@ -98,7 +98,7 @@ Bốn là, mô hình kiểm thử linh hoạt: Trong môi trường CI hoặc m�
 
 ## 4. Kênh truyền dữ liệu tốc độ cao: BPF Ring Buffer
 
-Để đưa dữ liệu từ Kernel lên Go Userspace, eBPF cung cấp cấu trúc dữ liệu **BPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)**. Khác với cơ chế Perf Event Array trước đây vốn cấp phát bộ đệm riêng biệt cho từng lõi CPU gây lãng phí bộ nhớ và dễ làm xáo trộn thứ tự thời gian của sự kiện, Ring Buffer sử dụng một vùng nhớ vòng dùng chung toàn cục cho tất cả các lõi CPU, bảo đảm tính tuần tự nghiêm ngặt của dòng dữ liệu.
+Để đưa dữ liệu từ Kernel lên Go Userspace, eBPF cung cấp cấu trúc dữ liệu **BPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)**. Khác với perf event array thường dùng buffer theo CPU, Ring Buffer dùng vùng nhớ chung và có thể giữ thứ tự reservation giữa producer. Đây hữu ích cho event tuần tự như fork/exec/exit; nó không biến record thành đồng hồ toàn cục chính xác, cũng không cho phép suy ra toàn bộ causal order của event song song trên nhiều CPU.
 
 Ở tầng người dùng, ứng dụng Go ánh xạ trực tiếp vùng nhớ này vào không gian địa chỉ tiến trình thông qua cơ chế `mmap`, cho phép đọc liên tục các sự kiện mà không phải trả chi phí chuyển ngữ cảnh (context switch) cho từng gói tin. Về phía kernel, thay vì cấp phát biến trên ngăn xếp 512 byte hạn hẹp, mã eBPF áp dụng mô hình Reserve & Submit: gọi `bpf_ringbuf_reserve` để giữ chỗ bộ nhớ trực tiếp trong ring buffer, ghi dữ liệu vào vùng đã cấp, rồi kết thúc bằng `bpf_ringbuf_submit`. Nếu hàng đợi đầy, hàm trả về con trỏ rỗng giúp kernel bỏ qua gói tin một cách an toàn mà không làm gián đoạn hệ thống.
 
@@ -329,6 +329,8 @@ func (o *Observer) readLoop(ctx context.Context) {
 }
 ~~~
 
+`context` chỉ mở đường thoát ở `select`; nó không chui vào interface `RecordReader.Read()`. Vì vậy lab đăng ký một nhánh cancellation gọi `reader.Close()`. Contract cần có là `Close` làm một `Read` đang block trở về; fake reader mới trong test block thật rồi được `Close` giải phóng. Nếu source reader khác không có contract đó, phải bọc hoặc đổi API thay vì hứa cancellation tức thì.
+
 ### Động cơ phát hiện bất thường an ninh (Heuristic Security Rules)
 Khi nhận được sự kiện, chúng ta đối chiếu với các quy tắc an ninh phỏng đoán. Cần lưu ý: Đây là các **quy tắc phỏng đoán (Heuristics)** hỗ trợ giám sát, không phải lá chắn bảo mật tuyệt đối, bởi kẻ tấn công nâng cao có thể lẩn tránh bằng cách gọi `execveat`, nạp nhị phân từ RAM qua `memfd_create`, hoặc dùng symlink:
 
@@ -438,7 +440,7 @@ Tuy nhiên, toàn bộ logic cốt lõi vẫn được bảo đảm thông qua 6
 | **Khai báo mảng lớn trên eBPF stack** (ví dụ mảng 1024 bytes). | Kernel Verifier lập tức từ chối nạp chương trình với lỗi `stack overflow`. | Bộ nhớ stack của eBPF bị giới hạn cứng 512B; luôn dùng `bpf_ringbuf_reserve` để cấp phát. |
 | **Lấy nhầm 32 bit thấp** của `bpf_get_current_pid_tgid()`. | Thu được Thread ID (TID) thay vì Process ID (PID), khiến log hiển thị PID sai lệch hoàn toàn. | Luôn dịch bit phải 32 bit: `(__u32)(pid_tgid >> 32)` để lấy đúng PID của tiến trình. |
 | **Xử lý sự kiện userspace quá chậm** trong vòng lặp đọc. | Tràn bộ đệm Ring Buffer trong kernel, khiến các sự kiện quan trọng bị âm thầm đánh rơi (dropped). | Sử dụng buffered channel và mô hình Worker Pool ở tầng Go để tiêu thụ sự kiện với tốc độ cao. |
-| **Chạy ứng dụng thiếu quyền** Linux Capabilities. | Syscall `SYS_BPF` trả về `EPERM: operation not permitted`. | Cấp quyền tối thiểu cho binary bằng lệnh: `sudo setcap cap_bpf,cap_sys_admin+ep <binary>`. |
+| **Chạy ứng dụng thiếu quyền** Linux capabilities. | Load/attach có thể trả `EPERM`. | Quyền cần thiết phụ thuộc kernel version, cấu hình LSM và loại program; kiểm tra policy của node. Không copy một bộ capability như công thức chung. |
 
 ---
 
@@ -496,23 +498,22 @@ type ExecEventExtended struct {
 	Args []string `json:"args"`
 }
 
-func ParseRawArgs(raw []byte) []string {
+func ParseNULSeparatedArgs(raw []byte) []string {
 	var args []string
 	tokens := bytes.Split(raw, []byte{0})
 	for _, tok := range tokens {
-		s := strings.TrimSpace(string(tok))
-		if len(s) > 0 {
-			args = append(args, s)
+		if len(tok) > 0 {
+			args = append(args, string(tok))
 		}
 	}
 	return args
 }
 ~~~
 
-Kỹ thuật bóc tách danh sách đối số cho phép người vận hành không chỉ biết file nào được thực thi, mà còn nắm rõ các cờ tham số nguy hiểm (ví dụ `curl http://... | bash`).
+`argv` là mảng con trỏ tới các chuỗi C; record wire format phải ghi rõ giới hạn số argument và kích thước mỗi argument, rồi dùng byte NUL làm delimiter. Khoảng trắng là dữ liệu hợp lệ trong một argument, nên không được dùng để split hay trim. Hook hiện tại chỉ thu filename; bài tập này là thiết kế mở rộng, không phải claim rằng lab đã capture toàn bộ argv.
 
 ---
 
-Với sức mạnh của **eBPF kết hợp cùng Go**, bạn đã sở hữu khả năng quan sát và bảo vệ hệ thống từ tầng sâu nhất của hệ điều hành Linux — nơi mà không một tiến trình độc hại nào có thể lẩn tránh.
+eBPF bổ sung một điểm quan sát mạnh, có giới hạn và cần được đo đạc; heuristic của lab chỉ tạo tín hiệu để điều tra, không phải cơ chế ngăn chặn hay bằng chứng xâm nhập. Trước khi dùng trên node thật, hãy xác minh kernel, capability, hook, tỷ lệ drop và policy dữ liệu của chính môi trường đó.
 
 Nhưng trong bức tranh vận hành hiện đại của năm 2026, các kỹ sư SRE không chỉ làm việc với các hệ thống tự động hóa truyền thống, mà đang ngày càng hợp tác với các **Tác tử Trí tuệ Nhân tạo (AI Agents)**. Khi chúng ta trao quyền cho AI Agent truy cập vào hệ thống hạ tầng để tự động xử lý sự cố (AIOps), câu hỏi sống còn đặt ra là: **Làm thế nào để trao công cụ cho Agent mà không trao toàn quyền?** Trong **Chương 28** — chương cuối cùng của lộ trình nâng cao — chúng ta sẽ tìm hiểu cách xây dựng máy chủ công cụ an toàn bằng Go theo giao thức **Model Context Protocol (MCP)**, thiết lập ranh giới phân quyền nghiêm ngặt, phòng chống tấn công Prompt Injection và lưu vết kiểm toán (Audit Trail) cho mọi thao tác của Agent.

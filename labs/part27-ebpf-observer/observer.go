@@ -20,10 +20,10 @@ type RecordReader interface {
 
 // Observer coordinates kernel event streaming into userspace Go channels.
 type Observer struct {
-	reader RecordReader
-	events chan *ExecEvent
-	errs   chan error
-	done   chan struct{}
+	reader    RecordReader
+	events    chan *ExecEvent
+	errs      chan error
+	done      chan struct{}
 	closeOnce sync.Once
 }
 
@@ -42,7 +42,19 @@ func NewObserver(reader RecordReader, bufferSize int) *Observer {
 
 // Start begins processing events asynchronously until context is canceled or reader closes.
 func (o *Observer) Start(ctx context.Context) (<-chan *ExecEvent, <-chan error) {
+	// RecordReader has no context-aware Read method. Cancellation can unblock a
+	// blocking read only when its Close contract wakes Read; ringbuf.Reader has
+	// that property, and test doubles must model it explicitly.
 	go func() {
+		select {
+		case <-ctx.Done():
+			_ = o.Close()
+		case <-o.done:
+		}
+	}()
+
+	go func() {
+		defer o.Close()
 		defer close(o.events)
 		defer close(o.errs)
 

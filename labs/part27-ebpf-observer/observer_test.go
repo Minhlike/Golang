@@ -16,6 +16,28 @@ type mockRecordReader struct {
 	closed  bool
 }
 
+// blockingRecordReader models a real event reader whose Read does not return
+// until Close is called. It prevents a cancellation test from passing merely
+// because a fake returned EOF immediately.
+type blockingRecordReader struct {
+	once   sync.Once
+	closed chan struct{}
+}
+
+func newBlockingRecordReader() *blockingRecordReader {
+	return &blockingRecordReader{closed: make(chan struct{})}
+}
+
+func (r *blockingRecordReader) Read() ([]byte, error) {
+	<-r.closed
+	return nil, ErrObserverClosed
+}
+
+func (r *blockingRecordReader) Close() error {
+	r.once.Do(func() { close(r.closed) })
+	return nil
+}
+
 func (m *mockRecordReader) Read() ([]byte, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -125,17 +147,23 @@ func TestObserverStreaming(t *testing.T) {
 }
 
 func TestObserverContextCancellation(t *testing.T) {
-	reader := &mockRecordReader{records: nil} // Will return EOF
+	reader := newBlockingRecordReader()
 	observer := NewObserver(reader, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	events, errs := observer.Start(ctx)
 
-	// Cancel immediately
+	// Cancel while Read is blocked. The cancellation path must call Close and
+	// release the read rather than relying on a cooperative fake EOF.
 	cancel()
 
-	// Wait for channels to close
-	for range events {
+	select {
+	case _, ok := <-events:
+		if ok {
+			t.Fatal("events channel should close after cancellation")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("blocked Read was not released by cancellation")
 	}
 	for range errs {
 	}

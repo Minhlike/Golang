@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -42,7 +43,7 @@ func setupTestMCPServer(t *testing.T) (*OpsServer, *httptest.Server, *mockActuat
 		{ID: "order-health", ServiceName: "order-service", URL: ts.URL},
 	}
 
-	ops := NewOpsServer(ts.Client(), actuator, authorizer, targets)
+	ops := NewOpsServer(ts.Client(), actuator, authorizer, NewKeyedIntervalLimiter(1000), targets)
 	return ops, ts, actuator
 }
 
@@ -63,7 +64,7 @@ func connectClientAndServer(
 	}
 
 	// Attach authenticated caller role to server session (MOCK_AUTH_BOUNDARY)
-	ops.SetSessionRole(serverSession.ID(), callerRole)
+	ops.setSessionRoleForTest(serverSession.ID(), callerRole)
 
 	cleanup := func() {
 		clientSession.Close()
@@ -281,5 +282,51 @@ func TestMCPMissingOrInvalidTicketDenied(t *testing.T) {
 
 	if len(actuator.restartedSvc) != 0 {
 		t.Fatalf("actuator should not have run")
+	}
+}
+
+func TestRestartFailsClosedWithoutRequiredDependencies(t *testing.T) {
+	ops := NewOpsServer(nil, nil, nil, NewKeyedIntervalLimiter(1000), nil)
+	ctx := context.Background()
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleOperator)
+	defer cleanup()
+
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "restart_service",
+		Arguments: map[string]any{
+			"service_name":  "payment-service",
+			"change_ticket": "CHG-1001",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool transport error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("restart must fail closed when dependencies are absent: %+v", result)
+	}
+}
+
+func TestApprovalTokenIsBoundAndOneTime(t *testing.T) {
+	manager := NewApprovalManager(time.Minute)
+	token, err := manager.RequestApproval("restart_service", "payment-service")
+	if err != nil {
+		t.Fatalf("RequestApproval: %v", err)
+	}
+	if manager.Confirm(token, "restart_service", "order-service") {
+		t.Fatal("token must not authorize a different target")
+	}
+	if manager.Confirm(token, "restart_service", "payment-service") {
+		t.Fatal("mismatched confirmation must consume token to prevent replay")
+	}
+
+	token, err = manager.RequestApproval("restart_service", "payment-service")
+	if err != nil {
+		t.Fatalf("RequestApproval: %v", err)
+	}
+	if !manager.Confirm(token, "restart_service", "payment-service") {
+		t.Fatal("matching approval should succeed once")
+	}
+	if manager.Confirm(token, "restart_service", "payment-service") {
+		t.Fatal("approval token must be one-time")
 	}
 }

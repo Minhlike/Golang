@@ -22,6 +22,7 @@ const (
 type contextKey string
 
 const roleContextKey contextKey = "mcp_caller_role"
+const rateLimitKeyContextKey contextKey = "mcp_rate_limit_key"
 
 // WithCallerRole binds authenticated caller identity to session context.
 // MOCK_AUTH_BOUNDARY: In production systems, identity is established during
@@ -37,6 +38,50 @@ func CallerRoleFromContext(ctx context.Context) Role {
 		return r
 	}
 	return RoleObserver
+}
+
+// callerRateLimitKey is established by the authenticated transport/session
+// boundary. A missing identity is deliberately grouped as anonymous instead of
+// trusting a value supplied in tool arguments.
+func callerRateLimitKey(ctx context.Context) string {
+	if key, ok := ctx.Value(rateLimitKeyContextKey).(string); ok && key != "" {
+		return key
+	}
+	return "anonymous"
+}
+
+// ToolRateLimiter makes the limiting policy testable and keeps rate state
+// keyed by an authenticated caller/session, not shared globally by all agents.
+type ToolRateLimiter interface {
+	Allow(key string, now time.Time) bool
+}
+
+// KeyedIntervalLimiter is a small teaching implementation. Production callers
+// should select a distributed limiter when the server is replicated.
+type KeyedIntervalLimiter struct {
+	mu       sync.Mutex
+	interval time.Duration
+	lastCall map[string]time.Time
+}
+
+func NewKeyedIntervalLimiter(rps int) *KeyedIntervalLimiter {
+	if rps <= 0 {
+		rps = 10
+	}
+	return &KeyedIntervalLimiter{
+		interval: time.Second / time.Duration(rps),
+		lastCall: make(map[string]time.Time),
+	}
+}
+
+func (l *KeyedIntervalLimiter) Allow(key string, now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if previous, found := l.lastCall[key]; found && now.Sub(previous) < l.interval {
+		return false
+	}
+	l.lastCall[key] = now
+	return true
 }
 
 // ServiceActuator executes actual stateful operations on managed services.
@@ -108,6 +153,7 @@ type OpsServer struct {
 	httpClient *http.Client
 	actuator   ServiceActuator
 	authorizer ChangeAuthorizer
+	limiter    ToolRateLimiter
 	targets    map[string]HealthTarget
 
 	mu          sync.RWMutex
@@ -119,10 +165,14 @@ func NewOpsServer(
 	client *http.Client,
 	actuator ServiceActuator,
 	authorizer ChangeAuthorizer,
+	limiter ToolRateLimiter,
 	targets []HealthTarget,
 ) *OpsServer {
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	if limiter == nil {
+		limiter = NewKeyedIntervalLimiter(10)
 	}
 	targetMap := make(map[string]HealthTarget, len(targets))
 	for _, t := range targets {
@@ -141,6 +191,7 @@ func NewOpsServer(
 		httpClient:  client,
 		actuator:    actuator,
 		authorizer:  authorizer,
+		limiter:     limiter,
 		targets:     targetMap,
 		sessionRole: make(map[string]Role),
 	}
@@ -152,11 +203,13 @@ func NewOpsServer(
 			role := CallerRoleFromContext(ctx)
 			if role == RoleObserver && req != nil && req.GetSession() != nil {
 				ops.mu.RLock()
-				sessRole, found := ops.sessionRole[req.GetSession().ID()]
+				sessionID := req.GetSession().ID()
+				sessRole, found := ops.sessionRole[sessionID]
 				ops.mu.RUnlock()
 				if found {
 					role = sessRole
 				}
+				ctx = context.WithValue(ctx, rateLimitKeyContextKey, sessionID)
 			}
 			ctx = WithCallerRole(ctx, role)
 			return next(ctx, method, req)
@@ -167,8 +220,10 @@ func NewOpsServer(
 	return ops
 }
 
-// SetSessionRole configures authenticated role for a given session ID (MOCK_AUTH_BOUNDARY).
-func (s *OpsServer) SetSessionRole(sessionID string, role Role) {
+// setSessionRoleForTest configures a fake authentication result for the
+// in-memory harness only. It is not an authentication mechanism and must not
+// be exposed by a network transport.
+func (s *OpsServer) setSessionRoleForTest(sessionID string, role Role) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessionRole[sessionID] = role
@@ -209,6 +264,11 @@ func (s *OpsServer) registerTools() {
 		Description: "Kiểm tra tình trạng sức khỏe dịch vụ qua target_id trong danh sách trắng đã kiểm duyệt.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input QueryHealthInput) (*mcp.CallToolResult, any, error) {
 		role := CallerRoleFromContext(ctx)
+		if !s.limiter.Allow(callerRateLimitKey(ctx), time.Now()) {
+			errStr := "tool call denied by caller rate-limit policy"
+			s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "DENY", errStr)
+			return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: errStr}}}, nil, nil
+		}
 		target, found := s.targets[input.TargetID]
 		if !found {
 			errStr := fmt.Sprintf("unapproved target_id %q: blocked by SSRF allowlist policy", input.TargetID)
@@ -257,25 +317,19 @@ func (s *OpsServer) registerTools() {
 		role := CallerRoleFromContext(ctx)
 		args := map[string]any{"service_name": input.ServiceName, "change_ticket": input.ChangeTicket}
 
-		if s.authorizer != nil {
-			if err := s.authorizer.AuthorizeChange(ctx, role, input.ServiceName, input.ChangeTicket); err != nil {
-				s.RecordAudit(role, "restart_service", args, "DENY", err.Error())
-				return &mcp.CallToolResult{
-					IsError: true,
-					Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
-				}, nil, nil
-			}
+		if s.authorizer == nil || s.actuator == nil {
+			errStr := "restart_service denied: required authorization or actuator dependency is not configured"
+			s.RecordAudit(role, "restart_service", args, "DENY", errStr)
+			return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: errStr}}}, nil, nil
 		}
-
-		if s.actuator != nil {
-			if err := s.actuator.RestartService(ctx, input.ServiceName); err != nil {
-				errStr := fmt.Sprintf("actuator restart failed: %v", err)
-				s.RecordAudit(role, "restart_service", args, "DENY", errStr)
-				return &mcp.CallToolResult{
-					IsError: true,
-					Content: []mcp.Content{&mcp.TextContent{Text: errStr}},
-				}, nil, nil
-			}
+		if err := s.authorizer.AuthorizeChange(ctx, role, input.ServiceName, input.ChangeTicket); err != nil {
+			s.RecordAudit(role, "restart_service", args, "DENY", err.Error())
+			return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}}}, nil, nil
+		}
+		if err := s.actuator.RestartService(ctx, input.ServiceName); err != nil {
+			errStr := fmt.Sprintf("actuator restart failed: %v", err)
+			s.RecordAudit(role, "restart_service", args, "DENY", errStr)
+			return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: errStr}}}, nil, nil
 		}
 
 		resText := fmt.Sprintf("Service %s successfully restarted under ticket %s", input.ServiceName, input.ChangeTicket)

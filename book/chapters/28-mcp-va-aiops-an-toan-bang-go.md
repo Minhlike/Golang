@@ -8,7 +8,7 @@ Tuy nhiên, việc kết nối trực tiếp tác tử AI với hạ tầng sả
 
 > *Nếu trao cho Agent quyền truy cập vào một công cụ, làm sao bạn bảo đảm tác tử không bị tấn công tiêm lời nhắc (Prompt Injection) để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ hạ tầng?*
 
-Giải pháp của ngành công nghiệp là chuẩn hóa ranh giới giao tiếp thông qua **Model Context Protocol (MCP)** kết hợp với kiến trúc phòng thủ đa tầng trong Go. Chương này hướng dẫn bạn cách xây dựng máy chủ công cụ MCP an toàn dựa trên thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (v1.8.0), thiết lập cơ chế phân quyền đặc quyền tối thiểu (Least Privilege), rào chắn chống tấn công giả mạo yêu cầu từ máy chủ (SSRF) và lưu vết kiểm toán có cấu trúc.
+MCP chuẩn hóa ranh giới giao tiếp, nhưng không tự cấp quyền hay làm tool an toàn. Chương này dùng thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (v1.8.0) để dựng một server sư phạm có đặc quyền tối thiểu, target registry và audit trail. Policy authorization, trust của target registry và actuator thật vẫn là trách nhiệm của deployment.
 
 ---
 
@@ -51,7 +51,7 @@ Giao thức **Model Context Protocol (MCP)** do Anthropic khởi xướng đã n
 
 Về bản chất kỹ thuật, MCP vận hành trên nền giao thức **JSON-RPC 2.0**. Máy chủ Go công bố danh sách các công cụ khả dụng kèm mô tả chức năng và JSON Schema qua phương thức `tools/list`. Khi tác tử quyết định sử dụng một công cụ, nó phát thông điệp `tools/call` chứa tên công cụ và các tham số tương ứng. 
 
-Dự án thực hành tại `labs/part28-mcp-ops-tools/` tích hợp trực tiếp thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (phiên bản v1.8.0, tương thích đặc tả giao thức MCP 2026-07-28). Kiến trúc của SDK cho phép lập trình viên định nghĩa các công cụ thông qua các hàm Go có kiểu dữ liệu tường minh (`typed handlers`), tự động sinh JSON Schema từ struct tags, và can thiệp vào luồng xử lý thông qua hệ thống middleware nhận tin (`ReceivingMiddleware`).
+Dự án thực hành tại `labs/part28-mcp-ops-tools/` ghim SDK v1.8.0. Theo compatibility matrix của chính SDK, bản này hỗ trợ và thương lượng revision mới nhất `2026-07-28` với peer hỗ trợ nó, đồng thời còn tương thích các revision cũ. Vì protocol revision được thương lượng theo kết nối, server không được tự suy ra wire behavior chỉ từ version của dependency. SDK vẫn cho phép typed handler, JSON Schema từ struct tags và `ReceivingMiddleware` cho các policy cục bộ.
 
 ### Giao vận Stdio và Kết nối Cục bộ
 
@@ -72,7 +72,7 @@ Một sai lầm rất phổ biến của các kỹ sư khi mới thiết kế MC
 
 Đây là một khiếm khuyết an ninh nghiêm trọng. Các bộ xác thực JSON Schema chỉ kiểm tra định dạng hình thức của chuỗi ký tự mà không hiểu ngữ nghĩa của địa chỉ đích. Khi tác tử bị tấn công tiêm lời nhắc hoặc gặp hiện tượng ảo giác, nó có thể gửi yêu cầu nhắm tới địa chỉ siêu dữ liệu nhạy cảm của điện toán đám mây (`http://169.254.169.254/latest/meta-data/...`), cổng quản trị nội bộ trên `localhost:9090`, hoặc các máy chủ cơ sở dữ liệu chưa mã hóa trong mạng riêng (VPC).
 
-Để loại trừ triệt để nguy cơ SSRF, kiến trúc chuẩn mực áp dụng nguyên tắc danh sách trắng: tác tử tuyệt đối không được phép chỉ định URL trực tiếp, mà chỉ được truyền mã định danh dịch vụ (`target_id`) đã được phê duyệt trước (chẳng hạn `checkout-health`, `payment-health`). Máy chủ Go nắm giữ danh bạ cho phép (`Target Allowlist Registry`) để ánh xạ `target_id` sang URL nội bộ thực tế; bất kỳ mã nào nằm ngoài danh bạ đều bị từ chối ngay lập tức tại ranh giới chính sách.
+Để giảm bề mặt SSRF do **caller** chọn, agent không được truyền URL trực tiếp mà chỉ truyền `target_id` đã được duyệt trước. Server ánh xạ ID sang URL từ target registry và từ chối ID lạ. Đây không tự chứng minh URL trong registry là an toàn: registry bị ghi sai hoặc bị xâm phạm vẫn là một trust boundary riêng, cần review cấu hình, DNS/egress policy và quyền sửa registry.
 
 ---
 
@@ -162,7 +162,7 @@ type ChangeAuthorizer interface {
 
 Dưới đây là cấu trúc `OpsServer` hoàn chỉnh trích xuất từ `labs/part28-mcp-ops-tools/server.go`, liên kết toàn bộ chuỗi phòng thủ đa tầng trên nền thư viện chính thức `github.com/modelcontextprotocol/go-sdk/mcp`:
 
-### 6.1. Khởi tạo MCP Server và Tiêm Middleware Phân quyền Phiên
+### 6.1. Khởi tạo server và ranh giới danh tính
 
 Trong kiến trúc của MCP Go SDK, `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp RPC gửi đến trước khi điều phối tới handler cụ thể. Ta sử dụng middleware này để bóc tách định danh caller từ phiên làm việc (`Session Context`) và tiêm vai trò bảo mật vào `context.Context`:
 
@@ -211,7 +211,8 @@ func NewOpsServer(
 		sessionRole: make(map[string]Role),
 	}
 
-	// Middleware gắn danh tính caller vào request context
+	// Test mapping only; not production authentication.
+	// Real transport authenticates before dispatch.
 	server.AddReceivingMiddleware(
 		func(next mcp.MethodHandler) mcp.MethodHandler {
 			return func(
@@ -327,9 +328,9 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 })
 ~~~
 
-### 6.3. Đăng ký Công cụ Gây Đột biến và Ủy quyền Phiếu Thay đổi
+### 6.3. Công cụ gây đột biến: dependency bắt buộc, không có đường mặc định cho phép
 
-Với công cụ `restart_service`, yêu cầu bắt buộc phải qua `AuthorizeChange` trước khi kích hoạt `RestartService`:
+Với công cụ `restart_service`, `ChangeAuthorizer` **và** `ServiceActuator` là dependency bắt buộc. Thiếu một trong hai phải trả `DENY`; không được coi `nil` là “không cần kiểm tra” rồi báo restart thành công. Khi cả hai có mặt, yêu cầu phải qua `AuthorizeChange` trước khi kích hoạt `RestartService`:
 
 ~~~go
 mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -346,10 +347,12 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 		"change_ticket": input.ChangeTicket,
 	}
 
-	if s.authorizer != nil {
-		if err := s.authorizer.AuthorizeChange(
-			ctx, role, input.ServiceName, input.ChangeTicket,
-		); err != nil {
+	if s.authorizer == nil || s.actuator == nil {
+		return deny("required authorization or actuator missing")
+	}
+	if err := s.authorizer.AuthorizeChange(
+		ctx, role, input.ServiceName, input.ChangeTicket,
+	); err != nil {
 			s.RecordAudit(
 				role, "restart_service", args,
 				"DENY", err.Error(),
@@ -360,13 +363,11 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 					&mcp.TextContent{Text: err.Error()},
 				},
 			}, nil, nil
-		}
 	}
 
-	if s.actuator != nil {
-		if err := s.actuator.RestartService(
-			ctx, input.ServiceName,
-		); err != nil {
+	if err := s.actuator.RestartService(
+		ctx, input.ServiceName,
+	); err != nil {
 			errStr := fmt.Sprintf("restart failed: %v", err)
 			s.RecordAudit(
 				role, "restart_service", args, "DENY", errStr,
@@ -377,7 +378,6 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 					&mcp.TextContent{Text: errStr},
 				},
 			}, nil, nil
-		}
 	}
 
 	resText := fmt.Sprintf(
@@ -488,39 +488,24 @@ Các kịch bản phòng thủ chứng minh tính kiên cố của hệ thống:
 
 ## 10. Hướng dẫn giải và Phân tích kiến trúc bài tập
 
-### Lời giải Thử thách 1: Bộ điều tốc phiên làm việc của Agent
+### Lời giải Thử thách 1: Bộ điều tốc theo caller đã xác thực
 
 ~~~go
-type AgentRateLimiter struct {
-	mu       sync.Mutex
-	lastCall time.Time
-	interval time.Duration
+type ToolRateLimiter interface {
+	Allow(key string, now time.Time) bool
 }
 
-func NewAgentRateLimiter(rps int) *AgentRateLimiter {
-	return &AgentRateLimiter{
-		interval: time.Second / time.Duration(rps),
-	}
-}
-
-func (l *AgentRateLimiter) Allow() bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	now := time.Now()
-	if now.Sub(l.lastCall) < l.interval {
-		return false // Vượt ngưỡng tốc độ cho phép
-	}
-	l.lastCall = now
-	return true
-}
+// Implementation giữ state theo authenticated session/caller key,
+// không dùng một lastCall toàn cục khiến agent A làm chậm agent B.
+// Replicas need distributed limiting for a shared quota.
 ~~~
 
 ### Lời giải Thử thách 2: Rào chắn Phê duyệt Hai bước
 
 ~~~go
 type PendingApproval struct {
-	Action    string
+	Action string
+	Target string
 	ExpiresAt time.Time
 }
 
@@ -535,35 +520,36 @@ func (m *ApprovalManager) RequestApproval(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	token := fmt.Sprintf("APPV-%d", time.Now().UnixNano())
+	// Use crypto/rand, not a predictable timestamp, for the token.
+	token := randomTokenFromCryptoRand()
 	m.pendings[token] = PendingApproval{
-		Action:    action,
+		Action: action,
+		Target: target,
 		ExpiresAt: time.Now().Add(5 * time.Minute),
 	}
 	return token
 }
 
-func (m *ApprovalManager) Confirm(token string) bool {
+func (m *ApprovalManager) Confirm(
+	token, action, target string,
+) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	item, exists := m.pendings[token]
-	if !exists || time.Now().After(item.ExpiresAt) {
-		delete(m.pendings, token)
-		return false
-	}
 	delete(m.pendings, token)
-	return true
+	return exists && time.Now().Before(item.ExpiresAt) &&
+		item.Action == action && item.Target == target
 }
 ~~~
 
+Xóa record trước khi return khiến cả một confirmation sai cũng không thể trở thành lượt thử đoán/replay tiếp theo. Mã trong lab còn kiểm chứng token chỉ dùng một lần. Đây vẫn là state process-local; production cần store transactionally bền vững và danh tính con người được xác thực tách khỏi agent.
+
 ---
 
-## 11. Nhìn lại Toàn bộ Hành trình: Từ Dòng Code Đầu Tiên đến Vận Hành Tác Tử Thông Minh
+## 11. Điểm dừng: một tool an toàn là một boundary có bằng chứng
 
-Với việc hoàn thành **Chương 28**, bạn đã chính thức khép lại một hành trình học tập và rèn luyện kỹ thuật đồ sộ bậc nhất trong thế giới lập trình Go và Kỹ thuật Hệ thống Hiện đại.
-
-Hãy cùng nhìn lại những nấc thang bạn đã vượt qua:
+Chương 28 khép lộ trình hiện tại bằng cùng một kỷ luật đã xuất hiện từ đầu sách: API có input không tin cậy, action có owner, và bằng chứng không được nói quá phạm vi của nó. Bảng sau chỉ là bản đồ để quay lại khi cần, không phải lời chứng nhận rằng một agent đã sẵn sàng thay con người vận hành production.
 
 | Chặng đường | Phạm vi kiến thức và kỹ năng | Thành tựu kỹ thuật cốt lõi |
 | :--- | :--- | :--- |
@@ -573,4 +559,4 @@ Hãy cùng nhìn lại những nấc thang bạn đã vượt qua:
 | **Phần VIII: Quan sát & Điều phối** | Observability (Prometheus, OTel), Docker multi-stage, Kubernetes, reconciliation loops. | Đóng gói tối ưu, vận hành dự án thực chiến `opsprobe`, điều hòa trạng thái mức. |
 | **Phần IX: Hạ tầng, Chuỗi cung ứng & AI** | `client-go` controller, K8s operator, AWS SDK v2, Git automation, SLSA gate, eBPF, MCP. | Tự động hóa hạ tầng đám mây, bảo vệ chuỗi cung ứng, quan sát kernel và AI an toàn. |
 
-Bạn không còn là một lập trình viên chỉ biết gọi thư viện bên ngoài theo các hướng dẫn rời rạc trên mạng. Bạn đã làm chủ **tư duy kiến trúc hệ thống từ nguyên lý đầu tiên (First-Principles Thinking)**, sở hữu phản xạ chẩn đoán sự cố nhạy bén, và hoàn toàn tự tin thiết kế, xây dựng và vận hành những hệ thống phần mềm hiệu năng cao, kiên cố và bảo mật trong kỷ nguyên Cloud Native và Trí tuệ Nhân tạo.
+Khi đưa những ý tưởng này vào production, hãy quay lại threat model, trust boundary, workload và incident policy của hệ thống cụ thể. Các lab chứng minh contract hẹp của chúng; chúng không thay thế xác thực danh tính thật, egress policy, durable audit hay review vận hành.

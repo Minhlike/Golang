@@ -244,6 +244,32 @@ func TestReconcileFinalizerExecution(t *testing.T) {
 	}
 }
 
+func TestReconcileDoesNotRemoveFinalizerWithoutCleaner(t *testing.T) {
+	scheme := setupTestScheme(t)
+	now := metav1.NewTime(time.Now())
+	app := &appsv1alpha1.AppService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "must-clean",
+			Namespace:         "default",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{AppServiceFinalizer},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	reconciler := &AppServiceReconciler{Client: fakeClient, Scheme: scheme}
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "default", Name: "must-clean"}}
+	if _, err := reconciler.Reconcile(context.Background(), req); err == nil {
+		t.Fatal("expected finalizer removal to fail closed without an external cleaner")
+	}
+	updated := &appsv1alpha1.AppService{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("get AppService: %v", err)
+	}
+	if !controllerutil.ContainsFinalizer(updated, AppServiceFinalizer) {
+		t.Fatal("finalizer must remain until cleanup is configured and succeeds")
+	}
+}
+
 // TestReconcileStatusSubresource verifies status calculation without mutating spec.
 func TestReconcileStatusSubresource(t *testing.T) {
 	scheme := setupTestScheme(t)

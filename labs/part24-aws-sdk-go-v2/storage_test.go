@@ -66,6 +66,7 @@ func TestCustomSmithyMiddlewareAuditHeader(t *testing.T) {
 
 	cfg := aws.Config{
 		Region: "us-east-1",
+		// Test-only dummy credentials let the SDK sign requests to httptest.
 		Credentials: credentials.NewStaticCredentialsProvider(
 			"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "",
 		),
@@ -111,6 +112,7 @@ func TestS3OperationsPutAndGet(t *testing.T) {
 
 	cfg := aws.Config{
 		Region: "us-east-1",
+		// Test-only dummy credentials; never a production credential pattern.
 		Credentials: credentials.NewStaticCredentialsProvider(
 			"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "",
 		),
@@ -174,6 +176,7 @@ func TestPaginatorListAllKeys(t *testing.T) {
 
 	cfg := aws.Config{
 		Region: "us-east-1",
+		// Test-only dummy credentials; the endpoint is the local httptest server.
 		Credentials: credentials.NewStaticCredentialsProvider(
 			"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "",
 		),

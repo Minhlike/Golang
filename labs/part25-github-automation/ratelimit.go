@@ -1,17 +1,41 @@
 package automation
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 )
 
+// JitterSource supplies one value in [0, 1). Keeping it explicit makes a
+// retry contract reproducible in tests instead of relying on process-global
+// randomness.
+type JitterSource func() float64
+
+// CalculateBackoffWithJitter returns base plus 10%--25% positive jitter.
+// Callers own the random source and may replace it with a deterministic value
+// in tests.
+func CalculateBackoffWithJitter(base time.Duration, next JitterSource) (time.Duration, error) {
+	if base < 0 {
+		return 0, fmt.Errorf("base backoff must not be negative")
+	}
+	if next == nil {
+		return 0, fmt.Errorf("jitter source is required")
+	}
+	value := next()
+	if value < 0 || value >= 1 {
+		return 0, fmt.Errorf("jitter value must be in [0, 1)")
+	}
+	factor := 0.10 + value*0.15
+	return base + time.Duration(float64(base)*factor), nil
+}
+
 // RateLimitStatus summarizes the GitHub API quota and required backoff.
 type RateLimitStatus struct {
-	Limit      int
-	Remaining  int
-	ResetAt    time.Time
-	RetryAfter time.Duration
+	Limit       int
+	Remaining   int
+	ResetAt     time.Time
+	RetryAfter  time.Duration
 	IsExhausted bool
 }
 

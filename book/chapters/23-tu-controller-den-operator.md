@@ -244,13 +244,15 @@ func (r *AppServiceReconciler) handleDeletion(
 		app, AppServiceFinalizer,
 	)
 	if hasFin {
-		if r.ExternalCleaner != nil {
-			err := r.ExternalCleaner.Cleanup(ctx, app)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf(
-					"cleanup lỗi: %w", err,
-				)
-			}
+		if r.ExternalCleaner == nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"external cleaner is required",
+			)
+		}
+		if err := r.ExternalCleaner.Cleanup(ctx, app); err != nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"cleanup lỗi: %w", err,
+			)
 		}
 		// Dọn dẹp xong -> Gỡ finalizer để etcd dọn dẹp
 		controllerutil.RemoveFinalizer(
@@ -293,7 +295,7 @@ func (r *AppServiceReconciler) syncDeploymentDrift(
 
 ## 7. Bằng chứng kiểm thử: Chứng minh 5 quy luật Operator
 
-Bộ kiểm thử tại `labs/part23-controller-runtime-operator/controllers/appservice_controller_test.go` sử dụng `fake.NewClientBuilder()` để mô phỏng toàn diện cụm Kubernetes API Server:
+Bộ kiểm thử tại `labs/part23-controller-runtime-operator/controllers/appservice_controller_test.go` dùng `fake.NewClientBuilder()` cho contract logic của reconciler. Đây không mô phỏng toàn diện API server: validation, generation/resourceVersion và nhiều semantics của subresource không giống cluster thật. Khi cần xác minh interaction với API server, dùng `envtest` hoặc cluster integration test riêng. Vì vậy lab vẫn ghi `ObservedGeneration` vào status để consumer biết status đã phản ánh spec nào, nhưng không dùng fake client để tuyên bố đã kiểm chứng đầy đủ lifecycle của generation.
 
 ~~~
 === RUN   TestReconcileCreateOwnedDeployment
@@ -316,8 +318,8 @@ Khi tạo mới một `AppService`, Reconciler tự động sinh một `Deployme
 ### 2. Tự phục hồi sai lệch cấu hình (TestReconcileDriftCorrection)
 Giả lập một hành vi can thiệp trái phép: sửa thủ công Deployment thành `replicas: 1` và đổi ảnh thành `malicious:v0`. Khi hàm `Reconcile` chạy, nó phát hiện sai lệch và khôi phục ngay lập tức về `replicas: 5` và `image: "nginx:1.26"`.
 
-### 3. Vòng đời Finalizer và Xóa sạch dữ liệu (TestReconcileFinalizerExecution)
-Gán `DeletionTimestamp` vào đối tượng. Reconciler kích hoạt hàm `ExternalCleaner.Cleanup()`, sau đó xóa Finalizer. Fake client mô phỏng chính xác hành vi của Kubernetes: ngay khi finalizer cuối cùng biến mất, đối tượng bị thu hồi hoàn toàn khỏi bộ nhớ etcd (`errors.IsNotFound` trả về true).
+### 3. Vòng đời Finalizer (TestReconcileFinalizerExecution)
+Gán `DeletionTimestamp` vào đối tượng. Reconciler gọi `ExternalCleaner.Cleanup()` rồi mới gỡ Finalizer; thiếu cleaner là lỗi và finalizer phải giữ lại. Test chỉ chứng minh contract của lab; việc object thực sự biến mất là trách nhiệm API server/garbage collection và không được suy ra từ fake client.
 
 ### 4. Cập nhật Status Subresource độc lập (TestReconcileStatusSubresource)
 Kiểm chứng rằng khi Deployment con đạt trạng thái sẵn sàng (`AvailableReplicas: 3`), Reconciler cập nhật `appService.Status.AvailableReplicas = 3` và gán nhãn `Phase = "Ready"` thông qua cổng `r.Status().Update()` mà không làm biến đổi bất kỳ trường nào trong `Spec`.

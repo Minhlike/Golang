@@ -44,7 +44,7 @@ type Vulnerability struct {
 	ID        string `json:"id"`
 	Package   string `json:"package"`
 	Symbol    string `json:"symbol"`
-	Severity  string `json:"severity"` // "CRITICAL", "HIGH", "MEDIUM", "LOW" (from OSV)
+	Severity  string `json:"severity"`  // "CRITICAL", "HIGH", "MEDIUM", "LOW" (from OSV)
 	Reachable bool   `json:"reachable"` // Synthesized from govulncheck call-graph trace
 }
 
@@ -54,7 +54,8 @@ type Attestation struct {
 	SubjectDigest string `json:"subjectDigest"`
 }
 
-// SignatureVerification represents cryptographic signature proof.
+// SignatureVerification is a pedagogical ECDSA proof, not a Cosign bundle,
+// certificate-chain, transparency-log, or identity verifier.
 type SignatureVerification struct {
 	PublicKey *ecdsa.PublicKey
 	RBytes    []byte
@@ -198,12 +199,14 @@ func (e *PolicyEngine) Evaluate(
 	if err := e.VerifySignature(artifactDigest, sig); err != nil {
 		res.Decision = DecisionDeny
 		res.Violations = append(res.Violations, err.Error())
+		return res
 	}
 
 	// 3. Provenance and Builder identity gate
 	if err := e.VerifyProvenance(artifactDigest, att); err != nil {
 		res.Decision = DecisionDeny
 		res.Violations = append(res.Violations, err.Error())
+		return res
 	}
 
 	// 4. Vulnerability gate with govulncheck reachability semantics

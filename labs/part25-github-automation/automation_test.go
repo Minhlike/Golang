@@ -77,6 +77,24 @@ func TestWebhookDeliveryIdempotency(t *testing.T) {
 	}
 }
 
+func TestDeliveryLedgerAllowsRetryAfterFailedHandling(t *testing.T) {
+	ledger := NewDeliveryLedger()
+	if _, accepted := ledger.Begin("delivery-1"); !accepted {
+		t.Fatal("first delivery should reserve processing state")
+	}
+	if state, accepted := ledger.Begin("delivery-1"); accepted || state != DeliveryProcessing {
+		t.Fatalf("concurrent redelivery = (%q, %v), want processing duplicate", state, accepted)
+	}
+	ledger.Fail("delivery-1")
+	if _, accepted := ledger.Begin("delivery-1"); !accepted {
+		t.Fatal("failed delivery must be eligible for a later retry")
+	}
+	ledger.Complete("delivery-1")
+	if state, accepted := ledger.Begin("delivery-1"); accepted || state != DeliveryCompleted {
+		t.Fatalf("completed delivery = (%q, %v), want completed duplicate", state, accepted)
+	}
+}
+
 func TestRateLimitParsingPrimaryAndSecondary(t *testing.T) {
 	now := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
 
@@ -86,7 +104,7 @@ func TestRateLimitParsingPrimaryAndSecondary(t *testing.T) {
 	h1.Set("X-RateLimit-Remaining", "0")
 	resetEpoch := now.Add(15 * time.Minute).Unix()
 	h1.Set("X-RateLimit-Reset", string(rune(resetEpoch))) // format as string number
-	h1.Set("X-RateLimit-Reset", "1790295300")              // epoch timestamp
+	h1.Set("X-RateLimit-Reset", "1790295300")             // epoch timestamp
 
 	status1 := ParseRateLimit(h1, now)
 	if !status1.IsExhausted {
@@ -105,6 +123,19 @@ func TestRateLimitParsingPrimaryAndSecondary(t *testing.T) {
 	}
 	if status2.RetryAfter != 120*time.Second {
 		t.Errorf("expected 120s retry-after, got %v", status2.RetryAfter)
+	}
+}
+
+func TestCalculateBackoffWithInjectedJitter(t *testing.T) {
+	backoff, err := CalculateBackoffWithJitter(100*time.Second, func() float64 { return 0.5 })
+	if err != nil {
+		t.Fatalf("CalculateBackoffWithJitter: %v", err)
+	}
+	if want := 117500 * time.Millisecond; backoff != want {
+		t.Fatalf("backoff = %v, want %v", backoff, want)
+	}
+	if _, err := CalculateBackoffWithJitter(time.Second, nil); err == nil {
+		t.Fatal("nil jitter source should fail")
 	}
 }
 

@@ -44,12 +44,13 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// 1. Finalizer handling: Resource lifecycle deletion gate
 	if !appService.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(appService, AppServiceFinalizer) {
+			if r.ExternalCleaner == nil {
+				return ctrl.Result{}, fmt.Errorf("external cleaner is required before removing finalizer")
+			}
 			// Perform idempotent external cleanup
-			if r.ExternalCleaner != nil {
-				if err := r.ExternalCleaner.Cleanup(ctx, appService); err != nil {
-					// Return error to trigger rate-limited retry
-					return ctrl.Result{}, fmt.Errorf("external cleanup failed: %w", err)
-				}
+			if err := r.ExternalCleaner.Cleanup(ctx, appService); err != nil {
+				// Return error to trigger rate-limited retry
+				return ctrl.Result{}, fmt.Errorf("external cleanup failed: %w", err)
 			}
 			// Cleanup succeeded; remove finalizer to allow Kubernetes to delete object from etcd
 			controllerutil.RemoveFinalizer(appService, AppServiceFinalizer)
@@ -116,9 +117,11 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if appService.Status.AvailableReplicas != deployment.Status.AvailableReplicas ||
-		appService.Status.Phase != newPhase {
+		appService.Status.Phase != newPhase ||
+		appService.Status.ObservedGeneration != appService.Generation {
 		appService.Status.AvailableReplicas = deployment.Status.AvailableReplicas
 		appService.Status.Phase = newPhase
+		appService.Status.ObservedGeneration = appService.Generation
 		// Rule: ALWAYS update status via StatusWriter, never mutate spec!
 		if err := r.Status().Update(ctx, appService); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update AppService status: %w", err)
