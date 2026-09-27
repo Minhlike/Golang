@@ -52,7 +52,7 @@ Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trư
 | :--- | :--- | :--- |
 | **Kiểm tra đường thực thi hữu hạn** | Phân tích CFG, state và các loop mà kernel/version cho phép chứng minh an toàn. | Hạn chế đường chạy không an toàn; không biến mọi program được nạp thành không có overhead. |
 | **Kiểm soát truy cập bộ nhớ** | Bắt buộc kiểm tra biên; truy cập userspace qua `bpf_probe_read_user_str()`. | Chống rò rỉ hoặc ghi đè trái phép lên không gian nhớ kernel. |
-| **Hạn mức ngăn xếp 512 byte** | Giới hạn tổng kích thước stack frame của chương trình eBPF $\le$ 512 bytes. | Ngăn chặn tràn ngăn xếp nhân hệ điều hành. |
+| **Hạn mức ngăn xếp 512 byte** | Giới hạn tổng kích thước stack frame của chương trình eBPF ≤ 512 byte. | Ngăn chặn tràn ngăn xếp nhân hệ điều hành. |
 | **Bảo toàn thanh ghi và FP** | Khóa thanh ghi `R10` làm read-only frame pointer, theo dõi kiểu R0–R9. | Đảm bảo tính toàn vẹn ngữ cảnh thanh ghi vi xử lý. |
 
 ---

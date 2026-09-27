@@ -140,6 +140,36 @@ func TestMCPQueryHealthRealHTTP(t *testing.T) {
 	}
 }
 
+func TestMCPQueryHealthReportsServerErrorAsUnhealthy(t *testing.T) {
+	ctx := context.Background()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+	actuator := &mockActuator{}
+	authorizer := &DefaultChangeAuthorizer{ApprovedTickets: map[string]string{}}
+	ops := NewOpsServer(
+		ts.Client(), actuator, authorizer, NewKeyedIntervalLimiter(1000),
+		[]HealthTarget{{ID: "broken-health", ServiceName: "broken-service", URL: ts.URL}},
+	)
+	session, cleanup := connectClientAndServer(t, ctx, ops, RoleObserver)
+	defer cleanup()
+	callRes, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "query_service_health",
+		Arguments: map[string]any{"target_id": "broken-health"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if callRes.IsError {
+		t.Fatalf("the query completed; service state should be reported, not hidden: %+v", callRes)
+	}
+	txt, ok := callRes.Content[0].(*mcp.TextContent)
+	if !ok || !strings.Contains(txt.Text, "unhealthy: HTTP 500") {
+		t.Fatalf("unexpected health result: %v", callRes.Content[0])
+	}
+}
+
 func TestMCPSSRFDeniedForUnapprovedTarget(t *testing.T) {
 	ctx := context.Background()
 	ops, ts, _ := setupTestMCPServer(t)

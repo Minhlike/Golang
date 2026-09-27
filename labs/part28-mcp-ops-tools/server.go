@@ -302,7 +302,11 @@ func (s *OpsServer) registerTools() {
 		defer resp.Body.Close()
 
 		duration := time.Since(start).Round(time.Millisecond)
-		resText := fmt.Sprintf("Service %s (%s) healthy: HTTP %d in %v", target.ServiceName, target.ID, resp.StatusCode, duration)
+		health := "unhealthy"
+		if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
+			health = "healthy"
+		}
+		resText := fmt.Sprintf("Service %s (%s) %s: HTTP %d in %v", target.ServiceName, target.ID, health, resp.StatusCode, duration)
 		s.RecordAudit(role, "query_service_health", map[string]any{"target_id": input.TargetID}, "ALLOW", resText)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: resText}},

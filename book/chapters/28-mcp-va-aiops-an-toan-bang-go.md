@@ -311,9 +311,14 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 	defer resp.Body.Close()
 
 	duration := time.Since(start).Round(time.Millisecond)
+	health := "unhealthy"
+	if resp.StatusCode >= http.StatusOK &&
+		resp.StatusCode < http.StatusMultipleChoices {
+		health = "healthy"
+	}
 	resText := fmt.Sprintf(
-		"Service %s (%s) healthy: HTTP %d",
-		target.ServiceName, target.ID, resp.StatusCode,
+		"Service %s (%s) %s: HTTP %d",
+		target.ServiceName, target.ID, health, resp.StatusCode,
 	)
 	s.RecordAudit(
 		role, "query_service_health",
@@ -542,6 +547,8 @@ func (m *ApprovalManager) Confirm(
 		item.Action == action && item.Target == target
 }
 ~~~
+
+Một HTTP request hoàn thành không đồng nghĩa service khỏe. Lab dùng quy ước hẹp: chỉ `2xx` là `healthy`; `4xx`/`5xx` được trả về như trạng thái `unhealthy`, còn lỗi transport mới là lỗi gọi tool. Hệ thống thật cần contract health riêng (ví dụ readiness, body schema và timeout) thay vì suy ra sức khỏe chỉ từ mã HTTP.
 
 Xóa record trước khi return khiến cả một confirmation sai cũng không thể trở thành lượt thử đoán/replay tiếp theo. Mã trong lab còn kiểm chứng token chỉ dùng một lần. Đây vẫn là state process-local; production cần store transactionally bền vững và danh tính con người được xác thực tách khỏi agent.
 

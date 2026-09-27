@@ -111,7 +111,7 @@ Toàn bộ quy trình phức tạp này được tổ chức thành một pipeli
 4. **Finalize:** Áp dụng token bucket client-side rate limiting, kiểm tra hạn ngạch retry, và ủy thác request cho HTTP transport (`net/http.RoundTripper`) bắn qua mạng.
 5. **Deserialize:** Đọc mã phản hồi HTTP, giải mã XML/JSON body thành struct kết quả, hoặc ánh xạ mã lỗi AWS (như `NoSuchKey`, `AccessDenied`) thành các struct lỗi cụ thể trong Go.
 
-Điểm sáng kỹ thuật nằm ở chiến lược chống thảm họa phân tán tại `aws/retry/standard.go` (`type Standard`). Khi một vùng của AWS gặp sự cố gián đoạn mạng, hàng nghìn container của bạn sẽ đồng loạt thử lại (retry). Nếu dùng thuật toán cấp số nhân đơn thuần ($2^t$), tất cả các client sẽ thức dậy và gửi request tại cùng một tích tắc, tạo ra cơn bão lưu lượng (thundering herd) đánh sập hoàn toàn khả năng hồi phục của hạ tầng. AWS SDK v2 triển khai thuật toán **Full Jitter**: khoảng thời gian ngủ giữa các lần thử lại là một giá trị ngẫu nhiên đồng đều trong đoạn $[0, 	ext{backoff}]$.
+Điểm sáng kỹ thuật nằm ở chiến lược chống thảm họa phân tán tại `aws/retry/standard.go` (`type Standard`). Khi một vùng của AWS gặp sự cố gián đoạn mạng, hàng nghìn container của bạn sẽ đồng loạt thử lại (retry). Nếu dùng thuật toán cấp số nhân đơn thuần (`2^t`), tất cả các client sẽ thức dậy và gửi request tại cùng một tích tắc, tạo ra cơn bão lưu lượng (thundering herd) đánh sập hoàn toàn khả năng hồi phục của hạ tầng. AWS SDK v2 triển khai thuật toán **Full Jitter**: khoảng thời gian ngủ giữa các lần thử lại là một giá trị ngẫu nhiên đồng đều trong đoạn `[0, backoff]`.
 
 Hơn thế nữa, SDK quản lý một **Retry Quota** nội bộ. Nó khởi tạo một "kho điểm" (token bucket) cố định (mặc định 500 điểm). Mỗi lần request thành công, kho được hồi phục 1 điểm; nhưng mỗi lần thử lại do lỗi mạng, SDK tiêu tốn 5 điểm. Nếu mạng downstream chập chờn liên tục, kho điểm sẽ cạn kiệt và SDK lập tức **fail-fast**, trả lỗi ngay về cho ứng dụng thay vì tiếp tục gửi thêm request retry. Đây là bài học sống còn về việc bảo vệ hệ thống đối tác khi viết SDK hạ tầng.
 
@@ -435,7 +435,7 @@ Tại sao dữ liệu tuần tự hóa bằng Protobuf lại có dung lượng n
 
 Để trả lời, hãy nhìn vào cách các byte được sắp đặt trên dây cáp mạng trong `proto/wire.go`. Protobuf loại bỏ hoàn toàn các chuỗi khóa lặp đi lặp lại như `"user_id":` hay `"is_active":`. Thay vào đó, mỗi trường dữ liệu được biểu diễn bằng một cặp thẻ nhị phân (Tag):
 
-$$	ext{Tag} = (	ext{Field Number} \ll 3) \mid 	ext{Wire Type}$$
+`Tag = (Field Number << 3) | Wire Type`
 
 Ba bit cuối cùng xác định kiểu dây (`WireType`: Varint, 64-bit, Length-delimited, hoặc 32-bit), còn các bit phía trên chứa số thứ tự trường của struct.
 
@@ -778,9 +778,9 @@ import _ "go.uber.org/automaxprocs"
 
 Khi được nạp, thư viện tự động đọc cấu hình cgroups của container tại `/sys/fs/cgroup/cpu/cpu.cfs_quota_us` và `cpu.cfs_period_us` (trên cgroups v1) hoặc `cpu.max` (trên cgroups v2). Nó tính toán hạn ngạch CPU thực tế:
 
-$$	ext{Quota} = rac{	ext{cfs\_quota\_us}}{	ext{cfs\_period\_us}}$$
+`Quota = cfs_quota_us / cfs_period_us`
 
-Nếu kết quả tính ra là $1.0$, thư viện lập tức gọi `runtime.GOMAXPROCS(1)`. Số luồng thực thi của Go được đưa về khớp chính xác với hạn ngạch thực tế của container, loại bỏ hoàn toàn hiện tượng thread contention và xóa sạch 100% tình trạng CPU Throttling vô lý trên Kubernetes.
+Nếu kết quả tính ra là `1.0`, thư viện lập tức gọi `runtime.GOMAXPROCS(1)`. Số luồng thực thi của Go được đưa về khớp chính xác với hạn ngạch thực tế của container, loại bỏ hoàn toàn hiện tượng thread contention và xóa sạch 100% tình trạng CPU Throttling vô lý trên Kubernetes.
 
 ---
 
@@ -851,8 +851,8 @@ Bên trong struct `Limiter` hoàn toàn không có goroutine hay timer nào cả
 
 Khi một request gọi vào hàm `AllowN(now, n)`:
 1. Nó lấy thời điểm hiện tại `now`.
-2. Nó tính khoảng thời gian trôi qua kể từ lần gọi cuối: $\Delta t = 	ext{now} - 	ext{last}$.
-3. Nó tính số token mới được sinh ra bằng một phép nhân số học đơn giản: $	ext{newTokens} = \Delta t 	imes 	ext{limit}$.
+2. Nó tính khoảng thời gian trôi qua kể từ lần gọi cuối: `Δt = now − last`.
+3. Nó tính số token mới được sinh ra bằng một phép nhân số học đơn giản: `newTokens = Δt × limit`.
 4. Nó cộng `newTokens` vào `tokens` (không vượt quá dung lượng tối đa của xô `burst`), trừ đi `n` token yêu cầu, cập nhật lại `last = now`, và trả về `true` nếu số token còn lại không âm.
 
 Bằng cách chuyển đổi một tiến trình thời gian thực thành một bài toán toán học tính toán theo nhu cầu (on-demand delta calculation), `Limiter` chỉ tiêu tốn vài byte RAM, thực thi trong vài nano-giây dưới sự bảo vệ của một `sync.Mutex` nhẹ, phục vụ hàng triệu rate limiters đồng thời mà không hề làm phiền tới Go scheduler.

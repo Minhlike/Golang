@@ -1,34 +1,42 @@
-# Báo Cáo Final Publication QA — Toàn Bộ 421 Trang
+# Final Publication QA — Golang Master
 
-- **Thời gian kiểm định:** 2026-09-25
-- **Tập tin xuất bản:** `Golang_Master.pdf`
-- **SHA-256:** `0dfa60cb3348b3fa4748836148cd3af6d3ac9ce363ebbb8075f81a23b00eef2d`
-- **Starting HEAD:** `fe0b9680b1a5abd7dda167fea8ff02c00631ec62`
-- **Tổng số trang:** 421 trang
-- **Số trang đã review:** 421/421 (100% toàn bộ ấn phẩm)
+- **Ngày chốt:** 2026-09-27
+- **Starting HEAD / origin/main:** `2345a91a3c0e0000796a0ba80e96f4c9fade4974`
+- **PDF được kiểm:** `Golang_Master.pdf`
+- **SHA-256:** `baa743dfd7552e9018cb0f1c8940020b9f689f7e3d2898c8ba1718dcc0aec0cd`
+- **Tổng số trang:** 435
 
-## 1. Kết Quả Kiểm Tra Tự Động & Tiền Kỳ (Preflight)
+## Phạm vi và bằng chứng độc lập
 
-- **Page Geometry:** PASS (Tất cả 421 trang đạt chuẩn ISO A4: 595.28 x 841.89 pt, MediaBox == CropBox, Rotation 0°).
-- **Mirror Margins / Gutter:** PASS (Trang lẻ Recto lề trong 2.4 cm bên trái; trang chẵn Verso lề trong 2.4 cm bên phải; vùng in 16.8 cm ổn định; số trang đặt đúng góc ngoài).
-- **Fonts:** PASS (100% văn bản hiển thị sử dụng font nhúng hợp lệ: `JetBrainsMono-Regular`, `SourceSans3-Regular`, `SourceSans3-Semibold`, `SourceSerif4-Regular`, `SourceSerif4-Semibold`; 0 font không nhúng được hiển thị; 0 ký tự hỏng/tofu).
-- **Grayscale Print Compliance:** PASS (Bảng màu Grayscale-first; toàn bộ nội dung, code block, table và diagram thể hiện rõ ràng khi in đơn sắc B&W).
-- **TOC & Bookmarks:** PASS (Mục lục in tại Trang 2 và 33 mục PDF bookmarks đối chiếu khớp 100% số trang thực tế của Ch00–Ch28, Back Matter và Phụ lục A; không có Chương 29).
-- **Thứ tự Cấu trúc Sách:** PASS (`Bìa` [Trang 1] -> `Mục lục` [Trang 2] -> `Trước khi viết dòng Go đầu tiên` [Trang 3] -> `Ch00–Ch28` [Trang 8–358] -> `Atlas 50 Thư viện` [Trang 359–411] -> `Phụ lục A: Atlas Lỗi Go` [Trang 412–421] -> HẾT).
-- **Error Atlas:** Nằm ở vị trí cuối cùng tuyệt đối của ấn phẩm (Trang 412–421).
-- **Blank Pages:** 0 trang trắng ngoài ý muốn.
-- **Duplicate Pages:** 0 trang trùng lặp.
-- **Clipping / Content Overflow:** 0 trường hợp tràn ngoài trang hoặc bị che khuất.
-- **Unresolved Markup:** 0 lỗi rò rỉ phát triển (2 trường hợp `REPLACE_ME` tại Trang 190–191 được xác minh là ví dụ sư phạm có chủ đích trong Chương 17).
+Không dùng lại nhãn PASS hay số liệu của các biên bản trước làm bằng chứng. Toàn bộ 435 trang của đúng PDF SHA-256 nêu trên đã được render và quan sát tuần tự; các trang chứa code, bảng, sơ đồ, Error Atlas hoặc trang sửa đã được mở ở độ phân giải cao. Các sửa ký tự không làm đổi phân trang; sáu trang có lỗi trình bày đã được render và xem lại trên PDF cuối.
 
-## 2. Phân Loại Mức Độ Vấn Đề
+- **AUTOMATED_PAGES_CHECKED:** 435/435
+- **VISUAL_PAGES_OPENED:** 435/435
+- **VISUAL_PAGES_PASS:** 435/435
+- **VISUAL_PAGES_WITH_ISSUES:** 6 (đều đã sửa và review lại)
+- **NOT_REVIEWED:** 0
 
-- **P0 (Lỗi chặn xuất bản nghiêm trọng):** 0
-- **P1 (Lỗi bố cục/nội dung phải sửa trước phát hành):** 0
-- **P2 (Lỗi định dạng nhẹ):** 1 tìm thấy và đã sửa tại source (`scripts/book_style.py`: bổ sung `bulletFontName=FONT_SANS` cho style `reference` để nhúng hoàn toàn font đánh số tham khảo, triệt tiêu 100% `Helvetica`).
-- **P3 (Ghi nhận cải tiến không rủi ro):** 0
+## Kết quả preflight và in ấn
 
-## 3. Trạng Thái Phát Hành Tổng Thể
+- **Geometry / printable frame:** PASS — mọi trang A4 `595.276 × 841.890 pt`, MediaBox = CropBox, rotation 0; vùng chữ nằm trong khung in, không clipping hoặc overlap.
+- **Mirror margins / folio:** PASS — kiểm tra độc lập 434 folio: không thiếu và không đặt sai mép ngoài chẵn/lẻ.
+- **Fonts / glyphs:** PASS — font render thực tế là Source Serif 4, Source Sans 3 và JetBrains Mono; tất cả được nhúng, không tofu/broken glyph.
+- **Grayscale pixel scan:** PASS — scan RGB 0.5× trên 435 trang, không pixel nào có chênh kênh màu lớn hơn 5; bản in đơn sắc vẫn giữ tương phản của prose, code, bảng và sơ đồ.
+- **Blank / perceptual duplicate:** PASS — 0 trang trắng ngoài ý muốn; 0 cặp trùng hoặc gần trùng qua fingerprint ảnh đã bỏ vùng folio.
+- **Code width / tables / figures:** PASS — 0 dòng code vượt khung in; kiểm tra trực quan không còn code, bảng hoặc sơ đồ bị cắt.
+- **TOC / bookmarks:** PASS — 33 bookmark có destination khớp heading tại trang đích; mục lục và thứ tự sách chạy từ front matter, Ch00–Ch28, Library Source Guides đến Error Atlas, là nội dung cuối; không có Ch29.
+- **Cross references:** PASS — Error Atlas có 85 entry, validator xác thực toàn bộ chapter reference; không còn marker sản xuất chưa giải quyết. Các từ `placeholder`/`REPLACE_ME` còn lại là mô tả hoặc ví dụ sư phạm có chủ đích, không phải rò rỉ sản xuất.
+- **Các validator bổ sung:** PASS — zero-bullet, Error Atlas và code-width.
 
-- **Trạng thái:** `PUBLICATION_READY`
-- **Kết luận:** Tác phẩm đã hoàn thành kiểm thử in ấn trang-trên-trang (page-by-page), đáp ứng toàn diện tiêu chuẩn xuất bản sách in chuyên nghiệp.
+## Lỗi tìm thấy và sửa tại source
+
+- **P0:** 0 tìm thấy, 0 còn mở.
+- **P1:** 2 tìm thấy, 2 đã sửa: webhook chỉ đánh dấu delivery hoàn tất sau khi handler nghiệp vụ thành công; HTTP 500 không còn bị báo là `healthy` trong MCP health probe. Lab liên quan đã được gofmt và test/vet/race trước vòng sửa typography cuối (source Go không đổi sau các test đó).
+- **P2:** 6 tìm thấy, 6 đã sửa: một mũi tên render sai và năm biểu thức Markdown/LaTeX lộ ra trong trang sách được thay bằng Unicode/inline technical text ở source, sau đó render và review lại ở độ phân giải cao.
+- **P3:** 0.
+
+## Kết luận
+
+`FINAL_STATUS=PUBLICATION_READY`
+
+PDF cuối đạt điều kiện xuất bản A4: không còn P0/P1 mở, `NOT_REVIEWED=0`, và toàn bộ kiểm định ở trên có bằng chứng độc lập từ bản render cuối. Cần giữ nguyên SHA-256 nêu trên khi gửi in; hiệu chỉnh giấy/mực riêng của nhà in nằm ngoài mô phỏng PDF này.

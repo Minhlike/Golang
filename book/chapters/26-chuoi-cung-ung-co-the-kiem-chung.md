@@ -464,7 +464,7 @@ ok      part26-supply-chain-gate   2.128s
 | Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
 | Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
 | Lỗ hổng trong dependency nhưng không được gọi (`Reachable = false`) | Ký hiệu `http2.Server.ServeConn` không nằm trong luồng thực thi | **`ALLOW`** (kèm cảnh báo kiểm toán trong `Warnings`) |
-| Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 $\rightarrow$ **`DENY`** |
+| Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 → **`DENY`** |
 
 ---
 

@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -54,7 +55,11 @@ func TestWebhookDeliveryIdempotency(t *testing.T) {
 	deliveryID := "7a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
 
 	// First delivery: should process normally (not duplicate)
-	isDuplicate, err := receiver.Process(deliveryID, sig, payload)
+	handled := 0
+	isDuplicate, err := receiver.Process(deliveryID, sig, payload, func() error {
+		handled++
+		return nil
+	})
 	if err != nil {
 		t.Fatalf("first delivery failed: %v", err)
 	}
@@ -63,7 +68,10 @@ func TestWebhookDeliveryIdempotency(t *testing.T) {
 	}
 
 	// Second delivery with identical ID: should be recognized as duplicate
-	isDuplicate, err = receiver.Process(deliveryID, sig, payload)
+	isDuplicate, err = receiver.Process(deliveryID, sig, payload, func() error {
+		handled++
+		return nil
+	})
 	if err != nil {
 		t.Fatalf("second delivery returned error: %v", err)
 	}
@@ -74,6 +82,36 @@ func TestWebhookDeliveryIdempotency(t *testing.T) {
 	// Verify count is 1
 	if receiver.DeliveryCount() != 1 {
 		t.Errorf("expected delivery count to be 1, got %d", receiver.DeliveryCount())
+	}
+	if handled != 1 {
+		t.Errorf("handler ran %d times, want 1", handled)
+	}
+}
+
+func TestWebhookFailedBusinessHandlingCanRetry(t *testing.T) {
+	receiver := NewWebhookReceiver("test-webhook-secret")
+	secret := []byte("test-webhook-secret")
+	payload := []byte(`{"action":"opened"}`)
+	sig := computeHMAC(payload, secret)
+
+	if _, err := receiver.Process("delivery-retry", sig, payload, func() error {
+		return errors.New("temporary downstream failure")
+	}); err == nil {
+		t.Fatal("expected business handler failure")
+	}
+	if receiver.DeliveryCount() != 0 {
+		t.Fatal("failed business handler must not complete the delivery")
+	}
+	called := 0
+	duplicate, err := receiver.Process("delivery-retry", sig, payload, func() error {
+		called++
+		return nil
+	})
+	if err != nil || duplicate {
+		t.Fatalf("retry = (duplicate=%v, err=%v), want accepted retry", duplicate, err)
+	}
+	if called != 1 || receiver.DeliveryCount() != 1 {
+		t.Fatalf("retry did not complete exactly once: called=%d completed=%d", called, receiver.DeliveryCount())
 	}
 }
 

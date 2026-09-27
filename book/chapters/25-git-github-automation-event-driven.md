@@ -138,30 +138,31 @@ Thiết kế bộ tiếp nhận có kiểm tra trùng lặp trong bộ nhớ:
 
 ~~~go
 type WebhookReceiver struct {
-	mu        sync.Mutex
-	secret    []byte
-	delivered map[string]time.Time
+	secret []byte
+	ledger *DeliveryLedger
 }
 
 func (r *WebhookReceiver) Process(
-	deliveryID, signature string, payload []byte,
+	deliveryID, signature string,
+	payload []byte,
+	handle func() error,
 ) (bool, error) {
 	if !VerifyHMACSHA256(payload, signature, r.secret) {
 		return false, ErrInvalidSignature
 	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Khử trùng lặp: Nếu ID đã xử lý, báo duplicate và bỏ qua
-	if _, exists := r.delivered[deliveryID]; exists {
+	if _, accepted := r.ledger.Begin(deliveryID); !accepted {
 		return true, nil
 	}
-
-	r.delivered[deliveryID] = time.Now()
+	if err := handle(); err != nil {
+		r.ledger.Fail(deliveryID)
+		return false, err
+	}
+	r.ledger.Complete(deliveryID)
 	return false, nil
 }
 ~~~
+
+`Complete` chỉ xảy ra sau `handle`. Vì vậy lỗi nghiệp vụ giải phóng reservation để redelivery có thể thử lại; delivery đồng thời hoặc đã hoàn tất không chạy handler lần nữa. Đây vẫn là mô hình trong RAM: production phải thay `DeliveryLedger` bằng reservation có TTL và transaction/lease bền vững cùng domain mutation.
 
 ---
 

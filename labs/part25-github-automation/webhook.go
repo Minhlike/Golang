@@ -7,7 +7,6 @@ import (
 	"errors"
 	"strings"
 	"sync"
-	"time"
 )
 
 var (
@@ -29,6 +28,20 @@ const (
 type DeliveryLedger struct {
 	mu      sync.Mutex
 	entries map[string]DeliveryState
+}
+
+// CompletedCount reports completed transport deliveries only. It deliberately
+// excludes attempts still processing or released after a handler failure.
+func (l *DeliveryLedger) CompletedCount() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	count := 0
+	for _, state := range l.entries {
+		if state == DeliveryCompleted {
+			count++
+		}
+	}
+	return count
 }
 
 func NewDeliveryLedger() *DeliveryLedger {
@@ -84,24 +97,29 @@ func VerifyHMACSHA256(payload []byte, signatureHeader string, secret []byte) boo
 	return hmac.Equal(actualSig, expectedSig)
 }
 
-// WebhookReceiver processes GitHub Webhook events with signature verification
-// and delivery ID deduplication for idempotency.
+// WebhookReceiver verifies a delivery before driving its business handler.
+// A completed delivery is recorded only after that handler succeeds.
 type WebhookReceiver struct {
-	mu        sync.Mutex
-	secret    []byte
-	delivered map[string]time.Time
+	secret []byte
+	ledger *DeliveryLedger
 }
 
 // NewWebhookReceiver creates a WebhookReceiver with the specified webhook secret.
 func NewWebhookReceiver(secret string) *WebhookReceiver {
 	return &WebhookReceiver{
-		secret:    []byte(secret),
-		delivered: make(map[string]time.Time),
+		secret: []byte(secret),
+		ledger: NewDeliveryLedger(),
 	}
 }
 
-// Process validates and registers a webhook delivery event.
-func (r *WebhookReceiver) Process(deliveryID, signature string, payload []byte) (isDuplicate bool, err error) {
+// Process verifies and reserves a delivery, runs handle, and marks it complete
+// only after the domain mutation succeeds. A duplicate is never handed to the
+// handler. Production requires an equivalent durable transaction/lease.
+func (r *WebhookReceiver) Process(
+	deliveryID, signature string,
+	payload []byte,
+	handle func() error,
+) (isDuplicate bool, err error) {
 	if deliveryID == "" {
 		return false, ErrMissingDelivery
 	}
@@ -109,22 +127,21 @@ func (r *WebhookReceiver) Process(deliveryID, signature string, payload []byte) 
 	if !VerifyHMACSHA256(payload, signature, r.secret) {
 		return false, ErrInvalidSignature
 	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Check idempotency store
-	if _, exists := r.delivered[deliveryID]; exists {
+	if handle == nil {
+		return false, errors.New("webhook handler is required")
+	}
+	if _, accepted := r.ledger.Begin(deliveryID); !accepted {
 		return true, nil
 	}
-
-	r.delivered[deliveryID] = time.Now()
+	if err := handle(); err != nil {
+		r.ledger.Fail(deliveryID)
+		return false, err
+	}
+	r.ledger.Complete(deliveryID)
 	return false, nil
 }
 
 // DeliveryCount returns the number of distinct deliveries processed.
 func (r *WebhookReceiver) DeliveryCount() int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return len(r.delivered)
+	return r.ledger.CompletedCount()
 }
