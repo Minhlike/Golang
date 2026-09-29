@@ -74,6 +74,42 @@ class CacheTests(unittest.TestCase):
             self.assertNotEqual(json.loads(before)["sha256"], after["sha256"])
             self.assertFalse(dc.search(self.root, doc, "GOMAXPROCS"))
 
+    def test_converter_version_invalidation(self):
+        with patch.object(dc, "version", return_value="1.0"):
+            status, doc = dc.ingest(self.source, self.root)
+            self.assertEqual(status, "CACHE_MISS")
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_HIT", doc))
+        with patch.object(dc, "version", return_value="2.0"):
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_INVALID", doc))
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_HIT", doc))
+
+    def test_converter_name_invalidation(self):
+        _, doc = dc.ingest(self.source, self.root)
+        with patch.object(dc, "CONVERTER", "alternate-converter"), patch.object(dc, "version", return_value="1"):
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_INVALID", doc))
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_HIT", doc))
+
+    def test_pipeline_and_schema_invalidation(self):
+        _, doc = dc.ingest(self.source, self.root)
+        with patch.object(dc, "PIPELINE_VERSION", dc.PIPELINE_VERSION + 1):
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_INVALID", doc))
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_HIT", doc))
+        with patch.object(dc, "SCHEMA", dc.SCHEMA + 1):
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_INVALID", doc))
+            self.assertEqual(dc.ingest(self.source, self.root), ("CACHE_HIT", doc))
+
+    def test_markdown_contains_only_normalized_source(self):
+        raw = "# Source\r\n\r\nOnly extracted prose.\r\n"
+        self.source.write_bytes(raw.encode("utf-8"))
+        _, doc = dc.ingest(self.source, self.root)
+        folder, index = dc.read_index(self.root, doc)
+        markdown = (folder / "document.md").read_text(encoding="utf-8")
+        self.assertEqual(markdown, dc.normalize(raw))
+        self.assertNotIn("UNKNOWN/UNEXTRACTED", markdown)
+        self.assertTrue(index["warnings"])
+        source = json.loads((folder / "source.json").read_text(encoding="utf-8"))
+        self.assertEqual(source["sha256"], dc.file_digest(self.source))
+
     def test_chunk_boundaries_and_offsets(self):
         code = "```go\n" + "println(1)\n" * 100 + "```\n"
         table = "| A | B |\n| --- | --- |\n" + "| value | other |\n" * 100
@@ -140,6 +176,45 @@ class CacheTests(unittest.TestCase):
         _, doc = dc.ingest(self.source, self.root)
         (self.root / doc / "chunks/0001.md").write_text("corrupted")
         self.assertEqual(dc.ingest(self.source, self.root)[0], "CACHE_INVALID")
+
+    def test_corrupt_document_and_missing_or_extra_chunks_regenerate(self):
+        _, doc = dc.ingest(self.source, self.root)
+        folder = self.root / doc
+        (folder / "document.md").write_text("tampered")
+        self.assertEqual(dc.ingest(self.source, self.root)[0], "CACHE_INVALID")
+        (folder / "chunks/extra.md").write_text("extra")
+        self.assertEqual(dc.ingest(self.source, self.root)[0], "CACHE_INVALID")
+        (folder / "chunks/0001.md").unlink()
+        self.assertEqual(dc.ingest(self.source, self.root)[0], "CACHE_INVALID")
+
+    def test_cache_symlinks_never_validate_or_escape(self):
+        _, doc = dc.ingest(self.source, self.root)
+        folder = self.root / doc
+        chunk = folder / "chunks/0001.md"
+        chunk.unlink()
+        outside = self.base / "outside.md"
+        outside.write_text("do not read", encoding="utf-8")
+        chunk.symlink_to(outside)
+        self.assertEqual(dc.ingest(self.source, self.root)[0], "CACHE_INVALID")
+
+    def test_search_rejects_tampered_index_and_symlink(self):
+        _, doc = dc.ingest(self.source, self.root)
+        folder = self.root / doc
+        index_path = folder / "index.json"
+        original = index_path.read_text(encoding="utf-8")
+        data = json.loads(original)
+        data["chunks"][0]["id"] = "../../outside"
+        index_path.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "integrity"):
+            dc.search(self.root, doc, "Original")
+        index_path.write_text(original, encoding="utf-8")
+        chunk = folder / "chunks/0001.md"
+        chunk.unlink()
+        outside = self.base / "outside.md"
+        outside.write_text("secret", encoding="utf-8")
+        chunk.symlink_to(outside)
+        with self.assertRaisesRegex(ValueError, "integrity"):
+            dc.search(self.root, doc, "secret")
 
     def test_real_pdf_docx_pptx_conversion(self):
         from pptx import Presentation

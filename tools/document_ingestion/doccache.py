@@ -17,6 +17,8 @@ CACHE_ROOT = Path(__file__).resolve().parents[2] / "runtime/document-cache"
 SUPPORTED = {".pdf", ".docx", ".pptx", ".md", ".txt"}
 TARGET_CHARS = 9000  # Roughly 1500–3000 tokens; not a measured token count.
 SCHEMA = 1
+PIPELINE_VERSION = 1  # Bump when normalization, chunking, or index semantics change.
+CONVERTER = "markitdown"
 
 
 def digest(data: bytes) -> str:
@@ -164,17 +166,61 @@ def write_json(path: Path, value):
 
 def read_index(root: Path, doc_id: str):
     folder = root / safe_id(doc_id)
-    return folder, json.loads((folder / "index.json").read_text(encoding="utf-8"))
+    index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
+    if index.get("document_id") != doc_id or not generated_files_valid(folder, index):
+        raise ValueError("Cache integrity check failed; re-ingest the source")
+    return folder, index
 
 
-def cache_valid(folder: Path, sha: str) -> bool:
+def generated_files_valid(folder: Path, index: dict) -> bool:
+    """Validate local paths and every generated Markdown file before reading."""
+    try:
+        if (folder.is_symlink() or any((folder / name).is_symlink()
+                for name in ("source.json", "index.json", "document.md", "chunks"))):
+            return False
+        content = (folder / "document.md").read_bytes()
+        if digest(content) != index["markdown_sha256"] or not index["chunks"]:
+            return False
+        markdown = content.decode("utf-8")
+        ids = [safe_id(chunk["id"]) for chunk in index["chunks"]]
+        if len(ids) != len(set(ids)):
+            return False
+        chunk_dir = folder / "chunks"
+        if {item.name for item in chunk_dir.iterdir()} != {chunk_id + ".md" for chunk_id in ids}:
+            return False
+        expected_offset = 0
+        for chunk_id, chunk in zip(ids, index["chunks"]):
+            start, end = chunk["char_start"], chunk["char_end"]
+            path = chunk_dir / (chunk_id + ".md")
+            if path.is_symlink() or start != expected_offset or end <= start:
+                return False
+            chunk_bytes = path.read_bytes()
+            expected = markdown[start:end].encode("utf-8")
+            if chunk_bytes != expected or digest(chunk_bytes) != chunk["sha256"]:
+                return False
+            expected_offset = end
+        return expected_offset == len(markdown)
+    except (OSError, ValueError, KeyError, TypeError, UnicodeError):
+        return False
+
+
+def cache_valid(folder: Path, sha: str, converter_name: str = CONVERTER,
+                converter_version: str | None = None) -> bool:
     try:
         source = json.loads((folder / "source.json").read_text(encoding="utf-8"))
         index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
-        return (source["sha256"] == sha and index["schema"] == SCHEMA
-                and file_digest(folder / "document.md") == index["markdown_sha256"]
-                and bool(index["chunks"])
-                and all(file_digest(folder / "chunks" / (safe_id(c["id"]) + ".md")) == c["sha256"] for c in index["chunks"]))
+        expected_version = converter_version or version(converter_name)
+        if not (source["sha256"] == sha and source["converter"] == converter_name
+                and source["converter_version"] == expected_version
+                and source["pipeline_version"] == PIPELINE_VERSION
+                and index["schema"] == SCHEMA and index["pipeline_version"] == PIPELINE_VERSION
+                and source == index["document"]
+                and index["document"]["sha256"] == sha
+                and index["document"]["converter"] == converter_name
+                and index["document"]["converter_version"] == expected_version
+                and index["document"]["pipeline_version"] == PIPELINE_VERSION):
+            return False
+        return generated_files_valid(folder, index)
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
@@ -191,7 +237,8 @@ def ingest(path: Path, root: Path = CACHE_ROOT, converter=None):
     lock.open("x").close()
     try:
         sha = file_digest(path)
-        if cache_valid(folder, sha):
+        converter_version = version(CONVERTER)
+        if cache_valid(folder, sha, CONVERTER, converter_version):
             return "CACHE_HIT", doc_id
         status = "CACHE_INVALID" if folder.exists() else "CACHE_MISS"
         validate_format(path)
@@ -199,12 +246,13 @@ def ingest(path: Path, root: Path = CACHE_ROOT, converter=None):
         if file_digest(path) != sha:
             raise ValueError("Source changed during conversion; retry ingestion")
         warnings = ["UNKNOWN/UNEXTRACTED: visual content and extraction completeness are not verified; inspect original."]
-        markdown += "\n<!-- " + warnings[0] + " -->\n"
         chunks, headings = chunk_document(markdown)
         source = {"source_path": str(path), "sha256": sha, "size_bytes": path.stat().st_size,
                   "converted_at": datetime.now(timezone.utc).isoformat(),
-                  "converter": "markitdown", "converter_version": version("markitdown")}
-        index = {"schema": SCHEMA, "document_id": doc_id, "document": source,
+                  "converter": CONVERTER, "converter_version": converter_version,
+                  "pipeline_version": PIPELINE_VERSION}
+        index = {"schema": SCHEMA, "pipeline_version": PIPELINE_VERSION,
+                 "document_id": doc_id, "document": source,
                  "markdown_sha256": digest(markdown.encode("utf-8")), "page_mapping": None,
                  "warnings": warnings, "heading_tree": headings, "chunks": chunks}
         # Generate fully before replacing the previous valid generation.
