@@ -1,5 +1,9 @@
 # HỢP ĐỒNG KIỂM KÊ VÀ BAO PHỦ KIẾN THỨC GO NỀN TẢNG (BASIC GO COVERAGE CONTRACT)
 
+## Đối chiếu edition ngày 29-09-2026
+
+Inventory 48 mục phía dưới là hồ sơ nền của lần retrofit, không phải nhãn QA của PDF mới. Lượt encyclopedia dùng gap matrix theo 159 topic: bổ sung const/iota ở Ch1; defined type/alias/assignability/conversion/comparability và embedding ở Ch3; modules/workspaces/build constraints/cross-build ở Ch5; fs/embed/Scanner/strconv/regexp ở Ch7; Once/Cond/atomic publication ở Ch8; cgo ở Ch14; tài nguyên container ở Ch17. Các khái niệm mới được kiểm tra bằng `labs/edition-contracts`; module/workspace và build selection được kiểm tra riêng với toolchain. Generic constraints giữ ở Ch19, không lặp lại thành một survey ở Ch3. Ch29 thêm task mix, evidence scope và lab quyền hành động, không thay nền tảng Go bằng prompt engineering.
+
 Tài liệu này đóng vai trò là bản kiểm kê toàn diện (comprehensive inventory) các chủ đề Go nhập môn, đối chiếu giữa danh mục tham khảo người mới bắt đầu (W3Schools Go Syllabus), tài liệu chuẩn kỹ thuật chính thức (Go Specification, A Tour of Go, Effective Go), và hiện trạng triển khai trong các chương sách.
 
 Mục tiêu tối thượng: **BASIC IS NOT SHALLOW** — Một người hoàn toàn chưa biết Go căn bản có thể bắt đầu từ Chương 00, học từng cú pháp, thành phần ngữ pháp, mô hình tinh thần từ nguyên lý đầu tiên mà không phải mở thêm bất kỳ tài liệu nào khác để học vỡ lòng.

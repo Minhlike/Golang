@@ -118,7 +118,7 @@ Kết quả là [1 99 3 4], [1 99], [99 3]. a[1] và b[0] đều chỉ vào ph�
 
 ## append là một phép thử về capacity
 
-append không hứa luôn dùng lại array cũ, cũng không hứa luôn tạo array mới. Nó trả về resulting slice. Khi backing array còn chỗ, implementation có thể dùng lại; khi capacity không đủ, append phải cấp underlying array mới đủ lớn cho kết quả. Vì return value mang descriptor có thể đã đổi, viết s = append(s, value) là dạng thông thường.
+append trả về slice kết quả. Go specification phân biệt hai trường hợp: nếu capacity hiện tại đủ cho các phần tử được thêm, append dùng lại underlying array; nếu không đủ, append cấp underlying array mới đủ lớn cho kết quả. Vì slice trả về có thể đổi độ dài hoặc mảng nền, dạng thông thường là `s = append(s, value)`. Quy tắc dùng lại mảng nền là ngữ nghĩa của ngôn ngữ; cách chọn capacity mới khi phải tăng mảng là chi tiết triển khai.
 
 ~~~go
 s := make([]int, 2, 4)
@@ -210,7 +210,7 @@ V và i mỗi chiếm một byte. ệ được mã hóa bằng ba byte UTF-8, v�
 
 String không cho phép gán trực tiếp `text[0] = 'v'`. Khi cần dữ liệu byte có thể sửa đổi, ta bắt buộc phải chuyển đổi sang `[]byte`, thao tác, rồi tạo chuỗi mới nếu cần. 
 
-Về mặt bộ nhớ, phép chuyển đổi `b := []byte(text)` hoặc `s := string(b)` theo đặc tả Go luôn sao chép toàn bộ dữ liệu byte sang một vùng nhớ mới. Việc sao chép này là bắt buộc để bảo vệ tính bất biến của chuỗi: nếu chia sẻ cùng mảng nền, một thao tác ghi đè `b[0] = 'v'` sẽ làm biến đổi giá trị của chuỗi `text` ban đầu. Mặc dù có chi phí cấp phát, trình biên dịch Go cung cấp cơ chế tối ưu hóa không cấp phát (zero-allocation optimization) trong các ngữ cảnh tra cứu cục bộ: khi tra cứu map dạng `lookup[string(b)]` hoặc so sánh `string(b) == "target"`, compiler phát hiện chuỗi tạm không thoát khỏi biểu thức và tái sử dụng trực tiếp con trỏ của lát cắt byte mà không sinh ra bất kỳ lệnh cấp phát heap nào.
+Conversion giữa string và byte slice phải giữ semantics của giá trị: sửa byte slice tạo từ string không được làm đổi string gốc; string tạo từ slice giữ giá trị dù slice về sau bị sửa. Specification không bắt một lần cấp phát hay physical copy ở mọi biểu thức. Compiler có thể bỏ allocation/copy khi chứng minh behavior quan sát không đổi. Nếu cần biết một biểu thức có allocate không, đo và xem output compiler của đúng version thay vì suy ra từ syntax.
 
 ## Pointer là câu hỏi khác
 

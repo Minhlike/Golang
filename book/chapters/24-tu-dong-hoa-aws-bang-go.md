@@ -6,7 +6,7 @@ Trong hành trình xây dựng các công cụ vận hành và nền tảng hạ
 
 > *Làm thế nào để chương trình Go giao tiếp an toàn với AWS API mà không bao giờ nhúng Access Key dài hạn vào mã nguồn, file cấu hình hay biến môi trường?*
 
-Theo các báo cáo bảo mật đám mây, việc để lộ cặp khóa `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY` dài hạn (static credentials) trên kho mã nguồn công khai hoặc nhật ký CI/CD là nguyên nhân hàng đầu khiến các doanh nghiệp bị xâm phạm hạ tầng.
+Để lộ cặp khóa `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY` dài hạn trong repo hoặc log có thể cho phép sử dụng quyền của khóa cho đến khi bị thu hồi. Vì vậy chương này ưu tiên credential tạm thời và quyền tối thiểu; không gán thứ hạng nguyên nhân sự cố khi không có bộ dữ liệu tương ứng.
 
 Chương này trang bị cho bạn tư duy thiết kế hệ thống tự động hóa đám mây hiện đại dựa trên thư viện chính thức **AWS SDK for Go v2**: từ cơ chế cấp quyền động ngắn hạn (Temporary Credentials), ngăn xếp middleware Smithy, ký chữ ký số **SigV4**, đến duyệt dữ liệu lớn qua **Paginator** và phân loại lỗi chuẩn mực.
 
@@ -78,7 +78,7 @@ Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra m�
 
 Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật toán ký số SigV4 để bảo đảm tính toàn vẹn và nguồn gốc của gói tin. Quá trình này bắt đầu bằng việc chuẩn hóa phương thức HTTP, đường dẫn tài nguyên, tham số truy vấn và các header thành một chuỗi đại diện duy nhất (Canonical Request). Chuỗi này được băm bằng thuật toán SHA-256 để tạo mã tóm lược nội dung.
 
-Tiếp đó, SDK sử dụng Secret Access Key kết hợp cùng thông tin ngày tháng, phân vùng địa lý (Region) và tên dịch vụ đích để tính toán khóa ký tạm thời (Signing Key) thông qua hàm băm HMAC. Khóa ký này được dùng để tạo mã băm xác thực cuối cùng, đưa trực tiếp vào HTTP Header dưới định dạng `Authorization: AWS4-HMAC-SHA256 Credential=ASIA...`. Bất kỳ thay đổi trái phép nào đối với gói tin trên đường truyền, dù chỉ một byte trong payload hoặc tiêu đề, đều khiến chữ ký tại máy chủ dịch vụ AWS không khớp và bị từ chối ngay lập tức với mã lỗi `403 SignatureDoesNotMatch`.
+SDK dùng signing key suy ra từ secret, ngày, region và service để tạo chữ ký SigV4 cho canonical request. Server kiểm tra những phần được ký; không phải mọi header đều được đưa vào SignedHeaders và một số chế độ cho phép unsigned payload. Sửa phần được bao phủ có thể gây lỗi xác minh, nhưng không suy ra một mã lỗi HTTP cố định cho mọi service. TLS vẫn cần bảo vệ đường truyền; SigV4 không thay thế TLS.
 
 SigV4 xác thực yêu cầu cho AWS và bảo vệ các phần được ký; nó không tự cung cấp bí mật nội dung, chống phát lại ở mọi ngữ cảnh, hay ký mọi header/payload trong mọi lựa chọn dịch vụ. TLS vẫn bảo vệ kênh truyền, còn caller phải hiểu service và tùy chọn signing của lời gọi mình dùng.
 
@@ -161,7 +161,7 @@ Dưới đây là cấu trúc mã nguồn trích xuất từ dự án mẫu `lab
 
 ### 1. Provider cấp khóa tạm thời tự xoay vòng
 
-Mô phỏng chính xác cách thức AWS STS cấp phát temporary credentials với thời hạn hiệu lực:
+Provider giả dưới đây trả credential có thời hạn để kiểm tra cache của SDK. Nó không gọi STS hay mô phỏng xác thực và phân quyền của STS:
 
 ~~~go
 type DynamicCredentialProvider struct {
@@ -189,7 +189,7 @@ func (p *DynamicCredentialProvider) Retrieve(
 
 ### 2. Can thiệp vào Smithy Middleware để thêm Header Audit
 
-Bạn muốn mọi lệnh gọi từ công cụ tự động hóa nội bộ phải gửi kèm mã định danh phiên làm việc để truy vết trên CloudTrail? Hãy viết một middleware ở pha `Build`:
+Để kiểm tra việc chèn một header của ứng dụng vào outbound request, ta viết middleware ở pha `Build`. Test chỉ kiểm tra header tại server cục bộ; không suy ra CloudTrail sẽ lưu custom header ấy:
 
 ~~~go
 type AuditHeaderMiddleware struct {
@@ -274,8 +274,8 @@ Kiểm chứng hàm phân loại bóc tách chính xác mã lỗi `SlowDown` (đ
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
 | **Hardcode Access Key** trong mã nguồn hoặc docker image. | Khóa bị quét và rò rỉ khi đẩy lên kho mã nguồn, gây mất quyền kiểm soát đám mây. | Luôn dùng IAM Role / IRSA và nạp quyền qua `config.LoadDefaultConfig`. |
-| **Không đóng Response Body** khi gọi `s3.GetObject`. | Rò rỉ socket HTTP (`file descriptor leak`), làm cạn kiệt tài nguyên mạng của container. | Luôn đặt `defer resp.Body.Close()` ngay sau khi kiểm tra lỗi `GetObject`. |
-| **Tự viết vòng lặp phân trang** bằng token thủ công. | Dễ phát sinh lỗi vô tận hoặc tràn bộ đệm RAM khi số lượng object vượt quá dự tính. | Luôn dùng `s3.NewListObjectsV2Paginator` của SDK v2. |
+| **Không đóng Response Body** khi gọi `s3.GetObject`. | Body và tài nguyên Transport có thể bị giữ lại, làm tăng áp lực tài nguyên khi lặp nhiều request. | Đặt `defer resp.Body.Close()` sau khi `GetObject` thành công; việc tái sử dụng kết nối còn có điều kiện riêng. |
+| **Tự viết vòng phân trang mà không xử lý token và ngân sách.** | Có thể lặp lại trang, bỏ sót dữ liệu hoặc giữ quá nhiều object. | Ưu tiên paginator của SDK; vẫn kiểm tra context, error, số trang và lượng dữ liệu giữ lại. |
 | **Thử lại mù quáng** với lỗi phân quyền `AccessDenied`. | Làm tắc nghẽn hàng đợi và kích hoạt các cảnh báo bảo mật bất thường trong SIEM. | Dùng `errors.As(err, &apiErr)` để chỉ thử lại các lỗi tạm thời (`SlowDown`, `5xx`). |
 
 ---
@@ -283,10 +283,10 @@ Kiểm chứng hàm phân loại bóc tách chính xác mã lỗi `SlowDown` (đ
 ## 8. Bài tập thực hành thiết kế Cloud Tool
 
 ### Thử thách 1: Tích hợp Context Timeout chặt chẽ cho thao tác đám mây
-**Yêu cầu:** Mạng đám mây có thể bị nghẽn bất cứ lúc nào. Hãy viết hàm bọc `PutObjectWithTimeout` nhận thêm tham số `timeout time.Duration`. Sử dụng `context.WithTimeout` để bảo đảm nếu việc upload kéo dài quá thời gian quy định, kết nối sẽ bị hủy ngay lập tức để giải phóng tài nguyên.
+**Yêu cầu:** Viết `PutObjectWithTimeout` nhận `timeout time.Duration` và truyền context có deadline tới SDK. Test với server giả chậm để quan sát caller ngừng chờ trên đường chạy ấy. Cancellation không chứng minh tác động phía server bị rollback hoặc resource được giải phóng tức thời ở mọi tầng.
 
 ### Thử thách 2: Thiết kế Waiter kiểm tra Bucket sẵn sàng
-**Yêu cầu:** Sau khi gửi lệnh tạo bucket (`CreateBucket`), hạ tầng S3 mất vài giây để đồng bộ DNS toàn cầu. Hãy viết hàm kiểm tra bucket đã tồn tại hay chưa bằng `s3.NewBucketExistsWaiter`. Cấu hình thời gian chờ tối đa 30 giây với khoảng cách thăm dò là 2 giây.
+**Yêu cầu:** Sau `CreateBucket`, dùng `s3.NewBucketExistsWaiter` để chờ điều kiện tồn tại được quan sát qua `HeadBucket`. Đặt thời gian chờ tối đa 30 giây, khoảng lùi từ 2 đến 5 giây. Đây không phải phép kiểm chứng DNS toàn cầu hay toàn bộ độ sẵn sàng của ứng dụng.
 
 ---
 

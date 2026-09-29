@@ -37,7 +37,7 @@ projects/opsprobe/
 
 Đặc điểm quan trọng nhất của kiến trúc này là **hướng phụ thuộc một chiều (unidirectional dependency)**: `probe` và `store` hoàn toàn độc lập, không import `httpapi` hay `cmd`. Điều này cho phép ta kiểm thử riêng rẽ từng năng lực lõi bằng unit test thuần túy mà không cần dựng HTTP server hay giả lập môi trường mạng phức tạp.
 
-## Bốn trụ cột kỹ thuật của một hệ thống đáng tin
+## Năm trụ cột kỹ thuật của một hệ thống đáng tin
 
 ### 1. Phân loại kết quả (Outcome Classification) và Context Deadline
 
@@ -68,13 +68,13 @@ req, err := http.NewRequestWithContext(
 	probeCtx, method, target.URL, nil)
 ~~~
 
-Sự phân biệt giữa `OutcomeTimeout` (hết thời gian chờ từ chối phục vụ) và `OutcomeCancel` (tiến trình cha chủ động hủy đợt kiểm tra) giúp đội ngũ SRE không bao giờ nhầm lẫn giữa sự cố quá tải mạng và hành vi shutdown bình thường của hệ thống.
+Phân biệt `OutcomeTimeout` với `OutcomeCancel` giúp caller giữ nguyên nhân kết thúc theo contract của lab. Nó không tự phân loại được root cause mạng hay chứng minh mọi cancellation đều là shutdown; cần correlation với lifecycle, deadline và observation khác.
 
-Mỗi kết quả probe ghi nhận đồng thời cả thời lượng tính bằng mili-giây (`DurationMs`) phục vụ dashboard và nano-giây (`DurationNs`) cho độ chính xác cao. Thời điểm ghi nhận run trong database phân định rành mạch giữa `StartedAt` (bắt đầu thực thi) và `CompletedAt` (kết thúc toàn bộ worker), tránh nhầm lẫn giữa độ trễ của từng request đơn lẻ với thời gian hoàn tất của cả lô công việc.
+Mỗi kết quả probe ghi nhận thời lượng bằng mili-giây (`DurationMs`) phục vụ dashboard và nano-giây (`DurationNs`) để tránh mất thông tin do làm tròn; đơn vị nano-giây không chứng minh đồng hồ đo chính xác đến nano-giây. Thời điểm ghi nhận run trong database phân biệt `StartedAt` (bắt đầu thực thi) và `CompletedAt` (kết thúc toàn bộ worker), tránh nhầm độ trễ một request với thời gian hoàn tất cả lô công việc.
 
 ### 2. Đồng thời có kiểm soát (Bounded Concurrency) và Áp suất ngược
 
-Khi danh sách target tăng từ 10 lên 10.000, một chương trình ngây thơ sẽ chạy `go p.ProbeSingle(...)` cho từng target. Cách làm này sẽ tạo ra hàng chục nghìn goroutine, làm cạn kiệt socket và gây sập hệ điều hành.
+Khi danh sách target tăng từ 10 lên 10.000, chạy `go p.ProbeSingle(...)` cho từng target có thể tạo áp lực lên bộ nhớ, socket và dịch vụ đích. Mức ảnh hưởng phụ thuộc workload và giới hạn môi trường; không suy ra hệ điều hành chắc chắn sẽ sập từ riêng số goroutine.
 
 `opsprobe` sử dụng mô hình worker pool với số lượng goroutine cố định:
 
@@ -187,11 +187,11 @@ func drainResponseBody(body io.ReadCloser) bool {
 
 Quy tắc kỹ thuật ở đây rất rõ ràng:
 
-Một là, luôn đóng body (`defer body.Close()`): Giải phóng file descriptor socket ngay cả khi xảy ra lỗi giữa chừng.
+Một là, đóng body trên đường kết thúc: hoàn tất trách nhiệm với response body theo contract. `Close` không đồng nghĩa mỗi lần phải đóng socket TCP; Transport có thể giữ connection để tái sử dụng.
 
-Hai là, đọc tối đa 16 KiB: Đủ rộng để xử lý phần lớn body thông điệp sức khỏe hoặc trang lỗi nhỏ của các web framework mà không nạp toàn bộ vào RAM.
+Hai là, chọn budget 16 KiB: Đây là chính sách của lab, không phải thống kê kích thước body của các framework. Helper đọc thêm tối đa một byte để nhận biết body vượt budget, dùng `io.Discard` thay vì giữ toàn bộ body trong RAM.
 
-Ba là, phát hiện cạn dòng (EOF): Bằng cách đặt giới hạn đọc là `MaxDrainBytes + 1`, nếu `lr.N > 0` nghĩa là luồng đã chạm `io.EOF` trước khi vượt quá 16 KiB. Khi đó và chỉ khi đó, socket mới được đánh dấu đủ điều kiện tái sử dụng (`reused_eligible = true`). Lưu ý rằng đây là điều kiện cần trên tầng stream HTTP/1.x, không phải bảo đảm tuyệt đối của mọi tầng Transport.
+Ba là, phát hiện cạn dòng (EOF): đọc tối đa `MaxDrainBytes + 1` phân biệt body nhỏ đã đọc hết với body vượt budget. Chỉ coi drain thành công khi phép đọc không có lỗi và `lr.N > 0`; lỗi đọc trước EOF không được diễn giải là thành công. Đây là quyết định budget của helper, không phải cờ đủ điều kiện reuse bên trong Transport. Đường tái sử dụng HTTP/1.x còn phụ thuộc body framing, server, lỗi kết nối và trạng thái Transport.
 
 Bốn là, đánh đổi có chủ đích: Nếu body vượt quá 16 KiB, `lr.N` sẽ bằng 0. Lab ghi nhận body chưa được đọc hết và đóng body để giải phóng tài nguyên; không suy ra chắc chắn Transport sẽ hay sẽ không tái sử dụng một kết nối cụ thể.
 
@@ -205,7 +205,7 @@ Về mô hình đe dọa (Threat Model): `opsprobe` được thiết kế như c
 
 Về hợp đồng JSON di động: Trường `timeout_ms` trong request payload sử dụng kiểu số nguyên mili-giây (`0 <= timeout_ms <= 60000`), bảo đảm tương thích đa nền tảng thay vì parse cú pháp chuỗi duration của riêng Go.
 
-Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request tự động chèn header `traceparent` theo child span hiện tại, bảo đảm chuỗi quan sát phân tán không bị đứt gãy giữa các dịch vụ.
+Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request chèn header `traceparent` theo child span hiện tại. Để nối trace, dịch vụ nhận còn phải đọc context và cấu hình lấy mẫu/xuất span phù hợp; gửi header không tự chứng minh chuỗi quan sát xuyên dịch vụ đã đầy đủ.
 
 ## Bài tập chẩn đoán sự cố: Bão cạn kiệt Socket
 
@@ -236,7 +236,7 @@ if err != nil {
 return resp.StatusCode, false, nil
 ~~~
 
-Lập trình viên đã return mà quên đóng body. Kết nối TCP bị giữ ở trạng thái "đang đọc dở", khiến connection pool bị phong tỏa và buộc mỗi request sau phải mở một socket mới.
+Trong kịch bản HTTP/1.x của lab, hàm trả về mà không đọc hết hoặc đóng body. Kết nối đang giữ body chưa hoàn tất không được tái sử dụng cho request khác; tải tiếp tục có thể làm tăng số kết nối. Không áp kết luận này nguyên xi cho cơ chế multiplexing của HTTP/2.
 
 ### Bằng chứng đo đạc thực nghiệm (Empirical Measurements)
 
@@ -254,11 +254,11 @@ Kiểm thử `TestIncident_BoundedDrainOversizedBody` xác nhận rằng với b
 
 Để đưa `opsprobe` ra môi trường production, ta áp dụng toàn bộ các nguyên tắc đã học ở Chương 17 và 18:
 
-Một là, Multi-Stage Dockerfile: Biên dịch tĩnh hoàn toàn với `CGO_ENABLED=0` và sử dụng base image tối giản `gcr.io/distroless/static-debian12:nonroot`, chạy dưới tài khoản không đặc quyền (`USER 65532:65532`).
+Một là, Multi-Stage Dockerfile: lab xây binary với `CGO_ENABLED=0`, rồi dùng base image `gcr.io/distroless/static-debian12:nonroot` và tài khoản không đặc quyền (`USER 65532:65532`). Với dependency thuần Go của lab, cách này không yêu cầu C runtime; không suy rộng thành bảo đảm mọi chương trình đều không có dependency ngoài binary.
 
 Hai là, ranh giới lưu trữ và số lượng Pod trong Kubernetes: Manifest `deploy/k8s/deployment.yaml` thiết lập `replicas: 1` kết hợp PersistentVolumeClaim `opsprobe-data-pvc` (`ReadWriteOnce`). Do SQLite là cơ sở dữ liệu file cục bộ, việc chạy nhiều pod đồng thời trên cùng một file dữ liệu sẽ gây tranh chấp khóa và không nhất quán state. Chiến lược triển khai sử dụng `strategy: Recreate` để bảo đảm pod cũ nhả volume trước khi pod mới được gắn. Khi hệ thống có nhu cầu mở rộng quy mô ngang (`replicas > 1`), tầng `store` phải được chuyển sang hệ quản trị cơ sở dữ liệu máy khách - máy chủ (client-server) như PostgreSQL.
 
-Ba là, cấu hình động qua ConfigMap: Các tham số giới hạn như concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường của container (`OPSPROBE_*`).
+Ba là, cấu hình lúc khởi động qua ConfigMap: Concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường (`OPSPROBE_*`). Sửa ConfigMap không tự cập nhật biến môi trường của process đang chạy; cần tạo lại Pod hoặc thiết kế cơ chế đọc lại riêng.
 
 Bốn là, định danh bất biến trong CI/CD: Trong manifest Kubernetes thực tế, image phải được gán digest bất biến sha256 (`image: ghcr.io/...@sha256:...`) đã được kiểm chứng bởi pipeline CI/CD, loại bỏ hoàn toàn các tag trôi nổi rủi ro như `:latest`.
 
@@ -293,7 +293,7 @@ curl http://127.0.0.1:8080/metrics
 
 ## Cột mốc hoàn thành Capstone: Chốt baseline hệ thống
 
-Khi bước vào dự án Capstone, một chương trình Go không còn là những tệp mã nguồn rời rạc hay hàm `fmt.Println` đơn lẻ. Ta nhìn thấy toàn bộ chiều sâu kỹ thuật đan kết trong một hệ thống vận hành hoàn chỉnh: một giá trị di chuyển qua bộ nhớ theo value hay pointer semantics; một goroutine được đánh thức bởi scheduler và phối hợp an toàn qua channel; một kết nối TCP được mượn từ pool, đọc cạn dữ liệu và hoàn trả nguyên vẹn; một transaction bảo đảm cơ sở dữ liệu không bao giờ chứa trạng thái dở dang; một tín hiệu OS dừng tiến trình êm ái mà không làm rơi rớt dữ liệu; và một artifact bất biến được định danh bằng digest nội dung, kiểm soát bởi các chốt chặn tự động trước khi bước vào production.
+Capstone ghép các proof nhỏ: value và aliasing, đồng bộ goroutine, body lifecycle, transaction và artifact identity. Mỗi proof có phạm vi riêng; transaction không giải quyết mọi external side effect, shutdown có deadline và có thể không hoàn tất mọi request, còn digest không chứng minh nội dung artifact đúng. Khi chuyển sang môi trường thật, giữ những giới hạn ấy trong test và observation.
 
 Đó chính là ranh giới giữa một người biết cú pháp ngôn ngữ và một kỹ sư phần mềm thực thụ: **hiểu rõ cái giá của từng quyết định thiết kế và chịu trách nhiệm đến cùng cho sự vận hành của hệ thống.**
 

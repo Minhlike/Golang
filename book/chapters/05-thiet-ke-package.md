@@ -14,7 +14,7 @@ Package `cmd/opsprobe` đóng vai trò điểm khởi đầu (command entrypoint
 
 Package `probe` là thư viện có thể tái sử dụng (importable package): sở hữu mô hình nghiệp vụ cho một lần kiểm tra và hoàn toàn độc lập với thiết bị đầu ra.
 
-Package `internal/config` là chi tiết triển khai nội bộ của ứng dụng (internal implementation detail): quản lý cấu hình mặc định nhưng được compiler bảo vệ không cho phép bất kỳ module bên ngoài nào import.
+Package `internal/config` là chi tiết triển khai nội bộ của ứng dụng: quản lý cấu hình mặc định, với phạm vi import bị `go` command giới hạn theo cây thư mục cha của `internal`, không phải một quy tắc chung “cùng module”.
 
 ![Dependency đi một chiều: command phối hợp config nội bộ và package probe; probe không import ngược command hay config.](../../assets/diagrams/package-boundary-graph.png)
 
@@ -57,7 +57,7 @@ Chữ cái đầu viết hoa không làm type “quan trọng hơn”; nó mở 
 
 Package documentation cũng là một phần của contract. File `probe/doc.go` bắt đầu bằng comment `Package probe ...`, nói package chịu trách nhiệm gì và không chịu trách nhiệm gì. Comment của export nên mô tả behavior mà caller có thể dựa vào, không chỉ lặp lại tên type.
 
-## `internal` là boundary do compiler kiểm tra
+## `internal` là boundary do go command kiểm tra
 
 Target mặc định là policy của application hiện tại. Ta để nó trong `internal/config`:
 
@@ -81,7 +81,7 @@ func DefaultTargets() []Target {
 }
 ~~~
 
-Package ở `internal` không phải “private bằng thỏa thuận”. Go chỉ cho code nằm trong cây thư mục của parent import nó. Vì `cmd/opsprobe` nằm dưới module root - parent của `internal` - nó import được `internal/config`. Một module khác import `example.com/golang-master/part5-package-design/internal/config` sẽ bị `go` command từ chối.
+Package ở `internal` không phải “private bằng thỏa thuận”. Go chỉ cho code nằm trong cây thư mục của parent import nó. Vì `cmd/opsprobe` nằm dưới module root — parent của `internal` — nó import được `internal/config`. Code nằm ngoài cây cha ấy bị `go` command từ chối. Không nên dùng số module làm phép thử: một repository nhiều module có thể vẫn có các package nằm trong cây được phép.
 
 Đây không phải lý do để nhét mọi package vào `internal` theo phản xạ. Với binary tự chứa, đó thường là default tốt vì không hứa API ngoài. Với `probe` trong lab này, ta cố tình để nó importable để boundary giữa domain operation và CLI được nhìn thấy. Nếu mai kia không còn consumer ngoài application, nó cũng có thể trở thành internal; vị trí phải theo consumer thật, không theo cây thư mục đẹp mắt.
 
@@ -126,7 +126,7 @@ Test cuối không phải để khẳng định “mọi slice đều dangerous�
 
 Khi phân tách mã nguồn thành nhiều package, Go runtime thực thi một quy trình khởi tạo cực kỳ nghiêm ngặt dựa trên đồ thị có hướng không chu trình (Directed Acyclic Graph - DAG). Trình biên dịch Go từ chối hoàn toàn các phụ thuộc vòng (`import cycle not allowed`) ngay tại thời điểm build.
 
-Nếu package `A` import `B`, thì `B` bắt buộc phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng package, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc dữ liệu tĩnh, tiếp theo là các hàm `init()` được thực thi tuần tự trên một goroutine duy nhất trước khi hàm `main` khởi chạy. Việc thấu hiểu đồ thị phụ thuộc giúp ta tránh hoàn toàn các lỗi phụ thuộc ẩn và giữ thời gian khởi động của ứng dụng luôn ở mức dự đoán được.
+Nếu package `A` import `B`, thì `B` phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng package, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc tĩnh, tiếp theo là các hàm `init()` chạy tuần tự trong goroutine khởi tạo trước khi `main` chạy. Tuy nhiên `init` có thể tạo goroutine khác; import graph không chứng minh các goroutine ấy đã hoàn tất hoặc config ngoài đã sẵn sàng. Công việc có thể lỗi, cần deadline hoặc cần dependency ngoài nên được gọi tường minh từ điểm khởi tạo ứng dụng, nơi caller quan sát được error.
 
 Lần này không bắt đầu từ implementation đã tách. Mở `labs/part5-package-refactor` trong VS Code: điểm xuất phát là một `main.go` monolithic đang chạy. Chạy `go run .` để giữ behavior làm mốc, rồi chạy `go test -tags exercise ./...`. Lỗi compiler vì package `probe` chưa tồn tại là tín hiệu bắt đầu, không phải lỗi để lờ đi: test đang đòi một public boundary mà code chưa có. Từ requirement và test, anh tự quyết định file nào đi vào `probe`, file nào là `internal/config`, và command map hai model ở đâu. Khi xong, `go run ./cmd/opsprobe` phải giữ output, còn `go test -tags exercise ./...` và `go vet ./...` phải xanh.
 
@@ -187,6 +187,40 @@ Một comment tốt giờ cũng có thể viết chính xác hơn: Result không
 ---
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** `Result{Service: service.Name}` là đủ cho nhánh thành công. Sau `err == nil`, command tự in literal `healthy=true`. Nếu một ngày cần health state mà vẫn giữ operation failure riêng, API sẽ cần một contract mới nói rõ result nào có thể xuất hiện cùng error nào; đó không phải việc của bool hiện tại.
+
+## Module chọn source nào để build
+
+Một package boundary đúng vẫn có thể build với source khác điều anh tưởng. Package là đơn vị tổ chức code; module là tập package có version và dependency requirements. `go.mod` đặt module path, phiên bản ngôn ngữ và các requirement; `go.sum` lưu checksum để kiểm tra nội dung dependency đã tải. Nó không phải lockfile liệt kê duy nhất mọi version sẽ dùng trong mọi chế độ build.
+
+Go dùng minimal version selection cho các requirement trong module graph: với mỗi module path, chọn version cao nhất được yêu cầu trong graph liên quan, không tự chọn bản mới nhất trên Internet. “Minimal” nói về tập version thỏa requirement, không có nghĩa chọn version thấp nhất trong mọi dependency. `replace` có thể thay source local hoặc version; một build dùng replace local chỉ chứng minh bản source ấy. Replace trong dependency không tự trở thành policy của main module tiêu dùng nó. Khi điều tra, đọc `go list -m all`, `go mod graph` và `go env GOMOD GOWORK` trước khi kết luận test đang chạy đúng dependency.
+
+Workspace thêm một lựa chọn local: `go.work` có thể đưa nhiều module vào vai trò main module để phát triển cùng nhau. Nó không gộp chúng thành một module để phát hành. Một service trong workspace có thể dùng library vừa sửa trên máy, trong khi downstream vẫn tải version đã phát hành. Vì vậy kiểm tra ngoài workspace là một phép thử khác, không phải sự lặp thừa:
+
+~~~powershell
+go env GOMOD GOWORK
+go list -m all
+# Chạy trong module muốn kiểm tra độc lập
+$env:GOWORK = "off"
+go test ./...
+Remove-Item Env:GOWORK
+~~~
+
+Nếu đã có `GOWORK` trong môi trường, hãy lưu và khôi phục giá trị thay vì xóa nó; đoạn trên minh họa phiên shell chưa đặt biến ấy. Bài thực hành không cần dependency thật: tạo hai module local, cho module A import B, dùng workspace để test, rồi tắt workspace. Giải thích vì sao kết quả đổi, và điều gì phải xuất hiện trong `go.mod` hoặc version đã phát hành để consumer độc lập build được. Đừng chữa lỗi bằng một replace trỏ vào đường dẫn laptop rồi gọi artifact đó là tái tạo được.
+
+## Build là phép chọn tệp trước khi compile
+
+Hai tệp trong cùng thư mục chưa chắc cùng đi vào một binary. Tên như `probe_linux.go`, suffix kiến trúc và dòng `//go:build` điều khiển việc chọn source. Constraint phải ở đầu file, trước package clause và có dòng trống phân cách. Đây là bước chọn file của toolchain; compiler vẫn kiểm tra những file đã được chọn theo cùng language semantics.
+
+Với một helper thuần Go, anh có thể đặt hai implementation cùng signature trong các tệp chọn theo OS. `go list -json .` cho biết `GoFiles`, `IgnoredGoFiles` và `CgoFiles`; nó hữu ích hơn suy đoán từ cây thư mục. Cross-compilation đổi target build, không làm máy Windows thực thi hay kiểm tra syscall Linux:
+
+~~~powershell
+$env:GOOS = "linux"
+$env:GOARCH = "amd64"
+$env:CGO_ENABLED = "0"
+go build -o probe-linux ./cmd/opsprobe
+~~~
+
+Chạy trong shell tạm hoặc khôi phục ba biến về giá trị trước đó. Build thành công mới chứng minh compiler/linker chấp nhận tập source cho target, chưa chứng minh binary chạy đúng trên target. Với cgo, còn cần C compiler và library phù hợp target; tắt cgo không phải một bản cross-build tương đương nếu chức năng C bị loại khỏi source. Chương 14 dạy hợp đồng ở biên giới C, Chương 17 kiểm tra process trong môi trường triển khai, còn Chương 26 kiểm tra provenance và vulnerability của artifact. Các bước ấy trả lời những câu hỏi khác nhau.
 
 ## Điểm dừng: package đủ nhỏ để thay đổi
 

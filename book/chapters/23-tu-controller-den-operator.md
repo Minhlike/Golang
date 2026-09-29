@@ -15,7 +15,7 @@ Nếu làm theo cách thủ công, bạn phải bảo trì hàng trăm file YAML
 Câu hỏi trung tâm của chương này là:
 > *Sự khác biệt cốt lõi giữa một Kubernetes Controller thông thường và một Kubernetes Operator là gì?*
 
-Mọi Operator đều là Controller, nhưng không phải mọi Controller đều là Operator. Trong khi một controller thông thường chỉ làm việc với các tài nguyên dựng sẵn của Kubernetes (`Pod`, `Deployment`, `Service`, `ConfigMap`) và hiểu các khái niệm hạ tầng chung chung, thì một Operator kết hợp giữa **Custom Resource Definition (CRD)** — một API hoàn toàn mới do bạn tự định nghĩa cho bài toán của mình — và một **Dedicated Controller** mang tri thức nghiệp vụ chuyên sâu.
+Operator dùng controller để tự động hóa vòng đời một ứng dụng hay domain cụ thể, thường cùng một CRD. Controller nói chung cũng có thể làm việc với custom resource; không có quy tắc rằng nó chỉ hiểu tài nguyên dựng sẵn. Điểm khác biệt hữu ích là tri thức vận hành mà reconciliation thể hiện, không một loại controller đặc biệt do Go hay Kubernetes compiler nhận diện.
 
 ~~~
 Tri thức chuyên gia (Domain Knowledge)
@@ -46,7 +46,7 @@ Khi bạn nộp khai báo trên, Operator sẽ tự động sinh ra Deployment t
 
 ## 2. Kiến trúc của controller-runtime
 
-Viết Operator bằng `client-go` thuần túy đòi hỏi hàng ngàn dòng code chỉ để thiết lập Reflector, Informer, Indexer và WorkQueue. Để giải phóng kỹ sư khỏi sự phức tạp lặp lại này, cộng đồng Kubernetes chính thức xây dựng thư viện `sigs.k8s.io/controller-runtime`.
+Viết Operator bằng `client-go` thuần túy đòi hỏi tự nối các phần quản lý cache, queue và lifecycle. Thư viện `sigs.k8s.io/controller-runtime` cung cấp lớp tổ chức chung cho các phần này; lượng code tiết kiệm phụ thuộc yêu cầu của operator, không có con số chung.
 
 Sơ đồ phân nhánh dưới đây mô tả cấu trúc của một hệ thống Operator hiện đại:
 
@@ -83,7 +83,7 @@ Sơ đồ phân nhánh dưới đây mô tả cấu trúc của một hệ thố
 
 ## 3. Bản thiết kế CRD: Ranh giới rạch ròi giữa Spec và Status
 
-Một trong những quy tắc bất biến trong thiết kế API Kubernetes là sự phân lập triệt để giữa **Spec** và **Status**:
+Với API của lab, ta tách **Spec** — ý định người dùng — khỏi **Status** — điều controller quan sát. Đây là contract của API; quyền ghi thực tế còn phụ thuộc RBAC và subresource:
 
 | Khối dữ liệu | Ý nghĩa | Ai có quyền ghi? | Trách nhiệm |
 | :--- | :--- | :--- | :--- |
@@ -92,7 +92,7 @@ Một trong những quy tắc bất biến trong thiết kế API Kubernetes là
 
 ### Quy tắc chống trượt (Anti-Drift Rule)
 
-> **CẤM TUYỆT ĐỐI:** Reconciler không bao giờ được phép tự ý thay đổi dữ liệu trong `Spec` của Custom Resource!
+> **Policy của lab:** Reconciler không sửa `Spec` để ghi observation hoặc tự ghi đè ý định người dùng. Observation đi vào `Status`; một controller có chức năng thay spec cần ownership và policy riêng.
 
 Nếu người dùng cấu hình `replicas: 3`, mà Reconciler thấy tải cao rồi tự ý sửa `spec.replicas = 5`, hệ thống sẽ rơi vào cuộc chiến bất tận giữa Operator và công cụ GitOps (ArgoCD liên tục kéo về 3, Operator liên tục đẩy lên 5).
 
@@ -139,7 +139,7 @@ Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): C
 
 Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng của bạn tạo ra các tài nguyên bên ngoài cụm như một cơ sở dữ liệu Amazon RDS, một bản ghi DNS trên Cloudflare, hay một hàng đợi tin nhắn AWS SQS?
 
-Khi người dùng chạy `kubectl delete appservice payment-api`, nếu Kubernetes xóa ngay đối tượng khỏi etcd, Operator sẽ mất dấu vĩnh viễn và không còn biết tài nguyên đám mây nào cần phải thu hồi, gây lãng phí hàng nghìn USD chi phí hạ tầng.
+Nếu đối tượng `AppService` bị xóa trước khi cleanup hoàn tất, controller có thể mất dữ liệu để xác định tài nguyên ngoài cụm. Trong scenario này, finalizer giữ object đủ lâu cho việc thu hồi; vẫn cần cơ chế điều tra hoặc đối soát để xử lý sự cố ngoài đường chạy bình thường. Không có số chi phí chung suy ra từ một object bị xóa.
 
 Đây chính là sứ mệnh của **Finalizer** (Bộ chốt vòng đời).
 
@@ -164,7 +164,7 @@ Khi người dùng chạy `kubectl delete appservice payment-api`, nếu Kuberne
 
 Một lỗi vận hành nghiêm trọng là thiết kế hàm dọn dẹp không có tính **lũy đẳng (idempotency)**. Nếu dịch vụ đám mây trả về lỗi `404 Not Found` (nghĩa là tài nguyên đã bị ai đó xóa trước rồi), hàm dọn dẹp không được coi đó là lỗi! 
 
-Nếu bạn trả về lỗi khi gặp 404, Reconciler sẽ liên tục thử lại và không bao giờ chịu gỡ Finalizer. Tài nguyên Kubernetes sẽ bị kẹt vĩnh viễn ở trạng thái `Terminating` và không ai có thể xóa được.
+Nếu coi mọi 404 khi cleanup là lỗi phải retry, controller có thể giữ finalizer dù resource ngoài đã mất. Object có thể kẹt `Terminating` cho tới khi logic được sửa hoặc có can thiệp. Chỉ coi not-found là cleanup thành công khi đã xác nhận đúng identity và contract API, không bỏ qua mọi lỗi ngoài bằng cùng một nhánh.
 
 ---
 
@@ -316,7 +316,7 @@ ok      part23-controller-runtime-operator/controllers   1.875s
 Khi tạo mới một `AppService`, Reconciler tự động sinh một `Deployment` mang tên tương ứng. Bằng chứng kiểm thử xác nhận `dep.OwnerReferences[0].Name == "cache-service"`, và `app.Finalizers` lập tức được bổ sung khóa `apps.example.com/finalizer`.
 
 ### 2. Tự phục hồi sai lệch cấu hình (TestReconcileDriftCorrection)
-Giả lập một hành vi can thiệp trái phép: sửa thủ công Deployment thành `replicas: 1` và đổi ảnh thành `malicious:v0`. Khi hàm `Reconcile` chạy, nó phát hiện sai lệch và khôi phục ngay lập tức về `replicas: 5` và `image: "nginx:1.26"`.
+Lab sửa desired deployment rồi gọi Reconcile để kiểm tra logic khôi phục những field controller sở hữu. Test không đo tốc độ hội tụ của cluster thật; cache, event delivery, retry và API error vẫn ảnh hưởng thời gian sửa drift.
 
 ### 3. Vòng đời Finalizer (TestReconcileFinalizerExecution)
 Gán `DeletionTimestamp` vào đối tượng. Reconciler gọi `ExternalCleaner.Cleanup()` rồi mới gỡ Finalizer; thiếu cleaner là lỗi và finalizer phải giữ lại. Test chỉ chứng minh contract của lab; việc object thực sự biến mất là trách nhiệm API server/garbage collection và không được suy ra từ fake client.
@@ -333,8 +333,8 @@ Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Re
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Sửa trường Spec trong Reconcile** để lưu trạng thái tạm thời. | Xung đột vĩnh viễn với các công cụ GitOps (ArgoCD), gây ra bão điều hòa liên tục. | Chỉ đọc `Spec`. Mọi trạng thái vận hành phải lưu tại nhánh `Status`. |
-| **Dùng r.Update thay vì r.Status().Update** khi cập nhật trạng thái. | Làm tăng số `metadata.generation`, kích hoạt Reconcile chạy lại vô tận. | Luôn tách bạch: cập nhật dữ liệu qua `r.Update()`, cập nhật trạng thái qua `r.Status().Update()`. |
+| **Ghi observation vào Spec** dù API quy định user sở hữu Spec. | Có thể xung đột với GitOps và gây reconcile lặp. | Giữ observation ở Status; xác định field ownership khi có chức năng sửa Spec. |
+| **Dùng `Update` cho Status khi CRD bật status subresource.** | Status có thể bị bỏ qua; generation không phải cứ Update là tăng. | Dùng `Status().Update` cho status và kiểm tra conflict/observedGeneration theo API. |
 | **Xử lý Finalizer không lũy đẳng (Non-idempotent)** khi dịch vụ ngoài báo 404. | Tài nguyên bị kẹt vĩnh viễn ở trạng thái `Terminating`, cụm máy chủ không thể dọn rác. | Nếu lệnh xóa ngoại vi trả về 404 Not Found, coi như đã xóa thành công và gỡ Finalizer. |
 | **Quên gán OwnerReference** cho tài nguyên con do Operator sinh ra. | Khi xóa đối tượng cha, tài nguyên con bị mồ côi (orphaned), gây rò rỉ tài nguyên cụm. | Luôn gọi `controllerutil.SetControllerReference(owner, child, r.Scheme)` trước khi tạo. |
 
@@ -419,4 +419,4 @@ Hàm `meta.SetStatusCondition` tự động kiểm tra: nếu điều kiện đ�
 
 ---
 
-Bằng việc kết hợp giữa **Custom Resource**, **controller-runtime** và **Finalizer**, bạn đã làm chủ công nghệ cốt lõi đứng sau các Operator phức tạp nhất thế giới hiện nay như Prometheus Operator, Kafka Strimzi hay cert-manager. Trong Chương 24, chúng ta sẽ mở rộng tầm nhìn ra ngoài biên giới Kubernetes: xây dựng các hệ thống tự động hóa hạ tầng đám mây trên **AWS SDK for Go v2** mà không bao giờ biến thông tin xác thực thành bí mật dài hạn dễ bị lộ lọt.
+Custom Resource, controller-runtime và finalizer cho ta các cơ chế để đọc và xây một operator nhỏ. Lab không chứng minh đã làm chủ mọi operator production; workload thật còn có schema evolution, ownership, retry, RBAC và recovery riêng. Chương 24 chuyển boundary ấy sang AWS SDK for Go v2 và credential tạm thời.

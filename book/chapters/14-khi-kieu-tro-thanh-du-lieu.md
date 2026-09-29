@@ -215,7 +215,7 @@ Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (poin
 p = unsafe.Pointer(uintptr(p) + offset)
 ~~~
 
-Trình biên dịch nhận diện mẫu hình biểu thức đơn này để bảo đảm đối tượng gốc không bị GC thu hồi trong khoảnh khắc tính toán địa chỉ. Việc tách `uintptr` ra một biến trung gian hoặc trả về từ hàm vi phạm trực tiếp cam kết này.
+Pattern một biểu thức còn phải giữ pointer trong cùng object đã cấp phát và trỏ tới dữ liệu hợp lệ theo contract `unsafe`; nó không cho phép tính một địa chỉ tùy ý. Tách địa chỉ qua `uintptr` trung gian không được hợp thức hóa chỉ bằng `KeepAlive`. Các mô tả runtime và ví dụ ở đây được kiểm tra trong bối cảnh Go 1.27.1; chỉ conversion pattern được package công bố mới là phần caller nên dựa vào.
 
 Thứ tư, hai kiểu `reflect.StringHeader` và `reflect.SliceHeader` đã bị Go chính thức đánh dấu deprecated kể từ Go 1.20 vì chúng khuyến khích việc thao tác sai lệch trên trường `uintptr Data`. Trong Go hiện đại, các thao tác chuyển đổi tầng thấp phải sử dụng các hàm chuẩn mực do package `unsafe` cung cấp:
 
@@ -233,7 +233,17 @@ slicePtr := unsafe.SliceData(buf)
 slice := unsafe.Slice(slicePtr, count)
 ~~~
 
-Cần lưu ý đặc biệt về vòng đời dữ liệu: các hàm như `unsafe.StringData` và `unsafe.SliceData` chỉ trích xuất địa chỉ byte đầu tiên, chúng **không tự động bảo đảm vòng đời** cho khối dữ liệu bên dưới nếu biến chuỗi hoặc slice gốc bị mất tham chiếu. Lập trình viên có trách nhiệm bảo đảm đối tượng gốc vẫn còn sống (sử dụng `runtime.KeepAlive` khi cần thiết) trong suốt khoảng thời gian con trỏ được sử dụng.
+Cần giữ contract về vòng đời và mutation: pointer Go hợp lệ được GC theo dõi, khác với một địa chỉ đã biến thành số nguyên. `unsafe.String` không cho phép sửa các byte nền trong khi string còn được sử dụng. `runtime.KeepAlive` có vai trò ở những boundary như resource có finalizer mà OS chỉ còn nhìn thấy descriptor; nó không hợp thức hóa conversion ngoài các pattern của `unsafe`, không pin memory và không sửa một địa chỉ `uintptr` đã stale.
+
+## Biên giới với C là một hợp đồng khác
+
+Reflection vẫn hoạt động trong hệ kiểu Go. Khi library chỉ có C ABI, cgo đưa chương trình qua một boundary khác: representation, lifetime, allocator và toolchain của hai phía đều cần được đọc. Một string Go có độ dài và có thể chứa byte NUL; `strlen` của C dừng ở NUL đầu tiên. Hai phép “đo độ dài” không cùng contract.
+
+Lab `labs/edition-contracts/interop` có một hàm nhỏ dùng `C.CString`, gọi `C.strlen`, rồi `C.free` vùng nhớ đã cấp phát. Test đòi `"a\x00b"` có kết quả 1 ở phía C, không phải `len` của string Go. Đừng biến phép thử này thành khuyến nghị chuyển parser sang C: nó chỉ làm lộ một khác biệt dữ liệu. Byte không có NUL cuối, string Unicode và C string cần chính sách chuyển đổi cụ thể; “cùng là text” chưa đủ.
+
+Memory do `C.CString` cấp phát cần được giải phóng theo allocator C; GC Go không tự thu hồi nó. Với pointer Go truyền sang C, tài liệu cgo quy định vùng memory được phép trỏ tới, pinning và thời gian C có thể giữ pointer. Không suy luận rằng thấy một địa chỉ hợp lệ lúc gọi là được lưu nó vô hạn ở C. `runtime.Pinner` và `runtime/cgo.Handle` giải quyết những trường hợp khác nhau; Handle là định danh để giữ giá trị Go, không phải permission cho C giải tham chiếu tùy ý. Chỉ dùng sau khi đã thiết kế lifecycle và đọc contract tương ứng.
+
+cgo còn thay deployment contract: build cần C compiler phù hợp, binary có thể phụ thuộc native library, cross-compilation cần toolchain target. Memory native không nằm trọn trong heap budget Go và crash native có thể vượt khỏi error path mà caller Go kiểm soát. Không có một số nanosecond crossing phổ quát: nếu boundary là hot path, đo đúng payload, tần suất và môi trường, rồi xem có thể gom nhiều operation thành một lượt gọi không. Go thuần thường đơn giản hơn cho tooling tự chứa; C hợp lý khi cần API, driver hoặc implementation đã được kiểm chứng mà việc viết lại tạo rủi ro lớn hơn chi phí interop.
 
 Chương này không dạy cách “né Go”. Nó dạy một boundary có trách nhiệm khi type chỉ xuất hiện lúc runtime. Reflection có thể giữ code generic nhỏ và thành thật nếu contract về shape, metadata và mutation được viết lộ ra. Khi proof ấy không đủ, quay lại type tĩnh, interface nhỏ hoặc API cụ thể thường là thiết kế tốt hơn.
 
@@ -242,3 +252,4 @@ Chương này không dạy cách “né Go”. Nó dạy một boundary có trá
 2. Go Team. Package `unsafe`: `Pointer`, `Sizeof`, `Alignof`, `Offsetof`, `String`, `StringData`, `Slice`, `SliceData`. pkg.go.dev/unsafe
 3. Go Team. The Go Programming Language Specification: struct tags, type identity và address operators. go.dev/ref/spec
 4. Go Team. Go Runtime: Garbage Collection Invariants and Stack Copying. go.dev/doc/gc-guide
+5. Go Team. `cmd/cgo`, Passing pointers; `runtime.Pinner`; `runtime/cgo.Handle`. Contract kiểm tra với Go 1.27.1. pkg.go.dev/cmd/cgo

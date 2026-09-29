@@ -50,6 +50,18 @@ CMD ["--config", "/etc/probe-api/config.json"]
 
 > **Dừng để dự đoán:** Nếu runtime override `CMD` thành `--config /run/config.json`, executable nào vẫn được chạy? Nếu `ENTRYPOINT` là shell form, process nào thực sự là PID 1 và signal termination sẽ đi qua đâu? Đừng trả lời bằng thói quen: mở image config hay Dockerfile rule của runtime đang dùng.
 
+## Container vẫn sống trên máy thật
+
+![Các dãy tủ máy Pleiades tại NASA Ames; ảnh hạ tầng thật, không mô tả workload Go.](../../assets/photos/pleiades-grayscale.jpg)
+
+@figure Pleiades tại NASA Ames, ảnh ngày 8-10-2008 của Marco Librero/NASA Ames Research Center, qua Wikimedia Commons. Asset thuộc public domain theo PD-USGov-NASA; bản sách chỉ chuyển grayscale. Ảnh cho thấy hạ tầng vật lý, không là bằng chứng NASA dùng Go hay Kubernetes trên hệ thống này.
+
+Ảnh phòng máy giúp đặt lại một giới hạn dễ bị YAML che khuất: process cuối cùng vẫn cạnh tranh CPU, RAM, I/O và mạng trên máy thật. Namespace trên Linux tạo những góc nhìn tách biệt cho một số resource; cgroup tổ chức và giới hạn tài nguyên theo policy. Chúng không biến CPU quota thành thêm core vật lý, cũng không biến memory limit thành một lượng heap Go được bảo đảm cấp phát.
+
+Hãy điều tra một tình huống giả định: Pod có memory limit, service không tăng số request, nhưng vẫn bị OOM kill sau khi thêm native library. Heap profile Go chưa giải thích toàn bộ RSS; ngoài Go-managed memory còn có native allocations, mappings và các thành phần OS kế toán theo policy của môi trường. `GOMEMLIMIT` là soft limit cho phần memory runtime Go quản lý, không phải RSS cap hay quyền yêu cầu kernel bỏ qua cgroup limit. Tài liệu `runtime/debug.SetMemoryLimit` nêu cả phần bị loại khỏi budget, như memory do code ngoài runtime quản lý.
+
+Vì vậy đọc limit trong declaration, lượng dùng thực tế và profile là ba bước khác nhau. Chương 10 cho công cụ đo allocation; Chương 20 phân biệt CPU parallelism với quota; ở đây nhiệm vụ của deployment là đặt resource policy có headroom phù hợp workload và quan sát throttle/OOM/latency. Không chọn một phần trăm memory cố định cho mọi service. Bài điều tra kết thúc khi anh có thể nói thành phần nào được đo, thành phần nào chưa đo và ai thực thi ngưỡng dừng, không phải khi đã thêm một biến môi trường vào manifest.
+
 ## Một process làm gì khi control plane muốn dừng nó?
 
 Chương 12 đã tách lifecycle HTTP server khỏi `main`: signal dẫn tới context của application, server ngừng nhận connection mới, rồi `Shutdown` chờ request đang hoạt động trong một grace period. Contract ấy vẫn thuộc về program. Container runtime và kubelet chỉ tạo thêm một upstream event: tới lúc termination, process nhận signal theo runtime policy; Kubernetes cũng có thể chờ một grace period trước khi buộc dừng. Không có lời hứa chung rằng mọi handler active tự bị cancel, mọi subprocess tự biến mất, hay mọi request sẽ hoàn thành.
@@ -285,11 +297,14 @@ Trong `deployment.yaml`, hai probe phục vụ hai mục đích hoàn toàn khá
 
 Thứ nhất là Readiness Probe (`/readyz`): Trả lời câu hỏi "Pod này có sẵn sàng nhận traffic từ Service ngay lúc này không?". Nếu readiness thất bại, endpoint controller sẽ tạm thời gỡ Pod khỏi danh sách IP nhận tải của Service, nhưng container **không** bị restart.
 
-Thứ hai là Liveness Probe (`/livez`): Trả lời câu hỏi "Process này còn sống và hoạt động bình thường không, hay đã bị deadlock hoàn toàn?". Nếu liveness thất bại, kubelet sẽ tiêu diệt và restart container. Tuyệt đối không kiểm tra database hay dependency từ xa trong liveness probe; một sự cố mạng thoáng qua của dependency sẽ khiến toàn bộ cluster tự restart hàng loạt (cascading failure).
+Thứ hai là Liveness Probe (`/livez`): kiểm tra điều kiện mà policy coi là cần restart container. Kubelet áp dụng threshold và termination policy, không restart chỉ vì một mẫu fail. Tránh dùng lỗi dependency xa làm liveness failure nếu restart không chữa được nó; điều đó có thể tạo cascading restart. Readiness và liveness phục vụ quyết định khác nhau.
 
 Phần tài nguyên cũng phân định rõ ràng giữa `requests` (con số scheduler dùng
-để tìm node phù hợp cho Pod) và `limits` (ngưỡng tối đa kernel cho phép; vượt CPU
-sẽ bị throttle, vượt memory sẽ bị OOM killer tiêu diệt).
+để tìm node phù hợp cho Pod) và `limits` (giới hạn tài nguyên được thực thi theo
+cơ chế của môi trường chạy). Với Linux cgroup, CPU bị throttle khi dùng hết
+ngân sách quota; giới hạn memory được thực thi theo cơ chế phản ứng và có thể
+dẫn tới OOM kill. Đây không phải cam kết rằng mọi lần vượt ngưỡng đều bị kill
+ngay lập tức, cũng không phải giới hạn riêng cho heap Go.
 
 Để hiểu cách điều tra sự cố bằng bằng chứng thay vì suy đoán, lab cung cấp
 fixture `k8s/failure-wrong-image.yaml` với tên image không tồn tại:

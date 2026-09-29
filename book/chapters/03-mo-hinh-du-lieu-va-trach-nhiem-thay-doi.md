@@ -353,6 +353,27 @@ Signature này nói rõ ba vai: `registry` là map value để lookup và gán e
 
 Sau chương này, một signature không còn chỉ là tên type. Nó cho biết ta đang đưa vào function một snapshot, một cửa sổ tới storage dùng chung, một map value dẫn tới map data, hay một pointer mở đường tới variable caller. Khi cần debug mutation, hãy viết ra trước/sau lời gọi: variable nào tồn tại ở caller, parameter nào xuất hiện ở function, và expression nào thực sự là đích gán.
 
+## Kiểu là ranh giới ý nghĩa, không chỉ cách chứa byte
+
+Một port và một số lần thử đều có thể nằm trong `uint16`, nhưng đổi chỗ chúng là bug nghiệp vụ. Khai báo kiểu có tên đặt một ranh giới compiler có thể kiểm tra:
+
+~~~go
+type Port uint16
+type Attempts uint16
+type PortAlias = uint16
+
+var port Port = 80
+// var attempts Attempts = port // không gán trực tiếp
+var raw uint16 = uint16(port)
+var alias PortAlias = raw
+~~~
+
+`Port` và `Attempts` là hai defined type khác nhau; cùng underlying type `uint16` không làm chúng có cùng identity. `PortAlias` lại là tên khác của chính `uint16`, không tạo một kiểu mới. Alias hữu ích khi chuyển API sang package khác mà vẫn giữ identity cho caller, không hữu ích nếu mục tiêu là ngăn nhầm hai đại lượng. Đừng đồng nhất assignability với convertibility: conversion tường minh có thể hợp lệ khi phép gán trực tiếp không hợp lệ; interface satisfaction còn dựa trên method set chứ không chỉ representation.
+
+Conversion không phải validation. Với variable `wide := uint32(65537)`, `Port(wide)` cho giá trị 1 do quy tắc chuyển số nguyên sang kiểu hẹp hơn. Ngược lại, `Port(65537)` với hằng số bị từ chối vì hằng số không biểu diễn được trong kiểu đích. Constructor nhận dữ liệu ngoài phải kiểm tra range trước conversion nếu contract là port `1..65535`. Kiểu có tên giúp phát hiện nhầm vai trò; nó không tự cấm zero value hoặc giá trị ngoài miền nghiệp vụ.
+
+Để tự kiểm chứng, mở `TestConstantsAndIdentity` và `testdata/incompatible` trong `labs/edition-contracts`. Test compiler yêu cầu phép gán giữa hai defined type bị từ chối; đừng sửa fixture chỉ vì nó không build. Sau đó tự thiết kế `NewPort(n uint32) (Port, error)` và viết test cho 0, 1, 65535, 65536 trước implementation. Đây là một bài về contract tại boundary, không phải bài thuộc lòng syntax `type`.
+
 ## Khi hành vi thuộc về service
 
 `recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một service, chữ ký bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho service, một hàm khác ghi kết quả probe, hàm nữa kiểm tra cấu hình. Lúc này method giúp đặt hành vi cạnh type mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc value semantics đã xây.
@@ -420,7 +441,19 @@ type Service struct {
 }
 ~~~
 
-`Service` có `Endpoint` và `ProbeState`; không có quan hệ kế thừa nào được ngụ ý. Đây là cách composition thường rõ nhất khi domain có các phần độc lập. Embedding cũng là một công cụ của Go, nhưng nó đưa field và method được promote vào selector của type ngoài. Ta sẽ chỉ dùng nó khi một API có lợi từ sự promote đó; hiện tại field có tên giữ ownership và đường đi của data rõ hơn.
+`Service` có `Endpoint` và `ProbeState`; không có quan hệ kế thừa nào được ngụ ý. Đây là cách composition thường rõ nhất khi domain có các phần độc lập. Embedding thay đường viết selector, không biến object ngoài thành subtype của object trong:
+
+~~~go
+type Named struct { Name string }
+func (n Named) Label() string { return n.Name }
+type Tagged struct { Named }
+
+tag := Tagged{Named: Named{Name: "api"}}
+fmt.Println(tag.Label()) // selector được promote
+// var n Named = tag // Tagged không phải Named
+~~~
+
+`Label` vẫn nhận receiver `Named`; lời gọi ngắn đi qua field được embed. Hai field embed có cùng selector ở cùng độ sâu có thể làm selector mơ hồ và bị compiler từ chối. Method được promote cũng có thể làm type ngoài thỏa một interface ngoài dự kiến. Vì vậy embedding là quyết định về public API, không phải mẹo tiết kiệm tên field. Khi caller cần nhìn rõ ownership, field có tên vẫn là lựa chọn dễ review hơn. Những quy tắc này thuộc Go specification về struct types, selectors và method sets, không phụ thuộc layout vật lý của struct.
 
 ## Interface xuất hiện ở nơi cần một hành vi
 
@@ -478,7 +511,7 @@ markFailed(&billing) // *Service thỏa ProbeRecorder
 
 Để không biến interface thành một khái niệm trừu tượng mơ hồ, ta cần nhìn vào cấu trúc dữ liệu thực tế mà trình biên dịch tạo ra. Trong đặc tả ngôn ngữ Go, một giá trị interface đại diện cho một cặp giá trị gồm kiểu động (dynamic type) và giá trị động (dynamic value). 
 
-Ở tầng triển khai thực tế của Go 1.27.1 (mã nguồn tại `src/runtime/iface.go`), một interface có chứa method như `SummarySource` được biểu diễn bằng cấu trúc `iface` gồm hai con trỏ 64-bit: con trỏ thứ nhất `tab *itab` trỏ tới bảng thông tin kiểu (chứa mô tả kiểu cụ thể, bảng con trỏ hàm thỏa mãn interface, và hash định danh kiểu); con trỏ thứ hai `data unsafe.Pointer` trỏ tới dữ liệu thực tế của đối tượng. Đối với interface rỗng (`any` hoặc `interface{}`), runtime sử dụng cấu trúc `eface` với con trỏ `_type *_type` và con trỏ `data`.
+Ở tầng triển khai thực tế của Go 1.27.1 trên kiến trúc amd64 đang dùng để kiểm thử sách (mã nguồn tại `src/runtime/iface.go`), một interface có chứa method như `SummarySource` được biểu diễn bằng cấu trúc `iface` gồm hai con trỏ 64-bit: con trỏ thứ nhất `tab *itab` trỏ tới bảng thông tin kiểu (chứa mô tả kiểu cụ thể, bảng con trỏ hàm thỏa mãn interface, và hash định danh kiểu); con trỏ thứ hai `data unsafe.Pointer` trỏ tới dữ liệu thực tế của đối tượng. Đối với interface rỗng (`any` hoặc `interface{}`), runtime sử dụng cấu trúc `eface` với con trỏ `_type *_type` và con trỏ `data`. Kích thước con trỏ phụ thuộc kiến trúc; biểu diễn này không phải cam kết của đặc tả ngôn ngữ.
 
 Biểu diễn hai con trỏ này giải thích trực diện cạm bẫy kinh điển mang tên **typed nil**:
 
@@ -493,13 +526,27 @@ if src == nil {
 }
 ~~~
 
-Một giá trị interface chỉ được đánh giá là `nil` khi và chỉ khi **cả kiểu động và giá trị động đều chưa được thiết lập** (tức `tab == nil` và `data == nil`). Khi gán một con trỏ `s` có giá trị `nil` kiểu `*Service` vào `src`, con trỏ `tab` được điền thông tin của kiểu `*Service`, trong khi `data` mang giá trị 0. Vì `tab` khác `nil`, biểu thức `src == nil` trả về `false`. Nếu sau đó chương trình gọi `src.Summary()`, method vẫn được kích hoạt với receiver mang giá trị `nil`, và nếu method cố truy cập các trường dữ liệu bên trong thì một cơn hoảng loạn (panic) giải tham chiếu con trỏ rỗng sẽ lập tức nổ ra.
+Một giá trị interface chỉ bằng `nil` khi chưa có kiểu động và giá trị động. Khi gán con trỏ `s` kiểu `*Service` có giá trị `nil` vào `src`, interface vẫn có kiểu động `*Service`, nên `src == nil` trả về `false`. Trong ví dụ này, `Summary` có value receiver `Service`: gọi `src.Summary()` cần giải tham chiếu con trỏ nil để tạo receiver value, nên panic xảy ra **trước khi vào thân method**. Với một method có pointer receiver, receiver nil có thể đi vào thân method; method ấy chỉ an toàn nếu contract và implementation chủ động xử lý nil. Đừng suy từ “interface không nil” thành “lời gọi method chắc chắn an toàn”.
+
+## So sánh được chưa chắc so sánh an toàn
+
+Map key cần kiểu comparable; slice, map và function không có phép so sánh bằng giữa hai giá trị cùng loại, dù chúng có thể so với `nil`. Array comparable khi element comparable; struct comparable khi các field comparable. Điều này giải thích vì sao thêm field slice vào một struct có thể làm một API dùng struct ấy làm map key không còn compile.
+
+Interface cần thêm một bước suy luận. Kiểu interface cho phép viết `==`, nhưng giá trị động bên trong có thể không comparable:
+
+~~~go
+var a any = []int{1}
+var b any = []int{1}
+// a == b sẽ panic: kiểu động là []int
+~~~
+
+Đây không phải bug của garbage collector. Compiler chỉ biết static type `any`; khi hai dynamic type giống nhau, phép so sánh phải áp dụng cho dynamic value và slice không có contract ấy. `TestDynamicComparabilityPanics` kiểm tra đúng phản ví dụ này. Muốn so nội dung slice, hãy định nghĩa nghĩa của “bằng nhau” rồi so phần tử; không ép nó vào interface để né lỗi compiler. Chương 19 sẽ quay lại giới hạn này khi thiết kế generic API dùng `comparable`.
 
 ## Một API nhỏ, Đủ để Đọc bằng Semantics
 
 Ở cuối mạch thiết kế này, công cụ `opsprobe` đã có thể diễn đạt ba ý định kiến trúc khác nhau một cách mạch lạc mà không cần dựa vào những danh xưng mơ hồ:
 
-Hàm `func (service Service) Summary() string` tiếp nhận receiver dưới dạng snapshot giá trị độc lập, bảo đảm an toàn tuyệt đối khỏi mọi tác dụng phụ khi đọc dữ liệu để sinh chuỗi mô tả.
+`Summary` nhận bản copy receiver `Service`; với các field value đang có, nó chỉ đọc dữ liệu để tạo chuỗi. Nếu type được thêm field pointer, map hoặc slice, copy receiver vẫn có thể chia sẻ dữ liệu nền. Value receiver không bảo đảm mọi method tương lai không có side effect.
 
 Hàm `func (service *Service) Record(bool)` tiếp nhận receiver dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
 

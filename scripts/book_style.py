@@ -58,15 +58,15 @@ COLOR_BORDER_HAIRLINE = colors.HexColor("#C8C8C8")  # Very light separators
 COLOR_BORDER_SUBTLE   = colors.HexColor("#E0E0E0")  # TOC row underlines
 
 # Background stops
-COLOR_BG_LIGHT   = colors.HexColor("#F2F2F0")  # Code block background (cool off-white)
-COLOR_BG_HEADER  = colors.HexColor("#E6E6E2")  # Table header background
-COLOR_BG_CALLOUT = colors.HexColor("#F5F5F3")  # Blockquote background
+COLOR_BG_LIGHT   = colors.HexColor("#F2F2F2")  # Neutral gray; R=G=B in RGB renders
+COLOR_BG_HEADER  = colors.HexColor("#E6E6E6")  # Table header background
+COLOR_BG_CALLOUT = colors.HexColor("#F5F5F5")  # Blockquote background
 COLOR_WHITE      = colors.HexColor("#FFFFFF")
 
 # Cover accent fills
 COLOR_COVER_DARK   = colors.HexColor("#1C1C1C")  # Dark focal block
-COLOR_COVER_MID    = colors.HexColor("#E8E8E4")  # Medium fill
-COLOR_COVER_LIGHT  = colors.HexColor("#F5F5F3")  # Light fill
+COLOR_COVER_MID    = colors.HexColor("#E8E8E8")  # Medium fill
+COLOR_COVER_LIGHT  = colors.HexColor("#F5F5F5")  # Light fill
 COLOR_COVER_GHOST  = colors.HexColor("#FAFAFA")  # Near-white fill
 
 # ==============================================================================
@@ -132,11 +132,13 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
         "body": ParagraphStyle(
             "Body", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=13.5,
             leading=21.5, alignment=TA_LEFT, textColor=COLOR_TEXT_PRIMARY, spaceAfter=9,
+            allowWidows=False, allowOrphans=False,
         ),
         "bullet": ParagraphStyle(
             "Bullet", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=13.5,
             leading=21.5, textColor=COLOR_TEXT_PRIMARY, leftIndent=16, firstLineIndent=-10,
             spaceAfter=4, bulletFontName=FONT_SERIF,
+            allowWidows=False, allowOrphans=False,
         ),
 
         # ── Code & Containers ────────────────────────────────────────────────

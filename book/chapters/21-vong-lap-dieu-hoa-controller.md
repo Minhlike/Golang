@@ -8,14 +8,14 @@ Trong Chương 20, dự án `opsprobe` đã trang bị cho ta một hệ thống
 
 ## Kích hoạt theo mức và Kích hoạt theo cạnh
 
-Để hiểu vì sao các hệ thống phân tán đáng tin cậy đều lựa chọn vòng lặp điều hòa, trước hết ta cần phân biệt hai triết lý thiết kế cơ bản: **Edge-Triggered (Kích hoạt theo cạnh)** và **Level-Triggered (Kích hoạt theo mức)**.
+Để hiểu vòng lặp điều hòa trong controller của chương này, ta phân biệt hai cách thiết kế: **Edge-Triggered (Kích hoạt theo cạnh)** và **Level-Triggered (Kích hoạt theo mức)**. Đây không phải lựa chọn bắt buộc của mọi hệ thống phân tán đáng tin cậy.
 
 ~~~
 Edge:  Bắn sự kiện "Down" -> [Drop mạng] -> Mất tín hiệu
 Level: "Actual != Desired" -> Can thiệp -> Hội tụ về chuẩn
 ~~~
 
-Trong mô hình **Edge-Triggered**, hệ thống chỉ phát tín hiệu khi có một biến cố chuyển đổi trạng thái (chẳng hạn: `Target X chuyển từ Healthy sang Down`). Cách tiếp cận này rất trực quan và tiết kiệm tài nguyên khi hệ thống hoạt động lý tưởng. Tuy nhiên, trong môi trường phân tán thực tế, mạng có thể bị phân mảnh (network partition), tiến trình nhận có thể bị crash, hoặc bộ đệm hàng đợi có thể bị tràn. Khi sự kiện chuyển trạng thái bị rơi rớt trên đường truyền, tiến trình xử lý sẽ không bao giờ biết sự cố đã diễn ra. Hệ thống bị kẹt vĩnh viễn ở trạng thái sai lệch dù nguyên nhân gốc đã kết thúc từ lâu.
+Trong mô hình edge-triggered, consumer phản ứng với chuyển trạng thái. Nếu mất event mà không có replay, resync hoặc quan sát bổ sung, consumer có thể không biết state đã đổi và giữ kết luận cũ. Đây là lý do một controller cần recovery từ observation hiện tại, không chỉ một chuỗi event được giả định không bao giờ mất.
 
 Ngược lại, mô hình **Level-Triggered** không quan tâm quá khứ đã xảy ra bao nhiêu lần chuyển trạng thái hay bao nhiêu thông điệp bị thất lạc. Ở mỗi chu kỳ, Controller chỉ quan sát **Trạng thái thực tế (Actual State)** hiện hành và so sánh với **Trạng thái mong muốn (Desired State)**. Khi trạng thái mong muốn đòi hỏi 3 bản sao `payment-service` khỏe mạnh nhưng trạng thái thực tế chỉ có 1 bản sao phản hồi thành công, Controller nhận diện mức sai lệch là thiếu 2 bản sao và lập tức kích hoạt hành động khởi chạy bổ sung.
 
@@ -57,7 +57,7 @@ Một là, thiếu khả năng gộp trùng (Deduplication): Khi một dịch v�
 
 Hai là, xung đột điều hòa song song (Parallel Race): Nếu hai worker trong pool cùng lấy một `key` ra xử lý song song, chúng có thể cùng nhìn thấy trạng thái thiếu hụt và cùng kích hoạt hành động tạo mới, dẫn đến tình trạng nhân đôi bản sao ngoài ý muốn (split-brain).
 
-Ba là, bão thử lại (Retry Storm): Nếu tài nguyên đích bị sập hoàn toàn, hàm `Act` sẽ liên tục trả về lỗi. Đẩy lại channel ngay lập tức sẽ khiến worker pool quay cuồng trong vòng lặp thử lại vô tận (spin-lock), vắt kiệt CPU và đánh sập chính dịch vụ đang hấp hối.
+Ba là, retry storm: nếu dependency liên tục lỗi mà key bị đưa lại ngay không có budget/backoff, worker có thể tạo một vòng retry dày, tiêu CPU và tăng tải lên dependency. Đây là busy retry, không phải spin-lock — một cơ chế chờ lock khác. Chính sách retry cần giới hạn tốc độ và hỗ trợ cancellation.
 
 Để nhìn rõ ba bài toán đó, lab dùng một `WorkQueue` tối giản. Nó mô phỏng các ý tưởng `dirty`, `processing` và đưa lại key sau `Done`, chứ không phải bản sao chính xác của `client-go/util/workqueue`.
 
@@ -156,7 +156,7 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 
 Với `BaseDelay=50ms`, lịch thử lại của mô hình này tăng theo 50ms, 100ms, 200ms, 400ms, rồi chạm trần `MaxDelay`. Giãn cách giúp giới hạn nhịp retry khi hệ thống đích gặp lỗi; nó không loại bỏ mọi đợt retry dồn dập giữa nhiều key hay nhiều controller. Khi reconcile thành công, controller gọi `q.Forget(item)` để xóa bộ đếm thất bại.
 
-## Tính lũy thừa: hành động có thể thử lại, quan sát luôn được đọc lại
+## Tính lũy đẳng: hành động có thể thử lại, quan sát được đọc lại
 
 Vì một tài nguyên có thể được đưa vào hàng đợi nhiều lần do sự kiện lặp, resync định kỳ hoặc retry sau lỗi, reconcile phải được thiết kế để an toàn khi gọi lại. Công thức `f(f(x)) = f(x)` chỉ là một trực giác về trạng thái thuần; nó không mô tả đầy đủ hợp đồng production, nơi lời gọi ra bên ngoài có thể thành công nhưng phản hồi bị mất, còn cache có thể cũ.
 
@@ -198,7 +198,7 @@ Nếu `payment-service` đang có 1 replica trong khi yêu cầu là 3, hàm g�
 
 ## Tắt nguồn mềm mại cho Controller
 
-Controller quản lý nhiều worker goroutine chạy ngầm liên tục. Khi nhận tín hiệu dừng tiến trình (`SIGTERM` hoặc hủy context cha), toàn bộ worker phải hoàn tất các công việc đang dở dang trước khi trả quyền kiểm soát:
+Controller quản lý nhiều worker goroutine. Khi context bị hủy, controller đóng hàng đợi để đánh thức worker rồi chờ chúng thoát. Công việc đang chạy có thể trả lỗi do cancellation, không nhất thiết hoàn tất nghiệp vụ; policy drain đến khi hoàn tất cần được thiết kế riêng:
 
 ~~~go
 func (c *Controller) Run(ctx context.Context) error {

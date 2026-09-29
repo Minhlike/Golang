@@ -120,7 +120,7 @@ Không phải test nào cũng cần fake. Config parser đã có test input/outp
 
 Test đầu tiên của `Run` cố ý chỉ dùng một override hợp lệ. Nó trả lời câu hỏi của refactor: endpoint có thật sự đi tới runner không? Nhưng nếu cứ nhân bản kiểu test đó cho từng input xấu, test suite sẽ dần thành một hành lang dài của những hàm gần giống nhau. Lúc ấy người đọc không còn nhìn thấy các rule của config; họ chỉ thấy rất nhiều lần gọi `LoadTargets`.
 
-Một reviewer tốt sẽ hỏi khác đi: parser này có bao nhiêu *policy* độc lập? Với `OPS_PROBE_TARGET`, ta cần giữ ít nhất hai. Variable vắng mặt dùng default đã công bố. Variable có mặt phải là một `host:port` hợp lệ, có host và port trong khoảng TCP. Mỗi hàng test là một ví dụ cho một policy, không phải một input ngẫu nhiên để tăng coverage.
+Một reviewer tốt sẽ hỏi khác đi: parser này có bao nhiêu policy độc lập? Với `OPS_PROBE_TARGET`, ta cần giữ ít nhất hai. Variable vắng mặt dùng default đã công bố. Variable có mặt phải là một `host:port` hợp lệ, có host và port trong khoảng TCP. Mỗi hàng test là một ví dụ cho một policy, không phải một input ngẫu nhiên để tăng coverage.
 
 Đây là lúc bảng test có ích. Không phải vì Go community có một nghi thức tên là “table-driven test”, mà vì bảng làm lộ phần thay đổi và phần giữ nguyên. `raw`, `found` và `want` thay đổi theo case; cách gọi parser và assertion về một target duy nhất được giữ chung:
 
@@ -425,7 +425,7 @@ Khi xây dựng hệ thống kiểm thử, kỹ sư trưởng thành không bao 
 
 ### Kiểm thử Đột biến với `testing.F`
 
-Kiểm thử hộp trắng thông thường chỉ kiểm tra các ca biên do người viết tưởng tượng ra. Ngược lại, kỹ thuật kiểm thử đột biến định hướng độ phủ (coverage-guided fuzzing) tích hợp sẵn trong Go (`testing.F`) sử dụng một động cơ sinh dữ liệu tự động. Động cơ này liên tục đột biến các chuỗi byte ngẫu nhiên, theo dõi các khối mã máy mới được kích hoạt trong luồng thực thi, và dồn dập đưa hàng triệu tổ hợp đầu vào quái dị vào hàm mục tiêu.
+Coverage-guided fuzzing của Go đột biến input và dùng feedback coverage để khám phá thêm đường chạy. Số case thực thi phụ thuộc thời gian, target và môi trường; không có một quota hàng triệu input được bảo đảm. Property và failure được chọn vẫn quyết định loại lỗi fuzzer có thể quan sát.
 
 ~~~go
 func FuzzParseEndpoint(f *testing.F) {
@@ -443,7 +443,7 @@ func FuzzParseEndpoint(f *testing.F) {
 }
 ~~~
 
-Khi phát hiện một đầu vào làm chương trình panic hoặc vi phạm bất biến logic, công cụ fuzzing sẽ tự động cô đọng chuỗi byte gây lỗi (crasher) và lưu vĩnh viễn vào thư mục `testdata/fuzz`. Tệp này trở thành một ca kiểm thử hồi quy cố định, ngăn chặn lỗi tái diễn trong tương lai.
+Khi tìm thấy failure, Go fuzzing có thể thu nhỏ input và lưu crasher vào `testdata/fuzz` để chạy lại như regression case. Lưu và commit corpus phù hợp giúp giữ bằng chứng; nó không tự chứng minh bug không thể tái diễn qua input khác.
 
 ### Tính Xác thực của Đo lường Hiệu năng với `testing.B`
 
@@ -456,7 +456,7 @@ func BenchmarkAppRunLoop(b *testing.B) {
 		res, _ := Run(
 			context.Background(), mockLookup, mockRunner,
 		)
-		if len(res) > 0 && res[0].ID == "" {
+		if len(res) > 0 && res[0].Service == "" {
 			b.Fatal("unexpected empty outcome")
 		}
 	}

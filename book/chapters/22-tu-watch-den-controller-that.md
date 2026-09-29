@@ -26,7 +26,7 @@ API Server là boundary thẩm quyền cho Kubernetes object; informer cache là
 Hãy tưởng tượng kịch bản sau: lúc `t₀`, Pod `web-app` có trạng thái `Pending` và API Server phát sự kiện `E₁(Pending)`. Đến lúc `t₁`, Kubelet khởi động xong container khiến Pod chuyển sang `Running`, và API Server phát sự kiện `E₂(Running)`. Do độ trễ mạng hoặc hàng đợi bận rộn, worker trong controller nhận `E₁` chậm mất 3 giây. Nếu worker dùng ngay dữ liệu bên trong `E₁`, nó sẽ tưởng Pod vẫn đang `Pending` và ra lệnh hủy Pod để tạo lại. Hành động này phá hủy trực tiếp Pod vừa khởi động lành lặn lúc `t₁`.
 
 Quy tắc bất biến của Kubernetes Controller:
-> **Chỉ đẩy định danh (Key: `namespace/name`) vào hàng đợi. Khi worker thức dậy, nó luôn truy vấn trạng thái mới nhất từ Informer Cache để quyết định hành động.**
+> **Policy hàng đợi:** Đẩy key `namespace/name`, rồi đọc observation hiện hành trong Informer cache khi xử lý. Cache là observation local và có thể chậm hơn API server; không gọi nó là trạng thái mới nhất tuyệt đối của cluster.
 
 ---
 
@@ -69,9 +69,9 @@ Sơ đồ khái niệm phân nhánh dưới đây mô tả chính xác luồng d
 | Thành phần Informer | Vai trò kỹ thuật | Tương tác trong hệ thống |
 | :--- | :--- | :--- |
 | `Reflector` | Mở kết nối List/Watch tới API Server | Đẩy các biến động tài nguyên vào bộ đệm `DeltaFIFO`. |
-| `Indexer (Local Store)` | Bộ nhớ đệm in-memory thread-safe | Phục vụ truy vấn đọc tức thì cỡ microsecond, giảm tải API Server. |
+| `Indexer (Local Store)` | Bộ nhớ đệm in-memory có đồng bộ truy cập | Phục vụ lookup local và giảm read tới API server; chi phí cần đo theo index và workload. |
 | `SharedInformer` | Phân phối sự kiện từ `DeltaFIFO` | Đảm bảo local cache cập nhật trước khi event handler kích hoạt. |
-| `Typed Rate-Limited WorkQueue` | Hàng đợi công việc chuyên dụng | Gộp trùng sự kiện, kiểm soát tốc độ thử lại và ngăn race condition. |
+| `Typed Rate-Limited WorkQueue` | Hàng đợi công việc chuyên dụng | Gộp key trùng và kiểm soát thử lại; không thay thế đồng bộ dữ liệu dùng chung. |
 
 ---
 
@@ -86,16 +86,16 @@ Client                                    API Server
   ├──────────────────────────────────────────>│
   │ <── Danh sách Pods + rv = "1040" ─────────┤
   │                                           │
-  │ 2. GET /api/v1/pods?watch=true&rv=1040    │
+  │ 2. Watch: resourceVersion="1040"          │
   ├──────────────────────────────────────────>│
   │ <── HTTP 200 OK (chunked stream) ─────────┤
   │ <── Event: ADDED pod-a (rv=1041) ─────────┤
   │ <── Event: MODIFIED pod-b (rv=1042) ──────┤
   │     ... (Mạng bị ngắt đột ngột) ...       │
   │                                           │
-  │ 3. GET /api/v1/pods?watch=true&rv=1042    │
+  │ 3. Watch: resourceVersion="1042"          │
   ├──────────────────────────────────────────>│
-  │ <── Nối tiếp stream không mất sự kiện ────┤
+  │ <── Tiếp tục nếu lịch sử còn giữ được ────┤
 ~~~
 
 ### Cơ chế hoạt động
@@ -138,7 +138,7 @@ func (c *Controller) handleDelete(obj any) {
 }
 ~~~
 
-Hàm này tự động kiểm tra: nếu `obj` là một struct thông thường, nó trích xuất key `namespace/name`. Nếu `obj` là `cache.DeletedFinalStateUnknown`, nó sẽ trích xuất key từ bia mộ lưu trữ bên trong một cách an toàn tuyệt đối.
+`DeletionHandlingMetaNamespaceKeyFunc` hỗ trợ object thông thường và tombstone `DeletedFinalStateUnknown` để lấy key. Caller vẫn phải xử lý error nếu object không có metadata phù hợp; helper không xác minh mọi dữ liệu nhận được là an toàn.
 
 Key chỉ mang `namespace/name`, nên không phân biệt được một đối tượng cũ đã bị xóa với đối tượng mới cùng tên. Nếu cleanup ngoài Kubernetes cần danh tính bền vững, hãy ghi nhận `metadata.uid` lúc đối tượng còn tồn tại và ràng buộc tài nguyên ngoài với UID đó; đừng suy diễn UID từ một tombstone chỉ còn key.
 
@@ -181,7 +181,7 @@ Một worker sau khi xử lý xong một lượt điều hòa (`reconcile`) sẽ
 
 Thứ nhất, nếu thành công: Gọi `c.queue.Forget(key)` để xóa sạch lịch sử số lần thất bại, đưa bộ đếm backoff về mức 0, và gọi `c.queue.Done(key)`.
 
-Thứ hai, nếu gặp thất bại tạm thời (Transient Error): Không gọi `Forget`. Thay vào đó, gọi `c.queue.AddRateLimited(key)`. Hàng đợi sẽ áp dụng thuật toán lũy thừa cơ số 2 kết hợp jitter (Exponential Backoff): `T_wait = base * 2^failures ± jitter`. Điều này bảo vệ hệ thống không bị đổ vỡ dây chuyền khi một dịch vụ phụ thuộc tạm thời không phản hồi.
+Thứ hai, nếu gặp thất bại tạm thời: Không gọi `Forget`, mà gọi `c.queue.AddRateLimited(key)`. Thời gian chờ do `RateLimiter` đã cấu hình quyết định. Lab dùng `DefaultTypedItemBasedRateLimiter` của client-go v0.37.0: lùi lũy thừa theo key, có mức trần, không tự thêm jitter hay token bucket toàn cục. Đây là cơ chế hạn chế tốc độ thử lại, không phải bảo đảm tránh mọi sự cố dây chuyền.
 
 ---
 
@@ -287,7 +287,7 @@ func (c *Controller) reconcileHandler(
 	}
 
 	if !exists {
-		// Tài nguyên đã bị xóa hoàn toàn khỏi cụm
+		// Không thấy tài nguyên trong cache cục bộ.
 		return c.reconciler.Reconcile(ctx, key)
 	}
 
@@ -309,7 +309,7 @@ func (c *Controller) reconcileHandler(
 
 ## 7. Bằng chứng kiểm thử: Kiểm chứng 6 hành vi then chốt
 
-Để chứng minh controller hoạt động chính xác dưới mọi điều kiện biên khắc nghiệt, bộ kiểm thử tự động tại `labs/part22-client-go-controller/controller_test.go` đã được thiết kế để đo lường 6 đặc tính cốt lõi:
+Bộ kiểm thử tại `labs/part22-client-go-controller/controller_test.go` kiểm tra sáu contract của lab dưới đây. Chúng không mô phỏng mọi điều kiện biên của cluster production:
 
 ~~~
 === RUN   TestEventDeduplication
@@ -329,22 +329,22 @@ ok      part22-client-go-controller   3.829s
 ~~~
 
 ### 1. Bằng chứng gộp trùng sự kiện (TestEventDeduplication)
-Bắn liên tiếp 10 sự kiện cập nhật cho cùng một Pod `production/payment-api` vào Informer. Nhờ cơ chế `dirty set` của WorkQueue, hàm `Reconcile` chỉ bị kích hoạt **đúng 1 lần duy nhất**, giúp loại bỏ 90% tải điều hòa vô ích.
+Test thêm mười lần cùng key của Pod `production/web-proxy` vào queue trước khi worker chạy. Queue có một item và sau một lần xử lý, bộ đếm reconcile bằng một. Kết quả chứng minh gộp key đang chờ trong lịch chạy này, không phải giảm 90% tải hay bảo đảm exactly-once khi sự kiện đến trong lúc xử lý.
 
 ### 2. Đọc trạng thái mới từ Cache thay vì Payload cũ (TestCacheNewerThanEvent)
-Sự kiện đầu tiên phát ra với nhãn `version: "v1"`. Trước khi worker kịp chạy, nhãn trong Informer cache đã được cập nhật thành `version: "v3"`. Khi worker thức dậy, giá trị nó nhận được là `v3`, chứng minh controller không bị đầu độc bởi dữ liệu cũ từ kênh sự kiện.
+Test enqueue Pod có `ResourceVersion: "1"`, rồi cập nhật Indexer thành `"3"` trước khi worker xử lý. Kết quả quan sát là `"3"`, xác nhận đường xử lý đọc lại cache thay vì giữ payload cũ. Test không chứng minh cache luôn mới so với API Server.
 
 ### 3. Tách biệt lỗi tạm thời và Lũy thừa thử lại (TestRateLimitedRetry)
-Giả lập hàm `Reconcile` trả về lỗi kết nối mạng tạm thời. Test kiểm chứng rằng ở lần chạy đầu thất bại, key được đẩy vào `AddRateLimited` thay vì vứt bỏ; đến lần chạy thứ hai thành công, `Forget(key)` được gọi ngay lập tức để xóa sạch vết backoff.
+`TestRateLimitedRetryDecoupledFromDomain` giả lập hai lần reconcile thất bại rồi lần thứ ba thành công. Các assertion kiểm tra hai lần retry, ba lần gọi và không drop; nhánh thành công trong source gọi `Forget(key)` để xóa lịch sử retry của key.
 
 ### 4. An toàn trước Tombstone (TestSafeDeletionAndTombstone)
-Đưa trực tiếp một struct `cache.DeletedFinalStateUnknown` vào hàm `handleDelete`. Chương trình không hề bị panic runtime mà giải mã chính xác key `default/orphaned-pod` để tiến hành dọn dẹp tài nguyên.
+Test truyền `cache.DeletedFinalStateUnknown` qua `enqueue`, kiểm tra key `production/tombstone-pod` được đưa vào queue rồi ghi nhận action xóa trong kết quả. Lab không thực hiện hay chứng minh dọn dẹp tài nguyên ngoại vi.
 
 ### 5. Dừng sạch tài nguyên (TestCleanCancellationShutdown)
-Khi gọi `cancel()` trên `context.Context`, tất cả worker đang chạy trong pool kết thúc vòng lặp, hàng đợi đóng cổng nhận việc (`ShutDown`), và hàm `ctrl.Run` thoát an toàn trong vòng dưới 50 mili-giây mà không để lại bất kỳ goroutine rò rỉ nào.
+Test chạy ba worker, thêm năm key rồi gọi `cancel()`. Assertion yêu cầu `ctrl.Run` trả về trong hai giây; 50 ms là khoảng sleep trước cancellation, không phải số đo shutdown. Source đóng queue và chờ worker, nhưng test này không kiểm kê mọi goroutine hay bảo đảm độ trễ shutdown ở production.
 
 ### 6. Khế ước bảo vệ Cache Chưa Đồng Bộ (TestCacheNotSyncedGuard)
-Nếu giả lập mạng chập chờn khiến `cache.WaitForNamedCacheSyncWithContext` trả về `false` (timeout), controller lập tức từ chối khởi động worker và trả về lỗi rõ ràng: `timed out waiting for cache sync`. Điều này ngăn chặn triệt để thảm kịch worker xử lý trên một bộ nhớ đệm rỗng.
+Trong lab, `WaitForNamedCacheSyncWithContext` trả false thì controller từ chối khởi động worker và trả lỗi cache sync. Gate ấy ngăn đường xử lý trước sync trong lifecycle này; sync không bảo đảm cache mãi không stale hay RBAC sẽ không thay đổi về sau.
 
 ---
 

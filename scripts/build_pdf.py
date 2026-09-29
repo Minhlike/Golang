@@ -148,18 +148,39 @@ def register_fonts() -> tuple[str, str, str, str, str]:
 
 
 def inline(text: str, mono: str) -> str:
-    escaped = html.escape(text)
-    def _mono_span(m: re.Match) -> str:
-        # Replace spaces with non-breaking space (U+00A0) so ReportLab
-        # cannot break the token mid-content inside a table cell.
-        content = m.group(1).replace(" ", "\u00a0")
-        return f'<font name="{mono}" color="#111111">{content}</font>'
-    escaped = re.sub(r"`([^`]+)`", _mono_span, escaped)
-    return re.sub(
+    code_spans = {}
+    marker = "\ue000"
+    while marker in text:
+        marker += "\ue000"
+    spans = []
+    # Parse code first: Markdown emphasis must never consume dereferences or
+    # multiplication inside code. Spaces remain valid command wrap points.
+    for part in re.split(r"(`[^`]+`)", text):
+        if part.startswith("`") and part.endswith("`"):
+            token = f"{marker}{len(code_spans)}\ue001"
+            code_spans[token] = (
+                f'<font name="{mono}" color="#111111">'
+                f'{html.escape(part[1:-1])}</font>'
+            )
+            spans.append(token)
+            continue
+        spans.append(html.escape(part))
+    # Protect code tokens while parsing emphasis across prose/code boundaries.
+    # Reinsert markup afterwards so a code asterisk cannot become a delimiter.
+    prose = "".join(spans)
+    prose = re.sub(
         r"\*\*(.+?)\*\*",
-        r'<font name="BookSansBold">\1</font>',
-        escaped,
+        r'<font name="BookSansBold">\1</font>', prose,
     )
+    # The book's available embedded font set uses weight for emphasis;
+    # do not leak delimiters or use an unembedded Vietnamese italic fallback.
+    prose = re.sub(
+        r"(?<!\*)\*(?=\S)([^*]*?\S)\*(?!\*)",
+        r'<font name="BookSansBold">\1</font>', prose,
+    )
+    for token, code in code_spans.items():
+        prose = prose.replace(token, code)
+    return prose
 
 
 def styles(body: str, body_bold: str, heading: str, heading_bold: str,
@@ -612,6 +633,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
 
     # 2. Error entries (2 columns)
     current_entry: list = []
+    pending_group: list = []
     for line in entry_lines:
         ls = line.strip()
         if ls.startswith("## "):
@@ -621,18 +643,23 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
             g_title = ls[3:].upper()
             # Do NOT insert FrameBreak before entire group J — it forces all 11
             # entries into one column. Balance is done mid-J at entry J06 instead.
-            story.append(KeepTogether([
+            # Keep the group label with its first complete entry, not merely
+            # with a rule and spacer that can remain at the foot of a column.
+            pending_group = [
                 Spacer(1, 4),
                 Paragraph(f"<b>{g_title}</b>", s["atlas_group"]),
                 HRFlowable(width="100%", thickness=0.5, color=COLOR_BORDER_STRONG),
                 Spacer(1, 2),
-            ]))
+            ]
             continue
 
         if ls.startswith("### "):
             if current_entry:
                 story.append(KeepTogether(current_entry))
                 current_entry = []
+            if pending_group:
+                current_entry.extend(pending_group)
+                pending_group = []
             m = re.match(r"^###\s+([A-J]\d{2})\s+(.+)$", ls)
             if m:
                 eid, raw_title = m.group(1), m.group(2).strip()
@@ -682,6 +709,38 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
 
     if current_entry:
         story.append(KeepTogether(current_entry))
+
+
+def keep_headings_with_content(story: list) -> list:
+    """Avoid nested KeepTogether and spacing-only followers orphaning headings.
+
+    ReportLab's automatic heading keep wraps the next flowable. A nested
+    KeepTogether reports an intentionally huge height, then unwraps, allowing
+    the heading to remain while the code/table moves. Merge that container
+    instead; spacing and rules must not be the heading's only follower.
+    """
+    result = []
+    index = 0
+    while index < len(story):
+        item = story[index]
+        if getattr(getattr(item, 'style', None), 'name', '') not in {'H1', 'H2', 'H3'}:
+            result.append(item)
+            index += 1
+            continue
+        end = index + 1
+        while end < len(story) and isinstance(story[end], (Spacer, HRFlowable)):
+            end += 1
+        prefix = story[index:end]
+        if end < len(story) and isinstance(story[end], KeepTogether):
+            item.keepWithNext = False
+            result.append(KeepTogether(prefix + story[end]._content))
+            index = end + 1
+        else:
+            for spacing in prefix[1:]:
+                spacing.keepWithNext = True
+            result.extend(prefix)
+            index = end
+    return result
 
 
 def build_document(story: list, body: str, body_bold: str, heading: str,
@@ -797,10 +856,10 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
         else:
             add_markdown(story, appendix, s, mono, page_break_before=True, numbering=numbering)
 
-    doc.build(story)
+    doc.build(keep_headings_with_content(story))
 
 
-def build() -> None:
+def build(*, candidate_only: bool = False) -> None:
     # Preflight: code line width validation
     import validate_code_width
     violations = validate_code_width.validate_all_code_blocks()
@@ -852,6 +911,20 @@ def build() -> None:
     if len(reader.pages) < 200 or "Chương 1" not in extracted:
         raise RuntimeError("Candidate PDF failed structural page count validation.")
 
+    if candidate_only:
+        print(f"Built candidate {CANDIDATE}: {len(reader.pages)} pages")
+        print("Current and rollback PDFs unchanged; publication requires visual QA.")
+        return
+
+    publish_candidate()
+    print(f"Built {CURRENT.name}: {len(reader.pages)} pages")
+    print(f"Rollback copy: {PREVIOUS.name}")
+
+
+def publish_candidate() -> None:
+    """Promote a separately reviewed candidate without rebuilding it."""
+    if not CANDIDATE.exists():
+        raise FileNotFoundError(CANDIDATE)
     if CURRENT.exists():
         shutil.copy2(CURRENT, PREVIOUS)
     else:
@@ -859,9 +932,11 @@ def build() -> None:
     next_path = TMP / "Golang_Master.next.pdf"
     shutil.copy2(CANDIDATE, next_path)
     next_path.replace(CURRENT)
-    print(f"Built {CURRENT.name}: {len(reader.pages)} pages")
-    print(f"Rollback copy: {PREVIOUS.name}")
 
 
 if __name__ == "__main__":
-    build()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--candidate-only", action="store_true")
+    args = parser.parse_args()
+    build(candidate_only=args.candidate_only)

@@ -1,0 +1,22 @@
+@startuml
+skinparam monochrome true
+skinparam backgroundColor white
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 20
+skinparam shadowing false
+skinparam dpi 200
+left to right direction
+rectangle "Đề xuất\nđúng artifact" as Proposal
+rectangle "Kiểm chứng\nđộc lập" as Evidence
+rectangle "Phê duyệt\nđúng caller" as Approval
+rectangle "Thực thi\ntrong quyền" as Execute
+rectangle "Quan sát\nhậu điều kiện" as Observe
+Proposal -right-> Evidence
+Evidence -right-> Approval : đạt
+Approval -down-> Execute : được cấp quyền
+Execute -left-> Observe
+note bottom of Evidence
+  Thiếu bằng chứng hoặc quyền:
+  từ chối, không thực thi.
+end note
+@enduml

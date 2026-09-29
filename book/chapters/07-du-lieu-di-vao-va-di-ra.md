@@ -110,13 +110,13 @@ Khi làm việc với các dòng nhập xuất dữ liệu, trực giác bề m�
 
 Nếu như `io.Reader` cho phép trả về số byte đọc được `n < len(p)` kèm theo `err == nil` trong các tình huống bình thường (chẳng hạn khi đường ống mạng chưa nhận đủ dữ liệu), thì giao diện `io.Writer` lại áp đặt một hợp đồng nghiêm ngặt hơn nhiều. Theo đặc tả của thư viện chuẩn Go, một hàm `Write(p)` bắt buộc phải trả về một lỗi khác `nil` nếu nó không thể ghi trọn vẹn toàn bộ lát cắt dữ liệu (`n < len(p)`).
 
-Lỗi chuẩn được quy ước cho tình huống này là `io.ErrShortWrite`. Nếu một đối tượng triển khai `io.Writer` chỉ ghi được một phần dữ liệu mà vẫn trả về `err == nil`, đối tượng đó đã vi phạm nghiêm trọng hợp đồng ngôn ngữ, khiến bên gọi ngộ nhận rằng toàn bộ thông điệp đã được gửi đi an toàn trong khi thực tế dữ liệu đã bị rơi rụng ngầm.
+`io.ErrShortWrite` là sentinel mô tả một lượt ghi ngắn không có error thích hợp. Writer có thể trả error cụ thể khác; contract không bắt mọi short write mang chính sentinel này. Nếu writer trả `n < len(p)` và error `nil`, nó vi phạm contract API của `io.Writer`, không phải một quy tắc ngôn ngữ. Caller dùng API ấy cần kiểm tra kết quả, không suy ra rằng byte đã tới đích cuối chỉ vì một lượt ghi ở tầng trung gian thành công.
 
 ### Bộ đệm User-space với `bufio`
 
-Mỗi lần một chương trình gửi yêu cầu đọc hoặc ghi trực tiếp xuống mô tả tệp của hệ điều hành, CPU phải thực hiện một quá trình chuyển đổi ngữ cảnh tốn kém từ không gian người dùng (user space) sang không gian nhân (kernel space), kèm theo chi phí lưu và khôi phục các thanh ghi phần cứng. Nếu một ứng dụng ghi một tệp log một megabyte bằng cách gọi hàm `Write` riêng rẽ cho từng byte đơn lẻ, nó sẽ phát sinh một triệu lời gọi hệ thống, làm suy sụp thông lượng của toàn bộ máy chủ.
+Một syscall đưa việc thực thi qua ranh giới user/kernel. Nó có chi phí, nhưng không đồng nghĩa với context switch của scheduler sang thread khác; việc block và chuyển lịch còn phụ thuộc operation và trạng thái tài nguyên. Ghi từng byte qua file chưa đệm thường tăng số lượt I/O so với gom nhiều byte. Không thể suy ra một số syscall cố định hay mức giảm throughput chỉ từ số lần gọi interface `Write`; phải xác định concrete writer và đo đường chạy trên OS cụ thể.
 
-Các kiểu dữ liệu như `bufio.Reader` và `bufio.Writer` giải quyết bài toán này bằng cách bọc một `io.Reader` hoặc `io.Writer` bất kỳ và thiết lập một vùng đệm trung gian trong bộ nhớ người dùng (mặc định là 4096 byte). Khi ghi vào `bufio.Writer`, các byte được tích lũy tuần tự vào mảng đệm nội bộ trong user space. Khi bộ đệm đầy hoặc khi lập trình viên chủ động kích hoạt lệnh `Flush()`, dữ liệu tích lũy mới được chuyển tiếp tới `io.Writer` bên dưới; nếu writer bên dưới là một mô tả tệp của hệ điều hành (`*os.File`), việc gom đệm này giúp giảm hàng nghìn lượt chuyển đổi ngữ cảnh xuống nhân, dù bản thân `Flush` không cam kết luôn tương ứng đúng một syscall duy nhất vì writer bên dưới có thể tự chia nhỏ lượt ghi.
+`bufio.Reader` và `bufio.Writer` gom dữ liệu trong đệm user-space. Trong source Go 1.27.1, constructor mặc định dùng buffer 4096 byte; con số ấy không phải quy tắc của `io.Reader` hay cam kết mọi buffer đều cùng kích thước. Writer chuyển byte xuống underlying writer khi cần chỗ hoặc khi Flush; caller phải kiểm tra lỗi Flush. Buffer có thể giảm số lượt gọi tầng dưới, không bảo đảm một tỷ lệ syscall hay throughput cố định.
 
 ### Lời gọi `Read` không đồng nghĩa với Syscall
 
@@ -126,13 +126,39 @@ Trong thực tế, ranh giới giữa việc xử lý trong không gian người
 
 | Kiểu cụ thể của Reader | Bản chất cơ chế khi gọi `Read(p)` | Có phát sinh Syscall xuống OS không? |
 | :--- | :--- | :--- |
-| `*bytes.Buffer` hoặc `*strings.Reader` | Sao chép byte trực tiếp từ mảng nhớ này sang mảng nhớ khác trong RAM qua hàm `runtime.memmove`. | Không. Toàn bộ thao tác diễn ra trong user-space với tốc độ băng thông bộ nhớ. |
-| `*bufio.Reader` (khi còn dữ liệu trong đệm) | Cắt lát cắt byte từ bộ đệm nội bộ có sẵn trong RAM và chuyển cho bên gọi (user-space buffer read). | Không. Chỉ truy cập bộ nhớ người dùng thuần túy mà không chuyển ngữ cảnh. |
+| `*bytes.Buffer` hoặc `*strings.Reader` | Sao chép byte vào buffer của caller từ dữ liệu trong bộ nhớ. | Không cần syscall I/O cho phần sao chép; cách compiler hiện thực `copy` không phải contract của Reader. |
+| `*bufio.Reader` (khi còn dữ liệu trong đệm) | `Read` sao chép byte từ đệm vào buffer của caller; khác với các API trả một slice nhìn vào đệm. | Không cần gọi underlying Reader trong lượt được phục vụ đủ từ đệm. |
 | `*bufio.Reader` (khi bộ đệm đã cạn) | Gọi `Read` lên đối tượng `io.Reader` bên dưới để nạp lại bộ đệm nội bộ. | Phụ thuộc underlying Reader. Nếu bọc in-memory buffer thì không có syscall; nếu bọc file hoặc socket thì do reader bên dưới quyết định. |
 | `*os.File` chưa đệm | Gửi yêu cầu I/O trực tiếp tới kernel qua bảng mô tả tệp (OS file I/O path). | Có. Thực hiện syscall đọc tệp của hệ điều hành (`read` trên Linux hoặc `ReadFile` trên Windows). |
 | `*net.TCPConn` | Thao tác non-blocking OS I/O kết hợp với Network Poller của runtime khi chưa sẵn sàng dữ liệu. | Có. Vẫn phát sinh syscall đọc non-blocking từ kernel; Network Poller chỉ điều phối việc đỗ và thức của goroutine. |
 
-Đối với I/O mạng (`*net.TCPConn`), Go đưa file descriptor về chế độ non-blocking. Chu trình đọc vận hành theo mô hình phối hợp chặt chẽ giữa syscall và runtime Network Poller: ứng dụng gọi `Read` -> runtime thử thực hiện một non-blocking OS I/O syscall -> nếu dữ liệu đã có sẵn trong socket buffer thì hệ điều hành trả về dữ liệu ngay lập tức -> nếu gặp lỗi chờ (như `EAGAIN` hoặc `EWOULDBLOCK`), runtime sẽ tạm dừng (park) goroutine và đăng ký file descriptor vào Network Poller (`epoll` trên Linux, `kqueue` trên macOS, `IOCP` trên Windows) -> khi hệ điều hành thông báo socket đã sẵn sàng, runtime đánh thức goroutine chuyển về trạng thái runnable -> goroutine được scheduler xếp lịch để thử lại hoặc tiếp tục thao tác đọc dữ liệu qua syscall. Network Poller vì thế quản lý tính sẵn sàng (readiness) và việc đỗ goroutine, chứ không loại bỏ hay thay thế thao tác đọc dữ liệu của syscall.
+Với Go 1.27.1 trên Linux, đường đọc socket trong `internal/poll/fd_unix.go` có thể thử non-blocking read, gặp `EAGAIN`, chờ poller rồi thử lại. Đây là mô hình triển khai được pin, không phải lời hứa của `net.Conn`. Không áp nguyên trace readiness Linux cho Windows: backend IOCP dùng completion và đường triển khai khác. API chung vẫn là đọc byte, error và deadline; poller giúp điều phối goroutine chứ không loại bỏ I/O xuống OS. Chương 11 sẽ đặt cơ chế đó vào một request thật.
+
+## Một filesystem là một khả năng, không phải một đường dẫn
+
+Parser ở trên chỉ cần byte, không cần quyền mở mọi file trên máy. Khi một application có nhiều nguồn file, `fs.FS` mô tả khả năng `Open(name)` với tên logic dùng dấu `/`. Consumer có thể nhận `embed.FS` chứa asset lúc build, `os.DirFS` nhìn vào directory lúc chạy, hoặc filesystem giả trong test. Consumer không cần đổi parser theo nguồn.
+
+~~~go
+// Đặt trong package có thư mục fixtures tại build time.
+//go:embed fixtures/*.txt
+var files embed.FS
+
+data, err := fs.ReadFile(files, "fixtures/message.txt")
+~~~
+
+Imports của đoạn này là `embed` và `io/fs`; bản chạy được nằm trong `labs/edition-contracts`. Directive phải ở package scope, gắn với variable phù hợp. Byte được đưa vào binary lúc build, không tự cập nhật khi file ngoài máy đổi. `embed.FS` có API đọc, không phải nơi lưu runtime secret hoặc config cần sửa sau triển khai. Những byte được bundle có thể bị trích xuất từ binary; “không còn file rời” không phải bảo mật.
+
+Tên hợp lệ theo `fs.ValidPath` không có `..` hoặc dấu `/` ở đầu; điều đó không tự biến mọi implementation thành sandbox. Đặc biệt `os.DirFS` và `fs.Sub` không ngăn symlink bên dưới trỏ ra ngoài directory. Nếu nhận tên file từ bên không tin cậy và cần confinement thực sự, đọc contract `os.Root` cùng giới hạn theo OS trong Go 1.27.1, thay vì ghép path rồi tin `Clean` đã chặn mọi lối thoát. Quyền mở file và quyền parse dữ liệu là hai boundary khác nhau.
+
+**Thực hành.** Viết một function nhận `fs.FS` và tên logic, đọc một tệp rồi đưa byte cho parser đã có. Test với filesystem giả; test riêng tên không hợp lệ và file thiếu. Sau đó thay bằng `embed.FS` mà không đổi parser. Đừng để test filesystem giả được diễn giải thành bằng chứng rằng symlink hoặc quyền truy cập thật trên OS đã an toàn.
+
+## Parser cũng có ngân sách
+
+Một log “mỗi dòng là một record” khiến `bufio.Scanner` tiện hơn vòng đọc thủ công. Nhưng Scanner có giới hạn token: một dòng dài có thể khiến `Scan()` trả false trước EOF. Caller phải đọc `Err()`, và nếu domain cho phép dòng lớn hơn thì gọi `Buffer` trước khi scan, với mức trần phù hợp. Không nên tăng trần vô hạn để chữa một input hỏng. `TestScannerLimitAndValidation` dùng cùng input với hai giới hạn để phân biệt kết thúc bình thường với token vượt ngân sách.
+
+Byte limit cũng không thay kiểm tra miền số. `strconv.ParseUint(text, 10, 16)` trả error nếu chuỗi không phải số nguyên unsigned biểu diễn được trong 16 bit; sau đó business rule vẫn phải quyết định port 0 có được phép không. `Atoi` chọn `int` của kiến trúc, không định nghĩa một wire format ổn định. Khi format yêu cầu bit width, nói rõ width trong parser và test biên.
+
+Với pattern do người dùng nhập, dùng `regexp.Compile` và xử lý error. `MustCompile` phù hợp với pattern cố định trong source mà lỗi là lỗi lập trình, không phải cách báo lỗi cho người vận hành. Package `regexp` cam kết thời gian match tuyến tính theo độ dài input; điều đó không cam kết chi phí compile, lượng memory hoặc số lượt match không cần giới hạn. Parser, số record, pattern và lifetime của stream vẫn phải có ngân sách của application. Chọn `strings` hay `bytes` khi thao tác chỉ là tìm delimiter hoặc prefix rõ ràng; thêm regexp chỉ khi grammar cần nó.
 
 ## Tự kiểm tra trước khi tích hợp
 

@@ -24,6 +24,6 @@ rectangle "alias\nmap[string]int" as alias
 rectangle "dữ liệu map (bảng băm)\nbilling → 2" as data
 registry --> data
 alias --> data
-note bottom of alias : alias := registry\nsao chép con trỏ header map
-note bottom of data : alias[\"billing\"]++\nhiển thị ngay khi đọc registry
+note bottom of alias : alias := registry\nsao chép map value; vẫn chung dữ liệu
+note bottom of data : alias["billing"]++\nhiển thị khi đọc registry
 @enduml

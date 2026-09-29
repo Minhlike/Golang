@@ -43,7 +43,7 @@ skinparam backgroundColor white
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 14
 {MINDMAP_STYLE}
-* **GOLANG\\n(Hội tụ ý tưởng)**
+* GOLANG\\n(Hội tụ ý tưởng)
 ** DÒNG DÕI C
 *** Cú pháp biểu thức
 *** Quản lý con trỏ ô nhớ
@@ -71,7 +71,7 @@ skinparam backgroundColor white
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 14
 {MINDMAP_STYLE}
-* **LỘ TRÌNH\\nHỌC GOLANG**
+* LỘ TRÌNH\\nHỌC GOLANG
 ** NỀN TẢNG & DỮ LIỆU
 *** Cú pháp & Kiểu nguyên tử
 *** Mảng & Lát cắt (Slice)
@@ -102,27 +102,17 @@ skinparam backgroundColor white
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 14
 {MINDMAP_STYLE}
-* **SỰ KIỆN HỆ THỐNG\\n(Event / Probe)**
+* SỰ KIỆN HỆ THỐNG\\n(Event / Probe)
 ** NHẬT KÝ (LOGS)
-*** Định danh chi tiết
-*** Dữ liệu có cấu trúc (JSON)
-*** Bối cảnh lỗi nguyên nhân
+*** Định danh chi tiết\\nDữ liệu có cấu trúc (JSON)\\nBối cảnh lỗi nguyên nhân
 ** CHỈ SỐ (METRICS)
-*** Số liệu thống kê tổng hợp
-*** Bộ đếm Counter & Thước đo Gauge
-*** Phân bố thời gian Histogram
+*** Số liệu thống kê tổng hợp\\nBộ đếm Counter & Thước đo Gauge\\nPhân bố thời gian Histogram
 ** DẤU VẾT (TRACES)
-*** Đường đi yêu cầu phân tán
-*** Mã vết TraceID & SpanID
-*** Điểm nghẽn độ trễ mạng
+*** Đường đi yêu cầu phân tán\\nMã vết TraceID & SpanID\\nĐiểm nghẽn độ trễ mạng
 ** TRẠNG THÁI (STATE)
-*** Hiện trạng tài nguyên bộ nhớ
-*** Số lượng Goroutine hoạt động
-*** Tải CPU & Tần suất GC
+*** Hiện trạng tài nguyên bộ nhớ\\nSố lượng Goroutine hoạt động\\nTải CPU & Tần suất GC
 ** SỨC KHỎE (HEALTH)
-*** Kiểm tra sống (Liveness)
-*** Sẵn sàng nhận việc (Readiness)
-*** Báo hiệu cho Orchestrator
+*** Kiểm tra sống (Liveness)\\nSẵn sàng nhận việc (Readiness)\\nBáo hiệu cho Orchestrator
 @endmindmap
 """
     (DIAGRAMS_DIR / "observability-projections.puml").write_text(observability_projections, encoding="utf-8")
@@ -133,12 +123,12 @@ skinparam backgroundColor white
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 14
 {MINDMAP_STYLE}
-* **TRỪU TƯỢNG HÓA\\nKIỂU DỮ LIỆU**
+* TRỪU TƯỢNG HÓA\\nKIỂU DỮ LIỆU
 ** GENERICS
 *** Cùng thao tác trên nhiều kiểu
 *** Bảo toàn thông tin kiểu compile-time
 *** Ràng buộc hợp lệ qua Constraint
-*** Loại bỏ chi phí ép kiểu lặp lại
+*** Không cần type assertion qua any
 ** GIAO DIỆN (INTERFACE)
 *** Thay thế linh hoạt theo hành vi
 *** Thỏa mãn ngầm định (Implicit)
@@ -147,7 +137,7 @@ skinparam defaultFontSize 14
 ** PHẢN CHIẾU (REFLECTION)
 *** Khám phá kiểu tại thời điểm runtime
 *** Nhận diện cấu trúc động bất định
-*** Cần kiểm soát vì chi phí phụ trội cao
+*** Đo chi phí trên workload cụ thể
 *** Sử dụng gói thư viện chuẩn reflect
 @endmindmap
 """
@@ -178,7 +168,7 @@ skinparam note {
 skinparam arrowColor #000000
 left to right direction
 
-rectangle "package main\\n\\nimport \\"fmt\\"\\n\\nconst service = \\"checkout\\"\\n\\nfunc classify(status int) string { ... }\\n\\nfunc main() {\\n    status := 503\\n    label := classify(status)\\n    fmt.Println(service, label)\\n}" as source
+rectangle "package main\\n\\nimport "fmt"\\n\\nconst service = "checkout"\\n\\nfunc classify(status int) string { ... }\\n\\nfunc main() {\\n    status := 503\\n    label := classify(status)\\n    fmt.Println(service, label)\\n}" as source
 note right of source
   package main: khai báo tên gói (package)
   import: nạp thư viện từ gói khác
@@ -422,8 +412,8 @@ left to right direction
 rectangle "biến của bên gọi\\namount: int\\n100" as amount
 rectangle "tham số hàm\\nbalance: *int\\n(giá trị con trỏ)" as pointer
 pointer --> amount : lưu địa chỉ ô nhớ
-note bottom of pointer : *balance giải tham chiếu ô nhớ này\\nđể đọc hoặc gán giá trị
-note bottom of amount : *balance += 20\\nbiến đổi amount gốc thành 120
+note bottom of pointer : ~*balance giải tham chiếu ô nhớ này\\nđể đọc hoặc gán giá trị
+note bottom of amount : ~*balance += 20\\nbiến đổi amount gốc thành 120
 @enduml
 """, encoding="utf-8")
 
@@ -486,8 +476,8 @@ rectangle "alias\\nmap[string]int" as alias
 rectangle "dữ liệu map (bảng băm)\\nbilling → 2" as data
 registry --> data
 alias --> data
-note bottom of alias : alias := registry\\nsao chép con trỏ header map
-note bottom of data : alias[\\"billing\\"]++\\nhiển thị ngay khi đọc registry
+note bottom of alias : alias := registry\\nsao chép map value; vẫn chung dữ liệu
+note bottom of data : alias["billing"]++\\nhiển thị khi đọc registry
 @enduml
 """, encoding="utf-8")
 
@@ -739,16 +729,16 @@ skinparam rectangle {
   RoundCorner 8
 }
 skinparam arrowColor #333333
-left to right direction
+top to bottom direction
 
 rectangle "TIẾP NHẬN (ACCEPTING)\\nlistener mở\\nnhận yêu cầu mới" as accepting
 rectangle "GIẢI TỎA (DRAINING)\\nlistener đóng\\nxử lý nốt yêu cầu đang chạy" as draining
 rectangle "DỪNG HẲN (STOPPED)\\nđóng kết nối\\ngiải phóng tài nguyên" as stopped
 
-accepting --> draining : tín hiệu dừng / deploy
-draining --> stopped : yêu cầu hoàn tất\\nhoặc hết thời hạn deadline
+accepting -down-> draining : tín hiệu dừng / deploy
+draining -down-> stopped : yêu cầu hoàn tất\\nhoặc hết thời hạn deadline
 
-note bottom of draining
+note right of draining
   Draining tách biệt với việc đóng listener:
   không nhận thêm việc mới nhưng
   hoàn tất công việc đang dang dở.
@@ -834,9 +824,10 @@ end note
     # 25. reconciliation-loop.puml
     p = DIAGRAMS_DIR / "reconciliation-loop.puml"
     p.write_text("""@startuml
-left to right direction
+top to bottom direction
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
 skinparam rectangle {
   BackgroundColor #F7F7F4
   BorderColor #5D5D5D
@@ -848,18 +839,19 @@ skinparam note {
   BorderColor #777777
 }
 
-rectangle "trạng thái mong muốn (Spec)\\nmã định danh gói, số bản sao, chính sách" as desired
+rectangle "trạng thái mong muốn (Spec)\\nmã định danh gói, số bản sao,\\nchính sách" as desired
 rectangle "bộ điều khiển (Controller)\\nquan sát -> phán đoán -> hành động" as controller
 rectangle "trạng thái thực tế (Status)\\nPod, tiến trình, độ sẵn sàng" as current
 
-desired --> controller : cấu hình khai báo (Spec)
-current --> controller : dữ liệu quan trắc thực tế
-controller --> current : tác động điều chỉnh
+desired -down-> controller : cấu hình khai báo (Spec)
+current -up-> controller : dữ liệu quan trắc thực tế
+controller -down-> current : tác động điều chỉnh
 
-note bottom of controller
-  Một vòng lặp không cam kết đưa hệ thống về
-  trạng thái cuối cùng ngay tức thì.
-  Nó là quá trình hội tụ liên tục qua thời gian.
+note right of controller
+  Một vòng lặp không cam kết
+  đạt trạng thái cuối ngay tức thì.
+  Đây là quá trình hội tụ
+  liên tục qua thời gian.
 end note
 @enduml
 """, encoding="utf-8")
@@ -867,9 +859,10 @@ end note
     # 26. delivery-evidence-chain.puml
     p = DIAGRAMS_DIR / "delivery-evidence-chain.puml"
     p.write_text("""@startuml
-left to right direction
+top to bottom direction
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
 skinparam rectangle {
   BackgroundColor #F7F7F4
   BorderColor #5D5D5D
@@ -888,11 +881,11 @@ rectangle "chính sách phê duyệt\\nquyền hạn + cổng kiểm tra" as pol
 rectangle "trạng thái mong muốn\\ngói được triển khai" as deploy
 rectangle "quan sát phát hành\\ntrạng thái + tín hiệu" as observe
 
-source --> build
-build --> evidence
-evidence --> policy
-policy --> deploy
-deploy --> observe
+source -right-> build
+build -right-> evidence
+evidence -down-> policy
+policy -left-> deploy
+deploy -left-> observe
 
 note bottom of policy
   Mỗi bước chỉ chứng minh

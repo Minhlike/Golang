@@ -1,7 +1,6 @@
 # Định hướng Phát triển Toàn diện sau Chương 28 (Forward Coverage Outline)
 
-> **TRẠNG THÁI HIỆN TẠI:** Tranche viết tiến bước (Forward Writing) từ **Chương 22 đến Chương 28** đã hoàn thành 100%, vượt qua toàn bộ các cổng kiểm định chất lượng (`go test -race`, `validate_code_width.py`, ReportLab PDF build 400 trang).
-> **QUY TẮC KHÓA:** Theo điều khoản Section 39 của `MASTER PROMPT.txt`, việc sinh chương mới **DỪNG LẠI TẠI ĐÂY**. Không tự ý viết Chương 29 nếu chưa có chỉ thị / phê duyệt mới từ người dùng.
+> **CẬP NHẬT 29-09-2026:** Chỉ thị ONE-PASS GO ENCYCLOPEDIA của người dùng cho phép chương mới khi gap matrix chứng minh cần thiết. Ch29 xử lý khoảng trống về dữ liệu AI/nghề nghiệp và verification; các chương nền được mở rộng có chọn lọc. Các ý tưởng phía dưới là outline lịch sử, không phải coverage đã hoàn thành hoặc cam kết của bản hiện tại.
 
 Tài liệu này đóng vai trò bản đồ định hướng (Strategic Outline) cho các tranche phát triển tiếp theo của cuốn sách khi được kích hoạt.
 
@@ -9,7 +8,7 @@ Tài liệu này đóng vai trò bản đồ định hướng (Strategic Outline
 
 ## 1. Hiện trạng Kiến trúc Sách (Chương 00 – 28 & Back Matter)
 
-Cuốn sách hiện tại đã đạt quy mô **400 trang in chuẩn mực (Print-Ready PDF)** với cấu trúc 9 phần hoàn chỉnh:
+Outline dưới đây ghi cấu trúc ở mốc Ch28. Bản đồ hiện hành ở `book/README.md`; số trang và QA phải đối chiếu đúng artifact tại `book/FINAL_PUBLICATION_QA.md`.
 
 1. **Phần I — Nền tảng Nguyên bản (First-Principles Foundation):** Ch00 (Tư duy hệ thống), Ch01 (Đọc & viết Go), Ch02 (Giá trị, Slice & Aliasing).
 2. **Phần II — Mô hình Dữ liệu & Tính Đúng đắn:** Ch03 (Mô hình dữ liệu), Ch04 (Biến lỗi & Error handling), Ch05 (Thiết kế package).

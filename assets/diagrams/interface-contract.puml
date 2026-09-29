@@ -1,4 +1,5 @@
 @startuml
+skinparam dpi 300
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"

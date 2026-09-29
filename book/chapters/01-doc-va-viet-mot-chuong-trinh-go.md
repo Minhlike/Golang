@@ -77,7 +77,7 @@ Việc định vị chính xác vai trò ngữ pháp của từng dòng giúp ta
 
 Khai báo (Declaration): Là hành động giới thiệu một định danh mới vào bảng ký hiệu (symbol table) của trình biên dịch tại một tầm vực xác định, gắn định danh đó với một kiểu dữ liệu, một hằng số, một biến hoặc một hàm. Khai báo thiết lập ý nghĩa tĩnh cho mã nguồn.
 
-Biểu thức (Expression): Là sự kết hợp giữa các toán hạng (toán tử, hằng số, biến, lời gọi hàm) có thể được đánh giá (evaluated) để sinh ra một giá trị duy nhất mang kiểu dữ liệu xác định. Ví dụ `status >= 500` là một biểu thức logic có giá trị kiểu `bool`. Biểu thức tự thân nó không làm thay đổi luồng điều khiển trừ khi được bọc trong một câu lệnh.
+Biểu thức (Expression): Kết hợp toán hạng và toán tử để tính giá trị. Ví dụ `status >= 500` cho một giá trị kiểu `bool`. Lời gọi hàm cũng là biểu thức: có thể trả một hoặc nhiều kết quả; lời gọi không trả kết quả được dùng như câu lệnh. Ngữ cảnh quyết định cách dùng các kết quả ấy. Đánh giá biểu thức có thể gọi hàm làm thay đổi dữ liệu hoặc gây panic, nên không đồng nghĩa với một phép tính không có tác động phụ.
 
 Câu lệnh (Statement): Là đơn vị thực thi hoàn chỉnh chỉ dẫn máy tính thực hiện một hành động cụ thể, chẳng hạn như rẽ nhánh điều kiện (`if`), lặp vòng (`for`), gán giá trị (`=`), hoặc trả về từ hàm (`return`). Câu lệnh cấu thành luồng chảy động của chương trình.
 
@@ -120,6 +120,36 @@ Khai báo ngắn trong thân hàm bằng `:=`: Cú pháp `name := value` kết h
 Cam kết ngữ nghĩa này không đồng nghĩa với việc mỗi biến đều bắt buộc phải chiếm một ô nhớ vật lý trong RAM và trình biên dịch luôn phải thực hiện lệnh memset xóa sạch các byte về số 0. Tùy thuộc vào chiến lược tối ưu hóa, trình biên dịch có thể xóa giá trị trên thanh ghi CPU, gấp hằng số (constant-fold), hoặc thậm chí loại bỏ hoàn toàn việc cấp phát lưu trữ nếu biến không còn được dùng đến. Việc xóa các byte bộ nhớ về 0 chỉ là một cơ chế triển khai (implementation mechanism) trong các trường hợp vùng nhớ lưu trữ thực sự được hiện thực hóa (materialized) trên stack frame hoặc heap.
 
 Khi sử dụng toán tử khai báo ngắn, vế trái bắt buộc phải giới thiệu ít nhất một biến mới vào phạm vi hiện tại. Phép gán thuần túy `=` chỉ ghi đè giá trị lên biến đã tồn tại và không sinh ra định danh mới.
+
+## Hằng số: giá trị chưa cần một ô nhớ
+
+Trước khi đọc tiếp, thử dự đoán vì sao `const small = 500` gán được cho `int16`, nhưng một variable `n := 500` không tự gán được cho variable `int16`. Hai bên cùng viết số 500; khác biệt nằm ở kiểu và thời điểm kiểm tra, không ở độ lớn của RAM.
+
+~~~go
+const small = 500
+var code int16 = small
+n := small
+// var other int16 = n // cần conversion tường minh
+_ = code
+_ = n
+~~~
+
+`small` là hằng số nguyên chưa có kiểu. Khi gán vào `code`, giá trị phải biểu diễn được bằng `int16`; khi dùng `:=` không có kiểu đích, kiểu mặc định của hằng số nguyên là `int`. Vì vậy `n` đã là variable kiểu `int`. Nếu thay 500 bằng 70000, phép gán vào `int16` bị compiler từ chối. Nếu viết `const small int = 500`, anh đã chọn kiểu ngay trong khai báo; hằng số có kiểu không còn được đối xử như hằng số chưa có kiểu ở phép gán ấy. Hằng số biểu diễn giá trị ở thời điểm biên dịch, không phải một variable bất biến có địa chỉ để lấy bằng `&`.
+
+`iota` giúp diễn đạt một chuỗi hằng số trong cùng một nhóm khai báo. Nó bắt đầu từ 0, tăng theo từng dòng khai báo hằng số trong nhóm; dòng bỏ biểu thức dùng lại biểu thức và kiểu của dòng trước. Hãy tính ba giá trị rồi mới chạy thử:
+
+~~~go
+const (
+	Pending = iota
+	Running
+	Stopped
+)
+const Restarted = iota // nhóm mới, trở lại 0
+~~~
+
+Đây là tên cho các số nguyên, chưa phải một cơ chế enum tự kiểm tra giá trị hợp lệ. Variable `int` vẫn nhận được số không thuộc ba trạng thái. Nếu số được lưu vào database hay truyền qua giao thức, chèn một dòng giữa nhóm có thể đổi ý nghĩa các giá trị về sau; khi ấy giá trị tường minh và chính sách tương thích quan trọng hơn việc gõ ít ký tự. Chương 3 sẽ thêm một kiểu có tên để phân biệt ý nghĩa, nhưng kiểu ấy cũng không tự kiểm tra miền giá trị.
+
+Trong `labs/edition-contracts`, `TestConstantsAndIdentity` giữ trace này thành thí nghiệm nhỏ. Hãy đổi hằng số chưa có kiểu thành hằng số kiểu `int`, rồi giải thích lỗi gán trước khi sửa. Quy tắc nguồn là các mục Constants, Constant declarations và Representability của Go specification, phiên bản ngôn ngữ Go 1.27; test chỉ kiểm tra những trường hợp đã chọn.
 
 ## Phạm vi Từ vựng và Vòng đời Lưu trữ: Scope không đồng nghĩa với Lifetime
 
@@ -192,7 +222,7 @@ Toán tử số học bao gồm cộng `+`, trừ `-`, nhân `*`, chia `/`, và 
 
 Toán tử so sánh bao gồm bằng `==`, khác `!=`, nhỏ hơn `<`, nhỏ hơn hoặc bằng `<=`, lớn hơn `>`, và lớn hơn hoặc bằng `>=`. Mọi biểu thức so sánh đều trả về kiểu `bool`.
 
-Về mặt cú pháp, các phép toán tăng giảm `count++` và `count--` trong Go được phân loại là câu lệnh (statements), không phải biểu thức (expressions). Do đó, Go cấm hoàn toàn các biểu thức gây tác dụng phụ khó lường như `x = count++` hay `++count`.
+Về mặt cú pháp, `count++` và `count--` là câu lệnh, không phải biểu thức. Vì vậy `x = count++` không hợp lệ; Go cũng không có dạng prefix `++count`. Quy tắc này không cấm mọi biểu thức có side effect: một lời gọi hàm vẫn có thể thay đổi state.
 
 ## Xuất Dữ liệu Định dạng với Gói `fmt`
 
@@ -240,7 +270,7 @@ Biến `err` được khai báo trong mệnh đề này chỉ có phạm vi từ
 
 Cấu trúc `switch` trong Go tự động kết thúc khi một nhánh `case` thỏa mãn, không đòi hỏi lập trình viên phải chèn lệnh `break` thủ công như các ngôn ngữ họ C. Nếu chủ đích muốn luồng chạy tiếp xuống nhánh kế tiếp, từ khóa `fallthrough` phải được khai báo tường minh.
 
-Go cũng hỗ trợ `switch` không điều kiện (`switch {}`), trong đó mỗi nhánh `case` là một biểu thức logic độc lập, thay thế hoàn toàn cho các chuỗi `if / else if` phức tạp và khó bảo trì:
+Go cũng hỗ trợ `switch` không điều kiện (`switch {}`). Các `case` được kiểm tra theo thứ tự và nhánh đầu tiên đúng được chọn; dạng này có thể làm một chuỗi điều kiện dễ đọc hơn, không phải lúc nào cũng nên thay `if / else if`:
 
 ~~~go
 switch {
@@ -288,7 +318,7 @@ Khi duyệt tập hợp bằng `for range`, biến phần tử thứ hai (`code`
 
 Hàm là đơn vị đóng gói logic độc lập, nhận vào các tham số hình thức và trả về kết quả cho bên gọi.
 
-Go áp dụng nghiêm ngặt ngữ nghĩa truyền theo giá trị (pass by value). Mọi đối số khi truyền vào hàm đều được sao chép nguyên trạng giá trị nhị phân vào khung ngăn xếp hoặc thanh ghi của hàm nhận. Nếu giá trị đó là một số nguyên, hàm nhận một bản sao độc lập; nếu giá trị đó là một con trỏ hoặc một cấu trúc chứa con trỏ trỏ tới vùng nhớ khác, bản sao con trỏ ấy vẫn trỏ về cùng một vùng dữ liệu chung.
+Go truyền đối số theo giá trị (pass by value): tham số nhận giá trị của đối số, không trở thành chính biến của bên gọi. Đây là ngữ nghĩa của lời gọi, không phải cam kết về một lệnh sao chép bit hay vị trí stack/thanh ghi; compiler có thể tối ưu nếu giữ nguyên hành vi quan sát được. Với số nguyên, gán lại tham số không đổi biến gốc. Với con trỏ hoặc cấu trúc chứa con trỏ, giá trị được truyền vẫn có thể dẫn tới vùng dữ liệu chung.
 
 Go cho phép hàm trả về cùng lúc nhiều giá trị độc lập, tạo tiền đề cho khuôn mẫu xử lý lỗi tiêu chuẩn của ngôn ngữ bằng cách trả về cặp giá trị gồm kết quả dữ liệu và đối tượng lỗi:
 
@@ -400,4 +430,4 @@ Khi gặp lỗi biên dịch, kỹ sư không phỏng đoán mơ hồ mà đối
 | Sai lệch kiểu tham số hàm | Truyền `int` vào hàm nhận `string`. | `cannot use status (variable of type int) as string value in argument to takesString` | Tầng kiểm tra kiểu tĩnh (`types2`): Chữ ký hàm từ chối đối số không tương thích kiểu. |
 | Phép toán lệch kiểu số học | Thực hiện `a + b` giữa `int` và `int64`. | `invalid operation: a + b (mismatched types int and int64)` | Tầng kiểm tra kiểu tĩnh (`types2`): Cấm phép toán hai ngôi ngầm định giữa hai kiểu khác nhau. |
 
-Thông điệp biên dịch là bản chẩn đoán chính xác về mặt toán học đối với cấu trúc của chương trình. Hiểu được nguyên lý phân tích từ token, cú pháp, kiểu dữ liệu, cho đến biểu diễn thanh ghi giúp bạn tiếp cận mọi sự cố mã nguồn với sự tự tin và chuẩn xác. Chương 2 sẽ tiếp nối hành trình bằng việc giải phẫu sâu cấu trúc dữ liệu linh hoạt và quan trọng bậc nhất của Go: lát cắt (slice) và cơ chế chia sẻ bộ nhớ nền.
+Thông điệp biên dịch chỉ ra lỗi mà compiler phát hiện tại vị trí đang xét; nó không chứng minh chương trình đã đúng với yêu cầu hay an toàn khi chạy. Phân biệt lỗi phân giải tên, cú pháp và kiểu dữ liệu giúp bạn đặt giả thuyết cụ thể rồi kiểm chứng bằng một thay đổi nhỏ. Chương 2 tiếp tục cách điều tra đó với slice: vì sao một bản sao giá trị vẫn có thể chia sẻ bộ nhớ nền.

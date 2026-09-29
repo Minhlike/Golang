@@ -60,9 +60,9 @@ Chương 6 đã dùng race detector để tìm một lần truy cập thực s�
 
 Cần phân biệt rạch ròi hai cặp khái niệm thường bị nhầm lẫn trong môi trường đồng thời:
 
-Tính đồng thời (Concurrency) và Tính song song (Parallelism): Đồng thời là đặc tính cấu trúc của chương trình, chia bài toán thành nhiều phần việc có thể xử lý độc lập về mặt logic; trong khi song song là đặc tính phần cứng khi nhiều dòng chỉ thị thực sự chạy cùng một lúc trên các lõi CPU vật lý khác nhau. Go goroutines mang lại mô hình đồng thời, nhưng việc chúng có chạy song song hay không phụ thuộc hoàn toàn vào số luồng `M`, số logical CPU `GOMAXPROCS`, và quyết định điều phối của nhân hệ điều hành.
+Concurrency là cấu trúc nhiều phần việc có thể tiến triển trong các khoảng thời gian chồng nhau; parallelism là thực thi cùng lúc. Parallelism không bắt buộc mỗi dòng chạy trên một core vật lý riêng, vì logical CPU cũng có thể là hardware thread. Trong Go, số `P` qua GOMAXPROCS giới hạn thực thi Go code đồng thời; thread và việc OS lập lịch còn ảnh hưởng hành vi quan sát.
 
-Xung đột truy cập bộ nhớ (Data Race) và Lỗi điều kiện tranh chấp logic (Race Condition): Data race là lỗi xảy ra ở mức vi kiến trúc khi hai goroutine cùng truy xuất một ô nhớ mà không có quan hệ happens-before bảo vệ, trong đó có ít nhất một thao tác ghi; đây là hành vi sinh lỗi không xác định (undefined behavior). Ngược lại, Race Condition là lỗi logic nghiệp vụ khi thứ tự hoàn thành giữa các tác vụ độc lập dẫn tới kết quả không mong muốn (ví dụ kiểm tra số dư rồi mới rút tiền, nhưng hai giao dịch cùng vượt qua bước kiểm tra), ngay cả khi toàn bộ các biến đều được bảo vệ bằng Mutex và hoàn toàn sạch data race.
+Data race là các access vào cùng memory location không được sắp thứ tự bởi happens-before, có ít nhất một access ghi và không được bao phủ bởi contract atomic tương ứng. Không gọi Go data race là undefined behavior không giới hạn kiểu C/C++: Go memory model đặt các hạn chế cho implementation, dù race vẫn là lỗi và race trên dữ liệu nhiều word có thể gây memory corruption. Race condition là lỗi thứ tự ở mức logic; nó có thể tồn tại dù mỗi access đã được bảo vệ bằng mutex.
 
 Đừng biến ba tên thành câu thần chú. Với mỗi kết quả cần đọc, hãy vẽ đường cụ thể. Trong ví dụ `ready`, không có cạnh nào từ `latest = ...` sang việc `show` đọc `latest`; vì vậy lời giải không thể chỉ là thêm một vòng lặp chờ.
 
@@ -109,7 +109,28 @@ Kết quả xanh ở đây là hai loại bằng chứng cùng lúc: test kiểm
 
 Lệnh `go f()` thiết lập một quan hệ từ nơi khởi động đến lúc `f` bắt đầu. Điều đó đủ để goroutine mới thấy dữ liệu đã được chuẩn bị trước lệnh `go`; nó không cho chiều ngược lại. Việc `f` return hay goroutine kết thúc không tự báo cho goroutine khác rằng công việc đã xong. Đó là lý do `WaitGroup` trong lab là một phần của chứng minh, không phải nghi thức để test bớt flake.
 
-Không dùng `time.Sleep` để thay mũi tên còn thiếu. Sleep chỉ đoán rằng worker có đủ thời gian trên một lần chạy; nó không công bố thứ tự nào và làm test vừa chậm vừa không chắc. Cũng chưa dùng channel hoặc atomic để vá ví dụ `ready`: chúng có nghĩa riêng và sẽ được dạy đầy đủ ở Chương 9, nơi câu hỏi chuyển sang truyền công việc, quyền sở hữu và áp suất của dòng dữ liệu.
+Không dùng `time.Sleep` để thay mũi tên còn thiếu. Sleep chỉ đoán rằng worker có đủ thời gian trên một lần chạy; nó không công bố thứ tự nào và làm test vừa chậm vừa không chắc. Channel ở Chương 9 giải quyết bàn giao công việc và vòng đời; trước đó, ta cần phân biệt công bố state với việc bảo vệ state đang tiếp tục bị sửa.
+
+## Công bố state và chờ điều kiện
+
+`sync.Once` giữ một hợp đồng “thực hiện một lần”, không phải “thử cho tới thành công”. Khi nhiều caller gọi `Do(f)` trên cùng Once, return của `f` xảy ra trước return của các lời gọi `Do` liên quan. Nhưng nếu `f` panic, Once vẫn coi lần ấy đã được thực hiện; caller recover rồi gọi `Do` lại không khiến `f` chạy lại. `TestOncePanicIsNotRetry` trong `labs/edition-contracts` giữ phản ví dụ này. Khởi tạo phụ thuộc có thể lỗi tạm thời cần policy retry tường minh; không giấu nó trong Once rồi hy vọng lần sau tự chữa.
+
+`sync.Cond` lại dùng cho một câu hỏi khác: chờ cho bất biến được bảo vệ bởi lock trở thành đúng. `Wait` nhả lock, chờ rồi lấy lock lại trước khi return. Notification không phải một token trạng thái để cất cho caller tương lai; predicate mới là state cần đọc dưới lock:
+
+~~~go
+mu.Lock()
+for !ready {
+	cond.Wait()
+}
+// Đọc state được bảo vệ khi vẫn giữ lock.
+mu.Unlock()
+~~~
+
+Vòng `for` không nói rằng Go cho phép Wait tự tỉnh vô cớ: tài liệu yêu cầu Signal hoặc Broadcast để Wait return. Nó cần thiết vì khi goroutine lấy lại lock, goroutine khác có thể đã làm predicate không còn đúng. Producer sửa predicate với cùng lock, rồi thông báo theo policy. Nếu producer đã làm `ready=true` trước khi consumer tới, consumer đọc predicate và không cần một notification lịch sử. Đây là nền để đọc queue ở Chương 21, không phải một lý do dùng Cond thay channel cho mọi công việc.
+
+Atomic publication phù hợp khi reader lấy một snapshot đã hoàn tất, còn writer thay toàn bộ snapshot thay vì sửa object được công bố. Một `atomic.Pointer[Config]` có thể Store pointer mới và Load pointer hiện hành; operation atomic có thứ tự sequentially consistent theo API `sync/atomic`. Nhưng lock-free access vào pointer không tự làm các field sau pointer an toàn. Nếu Store xong rồi sửa map, slice hay field của cùng object trong khi reader đọc, race vẫn có thể tồn tại.
+
+Trong `TestCondPredicateAndAtomicPublication`, mỗi Config được dựng xong trước Store và không bị sửa về sau. Test kiểm tra giá trị quan sát trên các đường chạy đã chọn, race detector kiểm tra access trên lần chạy đó; chứng minh thiết kế vẫn là policy snapshot bất biến sau publication. Atomic không thay một transaction nhiều field, không giải quyết ownership của object lồng nhau và không có lời hứa luôn nhanh hơn mutex. Hãy dùng cơ chế có proof nhỏ nhất cho bất biến, rồi mới đo khi workload thực sự đòi tối ưu.
 
 Chương này kết thúc khi anh nhìn hai goroutine không còn hỏi “có chạy cùng lúc không?”, mà hỏi “lần truy cập nào cùng dữ liệu, bất biến nào cần giữ, và đường happens-before nào làm điều đó đúng?”. Câu hỏi ấy đi cùng anh qua channel, HTTP handler, cache và code runtime; cơ chế có thể đổi, nhưng trách nhiệm chứng minh thứ tự không đổi.
 

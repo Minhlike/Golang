@@ -477,7 +477,7 @@ Các kịch bản phòng thủ chứng minh tính kiên cố của hệ thống:
 | **Phó mặc an ninh cho JSON Schema** của MCP. | Bị tấn công SSRF hoặc Prompt Injection đánh cắp token IAM đám mây. | Luôn coi tham số từ Agent là không tin cậy; kiểm tra ngữ nghĩa và IP trong Go handler. |
 | **Cho phép Agent gọi tool mutating** mà không có mã phiếu phê duyệt. | Agent tự ý xóa hoặc khởi động lại các dịch vụ quan trọng khi hiểu nhầm bối cảnh. | Bắt buộc yêu cầu `change_ticket` và chỉ cấp quyền mutating cho vai trò Operator. |
 | **Giao tiếp MCP qua HTTP công khai** không mã hóa. | Bị nghe lén dữ liệu chẩn đoán hoặc bị tấn công mạo danh yêu cầu công cụ. | Ưu tiên Stdio Transport; nếu bắt buộc dùng SSE qua mạng phải có TLS Mutual Authentication. |
-| **Không ghi nhật ký kiểm toán** (Audit Trail). | Khi hệ thống gặp sự cố do Agent gây ra, kỹ sư SRE hoàn toàn không có dữ liệu để truy vết nguyên nhân. | Ghi lại mọi lượt gọi công cụ vào append-only structured audit log. |
+| **Không ghi nhật ký kiểm toán** (Audit Trail). | Thiếu dữ liệu ở boundary tool để xác định caller và hành động, dù có thể còn log từ các tầng khác. | Ghi structured audit log phù hợp policy lưu trữ và bảo vệ dữ liệu. |
 
 ---
 

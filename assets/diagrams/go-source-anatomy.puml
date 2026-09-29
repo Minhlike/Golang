@@ -20,7 +20,7 @@ skinparam note {
 skinparam arrowColor #000000
 left to right direction
 
-rectangle "package main\n\nimport \"fmt\"\n\nconst service = \"checkout\"\n\nfunc classify(status int) string { ... }\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as source
+rectangle "package main\n\nimport "fmt"\n\nconst service = "checkout"\n\nfunc classify(status int) string { ... }\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as source
 note right of source
   package main: khai báo tên gói (package)
   import: nạp thư viện từ gói khác

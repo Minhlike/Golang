@@ -31,12 +31,12 @@ mindmapDiagram {
   }
 }
 </style>
-* **TRỪU TƯỢNG HÓA\nKIỂU DỮ LIỆU**
+* TRỪU TƯỢNG HÓA\nKIỂU DỮ LIỆU
 ** GENERICS
 *** Cùng thao tác trên nhiều kiểu
 *** Bảo toàn thông tin kiểu compile-time
 *** Ràng buộc hợp lệ qua Constraint
-*** Loại bỏ chi phí ép kiểu lặp lại
+*** Không cần type assertion qua any
 ** GIAO DIỆN (INTERFACE)
 *** Thay thế linh hoạt theo hành vi
 *** Thỏa mãn ngầm định (Implicit)
@@ -45,6 +45,6 @@ mindmapDiagram {
 ** PHẢN CHIẾU (REFLECTION)
 *** Khám phá kiểu tại thời điểm runtime
 *** Nhận diện cấu trúc động bất định
-*** Cần kiểm soát vì chi phí phụ trội cao
+*** Đo chi phí trên workload cụ thể
 *** Sử dụng gói thư viện chuẩn reflect
 @endmindmap

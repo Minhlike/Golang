@@ -57,6 +57,10 @@
 27. **Quan sát Linux từ kernel bằng eBPF và Go.** eBPF verifier và ranh giới kernel/userspace; bpf2go code generation; BPF maps và ring buffers; nạp và quản lý vòng đời eBPF bằng cilium/ebpf; quan sát process exec tracepoints.
 28. **MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền.** Model Context Protocol (MCP) Go SDK; stdio transport; schema-validated tool definitions; least privilege và ranh giới authorization; phòng chống SSRF; audit trail cho các hành động vận hành.
 
+## Phần X — Kỹ sư trong kỷ nguyên Agent
+
+29. **Kỹ sư và bằng chứng trong kỷ nguyên Agent.** Phân biệt task với nghề, thí nghiệm với survey và dự báo; đọc dữ liệu có ngày/mẫu/phạm vi; thiết kế rào chắn gắn bằng chứng với artifact, caller và quyền hành động. Lab local từ contract, không kết nối production.
+
 ## Back Matter & Phụ lục (Luôn nằm ở cuối sách)
 
 - **Back Matter — Atlas Mã Nguồn 50 Thư Viện Go DevOps & Cloud.** Mổ xẻ trực tiếp kiến trúc mã nguồn của 50 thư viện Go tiêu biểu trong hệ sinh thái Cloud Native/DevOps tại các commit đã khóa hash bất biến (Zero-Guess Protocol). Luôn nằm ngay sau chương kỹ thuật cuối cùng và trước Error Atlas.
@@ -64,4 +68,4 @@
 
 ## Cách dùng bản hiện tại
 
-Bản PDF hiện tại bao gồm đầy đủ Front Matter, Mục lục động, toàn bộ 28 chương kỹ thuật từ Chương 00 đến Chương 28, Back Matter 50 Thư viện Go DevOps & Cloud, và Phụ lục A — Atlas Lỗi Go (85 mục tra cứu chẩn đoán thực chiến A01–J11). Toàn bộ cuốn sách đạt quy mô 400 trang in chuẩn mực, được biên dịch print-ready tự động qua `scripts/build_pdf.py` với fatal code-width preflight không lỗi. Tranche phát triển khóa đã định (`FORWARD ROADMAP LOCK`) đã hoàn thành trọn vẹn 100%. Các hướng phát triển tiếp theo được tổng hợp tại `book/FORWARD_COVERAGE_AFTER_CH28.md`.
+Bản thảo gồm Front Matter, Chương 00 và Chương 1–29, Back Matter 50 thư viện và Phụ lục A — Atlas Lỗi Go (85 mục A01–J11). Lượt encyclopedia ngày 29-09-2026 bổ sung các khoảng trống tại Ch1/3/5/7/8/14/17 và Ch29 theo chỉ thị mở rộng mới của người dùng; không viết lại các chương đã đủ sâu. Số trang và trạng thái QA của đúng PDF được ghi ở `book/FINAL_PUBLICATION_QA.md`, không suy ra từ việc build thành công. `scripts/build_pdf.py --candidate-only` giữ nguyên current/previous trong lúc kiểm tra candidate; Error Atlas vẫn là nội dung cuối.

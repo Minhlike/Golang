@@ -1,17 +1,15 @@
 @startuml
 title Vòng lặp phản hồi khi học và viết Go
 start
+repeat
 :Nêu giả thuyết;
 :Viết thay đổi nhỏ nhất;
 :go fmt ./...;
 :go test ./...;
 :go vet ./... khi phù hợp;
-if (Kết quả bác bỏ giả thuyết?) then (có)
-  :Đọc dấu hiệu và sửa nguyên nhân;
-  -->[lặp] :Nêu giả thuyết;
-else (không)
-  :Ghi nhận điều đã biết;
-endif
+backward :Đọc dấu hiệu và sửa nguyên nhân;
+repeat while (Kết quả bác bỏ giả thuyết?) is (có) not (không)
+:Ghi nhận điều đã biết;
 stop
 @enduml
 

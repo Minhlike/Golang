@@ -241,15 +241,16 @@ def run_preflight() -> dict:
         report["bookmarks"]["present"] = True
         report["bookmarks"]["count"] = len(toc)
         report["bookmarks"]["entries"] = [{"level": item[0], "title": item[1], "page": item[2]} for item in toc]
-        has_ch29 = False
         invalid_dest = False
         for item in toc:
             lvl, title, target_page = item[:3]
             if target_page < 1 or target_page > total_pages:
                 invalid_dest = True
-            if "29" in title and ("Chương 29" in title or "Chapter 29" in title):
-                has_ch29 = True
-        if invalid_dest or has_ch29:
+            if 1 <= target_page <= total_pages:
+                normalize = lambda s: re.sub(r"\s+", " ", s).strip()
+                if normalize(title) not in normalize(doc[target_page - 1].get_text()):
+                    invalid_dest = True
+        if invalid_dest:
             report["bookmarks"]["pass"] = False
     else:
         report["bookmarks"]["present"] = False

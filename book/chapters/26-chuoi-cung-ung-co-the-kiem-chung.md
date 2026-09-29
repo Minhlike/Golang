@@ -2,7 +2,7 @@
 
 # Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng
 
-Trong phát triển phần mềm hiện đại, ứng dụng của bạn hiếm khi được viết từ con số không. Một dịch vụ Go thông thường có thể chỉ chứa vài nghìn dòng code nghiệp vụ, nhưng lại kéo theo hàng chục thư viện bên ngoài (dependencies), hàng trăm module gián tiếp và vận hành bên trong một container image chứa hàng nghìn gói nhị phân của hệ điều hành.
+Một scenario chuỗi cung ứng có thể gồm source nghiệp vụ, nhiều module gián tiếp và base image có package OS. Số thành phần phụ thuộc cách build: image `scratch` và một base image tổng quát không có cùng tập package. Vì vậy inventory phải được lấy từ artifact thực tế, không ước lượng từ số dòng Go của application.
 
 Điều đó tạo nên một bề mặt tấn công khổng lồ mang tên: **Chuỗi cung ứng phần mềm (Software Supply Chain)**.
 
@@ -67,10 +67,9 @@ Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư vi�
 
 Nếu máy bạn chưa từng tải bản release đó, làm sao Go biết mã băm `h1:` nào là chuẩn?
 
-Go giải quyết triệt để vấn đề này thông qua **Go Checksum Database (sum.golang.org)** — một sổ cái minh bạch (Transparency Log) dựa trên cấu trúc cây Merkle: khi máy của bạn tải một module mới lần đầu tiên, Go toolchain sẽ truy vấn `sum.golang.org`; Checksum Database chỉ ghi nhận mã băm của một module một lần duy nhất (nhật ký append-only); nếu hacker thay đổi code của tag `v1.2.0`, mã băm tải về sẽ không khớp với bản ghi trong sổ cái toàn cầu, và Go sẽ lập tức hủy bỏ quá trình build với thông báo lỗi `SECURITY ERROR: checksum mismatch`.
+Với module thuộc phạm vi kiểm tra checksum database và cấu hình mặc định phù hợp, Go toolchain đối chiếu checksum đã tải với transparency log `sum.golang.org`. Nội dung không khớp gây lỗi checksum. Cơ chế này kiểm tra tính nhất quán của nội dung, không chứng minh nội dung không độc hại; `GOPRIVATE`, `GONOSUMDB`, `GOSUMDB=off` và source thay bằng `replace` còn tạo các boundary khác. Phải đọc cấu hình build trước khi suy ra module đã qua cùng đường kiểm tra.
 
-> [!IMPORTANT]
-> **Quy tắc vàng:** Tệp `go.sum` BẮT BUỘC phải được commit vào Git repository. Tuyệt đối không đưa `go.sum` vào `.gitignore`. Bỏ qua `go.sum` đồng nghĩa với việc mở toang cửa cho các cuộc tấn công tráo đổi mã nguồn phụ thuộc.
+> **Khuyến nghị:** Commit `go.sum` cùng `go.mod` khi module có dependency tạo file ấy. Không bỏ checksum đã ghi nhận chỉ để tránh merge conflict. Checksum database vẫn có thể kiểm tra module đủ điều kiện ngay cả khi chưa có entry local; vì vậy thiếu `go.sum` không tự chứng minh đã xảy ra tráo source, nhưng làm mất bằng chứng checksum đã được project lưu.
 
 ---
 
@@ -557,10 +556,10 @@ func SafeRemoteVerify(
 }
 ~~~
 
-Nhờ cơ chế Fail-Closed, ngay cả khi nhà cung cấp dịch vụ xác thực gặp sự cố ngừng hoạt động (outage), hệ thống của bạn vẫn được bảo vệ tuyệt đối trước nguy cơ lọt lưới các artifact độc hại.
+Fail-closed từ chối artifact khi thiếu bằng chứng mà policy yêu cầu, kể cả lúc verifier gặp outage. Nó không bảo đảm mọi artifact đã chấp nhận đều vô hại: trust root, signer được phép, nội dung và chính policy vẫn có thể sai hoặc bị xâm phạm. Safety và availability của gate là hai câu hỏi cần kiểm chứng riêng.
 
 ---
 
-Sau khi đã làm chủ quy trình kiểm soát chuỗi cung ứng phần mềm — từ tính toàn vẹn của mã nguồn, xuất xứ build đến chữ ký số artifact container — chúng ta đã có thể yên tâm rằng các file nhị phân chạy trên production là nguyên bản và an toàn. 
+Quy trình kiểm soát chuỗi cung ứng phần mềm giúp đối chiếu tính toàn vẹn của mã nguồn, xuất xứ build và chữ ký số artifact container với policy đã chọn. Bằng chứng ấy không chứng minh file nhị phân vô hại: mã nguồn, signer hay trust root vẫn có thể bị xâm phạm.
 
-Nhưng khi các container đó thực sự chạy trên hệ điều hành, làm thế nào để bạn biết chắc chúng đang làm gì dưới tầng nhân (kernel)? Liệu có tiến trình lạ nào đang bí mật mở kết nối mạng, đọc trộm tệp tin cấu hình hay cố gắng leo thang đặc quyền mà các công cụ giám sát thông thường không nhìn thấy? Trong **Chương 27**, chúng ta sẽ thâm nhập vào tầng sâu nhất của hệ điều hành Linux: sử dụng **eBPF (Extended Berkeley Packet Filter) kết hợp với Go** để quan sát và bắt trọn từng hành vi của hệ thống trực tiếp từ kernel mà không làm chậm ứng dụng.
+Khi container thực sự chạy, cần thêm bằng chứng về hành vi: tiến trình nào mở kết nối mạng, đọc tệp cấu hình hay thực hiện thao tác đáng ngờ? Trong **Chương 27**, chúng ta dùng **eBPF (Extended Berkeley Packet Filter) kết hợp với Go** để quan sát các sự kiện tại những hook được chọn trong kernel Linux. Đây không phải khả năng bắt trọn mọi hành vi hay quan sát miễn phí. Phạm vi hook, cửa sổ thu thập, sự kiện bị mất và chi phí xử lý đều giới hạn kết luận; phải đo overhead với workload thực tế trước khi triển khai trên production.

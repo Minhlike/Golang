@@ -97,7 +97,7 @@ Type cụ thể không thỏa mãn interface vì thiếu method hoặc sai khác
 
 ### B01 `panic: runtime error: invalid memory address or nil pointer dereference`
 Truy cập field hoặc gọi method trên một con trỏ hoặc interface có giá trị `nil`.
-! Con trỏ nil là nguyên nhân hàng đầu gây crash process; tuyệt đối không dùng `recover()` bừa bãi để che giấu.
+! Nil dereference có thể làm process crash; đừng dùng recover để che lỗi mà không xác định contract và recovery boundary.
 → Thêm kiểm tra `if ptr == nil` trước khi truy cập, hoặc rà soát constructor/hàm khởi tạo chưa gán con trỏ. [Ch2,3,12]
 
 ### B02 `panic: runtime error: index out of range [x] with length y`
@@ -110,7 +110,7 @@ Biểu thức cắt slice `s[low:high]` có cận trên `high` vượt quá sứ
 
 ### B04 `panic: runtime error: makeslice: len out of range`
 Hàm `make([]T, len, cap)` nhận tham số `len` hoặc `cap` là số âm, hoặc `len > cap`, hoặc vượt trần bộ nhớ hệ thống.
-→ Rà soát phép tính toán kích thước buffer cấp phát; bảo đảm biến kích thước luôn dương và nằm trong ngưỡng an toàn. [Ch2,7]
+→ Kiểm tra kích thước buffer không âm và nằm trong ngân sách; buffer độ dài 0 có thể hợp lệ theo contract. [Ch2,7]
 
 ### B05 `panic: assignment to entry in nil map`
 Thực hiện thao tác gán giá trị vào một key của map chưa được khởi tạo (`nil map`).
@@ -118,8 +118,8 @@ Thực hiện thao tác gán giá trị vào một key của map chưa được 
 
 ### B06 `panic: send on closed channel`
 Thực hiện hành vi gửi dữ liệu vào một channel đã bị gọi lệnh `close()`.
-! Đóng channel là quy ước thuộc về quyền sở hữu (channel ownership): chỉ bên sở hữu hoặc producer duy nhất mới được đóng channel sau khi gửi xong mọi dữ liệu; nếu có nhiều sender đồng thời, không sender đơn lẻ nào được tự ý close channel mà phải dùng `sync.Once` hoặc cơ chế điều phối riêng.
-→ Tái cấu trúc ownership: gom quyền đóng channel về một goroutine điều phối hoặc dùng `sync.Once` để bảo đảm không có sender nào ghi sau khi đóng. [Ch8,9,12]
+! Bên đóng phải biết mọi sender đã ngừng gửi. `sync.Once` chỉ tránh đóng hai lần; nó không chặn việc gửi sau khi đóng.
+→ Gom quyền đóng về goroutine điều phối, chờ các sender kết thúc rồi mới `close`. Producer duy nhất có thể tự đóng sau lần gửi cuối. [Ch8,9,12]
 
 ### B07 `panic: close of closed channel`
 Gọi lệnh `close()` lần thứ hai trên cùng một channel đã được đóng trước đó.
@@ -131,15 +131,15 @@ Gọi lệnh `close()` lần thứ hai trên cùng một channel đã được �
 
 ### B09 `fatal error: concurrent map read and map write`
 Nhiều goroutine cùng truy cập đọc và ghi đồng thời vào một biến kiểu `map` chuẩn mà không có cơ chế khóa đồng bộ.
-! Phân biệt rõ: đây là crash cưỡng bức từ cơ chế kiểm tra nội tại của Go runtime (phát hiện cờ ghi đồng thời trong cấu trúc map nội bộ, không thể chặn bằng recover); khác với cảnh báo data race tổng quát từ ThreadSanitizer (`-race`) vốn quét trên mọi ô nhớ.
+! Đây là lỗi fatal từ kiểm tra nội tại của runtime, không thể chặn bằng `recover`; khác với `-race`, theo dõi truy cập không đồng bộ trên những đường chạy được thực thi. Cả hai không bảo đảm phát hiện mọi race trong mọi lịch chạy.
 → Bảo vệ map bằng `sync.RWMutex`, dùng `sync.Map` khi phù hợp, hoặc tuần tự hóa qua channel; kiểm thử với `go test -race`. [Ch8,9,20]
 
 ### B10 `fatal error: stack overflow`
 Hàm gọi đệ quy vô tận hoặc chuỗi lồng hàm quá sâu khiến kích thước stack của goroutine tăng trưởng liên tục vượt quá giới hạn tối đa do Go runtime quy định (`maxstacksize`).
 → Bổ sung điều kiện dừng (base case) chuẩn xác cho hàm đệ quy, hoặc chuyển đổi giải thuật sang dạng lặp (iterative). [Ch10]
 
-### B11 `panic: sync: unlock of unlocked mutex`
-Gọi phương thức `Unlock()` trên một đối tượng `sync.Mutex` hoặc `sync.RWMutex` chưa từng được `Lock()`.
+### B11 `fatal error: sync: unlock of unlocked mutex`
+Go 1.27.1 phát lỗi fatal khi gọi `Unlock()` trên `sync.Mutex` hiện không được khóa, kể cả khi mutex đã được khóa rồi mở trước đó. `recover` không cứu được lỗi này; `sync.RWMutex` có diagnostic riêng.
 → Kiểm tra cấu trúc đặt `defer mu.Unlock()` ngay sau `mu.Lock()`, tránh gọi unlock thủ công rải rác nhiều nhánh return. [Ch8,12]
 
 ---
@@ -148,7 +148,7 @@ Gọi phương thức `Unlock()` trên một đối tượng `sync.Mutex` hoặc
 
 ### C01 `io.EOF`
 Tín hiệu hoàn tất stream đọc dữ liệu (đã đọc hết toàn bộ byte sẵn có, không còn byte nào phía sau).
-! `io.EOF` là một sentinel marker bình thường của I/O stream, hoàn toàn không phải sự cố hay lỗi hệ thống.
+! `io.EOF` thường đánh dấu hết stream; EOF xuất hiện sớm vẫn có thể vi phạm contract của format hoặc operation.
 → Xử lý `io.EOF` như một điều kiện kết thúc vòng lặp đọc dữ liệu hợp lệ thay vì return failure lên tầng trên. [Ch7,11,20]
 
 ### C02 `io.ErrUnexpectedEOF`
@@ -167,10 +167,10 @@ Dữ liệu stream đi vào vượt quá ngưỡng kích thước tối đa cho 
 Kiểu dữ liệu trong JSON payload không tương thích với định nghĩa kiểu của struct field đích trong Go.
 → Đối chiếu schema JSON nguồn, điều chỉnh kiểu dữ liệu struct field hoặc triển khai `json.Unmarshaler` tùy biến. [Ch7,14,20]
 
-### C06 `json: syntax error: unexpected end of JSON input`
+### C06 `unexpected end of JSON input`
 Chuỗi JSON đưa vào `json.Unmarshal` bị rỗng hoặc bị ngắt cụt giữa chừng cú pháp.
 ! Phân biệt rõ: `json.Unmarshal` trả về lỗi cú pháp này khi buffer rỗng; trong khi `json.Decoder.Decode()` trên stream rỗng trả về `io.EOF`, và chỉ trả về unexpected end hoặc `io.ErrUnexpectedEOF` khi stream bị cắt cụt khi đang parse dở token.
-→ Kiểm tra request body có rỗng không (`len == 0`), và xác thực header `Content-Length` từ client truyền lên trước khi decode. [Ch7,11,20]
+→ Kiểm tra dữ liệu thực đọc được và lỗi decode; không dùng riêng `Content-Length` làm bằng chứng body đầy đủ. Giới hạn byte và xử lý stream rỗng theo contract API. [Ch7,11,20]
 
 ### C07 `sql: no rows in result set`
 Truy vấn `QueryRowContext` không tìm thấy bất kỳ bản ghi nào khớp với điều kiện lọc trong cơ sở dữ liệu (`sql.ErrNoRows`).
@@ -185,8 +185,8 @@ Gọi lệnh `Commit()` hoặc `Rollback()` trên một transaction cơ sở d�
 ## D — Context & Cancellation
 
 ### D01 `context canceled`
-Context bị hủy chủ động thông qua việc gọi hàm `cancel()` từ caller hoặc do server nhận tín hiệu shutdown.
-! Phân biệt rõ với timeout: cancellation xuất phát từ hành động chủ động hủy của client hoặc quy trình dừng service.
+Context bị hủy bởi `cancel()`, context cha bị hủy hoặc lifecycle của operation kết thúc.
+! `http.Server.Shutdown` không tự hủy context của active request. Muốn signal dừng process hủy handler phải truyền application context có chủ đích; policy ấy có thể làm gián đoạn graceful drain.
 → Dừng vòng lặp xử lý của goroutine, dọn dẹp tài nguyên và trả về trạng thái canceled (áp dụng quy ước mã phi chuẩn HTTP 499 Client Closed Request phổ biến trong microservices / OutcomeCancel). [Ch4,11,12,20]
 
 ### D02 `context deadline exceeded`
@@ -195,12 +195,12 @@ Tác vụ không hoàn thành trong khoảng thời gian timeout hoặc trước
 → Xác định nơi khởi tạo deadline (`WithTimeout`), đo lường độ trễ từng phân đoạn và điều chỉnh timeout hợp lý. [Ch4,11,12,20]
 
 ### D03 Client Disconnect During Body Read
-Client chủ động ngắt kết nối TCP hoặc request context bị hủy trong khi server đang trong tiến trình đọc stream `req.Body`. Trong Go, hàm `Read()` khi đó trả về lỗi ngữ nghĩa `context.Canceled` (hoặc `read: connection reset by peer` / `http.ErrBodyReadAfterClose`).
+Client ngắt kết nối khi handler đang đọc `req.Body`. Lỗi đọc tùy đường kết nối và trạng thái body; không bảo đảm luôn là `context.Canceled`. Incoming request context bị hủy khi kết nối đóng, request bị hủy trên HTTP/2 hoặc `ServeHTTP` kết thúc.
 → Kiểm tra `r.Context().Done()` hoặc `errors.Is(err, context.Canceled)` trong các tác vụ đọc stream để kịp thời giải phóng CPU và buffer. [Ch11,12,20]
 
 ### D04 Server Graceful Shutdown Timeout
 Phương thức `server.Shutdown(ctx)` chạm mốc timeout của context truyền vào trước khi toàn bộ các kết nối HTTP đang hoạt động được đóng mềm mại, trả về `context.DeadlineExceeded`.
-→ Tăng thời lượng shutdown grace period hoặc điều tra các goroutine/request xử lý tác vụ dài không chịu lắng nghe `ctx.Done()`. [Ch12,20]
+→ Điều tra request còn chạy và ngân sách drain. Context truyền cho `Shutdown` giới hạn thời gian chờ, không tự trở thành context của handler; kiểm tra policy hủy request riêng. [Ch12,20]
 
 ---
 
@@ -224,7 +224,7 @@ Cố gắng ghi dữ liệu vào một filesystem được mount ở chế độ
 
 ### E05 `executable file not found in $PATH`
 Hàm `exec.LookPath` hoặc `exec.Command` không tìm thấy file thực thi tương ứng trong các thư mục của biến môi trường `$PATH` (`exec.ErrNotFound`).
-→ Kiểm tra base image của container (distroless không có sẵn shell/ls), cung cấp đường dẫn tuyệt đối, hoặc cài đặt tool. [Ch15,17]
+→ Kiểm tra working directory, mount và base image thực tế; image distroless thường không có shell/ls, nhưng biến thể debug khác. Dùng đường dẫn phù hợp hoặc công cụ chẩn đoán riêng. [Ch15,17]
 
 ### E06 `signal: terminated / signal: killed`
 Process bị dừng đột ngột bởi tín hiệu hệ điều hành: SIGTERM khi dừng dịch vụ có phối hợp, hoặc SIGKILL khi bị cưỡng chế tiêu diệt (kill -9, hết hạn grace period, hoặc do Linux kernel OOM Killer).
@@ -234,9 +234,9 @@ Process bị dừng đột ngột bởi tín hiệu hệ điều hành: SIGTERM 
 ### E07 `failed to load bpf program: operation not permitted / permission denied (eBPF Verifier Error)`
 * `failed to load bpf program: operation not permitted`
 * `failed to load bpf program: permission denied: ... (verifier log)`
-Lỗi nạp chương trình eBPF vào Linux kernel thông qua syscall `SYS_BPF` khi tiến trình Go thiếu quyền quản trị (`CAP_BPF`/`CAP_SYS_ADMIN`), hoặc bytecode bị Kernel Verifier từ chối do vi phạm an toàn bộ nhớ (truy cập con trỏ ngoài biên, vòng lặp không xác định, hoặc stack vượt quá 512 bytes).
-! Kernel Verifier từ chối ngay lập tức ở cấp hệ điều hành trước khi chương trình eBPF được thực thi; phía Go nhận lỗi chi tiết qua Verifier Log.
-→ Chạy ứng dụng với quyền root hoặc cấp capability `setcap cap_bpf,cap_sys_admin+ep <binary>`, kiểm tra mã C eBPF bảo đảm mọi con trỏ đều qua hàm `bpf_probe_read_*` và kích thước stack < 512 bytes. [Ch27]
+Load bị từ chối có thể do quyền, chính sách host hoặc bytecode không đạt kiểm tra verifier. Capability cần thiết tùy kernel và loại program; không suy ra nguyên nhân chỉ từ một chuỗi permission denied.
+! Đọc error và verifier log nếu có. Verifier phân tích program trước khi cho chạy; không phải mọi lỗi permission đều có log verifier.
+→ Kiểm tra feature, hook, policy và quyền tối thiểu trước khi cấp thêm quyền. Sửa bytecode theo log cụ thể; không có quy tắc rằng mọi pointer đều phải đi qua `bpf_probe_read_*`. [Ch27]
 
 ---
 
@@ -251,7 +251,7 @@ Hệ thống DNS resolver không thể phân giải tên miền mục tiêu thà
 → Xác nhận service mục tiêu đã khởi chạy, bind đúng địa chỉ (`0.0.0.0` thay vì `127.0.0.1`), và port đích chính xác. [Ch4,11,16,20]
 
 ### F03 `i/o timeout / dial tcp: i/o timeout`
-Quá trình bắt tay TCP hoặc thao tác đọc/ghi socket không nhận được phản hồi trước khi `net.Dialer.Timeout` kết thúc.
+Dial không hoàn tất trong ngân sách kết nối, hoặc đọc/ghi vượt deadline tương ứng. `net.Dialer.Timeout` giới hạn dial, không đặt timeout chung cho mọi lần đọc/ghi sau đó.
 → Kiểm tra tường lửa/security group có đang chặn gói tin SYN không, routing mạng, hoặc server mục tiêu bị treo cứng. [Ch11,16,20]
 
 ### F04 `read: connection reset by peer`
@@ -269,7 +269,7 @@ Connection pool HTTP/1.1 cố gắng tái sử dụng kết nối nhưng server 
 
 ### F07 `x509: certificate signed by unknown authority`
 Bắt tay TLS thất bại vì chứng chỉ số của máy chủ không được ký bởi Certificate Authority (CA) có trong trust store của client.
-! Tuyệt đối không bật `InsecureSkipVerify: true` trong môi trường production vì sẽ vô hiệu hóa hoàn toàn bảo mật TLS.
+! `InsecureSkipVerify` bỏ kiểm tra certificate chain và hostname mặc định; không dùng để chữa lỗi production. Custom verification cần contract riêng; TLS encryption không vì cờ này mà tự biến mất.
 → Thêm Root CA nội bộ vào trust store của hệ điều hành/container hoặc nạp CA tùy biến qua `tls.Config.RootCAs`. [Ch11,17,20]
 
 ### F08 `x509: certificate has expired or is not yet valid`
@@ -281,13 +281,13 @@ Tên miền truy cập không khớp với danh sách Subject Alternative Names 
 → Cấp lại chứng chỉ với trường SAN bao quát đúng tên miền hoặc địa chỉ IP đang sử dụng để kết nối. [Ch11,17]
 
 ### F10 Unread Response Body (Lost Connection Reuse)
-Client đóng response body (`resp.Body.Close()`) khi dữ liệu stream chưa được đọc đến `io.EOF`, khiến `net/http.Transport` không thể tái sử dụng socket TCP trong pool cho các request tiếp theo.
-! Bounded drain (`io.LimitReader`) chỉ giúp kết nối đủ điều kiện tái sử dụng (`ReusedEligible = true`) khi toàn bộ dữ liệu thực sự chạm `io.EOF` trong ngưỡng giới hạn (như 16 KiB); nếu payload vượt quá giới hạn, socket buộc phải bị đóng để bảo vệ bộ nhớ.
-→ Luôn đọc cạn có giới hạn bằng `io.LimitReader` và chỉ coi kết nối là reuse-eligible khi số byte còn lại chạm `io.EOF` trước khi `Close()`. [Ch11,20]
+Với HTTP/1.x, đóng body trước EOF có thể làm mất khả năng tái sử dụng kết nối. HTTP/2 có lifecycle stream riêng; không suy ra cứ đóng body sớm là toàn bộ socket phải đóng.
+! EOF của `io.LimitReader` có thể chỉ báo hết ngân sách, không phải hết body gốc. `ReuseEligible` là cờ của helper trong lab, không phải cam kết từ Transport.
+→ Đóng body; nếu chọn drain, giới hạn byte và thời gian. EOF hỗ trợ một số đường HTTP/1.x reuse, không bảo đảm reuse ở mọi Transport/protocol. [Ch11,20]
 
 ### F11 `RequestTimeTooSkewed`
 * `RequestTimeTooSkewed: The difference between the request time and the current time is too large.`
-Lỗi xác thực chữ ký đám mây (`AWS SigV4 HTTP 403 Forbidden`) khi đồng hồ hệ thống của máy client bị lệch quá 15 phút so với đồng hồ chuẩn của AWS Server, khiến timestamp trong chữ ký SigV4 bị từ chối để chống tấn công phát lại (replay attack).
+Diagnostic này có thể gặp từ Amazon S3 khi thời gian request lệch ngoài cửa sổ được service chấp nhận. Không áp một ngưỡng phút chung cho mọi service hoặc mọi kiểu ký AWS; đọc response và contract API thực tế.
 ! Thường gặp trong container hoặc máy ảo khi tiến trình đồng bộ thời gian NTP bị lỗi hoặc đóng băng sau khi suspend.
 → Đồng bộ lại đồng hồ hệ điều hành thông qua dịch vụ chrony hoặc NTP daemon (`chronyc makestep`). [Ch24]
 
@@ -296,22 +296,22 @@ Lỗi xác thực chữ ký đám mây (`AWS SigV4 HTTP 403 Forbidden`) khi đ�
 ## G — Database
 
 ### G01 `sql: database is closed`
-Thực hiện thao tác truy vấn hoặc thực thi lệnh trên đối tượng `*sql.DB` sau khi phương thức `db.Close()` đã được gọi (`sql.ErrConnDone`).
+Thực hiện thao tác trên `*sql.DB` đã đóng. Đây không phải `sql.ErrConnDone`: sentinel ấy dành cho `*sql.Conn` đã trả lại pool hoặc đóng.
 → Rà soát lifecycle của `*sql.DB`: chỉ khởi tạo duy nhất một lần lúc ứng dụng startup và chỉ đóng khi toàn bộ process tắt. [Ch13,20]
 
 ### G02 `driver: bad connection`
-Kết nối vật lý tới database bị ngắt đột ngột phía máy chủ hoặc mạng (`driver.ErrBadConn`). Đồng thời, khi connection pool bị cạn kiệt (`SetMaxOpenConns`), các truy vấn mới sẽ bị xếp hàng chờ đến khi `context deadline exceeded` thay vì trả về một error string riêng từ `database/sql`.
-! `database/sql` không có error string chuẩn mang tên "connection pool exhausted"; khi hết connection, hệ thống xếp hàng đợi cho đến khi context timeout.
+Driver báo connection không dùng được (`driver.ErrBadConn`); `database/sql` có thể retry theo contract. Đây khác với chờ pool đạt `SetMaxOpenConns`.
+! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên "connection pool exhausted".
 → Kiểm tra health check kết nối, tăng `SetMaxOpenConns` nếu tải hợp lệ, hoặc đặt timeout cho context truy vấn để tránh goroutine bị treo vô hạn. [Ch13,20]
 
 ### G03 Unclosed sql.Rows (Connection Pool Starvation)
-Hiện tượng quên gọi `rows.Close()` sau khi duyệt qua kết quả truy vấn `db.QueryContext`, khiến kết nối database bên dưới bị giam giữ vĩnh viễn ngoài pool và làm cạn kiệt kết nối của ứng dụng.
+Không đóng `Rows` khi dừng duyệt sớm có thể giữ connection ngoài pool. Đọc tới EOF có thể tự đóng Rows theo contract, nhưng caller vẫn nên đóng tường minh và kiểm tra `rows.Err()`.
 ! `database/sql` không phát ra chuỗi lỗi báo quên close; triệu chứng thực tế là pool cạn kiệt âm thầm và các truy vấn kế tiếp bị treo đến khi context timeout.
 → Luôn đặt `defer rows.Close()` ngay sau dòng kiểm tra `if err != nil` của lệnh `db.QueryContext`. [Ch13,20]
 
 ### G04 `sqlite: database is locked / busy`
 SQLite gặp xung đột ghi đồng thời từ nhiều transaction hoặc goroutine trên cùng một tập tin cơ sở dữ liệu (`busy / locked`).
-→ Kích hoạt chế độ WAL (`_journal_mode=WAL`), thiết lập busy timeout (`_busy_timeout=5000`), hoặc tuần tự hóa luồng ghi. [Ch13,20]
+→ Cân nhắc WAL, busy timeout hoặc tuần tự hóa ghi theo workload. Cú pháp DSN/pragma tùy driver; các tên `_journal_mode` và `_busy_timeout` không phải contract chung của `database/sql`. [Ch13,20]
 
 ### G05 `UNIQUE constraint failed`
 Cố gắng chèn hoặc cập nhật bản ghi có giá trị trùng lặp trên cột được đánh chỉ mục duy nhất (PRIMARY KEY hoặc UNIQUE).
@@ -319,34 +319,34 @@ Cố gắng chèn hoặc cập nhật bản ghi có giá trị trùng lặp trê
 
 ### G06 `FOREIGN KEY constraint failed`
 Thao tác insert hoặc delete vi phạm tính toàn vẹn quan hệ khóa ngoại giữa bảng cha và bảng con.
-→ Kiểm tra thứ tự thao tác dữ liệu: luôn chèn bản ghi bảng cha trước bảng con, và xóa bản ghi bảng con trước bảng cha. [Ch13,20]
+→ Kiểm tra foreign key, transaction, deferred constraint và cascade của database thật; không áp một thứ tự insert/delete duy nhất cho mọi schema. [Ch13,20]
 
 ---
 
 ## H — Concurrency
 
 ### H01 `fatal error: all goroutines are asleep - deadlock!`
-Tất cả các goroutine trong chương trình đều đang bị block (chờ channel, mutex) mà không còn bất kỳ goroutine nào chạy để mở khóa.
-! Go runtime chỉ phát hiện deadlock khi TOÀN BỘ goroutine đều ngủ; nếu còn 1 goroutine chạy nền (như ticker), deadlock cục bộ bị bỏ qua!
+Runtime phát hiện không còn công việc có thể tiến triển theo các điều kiện kiểm tra nội tại của version đang chạy.
+! Goroutine chờ I/O hoặc timer không tự đồng nghĩa deadlock. Runtime không phát hiện mọi vòng chờ cục bộ; goroutine khác còn hoạt động có thể che một nhóm đang kẹt.
 → Thiết kế đồ thị phụ thuộc của lock/channel; luôn tuân thủ thứ tự acquisition lock nhất quán và tránh chờ đợi vòng tròn. [Ch8,9,12]
 
 ### H02 `WARNING: DATA RACE`
-Go race detector (`go test -race` / `go run -race`) phát hiện ít nhất hai goroutine cùng truy cập một ô nhớ và có ít nhất một thao tác ghi.
-! Tuyệt đối không phớt lờ cảnh báo data race; race condition dẫn đến dữ liệu bị hỏng âm thầm và crash ngẫu nhiên không thể dự đoán.
+Go race detector (`go test -race` / `go run -race`) phát hiện các truy cập xung đột tới cùng vùng nhớ, có ít nhất một lần ghi và thiếu quan hệ đồng bộ cần thiết trên đường chạy được quan sát.
+! Không bỏ qua data race. Kết quả có thể không nhất quán hoặc gây crash; một lần chạy không crash không chứng minh chương trình đúng.
 → Bảo vệ vùng nhớ dùng chung bằng `sync.Mutex`, chuyển sang toán tử `sync/atomic`, hoặc tái cấu trúc truyền dữ liệu qua channel. [Ch8,9,20]
 
 ### H03 Goroutine Leak
-Goroutine được sinh ra nhưng không bao giờ kết thúc vì bị block vô hạn trên channel không có buffer, mutex không được nhả, hoặc I/O thiếu context cancellation.
+Goroutine không kết thúc vì không còn đường thoát khỏi chờ channel, lock hoặc I/O. Context chỉ hữu ích nếu operation thực sự quan sát cancellation.
 ! Go runtime không tự động garbage collect goroutine bị block; một goroutine bị leak sẽ giữ toàn bộ stack frame và bộ nhớ tham chiếu liên quan.
-→ Luôn truyền `context.Context` có timeout/cancellation vào goroutine; bảo đảm mọi nhánh rẽ đều có điều kiện thoát hoặc dùng buffered channel thích hợp. [Ch8,9,12,20]
+→ Xác định owner và đường thoát; truyền context/deadline tới API có hỗ trợ. Buffer chỉ đổi thời điểm block, không tự sửa leak. [Ch8,9,12,20]
 
 ### H04 `panic: sync: negative WaitGroup counter`
 Phương thức `wg.Add()` nhận giá trị âm làm counter nhỏ hơn 0, hoặc phương thức `wg.Done()` bị gọi nhiều lần hơn số lần `Add()`.
-→ Kiểm tra số lần gọi `Done()`; luôn gọi `Add()` TRƯỚC KHI khởi chạy goroutine worker, tuyệt đối không gọi `Add()` bên trong worker. [Ch8,9]
+→ Kiểm tra số lần `Done()` và tăng counter trước khi khởi chạy worker trong mẫu đang học. `Add` dương khi counter bằng 0 phải xảy ra trước `Wait`; không để worker mới tự tăng sau khi caller đã có thể `Wait`. [Ch8,9]
 
 ### H05 `panic: sync: WaitGroup misuse: Add called concurrently with Wait`
-Phương thức `wg.Add()` được gọi đồng thời trong khi một goroutine khác đang thực thi phương thức `wg.Wait()`.
-→ Toàn bộ các thao tác `wg.Add()` khởi tạo phải hoàn tất trước khi lệnh `wg.Wait()` bắt đầu được gọi. [Ch8,9]
+Diagnostic này không có nghĩa mọi `Add` đồng thời với `Wait` đều sai. Theo contract, `Add` dương khi counter đang bằng 0 phải xảy ra trước `Wait`; khi counter đã dương, quy tắc khác áp dụng.
+→ Trong mẫu worker đang học, đăng ký task trước khi khởi chạy; nếu tái sử dụng WaitGroup, chỉ thêm lứa mới sau khi mọi `Wait` của lứa cũ đã trả về. [Ch8,9]
 
 ---
 
@@ -382,7 +382,7 @@ Toàn bộ suite kiểm thử hoặc một test cụ thể chạy vượt quá g
 
 ### I08 `API rate limit exceeded`
 * `API rate limit exceeded for user ID <id>`
-Lỗi từ chối (`GitHub API HTTP 403 Forbidden`) khi số lượng request gửi tới máy chủ GitHub vượt quá định mức cho phép (5.000 requests/giờ cho authenticated token hoặc 60 requests/giờ cho IP nặc danh), hoặc vi phạm chính sách chống lạm dụng Secondary Rate Limit (`Retry-After`).
+GitHub REST API có thể trả HTTP 403 hoặc 429 khi vượt primary hay secondary rate limit. Theo tài liệu ngày 29-09-2026, mức cơ bản là 5.000 request/giờ cho user được xác thực và 60 cho IP không xác thực; loại token, App, endpoint và Enterprise có ngoại lệ. Dùng header thực tế, không gán mức ấy cho mọi token.
 ! Thường gặp khi các bot tự động hóa hoặc CI/CD pipeline gửi yêu cầu liên tục trong vòng lặp mà không kiểm tra hạn mức còn lại.
 → Bóc tách header `X-RateLimit-Reset` hoặc `Retry-After` để tạm dừng tiến trình (sleep with jitter) cho đến khi quota được khôi phục trước khi gửi yêu cầu tiếp theo. [Ch25]
 
@@ -402,12 +402,12 @@ Trạng thái kết thúc (`Terminated Reason`) của container trong Kubernetes
 
 ### J03 ImagePullBackOff / ErrImagePull
 Trạng thái chờ (`Waiting Reason`) của Pod khi Kubernetes không thể tải container image từ registry (sai image tag, thiếu secret xác thực, hoặc nghẽn mạng).
-! Đây là trạng thái lỗi kéo image của Kubernetes control plane, xảy ra trước khi container Go khởi chạy.
+! Kubelet trên node phối hợp với container runtime để kéo image; trạng thái được báo về API. Lỗi này xảy ra trước khi container Go khởi chạy.
 → Kiểm tra tên image và tag, cấu hình `imagePullSecrets` cho service account, hoặc kiểm tra kết nối mạng egress của cụm. [Ch17,18]
 
 ### J04 CreateContainerConfigError
 Trạng thái lỗi cấu hình (`Waiting Reason`) khi Kubernetes không tìm thấy ConfigMap hoặc Secret được tham chiếu trong cấu hình Pod.
-! Lỗi ở cấp scheduler/kubelet khi chuẩn bị môi trường chạy container, xảy ra trước khi binary Go được thực thi.
+! Kubelet gặp lỗi khi chuẩn bị cấu hình container; không phải diagnostic của Go hay riêng thao tác chọn node của scheduler.
 → Chạy `kubectl describe pod <pod>` để xác định chính xác tên ConfigMap/Secret đang bị thiếu và tạo bổ sung vào namespace. [Ch17,21]
 
 ### J05 Readiness probe failed
@@ -418,7 +418,7 @@ Sự kiện chẩn đoán (`Kubelet Event`) phát ra khi endpoint kiểm tra m�
 
 ### J06 Liveness probe failed
 Sự kiện chẩn đoán (`Kubelet Event`) phát ra khi endpoint kiểm tra sự sống (`/livez`) không phản hồi hoặc trả về mã lỗi, khiến Kubernetes ra lệnh tiêu diệt và khởi động lại container.
-! Tuyệt đối không để liveness probe phụ thuộc vào database bên ngoài; nếu database chết, toàn bộ cụm pod sẽ restart dây chuyền!
+! Tránh dùng lỗi database xa làm liveness failure nếu restart không chữa được nó; policy sai có thể gây cascading restart.
 → Liveness probe chỉ được kiểm tra nội tại process (deadlock, event loop); không kiểm tra dependency bên ngoài. [Ch12,17,21]
 
 ### J07 Admission Gate Rejected
@@ -442,15 +442,15 @@ Lỗi cấu hình runtime (`Kubernetes Scheme Error`) khi một Go struct đư�
 ### J10 Denied by Supply Chain Policy: reachable vulnerability or untrusted builder
 * `reachable <SEVERITY> vulnerability <ID> in <package> (symbol: <symbol>)`
 * `untrusted builder identity: <builder>`
-Trạng thái chặn (`Supply Chain Verification Gate Status`) khi artifact mang theo CVE có ký hiệu thực sự được gọi trong đồ thị cuộc gọi thực thi (Call-Graph Reachability) hoặc được build từ quy trình không được cấp phép.
-! Khác với các công cụ quét phụ thuộc tĩnh báo cáo hàng loạt CVE trong thư viện không dùng tới, cảnh báo này cho biết mã độc/lỗi logic nằm trên luồng thực thi trực tiếp của binary.
+Trạng thái chặn theo policy khi công cụ phân tích tìm đường gọi có thể tới ký hiệu liên quan lỗ hổng, hoặc identity của builder không được chấp nhận.
+! Reachability tĩnh không chứng minh đường ấy đã chạy, khai thác thành công hay có mã độc. Phân biệt kết quả phân tích với trace thực nghiệm.
 → Cập nhật phiên bản dependency đã vá lỗi, loại bỏ việc gọi ký hiệu chứa lỗ hổng, hoặc kiểm tra lại builder ID trong CI workflow. [Ch26]
 
 ### J11 MCP Tool Execution Denied: unauthorized mutation or SSRF boundary violation
 * `mcp: tool authorization denied for role <role> on tool <tool>`
 * `mcp: ssrf blocked: target ip <ip> belongs to private/metadata range`
 Trạng thái từ chối (`MCP Security Boundary Status`) khi Agent AI cố gắng kích hoạt công cụ làm thay đổi trạng thái hạ tầng (Mutating Tool) mà không có quyền hạn, hoặc truyền tham số URL vi phạm ranh giới phòng vệ SSRF (hướng tới AWS Metadata Service `169.254.169.254` hoặc Loopback `127.0.0.1`).
-! JSON Schema trong MCP chỉ xác thực kiểu dữ liệu của tham số; nó KHÔNG THỂ ngăn chặn Prompt Injection hay khai thác SSRF. Rào chắn này bắt buộc phải do Go handler thực thi.
+! Schema kiểm tra cấu trúc và constraint đã khai báo, không thay authorization, kiểm soát destination hay phòng prompt injection. Handler, gateway hoặc lớp mạng phải thực thi policy phù hợp; không phải yêu cầu bắt buộc dùng Go.
 → Kiểm tra role của Agent trong phiên MCP, cấu hình whitelist URL cho công cụ mạng, hoặc cấp token ủy quyền (Change Request ID) trước khi gọi các tool gây đột biến. [Ch28]
 
 

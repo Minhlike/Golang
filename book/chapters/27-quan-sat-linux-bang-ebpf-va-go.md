@@ -4,9 +4,9 @@
 
 Cho đến thời điểm này của cuốn sách, chúng ta đã xây dựng các công cụ giám sát dựa trên ba trụ cột Observability truyền thống: Metrics (Prometheus), Logs và Tracing (OpenTelemetry). 
 
-Tuy nhiên, tất cả các phương pháp đó đều chia sẻ một điểm yếu cốt tử: **Chúng hoàn toàn phụ thuộc vào việc ứng dụng ở tầng người dùng (Userspace) có hợp tác hay không**.
+Instrumentation đặt trong application cần code ứng dụng tham gia để tạo metric và span có ngữ nghĩa nghiệp vụ. Nhưng metrics, logs và tracing không chỉ có nguồn ấy: OS, proxy và các tầng hạ tầng cũng có thể cung cấp tín hiệu độc lập. Câu hỏi ở đây là điểm quan sát nào còn thấy được hành vi khi application không chủ động báo cáo.
 
-Hãy hình dung một kịch bản thực chiến trong vận hành cụm container: một tiến trình máy chủ web bị khai thác lỗ hổng thực thi mã từ xa (RCE). Kẻ tấn công mở một phiên shell ngầm `/bin/sh`, tải mã độc về thư mục `/tmp` rồi thực thi trực tiếp. Tiến trình độc hại này hoàn toàn không tích hợp OpenTelemetry SDK, không công bố metric Prometheus và xóa sạch dấu vết tệp tin cấu hình. Khi ấy, các công cụ giám sát APM truyền thống ở tầng người dùng hoàn toàn bất lực vì chúng phụ thuộc vào sự hợp tác tự nguyện của ứng dụng.
+Xét một scenario: tiến trình web bị khai thác RCE, mở `/bin/sh`, tải payload vào `/tmp` rồi thực thi mà không tạo span hay metric trong application. Instrumentation của chính application có thể thiếu dấu vết đó; log OS, proxy hoặc audit vẫn có thể hữu ích. Ta bổ sung một điểm quan sát kernel cho hook đã chọn, không tuyên bố eBPF là nguồn nhìn thấy mọi hành vi.
 
 eBPF cho phép đặt điểm quan sát gần kernel cho những hook mà policy và kernel hỗ trợ; nó không nhìn thấy “mọi hành vi” và không thay thế audit log hay kiểm soát truy cập. Trước đây, can thiệp vào kernel thường dùng Linux Kernel Module (LKM) bằng C, có blast radius lớn khi lỗi. eBPF kết hợp `cilium/ebpf` cho phép nạp bytecode qua verifier, nhưng khả năng attach, quyền hạn và overhead vẫn phải được kiểm chứng trên kernel/workload thật.
 
@@ -61,7 +61,7 @@ Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trư
 
 Khi lập trình eBPF với Go, nhiều người lầm tưởng rằng bắt buộc phải cài đặt trình biên dịch Clang/LLVM cồng kềnh trên máy chủ sản xuất hoặc phải kích hoạt CGO.
 
-Thư viện **`github.com/cilium/ebpf`** giải quyết triệt để vấn đề này nhờ kiến trúc **CGO-Free**:
+Thư viện **`github.com/cilium/ebpf`** cung cấp đường nạp và quản lý object eBPF từ Go không phụ thuộc cgo ở phía userspace:
 
 ~~~
 [exec_observer.c] ──(clang dev)──> [exec_observer.o]
@@ -90,7 +90,7 @@ Một là, giai đoạn phát triển: Kỹ sư viết mã C eBPF, sau đó ch�
 
 Hai là, tự động nhúng Bytecode: Công cụ `bpf2go` tự động sinh ra tệp Go chứa mã bytecode ELF đã được nhúng thẳng vào binary thông qua tính năng `//go:embed`.
 
-Ba là, thực thi không CGO: Khi binary Go khởi chạy trên máy chủ production, nó tự tay mở file descriptor và kích hoạt syscall cấp thấp của Linux: `unix.Syscall(unix.SYS_BPF, ...)` để nạp chương trình eBPF vào kernel mà **hoàn toàn không cần CGO** (`CGO_ENABLED=0`) và không cần cài thêm bất kỳ gói phần mềm nào trên OS host!
+Ba là, phía Go có thể nạp object eBPF đã build sẵn qua syscall Linux mà không cần cgo. Điều đó không xóa dependency của môi trường: kernel phải hỗ trợ tính năng và hook cần dùng, caller phải có quyền phù hợp, và BTF hay các asset build-time cần khớp cách ứng dụng được đóng gói. Không cần C runtime cho loader thuần Go không đồng nghĩa không cần điều kiện nào trên host.
 
 Bốn là, mô hình kiểm thử linh hoạt: Trong môi trường CI hoặc máy phát triển không có Clang/kernel headers, mã Go có thể sử dụng các loader mô hình hóa hoặc giả lập nguồn đọc (`RecordReader`) để kiểm chứng toàn bộ pipeline xử lý mà không cần quyền root.
 
@@ -427,9 +427,9 @@ ok      part27-ebpf-observer   0.742s
 
 ### Phân tích kết quả kiểm thử và Ranh giới kiểm chứng:
 
-Bộ kiểm thử được phân loại ở cấp độ `UNIT_TESTED` kết hợp `MODEL_ONLY`. Việc biên dịch tệp nhị phân ELF và móc trực tiếp vào tracepoint nhân Linux đòi hỏi môi trường hệ điều hành Linux cùng đặc quyền nhân (`CAP_BPF` hoặc root). Trên các máy trạm phát triển không có Linux kernel headers, thao tác nạp trực tiếp vào kernel được tạm dừng có chủ đích (`SKIPPED_WITH_REASON`). 
+Bộ kiểm thử được phân loại ở cấp độ `UNIT_TESTED` kết hợp `MODEL_ONLY`. Biên dịch object ELF là bước build, cần compiler và các header hoặc type asset mà mã C sử dụng; nó không tự đòi hỏi quyền nạp vào kernel. Load/attach tracepoint cần kernel Linux hỗ trợ hook và quyền phù hợp với kernel, loại program cùng chính sách bảo mật. Lab này chưa chạy bước ấy trên Linux (`SKIPPED_WITH_REASON`); thiếu kernel headers không phải lý do chung khiến object đã build không thể được nạp.
 
-Tuy nhiên, toàn bộ logic cốt lõi vẫn được bảo đảm thông qua 6 kịch bản thực chiến: giải mã nhị phân little-endian 156 byte C ABI; xử lý phòng vệ khi gói tin bị cắt ngắn (`Truncated`); điều phối kênh truyền bất đồng bộ không rò rỉ goroutine hay data race; ngắt luồng đọc an toàn qua Context; phát hiện bất thường an ninh theo heuristic; và nạp mô hình cấu trúc `CollectionSpec` từ `cilium/ebpf` với Map loại `RingBuf` và Program loại `TracePoint`.
+Sáu kịch bản kiểm thử kiểm tra các contract cục bộ: giải mã little-endian theo layout 156 byte của lab; từ chối dữ liệu bị cắt ngắn (`Truncated`); điều phối channel; ngắt luồng đọc qua Context; áp dụng heuristic cảnh báo; và dựng `CollectionSpec` từ `cilium/ebpf` với Map `RingBuf`, Program `TracePoint`. Việc không phát hiện race hay goroutine bị giữ lại trên những đường chạy được kiểm tra không phải bằng chứng cho mọi lịch thực thi. Bộ test cũng không chứng minh load/attach thành công, thu đủ sự kiện hoặc overhead chấp nhận được trên kernel production; những điều đó cần kiểm chứng riêng trong môi trường Linux mục tiêu.
 
 ---
 
@@ -437,7 +437,7 @@ Tuy nhiên, toàn bộ logic cốt lõi vẫn được bảo đảm thông qua 6
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Khai báo mảng lớn trên eBPF stack** (ví dụ mảng 1024 bytes). | Kernel Verifier lập tức từ chối nạp chương trình với lỗi `stack overflow`. | Bộ nhớ stack của eBPF bị giới hạn cứng 512B; luôn dùng `bpf_ringbuf_reserve` để cấp phát. |
+| **Dùng stack vượt giới hạn của kernel/program type.** | Verifier có thể từ chối khi compiler hiện thực dữ liệu trên stack quá lớn; một khai báo bị tối ưu bỏ không tự tạo stack use. | Kiểm tra bytecode và verifier log; với event ring buffer của lab, reserve/submit tránh đặt toàn bộ event trên stack. |
 | **Lấy nhầm 32 bit thấp** của `bpf_get_current_pid_tgid()`. | Thu được Thread ID (TID) thay vì Process ID (PID), khiến log hiển thị PID sai lệch hoàn toàn. | Luôn dịch bit phải 32 bit: `(__u32)(pid_tgid >> 32)` để lấy đúng PID của tiến trình. |
 | **Xử lý sự kiện userspace quá chậm** trong vòng lặp đọc. | Tràn bộ đệm Ring Buffer trong kernel, khiến các sự kiện quan trọng bị âm thầm đánh rơi (dropped). | Sử dụng buffered channel và mô hình Worker Pool ở tầng Go để tiêu thụ sự kiện với tốc độ cao. |
 | **Chạy ứng dụng thiếu quyền** Linux capabilities. | Load/attach có thể trả `EPERM`. | Quyền cần thiết phụ thuộc kernel version, cấu hình LSM và loại program; kiểm tra policy của node. Không copy một bộ capability như công thức chung. |

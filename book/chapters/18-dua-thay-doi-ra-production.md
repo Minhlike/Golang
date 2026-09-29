@@ -287,7 +287,7 @@ Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo
 
 Mục `labs/part18-workflow-delivery/terraform/` cung cấp một cấu hình Terraform
 minh họa mô hình liên kết danh tính OpenID Connect (OIDC) giữa GitHub Actions và
-AWS IAM nhằm loại bỏ hoàn toàn các access key dài hạn tĩnh.
+AWS IAM trong pipeline này để dùng credential tạm thời thay cho access key dài hạn được lưu trong CI.
 
 Cần hiểu đúng ranh giới của các cơ chế phân quyền trong cấu hình này:
 

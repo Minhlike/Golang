@@ -62,8 +62,8 @@ Bộ công cụ Go cung cấp hai lệnh cơ bản với vai trò rõ ràng tron
 
 | Câu lệnh | Hợp đồng công cụ (Tool Contract) | Hành vi tệp trên đĩa | Bối cảnh sử dụng |
 | :--- | :--- | :--- | :--- |
-| `go run [packages/files]` | Biên dịch và thực thi ngay main package được chỉ định (`compiles and runs the named main package`). | Không phát sinh tệp nhị phân trong thư mục làm việc hiện hành. | Thử nghiệm nhanh cục bộ, chạy kịch bản tự động hóa hoặc kiểm tra logic tức thời. |
-| `go build [packages/files]` | Biên dịch mã nguồn và liên kết toàn bộ phụ thuộc thành tệp thực thi độc lập. | Phát sinh trực tiếp tệp nhị phân tại thư mục hiện hành (`main.exe` trên Windows, `main` trên Linux/macOS). | Đóng gói bản phát hành, triển khai môi trường máy chủ và hệ thống production. |
+| `go run main.go` | Build rồi chạy main package được chỉ định. | Dùng executable tạm; không xuất binary vào working directory. | Thử nghiệm local. |
+| `go build .` | Build package hiện tại; main package có thể tạo executable. | Với main package, mặc định xuất executable theo tên package/directory; `-o` chọn output khác. | Tạo artifact để phân phối. |
 
 Về mặt chi tiết triển khai (implementation behavior) của toolchain Go 1.27.1, lệnh `go run` tạo file nhị phân tạm thời trong thư mục làm việc tạm của tiến trình xây dựng (`work directory`), chạy tiến trình từ đó rồi tự động xóa sạch khi kết thúc. Cần phân biệt rõ thư mục tạm này với bộ đệm biên dịch (`GOCACHE`) — nơi Go lưu trữ siêu dữ liệu và tệp đối tượng tái sử dụng giữa các lần biên dịch độc lập.
 
@@ -82,10 +82,10 @@ Học kỹ thuật hệ thống đòi hỏi thói quen xây dựng mô hình d�
 
 Bảng dưới đây minh họa ba thí nghiệm nhỏ về ranh giới kiểm tra tĩnh của Go compiler:
 
-| Thí nghiệm kiểm chứng | Thao tác thay đổi mã nguồn | Phản hồi từ trình biên dịch | Cơ chế phân tích của Compiler |
+| Thí nghiệm kiểm chứng | Thao tác thay đổi mã nguồn | Phần chính của diagnostic | Cơ chế phân tích của Compiler |
 | :--- | :--- | :--- | :--- |
-| Đổi tên gói khởi điểm | Đổi `package main` thành `package worker`, sau đó chạy `go run main.go`. | `package command-line-arguments is not a main package` | Giai đoạn phân tích ngữ nghĩa (semantic analysis) xác định gói đích không thỏa mãn điều kiện tạo tệp thực thi độc lập. |
+| Đổi tên gói khởi điểm | Đổi `package main` thành `package worker`, sau đó chạy `go run main.go`. | `is not a main package` | Gói đích không thỏa mãn điều kiện tạo tệp thực thi độc lập; đây là kiểm tra của `go run`. |
 | Nạp thư viện không sử dụng | Thêm dòng `import "time"` nhưng không gọi hàm nào của gói `time`. | `imported and not used: "time"` | Trình phân tích AST kiểm tra việc sử dụng định danh; từ chối mọi gói thừa nhằm giữ cây phụ thuộc tinh gọn. |
-| Khai báo biến cục bộ thừa | Khai báo `workerID := 1` trong thân hàm `main` nhưng không đọc lại. | `workerID declared and not used` | Phân tích dòng dữ liệu xác định biến cục bộ không đóng góp vào kết quả chương trình, phát hiện mã chết ngay lúc biên dịch. |
+| Khai báo biến cục bộ thừa | Khai báo `workerID := 1` trong `main` nhưng không dùng. | `workerID declared and not used` | Kiểm tra usage của biến cục bộ; không phải chứng minh toàn bộ dead code đã được phát hiện. |
 
-Sự khắt khe của trình biên dịch không phải là sự phiền toái ngẫu nhiên. Bằng cách ngăn chặn mã thừa, biến chết và sai lệch không gian tên ngay tại thời điểm biên dịch, Go loại bỏ phần lớn các lỗi vận hành tiềm ẩn trước khi chương trình có cơ hội chạm tới môi trường production. Chương tiếp theo sẽ dẫn dắt bạn đi sâu vào từng khối xây dựng cốt lõi của một chương trình Go: định danh, kiểu dữ liệu, phạm vi biến, và biểu diễn hợp ngữ thực tế của máy tính.
+Compiler bắt một lớp lỗi cú pháp, kiểu và usage trước khi chạy; nó không chứng minh phần lớn lỗi vận hành đã bị loại bỏ. Deadline, quyền, resource budget và yêu cầu nghiệp vụ vẫn cần phép kiểm tra khác. Chương tiếp theo đi vào định danh, kiểu dữ liệu và phạm vi biến để anh biết chính xác compiler đang kiểm tra điều gì.

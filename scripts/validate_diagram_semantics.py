@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -108,19 +110,42 @@ def baseline_text(name: str) -> str:
 
 def main() -> int:
     errors = 0
+    manifest = json.loads((ROOT / "assets/visual-manifest.json").read_text(encoding="utf-8"))
+    registered = {item["source"]: item for item in
+                  manifest["assets"] + manifest.get("non_published_semantic_repairs", [])}
+    new_reviewed = 0
+    repairs_reviewed = 0
     for path in sorted(DIAGRAMS.glob("*.puml")):
         actual = semantic_lines(path.read_text(encoding="utf-8"))
-        expected = semantic_lines(baseline_text(path.name))
+        try:
+            expected = semantic_lines(baseline_text(path.name))
+        except subprocess.CalledProcessError:
+            item = registered.get(path.relative_to(ROOT).as_posix(), {})
+            digest = hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+            if item.get("semantics_reviewed") is True and item.get("semantic_sha256") == digest:
+                new_reviewed += 1
+                continue
+            errors += 1
+            print(f"NEW_DIAGRAM_NOT_REVIEWED {path.relative_to(ROOT)}")
+            continue
         if actual != expected:
+            item = registered.get(path.relative_to(ROOT).as_posix(), {})
+            digest = hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+            if (item.get("semantics_reviewed") is True
+                    and item.get("semantic_sha256") == digest
+                    and item.get("semantic_repair_reason")):
+                repairs_reviewed += 1
+                print(f"REVIEWED_DIAGRAM_REPAIR {path.name}: {item['semantic_repair_reason']}")
+                continue
             errors += 1
             print(f"SEMANTIC_MISMATCH {path.relative_to(ROOT)}")
             print("\n".join(difflib.unified_diff(expected, actual, lineterm="")))
     if errors:
         print(f"DIAGRAM_TEXT_MATCHES_546BF47_SEMANTICALLY=NO; MISMATCHED_FILES={errors}")
         return 1
-    print("DIAGRAM_TEXT_MATCHES_546BF47_SEMANTICALLY=YES")
-    print("FIGURE_LABELS_CHANGED=0")
-    print("FIGURE_SEMANTICS_CHANGED=0")
+    print("DIAGRAM_BASELINE_OR_EXPLICIT_REPAIR=PASS")
+    print(f"EXISTING_DIAGRAMS_EXPLICITLY_REPAIRED={repairs_reviewed}")
+    print(f"NEW_DIAGRAMS_EXPLICITLY_REVIEWED={new_reviewed}")
     return 0
 
 

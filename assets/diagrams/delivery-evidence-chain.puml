@@ -1,7 +1,8 @@
 @startuml
-left to right direction
+top to bottom direction
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
 skinparam rectangle {
   BackgroundColor #F7F7F7
   BorderColor #5D5D5D
@@ -20,11 +21,11 @@ rectangle "chính sách phê duyệt\nquyền hạn + cổng kiểm tra" as poli
 rectangle "trạng thái mong muốn\ngói được triển khai" as deploy
 rectangle "quan sát phát hành\ntrạng thái + tín hiệu" as observe
 
-source --> build
-build --> evidence
-evidence --> policy
-policy --> deploy
-deploy --> observe
+source -right-> build
+build -right-> evidence
+evidence -down-> policy
+policy -left-> deploy
+deploy -left-> observe
 
 note bottom of policy
   Mỗi bước chỉ chứng minh

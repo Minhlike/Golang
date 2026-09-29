@@ -1,7 +1,8 @@
 @startuml
-left to right direction
+top to bottom direction
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 18
 skinparam rectangle {
   BackgroundColor #F7F7F7
   BorderColor #5D5D5D
@@ -13,17 +14,18 @@ skinparam note {
   BorderColor #777777
 }
 
-rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao, chính sách" as desired
+rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao,\nchính sách" as desired
 rectangle "bộ điều khiển (Controller)\nquan sát -> phán đoán -> hành động" as controller
 rectangle "trạng thái thực tế (Status)\nPod, tiến trình, độ sẵn sàng" as current
 
-desired --> controller : cấu hình khai báo (Spec)
-current --> controller : dữ liệu quan trắc thực tế
-controller --> current : tác động điều chỉnh
+desired -down-> controller : cấu hình khai báo (Spec)
+current -up-> controller : dữ liệu quan trắc thực tế
+controller -down-> current : tác động điều chỉnh
 
-note bottom of controller
-  Một vòng lặp không cam kết đưa hệ thống về
-  trạng thái cuối cùng ngay tức thì.
-  Nó là quá trình hội tụ liên tục qua thời gian.
+note right of controller
+  Một vòng lặp không cam kết
+  đạt trạng thái cuối ngay tức thì.
+  Đây là quá trình hội tụ
+  liên tục qua thời gian.
 end note
 @enduml

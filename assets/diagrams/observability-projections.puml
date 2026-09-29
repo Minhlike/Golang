@@ -31,25 +31,15 @@ mindmapDiagram {
   }
 }
 </style>
-* **SỰ KIỆN HỆ THỐNG\n(Event / Probe)**
+* SỰ KIỆN HỆ THỐNG\n(Event / Probe)
 ** NHẬT KÝ (LOGS)
-*** Định danh chi tiết
-*** Dữ liệu có cấu trúc (JSON)
-*** Bối cảnh lỗi nguyên nhân
+*** Định danh chi tiết\nDữ liệu có cấu trúc (JSON)\nBối cảnh lỗi nguyên nhân
 ** CHỈ SỐ (METRICS)
-*** Số liệu thống kê tổng hợp
-*** Bộ đếm Counter & Thước đo Gauge
-*** Phân bố thời gian Histogram
+*** Số liệu thống kê tổng hợp\nBộ đếm Counter & Thước đo Gauge\nPhân bố thời gian Histogram
 ** DẤU VẾT (TRACES)
-*** Đường đi yêu cầu phân tán
-*** Mã vết TraceID & SpanID
-*** Điểm nghẽn độ trễ mạng
+*** Đường đi yêu cầu phân tán\nMã vết TraceID & SpanID\nĐiểm nghẽn độ trễ mạng
 ** TRẠNG THÁI (STATE)
-*** Hiện trạng tài nguyên bộ nhớ
-*** Số lượng Goroutine hoạt động
-*** Tải CPU & Tần suất GC
+*** Hiện trạng tài nguyên bộ nhớ\nSố lượng Goroutine hoạt động\nTải CPU & Tần suất GC
 ** SỨC KHỎE (HEALTH)
-*** Kiểm tra sống (Liveness)
-*** Sẵn sàng nhận việc (Readiness)
-*** Báo hiệu cho Orchestrator
+*** Kiểm tra sống (Liveness)\nSẵn sàng nhận việc (Readiness)\nBáo hiệu cho Orchestrator
 @endmindmap
