@@ -1,70 +1,51 @@
-# Publication QA — Encyclopedia edition, 29-09-2026
+# Final completeness & visual editorial pass — 30-09-2026
 
-Biên bản này thay thế kết luận về PDF 435 trang ngày 27-09-2026. Nó chỉ áp dụng cho bản encyclopedia và phạm vi nghiệm thu của chỉ thị ONE-PASS GO ENCYCLOPEDIA + DEVOPS/SRE/AI-ERA EDITION; không dùng nhãn PASS cũ làm bằng chứng cho PDF mới.
+Biên bản này áp dụng duy nhất cho PDF có SHA-256 `82f7aac3a59a3e5adef37d462e335f9dd1d131b3108438f0b60190462d3430fc`. Bản nghiệm thu trước (`ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d`) là baseline, không phải bằng chứng tự động cho trang đã thay đổi. Không thêm chương, thư viện, ảnh trang trí hay mở một content wave mới.
 
-## Định danh
+## Định danh và rollback
 
-- STARTING_HEAD: `666e0aec1455f46083cbb7e01edc44fce47cc953`.
-- PDF: `Golang_Master.pdf`, 457 trang.
-- FINAL_PDF_SHA256: `ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d`.
-- ROLLBACK_PDF_SHA256: `68f37d0b099fc667f87df01a7cb8a60369bdba1559ee6261fa8d39d4ce9dd444` — đúng bytes current trước khi promote, không phải bản dựng lại.
-- GO_VERSION_VERIFIED: `go1.27.1 windows/amd64`; VERIFICATION_DATE: `2026-09-29`.
+- STARTING_HEAD: `86a39ed00ac204ca752f1d8f7a6a679a46333077` (origin/main cùng SHA trước khi sửa).
+- PDF_SHA256: `82f7aac3a59a3e5adef37d462e335f9dd1d131b3108438f0b60190462d3430fc`; PDF_PAGE_COUNT: `457`.
+- ROLLBACK_MATCH: `YES`; `Golang_Master.prev.pdf` có SHA-256 `ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d`, đúng từng byte của PDF current trước khi promote.
+- FINAL_HEAD: xem commit của pass này; chỉ xác nhận sau khi push fast-forward.
 
-## Quan sát thực tế và giới hạn
+## Review trực quan từng trang
 
-Phạm vi trực quan gồm toàn bộ hình/ảnh, code block và bảng lớn, trang mở chương/chuyển đoạn, phần bổ sung, hai atlas chữ nhỏ và mẫu văn xuôi lấy có hệ thống. Mỗi trang được kiểm tra bằng actual render riêng; contact sheet không thay cho quan sát trang. Đây không phải chứng nhận mọi trang văn xuôi đã được xem riêng.
+Ledger cuối: `.workspace/completeness-pass/final-page-review.csv`, gồm 457 dòng gắn với PDF_SHA256 trên. Từ baseline cũ, 58 trang `NOT_REVIEWED` đã được mở riêng, không bulk-fill. Hai trang có issue ngắt heading (299, 384) và mọi trang thay đổi do sửa Atlas/build đều được render và mở lại trên candidate cuối ở độ phân giải cao.
 
-- AUTOMATED_PAGES_CHECKED: `457/457`, render lại bằng Poppler RGB 150 dpi.
-- PRIORITY_PAGES_REQUIRED: `396`; PRIORITY_NOT_REVIEWED: `0`.
-- VISUAL_PAGES_ACCEPTED: `399`; VISUAL_PAGES_WITH_OPEN_ISSUES: `0`.
-- FRESHLY_OPENED_FINAL_V11: `11` trang — 362, 363, 449, 450, 451, 452, 453, 454, 455, 456, 457, mở ở 216 dpi.
-- BYTE_IDENTICAL_PREVIOUSLY_OBSERVED: `388`. Chỉ chuyển PASS của trang đã thực sự được mở riêng nếu SHA-256 PNG cùng số trang khớp tuyệt đối. Trang thay đổi hoặc có ISSUE không được tự chuyển PASS. Chuỗi bằng chứng chuyển trạng thái được giữ trong workspace của từng candidate.
-- NOT_REVIEWED: `58` trang ngoài phạm vi trực quan bắt buộc, không bulk-fill.
-- ALL_PAGES_INDIVIDUALLY_OBSERVED: `NO`.
+- FINAL_PAGES: `457`; INDIVIDUALLY_OBSERVED: `457/457`; NOT_REVIEWED: `0`.
+- CHANGED_PAGES_REVIEWED: `54/54` mở trực tiếp trên final candidate. `403` trang còn lại chỉ kế thừa quan sát riêng ở baseline khi ảnh pixel của đúng số trang khớp SHA-256 tuyệt đối; các trang có issue cũ không được kế thừa.
+- VISUAL_OPEN_ISSUES: `0`; P0_OPEN: `0`; P1_OPEN: `0`; P2_OPEN: `0`.
+- Kết quả được giới hạn ở layout/trang quan sát; không đồng nghĩa từng câu văn đã được phản biện khoa học lại.
 
-Ledger cuối: `.workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv`. Mọi PASS gắn với đúng PDF SHA-256. Hash ledger và ánh xạ 31 hình sang trang đã xem nằm trong `book/EDITION_AUDIT.json` và `assets/visual-manifest.json`. Bằng chứng tự động: `independent.json`, `preflight/PREFLIGHT_RAW.json`, `crossrefs.json` trong cùng workspace QA.
+## Kiểm định PDF độc lập
 
-## Kiểm định xuất bản
+Bằng chứng trong `.workspace/completeness-pass/`: `candidate-comparison.json`, `candidate-preflight.json`, `final-independent.json`, `final-crossrefs.json`, `final-page-review.csv` và 54 ảnh trang thay đổi. Preflight và scan độc lập chạy trên đúng candidate SHA trước khi promote; PDF promoted có cùng SHA.
 
-- Geometry: PASS — 457 trang A4 khoảng `595.28 × 841.89 pt`, MediaBox bằng CropBox, rotation 0.
-- Printable frame: PASS — preflight không clipping/overflow; bounding box chữ theo lề đối xứng, dung sai 2 pt, không vi phạm. Trực quan không thấy code/bảng/hình bị cắt trong phạm vi đã xem. Bounding box không tự chứng minh vắng mọi dạng overlap.
-- Folio: PASS — đủ 456 số trang đúng mép ngoài chẵn/lẻ; bìa cố ý không có folio.
-- Fonts/glyphs: PASS — font thực sự vẽ chữ đều được nhúng: Source Serif 4, Source Sans 3 Regular/Semibold, JetBrains Mono. Không glyph hỏng được detector phát hiện hoặc thấy trên trang đã xem. Helvetica/Times-Roman chỉ là resource không vẽ chữ, không phải fallback đã xuất hiện.
-- Grayscale pixel scan: PASS — từng RGB render không có chênh lệch kênh màu vượt 1; các trang đã xem giữ tương phản đơn sắc.
-- Blank/perceptual duplicate: PASS — không trang trắng ngoài ý muốn; không cặp gần trùng qua difference hash độ chói 256 bit, Hamming ≤3 trên 457 trang. Không bảo đảm phát hiện mọi sao chép một phần nội dung.
-- Raster: 31 ảnh, effective DPI nhỏ nhất `227.39`; tất cả trang ảnh được xem riêng. DPI không thay cho kiểm tra độ đọc được của nhãn.
-- TOC independent match: PASS — 33 entry in khớp số trang heading thật.
-- Bookmark destinations: PASS — 34 bookmark, gồm mục lục, title khớp heading tại destination.
-- Thứ tự: front matter → Ch00–Ch29 → Library Source Guides → Error Atlas. Ch29 bắt đầu trang 388, Library Source Guides trang 396, Error Atlas trang 448–457 và là nội dung cuối.
-- Cross references: PASS về cấu trúc — 141 lần nhắc chương không có số đích ngoài 0–29; 31 caption hình, 20 caption bảng đúng chuỗi; mỗi ảnh có caption và trang đích thật. ID Error Atlas qua validator riêng. Không suy ra mọi liên hệ khái niệm trong prose đều đúng.
-- Production markup: PASS theo preflight; `REPLACE_ME` tại trang 209–210 là ví dụ có chủ đích, được giải thích để ngăn apply nhầm.
+- AUTOMATED_PAGES_CHECKED: `457/457`. A4 `595.28 × 841.89 pt`, MediaBox/CropBox/rotation và mirrored margins đạt; không phát hiện chữ vượt printable frame. Scan bounding box bổ sung không thay thế review trực quan overlap.
+- GRAYSCALE_PIXEL_SCAN: `PASS`, quét RGB raster từng trang, không trang nào có chênh lệch kênh >1. FOLIO_POSITION: `PASS`, đủ 456 folio ở mép ngoài chẵn/lẻ; bìa không đánh số.
+- TOC_INDEPENDENT_MATCH: `PASS`, 33 entry in đối chiếu trang heading thật. BOOKMARK_DESTINATIONS: `PASS`, 34 bookmark khớp heading tại đích.
+- DUPLICATE_PERCEPTUAL_SCAN: `PASS`, không trang trắng hoặc cặp gần trùng với difference hash 256 bit/Hamming ≤3; đây không phải phép chứng minh vắng mọi trùng lặp một phần.
+- FONTS/RASTER: `PASS`, bốn font thực vẽ chữ (Source Serif 4, Source Sans 3 Regular/Semibold, JetBrains Mono) được nhúng, không glyph hỏng detector thấy; 31 raster, không ảnh dưới ngưỡng DPI của preflight.
+- CROSS_REFERENCES: `PASS` trong phạm vi máy kiểm được: 141 lần nhắc chương hợp lệ, 31 hình và 20 bảng; không thấy markup nội bộ rò rỉ. Error Atlas là 10 trang cuối (448–457), sau Ch00–Ch29 và Library Source Guides.
+- CODE_WIDTH: `PASS`, 0 dòng vượt 448.22 pt; ZERO_BULLET: `PASS`; ERROR_ATLAS: `PASS` (10 nhóm, 85 entry, 89 pattern); DIAGRAM_ENCODING/SEMANTICS: `PASS`.
 
-## Nội dung và kiểm thử
+## Atlas thư viện và ranh giới bằng chứng
 
-Inventory trước khi viết có 159 chủ đề: 131 giữ hướng dạy, 28 gap đã xử lý (21 Go, 7 kỹ nghệ/nghề nghiệp). Thêm Ch29; mở rộng Ch1/3/5/7/8/14/17; thêm 17 mục lớn. 23 tệp chương cũ giữ cấu trúc sư phạm, không có nghĩa bytes không đổi: lỗi factual phát hiện được sửa nhỏ tại source.
+`book/EDITION_AUDIT.json` ghi disposition cho từng entry và file/symbol tại commit đã pin nếu có claim implementation. `library_sources/lock.json` khóa đủ 50 identity. Kết quả của pass này: LIBRARY_ENTRIES `50/50`; API_DOC_BOUNDARY_ENTRIES `10`; PINNED_IMPLEMENTATION_ENTRIES `40`; PINNED_IMPLEMENTATION_VERIFIED `40/40` claim đích; LIBRARY_EVIDENCE_BOUNDARIES_VERIFIED `50/50`; UNSCOPED_IMPLEMENTATION_CLAIMS `0`; UNSUPPORTED_NUMERIC_PERF_CLAIMS `0`; UNSUPPORTED_ABSOLUTE_CLAIMS `0` trong inventory đã rà. Claim bị bác bỏ được sửa/hạ về contract trong `book/appendices/devops-library-atlas.md`.
 
-Có 27 entry bằng chứng chính và 3 entry sửa tiếp theo từ quan sát xuất bản. 239 đoạn claim mạnh đã disposition: 133 giữ sau kiểm tra, 106 sửa/bỏ. Không còn claim quan trọng thiếu bằng chứng/phạm vi trong inventory đã rà; không suy rộng thành chứng minh khoa học mọi câu trong sách. Dữ liệu nghề nghiệp dùng 5 nhóm nguồn, 6 URL, giữ ngày, mẫu, địa lý, phương pháp và giới hạn; không biến kết quả task thành dự báo chắc chắn về nghề.
+Không đánh đồng 40 source-file/symbol review có mục tiêu với full-tree implementation fingerprints: validator cũ vẫn báo `10` fingerprint xác minh và `40` pending theo giao thức riêng. Không có khẳng định “50 implementation đã được khoa học kiểm định” hay behavior của cloud/kernel đã được chạy thực tế.
 
-Sửa xuất bản tại Markdown/PlantUML/style/build, không patch PDF: quote trong hình source-anatomy, nhãn/quan hệ/tỷ lệ sơ đồ, emphasis quanh inline code, heading orphan, widow prose/list, tiêu đề nhóm Error Atlas cuối cột và ghi chú lifecycle/diagnostic. Regression test kiểm tra wrapping, keep-with-next và promotion/rollback.
+## Ảnh thật và ngôn ngữ hình
 
-- LABS_ADDED: `labs/edition-contracts`, `labs/part29-change-evidence`.
-- LAB_CHANGED: `labs/part6-testable-command/internal/app/publication_benchmark_test.go`; fixture thật, hai kiểu vòng benchmark. Smoke một iteration không phải số liệu performance so sánh.
-- GO_TEST / GO_VET / GO_RACE: PASS trên 38 module, 114 gate thành công. Edition-contracts được gofmt và chạy lại cả ba gate sau hai regression test cuối về Once/send-after-close và fatal unlocked Mutex.
-- PYTHON_PUBLICATION_REGRESSION_TESTS: `12/12 PASS`.
-- CODE_WIDTH: PASS — 0 dòng vượt khung 448.22 pt.
-- ZERO_BULLET: PASS trên narrative chương.
-- ERROR_ATLAS: PASS — 10 nhóm, 85 entry, 89 diagnostic pattern.
-- DIAGRAM_ENCODING / SEMANTICS / VISUAL_MANIFEST: PASS; 31 visual có provenance, quyền phân phối, caption/alt tiếng Việt; thêm 1 ảnh thật và 1 sơ đồ, không ảnh AI/chart mới.
-- LIBRARY_SOURCE_VALIDATOR: PASS về 50 source lock; 10 implementation fingerprint đã xác minh, 40 chưa xác minh ở mức đó. Retrieval không được coi là đã đọc/kiểm định implementation; không gọi cả 50 guide là scientific-review hoàn chỉnh.
-- DOCUMENT_CACHE: 8 tài liệu ngoài ingest, 2 cache hit, selective retrieval; không commit generated cache.
-- GIT_DIFF_CHECK: PASS.
+- REAL_PHOTOS_BEFORE/AFTER: `1/1`; REAL_PHOTOS_ADDED: `0`; TECH_DIAGRAMS: `30`; AI_ILLUSTRATIONS: `0`.
+- Đã tìm/soát ứng viên lịch sử và hạ tầng vật lý: trạm cáp Đà Nẵng trên Wikimedia (quyền CC BY-SA rõ nhưng không minh họa đúng nội dung HTTP Ch11), rack NERSC (CC0 nhưng lặp vai trò với ảnh rack NASA Pleiades đã có ở Ch17), chân dung Ken Thompson (creator/quyền và độ phân giải chưa đủ rõ). Cả ba bị loại; không dùng ảnh chỉ để tăng số lượng.
+- VISUAL_PROVENANCE / VISUAL_LICENSE / VI_CAPTION_ALT: `PASS` cho 31 visual đang xuất bản theo manifest; ALL_NEW_REAL_PHOTOS_LICENSE/PROVENANCE/FACTUAL_CAPTION_VERIFIED: `YES` theo tập rỗng, vì không thêm ảnh mới.
 
-Native cgo và Linux cross-build đã kiểm tra. Không live AWS provisioning, cài Kubernetes production hay Linux eBPF kernel attach trên máy Windows này. Lab/mock/tài liệu không thay cho chứng nhận production; hướng dẫn nghề nghiệp không bảo đảm tuyển dụng hoặc thu nhập.
+## Test và kết luận
 
-## Kết luận
+- GO_TEST / GO_VET / GO_RACE: `PASS` trên 38 module, 114 gate; không sửa Go source sau lượt chạy này. PYTHON_PUBLICATION_REGRESSION_TESTS: `14/14 PASS`.
+- CONTENT_VALIDATORS: `PASS` (visual manifest, library source lock, zero-bullet, code width, diagram encoding/semantics, Error Atlas). PUBLICATION_VALIDATORS: `PASS` (PDF preflight, pixel scan, frame, folio, TOC, bookmark, perceptual duplicate, cross-reference). GIT_DIFF_CHECK: `PASS`.
+- BOOK_CONTENT_STATUS: `READY`; PUBLICATION_STATUS: `READY` cho đúng PDF SHA nêu trên. KNOWN_LIMITATIONS: không live AWS/Kubernetes production/eBPF Linux; kiểm định hình ảnh không thay thế xác minh mọi runtime/version trong mọi môi trường. WIP ngoài scope không được đưa vào commit.
 
-`P0_OPEN=0; P1_OPEN=0; P2_OPEN=0` trong phạm vi nội dung và trang đã kiểm tra.
-
-`BOOK_CONTENT_STATUS=READY; PUBLICATION_STATUS=READY; SCOPE=ONE_PASS_EDITION_ACCEPTANCE`.
-
-`KNOWN_BLOCKERS=NONE` đối với phạm vi này. READY không có nghĩa đã xem riêng 457/457 trang, không chứng nhận cả 50 implementation, không chứng nhận runtime cloud/kernel chưa chạy. Giữ đúng PDF SHA-256 khi giao bản; thay đổi tiếp theo không tự động kế thừa kết luận này.
+Pass dừng tại đây; không mở wave/hotfix tiếp theo.

@@ -77,6 +77,22 @@ class PublicationContracts(unittest.TestCase):
         self.assertEqual(result, [heading, spacer, body])
         self.assertTrue(spacer.getKeepWithNext())
 
+    def test_consecutive_headings_move_with_first_answer_box(self):
+        section = Paragraph('SECTION_SENTINEL', ParagraphStyle('H2', keepWithNext=True))
+        answer = Paragraph('ANSWER_SENTINEL', ParagraphStyle('H3', keepWithNext=True))
+        box = Table([['CODE_SENTINEL']], rowHeights=[400])
+        story = [Spacer(1, 230), section, answer, KeepTogether([box])]
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 600),
+                          leftMargin=30, rightMargin=30,
+                          topMargin=30, bottomMargin=30).build(
+            build_pdf.keep_headings_with_content(story))
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertEqual(len(pages), 2)
+        for sentinel in ('SECTION_SENTINEL', 'ANSWER_SENTINEL', 'CODE_SENTINEL'):
+            self.assertNotIn(sentinel, pages[0])
+            self.assertIn(sentinel, pages[1])
+
     def test_rendered_heading_moves_with_following_box(self):
         heading = Paragraph('HEADING_SENTINEL', ParagraphStyle('H2', keepWithNext=True))
         code = Paragraph('CODE_SENTINEL', ParagraphStyle('Code'))
@@ -91,6 +107,27 @@ class PublicationContracts(unittest.TestCase):
         self.assertEqual(len(pages), 2)
         self.assertNotIn('HEADING_SENTINEL', pages[0])
         self.assertIn('HEADING_SENTINEL', pages[1])
+        self.assertIn('CODE_SENTINEL', pages[1])
+
+    def test_colon_code_intro_stays_with_example(self):
+        build_pdf.register_fonts()
+        styles = book_style.get_book_styles()
+        with tempfile.TemporaryDirectory() as task_dir:
+            source = Path(task_dir) / 'devops-library-atlas.md'
+            source.write_text('INTRO_SENTINEL:\n\n```go\nCODE_SENTINEL\n```\n', encoding='utf-8')
+            story = []
+            build_pdf.add_markdown(story, source, styles, 'BookMono', False,
+                                   {'figure': 0, 'table': 0})
+        self.assertTrue(story[0].getKeepWithNext())
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 600),
+                          leftMargin=30, rightMargin=30,
+                          topMargin=30, bottomMargin=30).build(
+            build_pdf.keep_headings_with_content([Spacer(1, 490), *story]))
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertEqual(len(pages), 2)
+        self.assertNotIn('INTRO_SENTINEL', pages[0])
+        self.assertIn('INTRO_SENTINEL', pages[1])
         self.assertIn('CODE_SENTINEL', pages[1])
 
     def test_inline_command_can_wrap_at_spaces(self):

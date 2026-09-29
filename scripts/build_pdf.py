@@ -284,10 +284,14 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
     in_references = False
     in_code = False
 
-    def flush_paragraph() -> None:
+    def flush_paragraph(before_code: bool = False) -> None:
         nonlocal paragraph_lines
         if paragraph_lines:
-            story.append(Paragraph(inline(" ".join(paragraph_lines), mono), s["body"]))
+            prose = " ".join(paragraph_lines)
+            style = s["body"]
+            if before_code and prose.rstrip().endswith(":"):
+                style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
+            story.append(Paragraph(inline(prose, mono), style))
             paragraph_lines = []
 
     def flush_table() -> None:
@@ -438,7 +442,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             story.extend([Spacer(1, 4), pending_image, Spacer(1, 6)])
             pending_image = None
 
-    for line in lines:
+    for line_index, line in enumerate(lines):
         if pending_image is not None and line.startswith("@figure "):
             numbering["figure"] += 1
             story.append(KeepTogether([
@@ -507,7 +511,11 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             story.extend([Spacer(1, 5), note, Spacer(1, 12)])
             continue
         if not line.strip():
-            flush_paragraph()
+            following = next((candidate for candidate in lines[line_index + 1:] if candidate.strip()), '')
+            flush_paragraph(before_code=(
+                chapter.name == 'devops-library-atlas.md'
+                and following.startswith(('```', '~~~'))
+            ))
             continue
         heading = re.match(r"^(#{1,3})\s+(.+)$", line)
         if heading:
@@ -712,7 +720,7 @@ def add_error_atlas(story: list, atlas: Path, s: dict[str, ParagraphStyle], mono
 
 
 def keep_headings_with_content(story: list) -> list:
-    """Avoid nested KeepTogether and spacing-only followers orphaning headings.
+    """Avoid nested KeepTogether orphaning headings or code introductions.
 
     ReportLab's automatic heading keep wraps the next flowable. A nested
     KeepTogether reports an intentionally huge height, then unwraps, allowing
@@ -723,16 +731,21 @@ def keep_headings_with_content(story: list) -> list:
     index = 0
     while index < len(story):
         item = story[index]
-        if getattr(getattr(item, 'style', None), 'name', '') not in {'H1', 'H2', 'H3'}:
+        if getattr(getattr(item, 'style', None), 'name', '') not in {'H1', 'H2', 'H3', 'body-intro'}:
             result.append(item)
             index += 1
             continue
         end = index + 1
-        while end < len(story) and isinstance(story[end], (Spacer, HRFlowable)):
+        while end < len(story) and getattr(getattr(item, 'style', None), 'name', '') != 'body-intro' and (
+            isinstance(story[end], (Spacer, HRFlowable))
+            or getattr(getattr(story[end], 'style', None), 'name', '')
+            in {'H1', 'H2', 'H3'}
+        ):
             end += 1
         prefix = story[index:end]
         if end < len(story) and isinstance(story[end], KeepTogether):
-            item.keepWithNext = False
+            for heading in prefix:
+                heading.keepWithNext = False
             result.append(KeepTogether(prefix + story[end]._content))
             index = end + 1
         else:

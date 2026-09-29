@@ -3,7 +3,7 @@
 
 Phụ bản này đứng sau Chương 29 và ngay trước Atlas Lỗi Go. Các nhận xét về implementation chỉ áp dụng cho version và commit ghi ở mỗi mục, không phải cam kết API cho mọi version. Khóa source chứng minh identity của checkout, không tự chứng minh mọi giải thích cơ chế; khi dùng một chi tiết để quyết định production, đọc code và test tại commit đó.
 
-Mục tiêu của tài liệu là mở toang "hộp đen" của 50 thư viện Go hàng đầu trong hệ sinh thái Cloud Native, DevOps, SRE, Platform Engineering, DevSecOps, Networking, Observability, IaC và AI Agent Infrastructure. Thay vì liệt kê danh mục như một trang tài liệu API, mỗi thư viện dưới đây được mổ xẻ trực tiếp từ mã nguồn thực tế tại **commit đã khóa bất biến (immutable source lock)** theo **Zero-Guess Protocol**.
+Phụ bản chọn 50 thư viện Go trong các lĩnh vực DevOps, cloud, networking, observability, IaC và hạ tầng Agent. Mỗi mục ghi version/commit được ghim để người đọc có thể đối chiếu. Mô tả API hoặc hợp đồng công khai không đồng nghĩa đã kiểm chứng mọi chi tiết implementation; câu nào nói đến cơ chế nội bộ phải có điểm neo source tương ứng ở bản đã ghim.
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -42,21 +42,22 @@ API Server Watch Stream
 [SharedIndexInformer] ───► [Thread-Safe Cache Indexer]
          │ (dispatch)
          ▼
-[TypedQueue (workqueue)] ───► [Worker Goroutines]
+[Typed workqueue] ───► [Worker Goroutines]
 ```
 
-Điểm neo kỹ thuật đáng giá nhất để học trong `client-go` nằm ở `util/workqueue/queue.go` (`type TypedQueue[T]`). Hàng đợi này không đơn thuần là một slice hay Go channel, mà là sự phối hợp của ba cấu trúc dữ liệu:
+Điểm neo kỹ thuật đáng giá nhất để học trong `client-go` nằm ở `util/workqueue/queue.go` (`type Typed[T]`). `TypedInterface[T]` là giao diện public; `TypedQueueConfig[T]` là cấu hình. Triển khai `Typed[T]` phối hợp hàng đợi có thể thay thế và hai tập khóa:
 
 ```go
-type TypedQueue[T comparable] struct {
-    queue      []T
-    dirty      set[T]
-    processing set[T]
+type Typed[T comparable] struct {
+    queue      Queue[T]
+    dirty      sets.Set[T]
+    processing sets.Set[T]
     cond       *sync.Cond
+    // Các trường lifecycle và metrics khác được lược bỏ.
 }
 ```
 
-Hãy hình dung: Worker đang bận xử lý key `"default/my-pod"` trong tập `processing`. Cùng lúc đó, 5 sự kiện cập nhật liên tiếp của Pod này được Informer gửi tới. Hàm `Add(item)` kiểm tra: nếu item đã nằm trong `processing`, nó chỉ ghi nhận key vào tập `dirty` mà **hoàn toàn không đẩy thêm phần tử nào vào slice `queue`**. Khi worker xử lý xong và gọi `Done(item)`, queue mới kiểm tra tập `dirty`: nếu key vẫn còn trong `dirty`, nó mới được chuyển ngược lại vào `queue` đúng một lần. Cơ chế khử trùng lặp (deduplication) thanh lịch này ngăn chặn hiện tượng bùng nổ hàng đợi (queue explosion) khi hệ thống chịu tải cao. Quan trọng: queue chỉ chứa key `namespace/name`, không chứa đối tượng. Worker đọc snapshot hiện tại từ Indexer tại thời điểm thực thi — snapshot đó phản ánh những gì Reflector đã nhận được, nhưng có thể stale so với API server. Chính cơ chế reconciliation lặp lại theo level-triggered mới làm hệ thống hội tụ về trạng thái mong muốn.
+Hãy hình dung: Worker đang bận xử lý key `"default/my-pod"` trong tập `processing`. Cùng lúc đó, 5 sự kiện cập nhật liên tiếp của Pod này được Informer gửi tới. `Add(item)` chỉ đánh dấu key trong `dirty` khi nó đang được xử lý, không đẩy thêm vào hàng đợi. Khi worker gọi `Done(item)`, nếu key vẫn `dirty`, nó được đẩy lại đúng một lần. Cơ chế khử trùng lặp này giới hạn việc xếp trùng một key; thứ tự và cấu trúc lưu trữ phụ thuộc triển khai `Queue[T]`. Worker thường lấy key rồi đọc snapshot hiện tại từ Indexer — snapshot đó có thể stale so với API server. Reconciliation lặp lại mới giúp hội tụ về trạng thái mong muốn.
 
 Khi worker không chạy, kiểm tra lifecycle, error của Reflector và cache sync. Thiếu quyền list có thể ngăn initial population; thiếu quyền watch ảnh hưởng nhận cập nhật. Không suy ra HasSynced luôn false chỉ từ một lỗi watch, vì trạng thái sync còn phụ thuộc đường khởi tạo. Phải có cancellation/deadline và quan sát error thay vì chờ vô hạn.
 
@@ -140,7 +141,7 @@ atomic.AddUint64(&c.valInt, 1)
 
 `atomic.AddUint64` trên nhiều kiến trúc (như x86_64 với `LOCK XADD`) tránh được một mutex trong thao tác cập nhật counter, nhưng chi phí thực tế vẫn phụ thuộc vào kiến trúc phần cứng, mức độ tranh chấp, trạng thái cache coherence, compiler và runtime. Không nên gán một con số nanosecond cố định cho mọi môi trường. Chỉ khi bạn gọi `Add(val)` với một số thực có phần lẻ (ví dụ `c.Add(0.15)`), hàm mới chuyển sang đường dẫn chậm (slow path): đọc `valBits`, chuyển đổi sang số thực bằng `math.Float64frombits`, thực hiện phép cộng số thực, và dùng `atomic.CompareAndSwapUint64` trong một vòng lặp CAS để cập nhật lại bit representation.
 
-Độ phức tạp tiếp theo nằm ở việc quản lý metric có nhãn động: `MetricVec` (`prometheus/vec.go`). Để tránh cấp phát bộ nhớ trên heap mỗi khi tra cứu nhãn, thư viện xây dựng một bảng băm hai cấp: một `sync.RWMutex` bảo vệ map ánh xạ từ chuỗi băm của các nhãn (label values) sang đối tượng `Metric` cụ thể. Khi một tập nhãn đã được truy cập lần đầu tiên, các goroutine thực thi sau đó chỉ cần nắm giữ `RLock()`, đọc con trỏ đối tượng có sẵn và cập nhật số liệu.
+Độ phức tạp tiếp theo nằm ở metric có nhãn động: `MetricVec` (`prometheus/vec.go`) dùng cơ chế tra cứu theo bộ giá trị nhãn và tái dùng metric đã tạo. Điều này không chứng minh mỗi lần tra cứu đều không cấp phát; chi phí thực tế cần đo với tập nhãn và đường gọi cụ thể.
 
 Ở scrape path, `Gather()` thu thập metric families, còn handler chọn encoder theo format negotiation và ghi response. Gathering và encoding là hai bước khác nhau; chi phí cấp phát phụ thuộc số metric, tần suất scrape và encoder, không chỉ việc không dùng JSON.
 
@@ -188,9 +189,9 @@ Xuyên suốt chu kỳ này, tính liên tục của vết phân tán được b
 
 ### 06. `go.opentelemetry.io/collector` (v0.161.0 — `0bf928af`)
 
-Nếu `opentelemetry-go` là giác quan thu nhận dữ liệu bên trong tiến trình, thì OpenTelemetry Collector là nhà máy xử lý và trạm trung chuyển dữ liệu ở cấp độ hạ tầng. Một Collector instance chạy dưới dạng daemonset trên node có thể tiếp nhận telemetry từ nhiều container gửi về qua OTLP, Prometheus, Jaeger, và Zipkin, thực hiện lọc bỏ thông tin nhạy cảm (PII redaction), làm giàu metadata Kubernetes, rồi chuyển tiếp sang Datadog, Elasticsearch và S3.
+Nếu SDK đo telemetry trong tiến trình, Collector là đường tiếp nhận, xử lý và chuyển tiếp dữ liệu ở cấp hạ tầng. Một bản phân phối Collector có thể cấu hình receiver, processor và exporter để nối nhiều nguồn/đích; danh sách OTLP, Prometheus, Jaeger, Zipkin, Datadog, Elasticsearch hay S3 phụ thuộc component thực sự được đóng gói và cấu hình, không mặc định có trong core module.
 
-Kiến trúc xử lý của Collector được xây dựng trên mô hình đường ống tuần tự ba giai đoạn tại `service/pipelines/pipelines.go`:
+Hợp đồng cấu hình Collector nối ba loại component trong pipeline:
 
 ```
 [Receiver] ──► [Processor(s)] ──► [Exporter]
@@ -201,7 +202,7 @@ Kiến trúc xử lý của Collector được xây dựng trên mô hình đư�
 2. **Processor:** Áp dụng các quy tắc biến đổi: gom lô (`batch`), lọc dữ liệu (`filter`), hoặc lấy mẫu (`probabilistic_sampler`).
 3. **Exporter:** Dịch `pdata` ngược lại định dạng của hệ thống đích và đẩy qua mạng.
 
-Một điểm đáng chú ý trong thiết kế bộ nhớ của Collector là cách pdata kiểm soát việc chia sẻ dữ liệu giữa các consumer. Struct `pdata` biểu diễn telemetry trong bộ nhớ dựa trên OTLP protobuf structs; việc sao chép hay không sao chép khi chuyển qua pipeline được kiểm soát bởi `consumer.Capabilities().MutatesData`. Khi một consumer khai báo nó có thể thay đổi dữ liệu (`MutatesData=true`), fanout consumer có thể cần clone để bảo vệ các consumer khác; khi tất cả consumer chỉ đọc, dữ liệu có thể được chia sẻ. Quyết định clone phụ thuộc vào tập hợp các consumer và capabilities của chúng, không đơn giản là số lượng exporter. Không nên hiểu đây là đảm bảo zero-copy trên toàn pipeline.
+`consumer.Capabilities` cho phép component khai báo nó có thể sửa dữ liệu. Đó là thông tin đầu vào cho việc xử lý chia sẻ dữ liệu ở fan-out, không phải một bảo đảm toàn pipeline không copy; khi thiết kế processor, caller phải tôn trọng hợp đồng ownership của component đang dùng.
 
 Exporter helper có queue/retry policy tùy exporter và cấu hình. Persistent queue dùng storage extension khi được hỗ trợ và cấu hình; không phải mặc định mọi exporter đều có queue, cũng không phải RAM queue đầy sẽ tự spill xuống disk. Phải kiểm tra capacity, unit, overflow policy, retry timeout và storage của exporter đang dùng.
 
@@ -243,26 +244,23 @@ Với một file thường nằm trong layer chỉ đọc, OverlayFS có thể c
 
 ### 08. `github.com/containerd/containerd/v2` (v2.4.0 — `a7fe631d`)
 
-Hãy hình dung một tình huống vận hành nguy cấp trên cụm máy chủ sản xuất: Daemon quản lý container (`containerd`) gặp sự cố rò rỉ bộ nhớ hoặc cần được nâng cấp nóng bản vá bảo mật kernel. Nếu kiến trúc phần mềm gắn chặt vòng đời của daemon với vòng đời của các tiến trình container, việc khởi động lại daemon sẽ làm chết đứng toàn bộ các web server, database và API gateway đang phục vụ người dùng. Tại sao `containerd` có thể khởi động lại mượt mà mà các container bên dưới vẫn sống sót bình yên?
+Nếu daemon quản lý container gặp sự cố, vòng đời của task đang chạy có bắt buộc chấm dứt theo không? Câu trả lời phụ thuộc ranh giới giữa daemon và runtime shim, không phải một cam kết restart luôn êm cho mọi workload.
 
-Câu trả lời nằm ở **Kiến trúc Shim Tách Tiến trình (Out-of-Process Shim-v2)** tại `runtime/v2/shim/` (`containerd-shim-runc-v2`).
+Câu trả lời nằm ở ranh giới daemon–shim của runtime v2; phía daemon được triển khai trong `core/runtime/v2/shim.go`. `containerd-shim-runc-v2` là một shim cụ thể, không đại diện mọi runtime.
 
 ```
-[containerd daemon] (Quản lý cấp cao, gRPC/ttrpc)
+[containerd daemon] (Quản lý cấp cao)
         │
-        ▼ (fork & exec độc lập)
-[containerd-shim-v2] (Tiến trình cha nuôi dưỡng, giữ I/O)
+        ▼ (khởi tạo shim process riêng)
+[containerd-shim-v2] (Boundary lifecycle task)
         │
-        ▼ (gọi runc một lần)
+        ▼ (runtime được chọn)
 [Ứng dụng Container] (Chạy trực tiếp trên Linux Kernel)
 ```
 
-Khi máy chủ nhận lệnh tạo container, `containerd` không trực tiếp nuôi dưỡng tiến trình container. Thay vào đó, nó fork ra một tiến trình shim độc lập (`containerd-shim-runc-v2`). Tiến trình shim này gọi `runc` để thiết lập các namespace và cgroup, sau khi `runc` khởi tạo xong tiến trình ứng dụng và thoát ra, shim trở thành tiến trình cha nhận nuôi (subreaper) của ứng dụng đó.
+Daemon dùng shim process riêng để quản lý task. Ở commit được pin, `core/runtime/v2/shim.go` cho thấy containerd nạp shim, đọc bootstrap result và nối tới endpoint của shim. File này không chứng minh shim nào cũng trở thành subreaper, dùng đúng syscall `wait4` hay trực tiếp giữ mọi luồng I/O; muốn khẳng định các chi tiết ấy phải đọc implementation của shim được chọn.
 
-Tiến trình shim đóng vai trò là chiếc mỏ neo sống còn:
-1. Nó giữ mở các file descriptors đại diện cho các luồng nhập xuất `stdin`, `stdout`, `stderr` của container, chuyển tiếp log vào file hoặc socket.
-2. Nó thu gom và chờ đợi mã thoát (`wait4` syscall) của container khi ứng dụng kết thúc để báo cáo lại cho hệ thống, ngăn chặn tiến trình container trở thành tiến trình ma (zombie process).
-3. Nó giao tiếp ngược lại với `containerd` thông qua giao thức nhị phân siêu nhẹ mang tên **TTRPC** (một biến thể gRPC tối giản không cần kéo theo toàn bộ ngăn xếp `net/http2` cồng kềnh, giảm thiểu tối đa footprint bộ nhớ của shim).
+Boundary giữa daemon và shim dùng endpoint có thể chọn ttrpc hoặc gRPC theo bootstrap result trong source đã pin; không có một transport hay mức tiết kiệm memory cố định cho mọi shim. Đường I/O, reaping và recovery phụ thuộc shim/runtime cụ thể.
 
 Shim tách lifecycle task khỏi daemon containerd nên một số trường hợp daemon restart không buộc task dừng. Đây không phải bảo đảm workload không bị ảnh hưởng trong mọi failure; reattach, state storage và hoạt động đang cần daemon có thể lỗi. Thời gian recovery cần đo trên version và cấu hình thật, không gán vài chục millisecond cho mọi host.
 
@@ -277,14 +275,13 @@ Hãy xem xét kịch bản sau: Bạn viết một file cấu hình Terraform đ
 Ở boundary dữ liệu Terraform, `terraform-plugin-framework` dùng các value biểu diễn được known, null và unknown, thay vì chỉ dùng một giá trị primitive Go không mang đủ trạng thái. Điều này không có nghĩa implementation không còn dùng kiểu Go bên trong. Các interface và kiểu value được xem tại `attr/value.go` và các kiểu liên quan:
 
 ```go
-type String struct {
-    value   string
-    unknown bool
-    null    bool
+type StringValue struct {
+    state attr.ValueState
+    value string
 }
 ```
 
-Một thuộc tính trong Terraform Framework luôn có thể biểu diễn 3 trạng thái phân biệt:
+`types/basetypes/string_value.go` dùng `state` để phân biệt ba trạng thái:
 - **Known (Đã biết):** Giá trị đã được xác định cụ thể (ví dụ `"us-east-1"`).
 - **Null (Rỗng):** Người dùng chủ động không cấu hình thuộc tính này trong file HCL.
 - **Unknown (Chưa xác định):** Giá trị chưa thể biết được tại giai đoạn `Plan`, nó sẽ chỉ được sinh ra bởi hạ tầng điện toán đám mây sau khi tài nguyên phụ thuộc được tạo tại giai đoạn `Apply`.
@@ -295,13 +292,13 @@ Mã nguồn trong `internal/fwserver/server.go` tiếp nhận các cuộc gọi 
 
 ### 10. `helm.sh/helm/v3` (v3.22.0 — `144ca65f`)
 
-Một trong những bước ngoặt vĩ đại nhất trong lịch sử công cụ Cloud Native là sự chuyển giao từ Helm 2 sang Helm 3: **Xóa bỏ hoàn toàn daemon Tiller**. Ở thời kỳ Helm 2, Tiller là một pod chạy bên trong cluster giữ quyền quản trị tối cao (`cluster-admin`). Bất kỳ lập trình viên nào có quyền gửi lệnh tới Tiller đều có thể vô tình hoặc cố ý chiếm toàn quyền điều khiển cluster Kubernetes, tạo ra một lỗ hổng bảo mật khổng lồ cho các doanh nghiệp.
+Một thay đổi kiến trúc của Helm 3 là bỏ daemon Tiller của Helm 2. Quyền Kubernetes của Tiller phụ thuộc ServiceAccount và RBAC được cấu hình; cấu hình quá rộng tạo rủi ro leo quyền cho người gửi lệnh tới Tiller.
 
 Helm 3 giải quyết tận gốc bài toán này bằng cách chuyển đổi toàn bộ kiến trúc thành một công cụ máy khách thuần túy (Client-Only Architecture) tại `pkg/action/action.go` (`type Configuration`). Mọi thao tác cài đặt, nâng cấp, kiểm tra trạng thái đều sử dụng trực tiếp danh tính và quyền hạn RBAC trong file `kubeconfig` của chính người dùng đang gõ lệnh.
 
 Nhưng câu hỏi hóc búa đặt ra là: Nếu không có server daemon, Helm lưu trữ lịch sử các bản phát hành (release history), các lần nâng cấp và bản lưu rollback ở đâu?
 
-Mã nguồn tại `pkg/storage/driver/secrets.go` (`type Secrets`) hé lộ câu trả lời: Helm biến chính Kubernetes thành cơ sở dữ liệu phân tán của mình. Mỗi khi bạn thực hiện `helm install` hoặc `helm upgrade`, Helm tạo một đối tượng **Kubernetes Secret** nằm ngay trong namespace triển khai ứng dụng với nhãn nhận diện đặc thù:
+Một storage driver của Helm nằm ở `pkg/storage/driver/secrets.go` (`type Secrets`): khi chọn driver Secrets, release history được lưu trong Kubernetes Secret ở namespace triển khai, với nhãn nhận diện. Đây là đường mặc định phổ biến, không phải storage backend duy nhất Helm hỗ trợ:
 
 ```
 name: sh.helm.release.v1.my-app.v1
@@ -314,7 +311,7 @@ labels:
 
 Toàn bộ thông tin của bản phát hành — bao gồm source chart, file `values.yaml` đã merge, và toàn bộ chuỗi manifest YAML kết quả sinh ra từ `pkg/engine/engine.go` — được gom lại thành một struct `Release`, sau đó được tuần tự hóa JSON, nén bằng thuật toán gzip, mã hóa base64 và nhét trọn vẹn vào trường `data["release"]` của Secret.
 
-Khi người dùng gõ lệnh `helm rollback my-app 1`, Helm chỉ cần truy vấn Secret phiên bản cũ qua Kubernetes REST client, giải nén manifest trong bộ nhớ, tính toán diff so với trạng thái hiện tại, và gửi các lệnh Patch lên API Server. Bằng cách tận dụng các khối nguyên thủy có sẵn của Kubernetes (Secrets và RBAC), Helm 3 tinh gọn mã nguồn và loại bỏ daemon Tiller vốn yêu cầu quyền cluster-admin. Quyền hạn thực tế được kiểm soát qua RBAC của từng user, không do Helm quyết định.
+Khi rollback, Helm đọc release history từ storage đã cấu hình và dùng action rollback để tạo revision mới, rồi cập nhật tài nguyên qua Kubernetes API. Đây không đơn thuần là giải nén một Secret, tính diff và Patch mọi tài nguyên. Helm 3 bỏ Tiller; quyền thực tế phụ thuộc credentials và RBAC của client đang gọi.
 
 ---
 
@@ -324,7 +321,7 @@ Một image `scratch` không tự mang shell, git hay C runtime; các biến th�
 
 `go-git` làm được điều kỳ diệu đó nhờ việc tái hiện trung thực kiến trúc hai tầng của Linus Torvalds: **Tầng Đáy (Plumbing)** và **Tầng Mặt (Porcelain)**.
 
-Tầng Plumbing tại `plumbing/format/packfile/decoder.go` (`type Decoder`) là một kỳ công về kỹ thuật phân tích định dạng nhị phân. Khi Git truyền mã nguồn qua mạng, nó không truyền từng file riêng rẽ mà đóng gói toàn bộ vào một tệp nhị phân nén gọi là Packfile. Điểm hóc búa nhất là Git sử dụng cơ chế nén delta (Delta Compression): một file ở commit mới chỉ được lưu dưới dạng một chuỗi các chỉ thị byte khác biệt (offset delta hoặc ref delta) so với file ở commit cũ. Bộ giải mã `go-git` dựng một đồ thị giải quyết delta trực tiếp trong bộ nhớ, lần ngược lại object gốc và tái tạo chính xác nội dung byte của các Git Blobs, Trees, Commits và Tags.
+Tầng plumbing (`plumbing/format/packfile/parser.go`, `packfile.go`) đọc packfile chứa các Git object, trong đó object delta tham chiếu một base object bằng offset hoặc object ID. Base không nhất thiết là “file của commit cũ”; đối tượng có thể là blob, tree, commit hoặc tag. Đường giải mã cần tìm base và áp dụng chuỗi delta để tái tạo object. Không suy ra toàn bộ object graph luôn được giữ trong RAM.
 
 Tầng lưu trữ được trừu tượng hóa qua interface `plumbing/storer/storer.go` (`interface EncodedObjectStorer`). Nhờ thiết kế tách rời tuyệt đối giữa logic xử lý đối tượng và tầng lưu trữ vật lý, `go-git` cung cấp hai triển khai lưu trữ hoàn toàn khác biệt:
 - `storage/filesystem`: Ghi các object và reflog xuống thư mục `.git` trên ổ đĩa vật lý như Git truyền thống.
@@ -355,7 +352,7 @@ SSH có flow control theo channel để receiver giới hạn lượng dữ li�
 - Bên gửi chỉ được phép truyền một lượng byte tối đa bằng đúng kích thước cửa sổ mà bên nhận đã cấp phép.
 - Khi ứng dụng của bạn gọi `session.StdoutPipe().Read(buf)` và đọc bớt dữ liệu ra khỏi bộ đệm, mã nguồn trong `channel.go` mới gửi một gói tin kiểm soát đặc biệt mang tên `msgChannelWindowAdjust` để cấp thêm hạn ngạch nhận byte cho bên gửi.
 
-Nếu terminal bị treo không đọc tiếp, cửa sổ nhận của kênh số 1 sẽ co về số 0. Bên gửi lập tức ngừng truyền dữ liệu cho terminal, nhưng các kênh logic khác trên cùng kết nối TCP vẫn tiếp tục hoạt động mượt mà với cửa sổ trượt riêng của chúng. Đây là một bài học kinh điển về việc tự xây dựng cơ chế điều tiết lưu lượng ở tầng ứng dụng (L7 flow control) bên trên tầng giao vận (L4 transport).
+Nếu consumer ngừng đọc và cửa sổ nhận của kênh đó hết, sender không thể tiếp tục gửi data cho riêng kênh ấy cho tới khi có điều chỉnh cửa sổ. Các kênh khác có cửa sổ riêng, nhưng vẫn chia sẻ cùng TCP connection và tài nguyên process; vì vậy không có bảo đảm chúng luôn “mượt mà” khi một consumer chậm.
 
 ---
 
@@ -388,13 +385,13 @@ Khi bạn kéo một container image `registry.internal/app:v1.2.0` về triển
 
 Cosign hỗ trợ chữ ký tách rời gắn với image digest; ký số nói chung không bắt buộc sửa image. Cách lưu và tìm signature phụ thuộc artifact format và registry support của version được dùng.
 
-Cosign băm mã SHA-256 của image cần bảo vệ (`sha256:abc...`), ký mã băm đó bằng khóa mã hóa, rồi đẩy một artifact phụ trợ lên OCI Registry với một tag định danh quy ước:
+Một đường lưu chữ ký kiểu tag dùng tên suy ra từ digest, chẳng hạn:
 
 ```
 registry.internal/app:sha256-abc....sig
 ```
 
-Image gốc hoàn toàn không bị chạm vào dù chỉ một byte. Registry lưu trữ chữ ký như một đối tượng độc lập gắn liền với digest của image gốc.
+Chữ ký gắn với identity của image theo digest, không sửa các layer của image. Đường lưu và truy vấn còn tùy artifact format, OCI referrers và hỗ trợ registry ở bản Cosign đang dùng; ví dụ tag trên không phải định dạng bắt buộc cho mọi chữ ký.
 
 Tính năng nổi bật của Cosign là chế độ **Ký Không Cần Quản Lý Khóa (Keyless Signing)**: Thay vì lưu trữ private key trên máy chủ CI/CD (nơi rất dễ bị lộ lọt), Cosign tích hợp với hai dịch vụ của Sigstore:
 1. **Fulcio:** Cấp chứng chỉ ngắn hạn theo policy của CA và identity OIDC; đọc validity thực tế thay vì coi mọi chứng chỉ luôn sống đúng mười phút.
@@ -432,7 +429,7 @@ Resolver cung cấp endpoint theo scheme và implementation. Với DNS headless 
 
 Protobuf dùng field number và wire type thay cho lặp tên field trên wire. Dung lượng và tốc độ so với JSON phải đo trên schema, value, encoder và workload; không có tỷ lệ 3–10 lần chung.
 
-Để trả lời, hãy nhìn vào cách các byte được sắp đặt trên dây cáp mạng trong `proto/wire.go`. Protobuf loại bỏ hoàn toàn các chuỗi khóa lặp đi lặp lại như `"user_id":` hay `"is_active":`. Thay vào đó, mỗi trường dữ liệu được biểu diễn bằng một cặp thẻ nhị phân (Tag):
+Để trả lời, hãy nhìn vào cách các byte được mã hóa trong `encoding/protowire/wire.go`. Protobuf không lặp tên trường như `"user_id":` hay `"is_active":` trên wire. Thay vào đó, mỗi trường dùng một tag nhị phân:
 
 `Tag = (Field Number << 3) | Wire Type`
 
@@ -455,6 +452,7 @@ Hãy tưởng tượng bạn đang viết một công cụ bảo mật quét mã
 
 ```go
 type Image interface {
+    // Rút gọn từ pkg/v1/image.go; còn các method khác.
     Manifest() (*Manifest, error)
     ConfigName() (Hash, error)
     RawConfigFile() ([]byte, error)
@@ -516,9 +514,9 @@ Trước khi eBPF xuất hiện, nếu bạn muốn can thiệp vào cách Linux
 
 Với object eBPF đã được biên dịch trước, `cilium/ebpf` cho phép Go loader nạp và gắn chương trình mà không cần cgo hoặc Clang trên máy đích. Máy đích vẫn cần Linux kernel, feature, quyền và resource limit tương thích; đường build object cần toolchain riêng.
 
-Mã nguồn trong `prog.go` (`type ProgramSpec`) và `map.go` (`type Map`) tự tay đóng gói các tham số nhị phân và kích hoạt trực tiếp lời gọi hệ thống cấp thấp của Linux thông qua hàm `unix.Syscall(unix.SYS_BPF, ...)`. Chương trình eBPF sau khi vượt qua bộ kiểm định an toàn (Kernel Verifier) sẽ được gắn vào các điểm móc (hook points) như XDP (eXpress Data Path), Traffic Control (TC) hoặc kprobes.
+`prog.go` (`type ProgramSpec`) và `map.go` (`type Map`) mô tả chương trình và map; các tầng nội bộ gọi Linux `bpf` syscall khi nạp hoặc thao tác tài nguyên. Không đồng nhất hai file API này với vị trí của lời gọi syscall. Sau khi vượt qua kernel verifier, chương trình có thể được gắn vào hook phù hợp như XDP, TC hoặc kprobe.
 
-Đặc biệt, kênh truyền thông tin hai chiều tốc độ cao giữa Kernel và Go User Space được hiện thực hóa tại `ringbuf/reader.go` (`type Reader`). Kernel ghi các sự kiện an ninh mạng vào một bộ đệm vòng (circular ring buffer) được ánh xạ bộ nhớ (`mmap`). Phía Go, `Reader` sử dụng cơ chế `epoll` trên file descriptor của ringbuffer để thức dậy và đọc hàng loạt sự kiện (batch read) mà không tiêu tốn chu kỳ CPU nhàn rỗi. Kỹ thuật này giúp các hệ thống như Cilium hay Tetragon có thể xử lý lượng lớn sự kiện an ninh với chi phí context-switch thấp hơn nhiều so với phương pháp đẩy toàn bộ packet lên user space. Throughput và mức tiêu thụ tài nguyên thực tế phụ thuộc vào loại hook, kích thước event và workload cụ thể.
+Đường kernel → Go có thể dùng BPF ring buffer. `ringbuf/reader.go` (`type Reader`) tạo poller cho file descriptor của map; backend không-Windows tại `ringbuf/reader_other.go` dùng epoll để chờ dữ liệu. `Read` lấy từng record theo API, không phải lời hứa “batch read” cho mọi caller. Throughput và mức tiêu thụ tài nguyên phụ thuộc hook, kích thước event và workload; không suy ra speedup từ riêng cơ chế chờ.
 
 ---
 
@@ -528,7 +526,7 @@ Gọi ip bằng subprocess là một dependency vào executable, quoting/argumen
 
 `netlink` loại bỏ hoàn toàn các tiến trình trung gian đó bằng cách nói chuyện trực tiếp với Linux Kernel qua giao thức **Netlink IPC** tại `netlink_linux.go` và `link_linux.go`.
 
-Thư viện mở một raw socket đặc biệt của kernel:
+Ở tầng transport Netlink bên dưới, việc mở socket có dạng khái niệm:
 
 ```go
 fd, err := unix.Socket(
@@ -536,7 +534,7 @@ fd, err := unix.Socket(
 )
 ```
 
-Giao thức `NETLINK_ROUTE` là huyết mạch điều khiển toàn bộ ngăn xếp mạng của nhân Linux. Khi bạn gọi hàm `netlink.LinkAdd(&netlink.Veth{...})`, thư viện không chạy lệnh shell nào cả. Nó tuần tự hóa cấu hình card mạng thành một cấu trúc nhị phân chuẩn của kernel mang tên `nlmsghdr` (Netlink Message Header) kết hợp với các thuộc tính lồng nhau `RtAttr` (Route Attributes), rồi bắn mảng byte này qua socket vào thẳng kernel thông qua lời gọi `unix.Sendto`.
+Khi gọi `netlink.LinkAdd(&netlink.Veth{...})`, thư viện tạo Netlink request và thực thi qua `NETLINK_ROUTE`, không chạy shell. `link_linux.go` cho thấy `RTM_NEWLINK` và `req.Execute`; các chi tiết mở socket và syscall gửi nằm ở tầng transport bên dưới, không phải đoạn code chép nguyên từ `LinkAdd`.
 
 Kernel trả kết quả hoặc lỗi theo Netlink protocol. Bỏ subprocess thay đổi đường đi và dependency, nhưng thời gian tạo veth và speedup so với CLI cần benchmark theo host, namespace và operation; không có con số vài phần mười millisecond hay hàng trăm lần chung.
 
@@ -548,21 +546,21 @@ Kubernetes vốn được thiết kế để điều phối container trên mộ
 
 Làm thế nào để biến một API REST bất đồng bộ của AWS thành một đối tượng điều hòa tuần hoàn chuẩn mực của Kubernetes?
 
-`crossplane-runtime` giải bài toán này tại `pkg/reconciler/managed/reconciler.go` thông qua interface trừu tượng hóa tài nguyên bên ngoài: `ExternalClient`:
+`crossplane-runtime` đặt hợp đồng với tài nguyên bên ngoài tại `pkg/reconciler/managed/reconciler.go`. `ExternalClient` là alias của `TypedExternalClient[resource.Managed]`; đoạn sau rút gọn interface generic ở commit đã pin:
 
 ```go
-type ExternalClient interface {
+type TypedExternalClient[T resource.Managed] interface {
     Observe(
-        ctx context.Context, mg resource.Managed,
+        ctx context.Context, mg T,
     ) (ExternalObservation, error)
     Create(
-        ctx context.Context, mg resource.Managed,
+        ctx context.Context, mg T,
     ) (ExternalCreation, error)
     Update(
-        ctx context.Context, mg resource.Managed,
+        ctx context.Context, mg T,
     ) (ExternalUpdate, error)
     Delete(
-        ctx context.Context, mg resource.Managed,
+        ctx context.Context, mg T,
     ) (ExternalDelete, error)
     Disconnect(ctx context.Context) error
 }
@@ -584,7 +582,7 @@ Khi một hệ thống GitOps tự động hóa triển khai phần mềm cho h�
 
 Flux CD chuẩn hóa trải nghiệm vận hành GitOps bằng cách biến mọi tài nguyên thành một **Máy Trạng Thái Có Thể Quan Sát Được (Observable State Machine)** tại `runtime/conditions/setter.go`.
 
-Thư viện tuân thủ nghiêm ngặt đặc tả `kstatus` của Kubernetes. Mọi Custom Resource (như `GitRepository` hay `Kustomization`) đều sở hữu trường `.status.conditions`:
+Helper condition của Flux dùng các kiểu condition cho những resource triển khai contract tương ứng; nó không áp đặt `.status.conditions` lên mọi Custom Resource trong Kubernetes. Ví dụ:
 
 ```go
 conditions.MarkTrue(
@@ -610,13 +608,13 @@ Helper cập nhật condition trên object trong memory. Controller còn phải 
 
 ---
 
-### 24. `github.com/google/go-github/v68` (v68.0.0 — `98d4f502`)
+### 24. `github.com/google/go-github/v92` (v92.0.0 — `5149b4d7`)
 
 Khi viết một con bot tự động hóa GitHub Actions hoặc công cụ dọn dẹp các pull request cũ trong một tổ chức doanh nghiệp có hàng nghìn repositories, bạn sẽ phải đối mặt với bài toán phân trang (pagination) và giới hạn tần suất gọi API (Rate Limiting).
 
 GitHub REST API không trả về số trang tiếp theo bên trong nội dung JSON body, mà truyền thông tin này qua header HTTP tiêu chuẩn: `Link: <https://api.github.com/...page=2>; rel="next"`.
 
-`go-github` xử lý bài toán này thanh lịch tại `github/pagination.go` và `github/github.go`. Mỗi hàm truy vấn danh sách nhận vào một struct `ListOptions{Page: 1, PerPage: 100}` và trả về đối tượng `*github.Response`:
+`go-github` có đường offset pagination trong `github/github.go`. Nhiều hàm list nhận `ListOptions` và trả `*github.Response`; một số API dùng cursor hoặc dạng phân trang khác, nên ví dụ sau chỉ dành cho endpoint dùng page number:
 
 ```go
 opt := &github.PullRequestListOptions{
@@ -660,7 +658,7 @@ Chu kỳ thực thi của một lệnh khi người dùng gõ phím được ki�
 
 Điểm sáng kiến trúc của Cobra là sự phân biệt giữa cờ cục bộ (`Flags()`) và cờ kế thừa xuyên suốt (`PersistentFlags()`). Khi bạn khai báo cờ `--kubeconfig` hoặc `--verbose` trên lệnh gốc (Root Command) bằng `PersistentFlags()`, cờ đó tự động được truyền xuống và có hiệu lực trên toàn bộ hàng trăm lệnh con cháu bên dưới cây lệnh.
 
-Đồng thời, hàm `PersistentPreRun` ở lệnh gốc cho phép bạn thực hiện các tác vụ khởi tạo dùng chung — như thiết lập mức độ ghi log, đọc file cấu hình Viper, hoặc bắt đầu một OpenTelemetry trace — một lần duy nhất tại nút gốc mà không bắt từng lệnh con phải sao chép lại logic chuẩn bị này.
+`PersistentPreRun` có thể đặt tác vụ khởi tạo chung ở lệnh cha. Cần kiểm tra cách Cobra chọn hook theo cây lệnh ở version đang dùng: hook của cha không phải cam kết sẽ luôn chạy nếu lệnh con khai báo hook tương ứng.
 
 ---
 
@@ -797,12 +795,9 @@ Kết nối có thể không đủ điều kiện để tái sử dụng khi bod
 Ở `client.go`, thư viện dùng helper bounded drain trước khi đóng body. Mã minh họa policy, không phải signature chép nguyên từ source:
 
 ```go
-func drainBody(resp *http.Response) {
-    if resp.Body != nil {
-        reader := io.LimitReader(resp.Body, respReadLimit)
-        io.Copy(io.Discard, reader)
-        resp.Body.Close()
-    }
+func (c *Client) drainBody(body io.ReadCloser) {
+    defer body.Close()
+    _, _ = io.Copy(io.Discard, io.LimitReader(body, respReadLimit))
 }
 ```
 
@@ -857,7 +852,7 @@ Package `plugin` có giới hạn tương thích và platform được tài li�
 
 HashiCorp (tác giả của Terraform, Vault, Packer) giải quyết bài toán plugin mở rộng cho hàng nghìn bên thứ ba bằng một kiến trúc hoàn toàn khác biệt tại `client.go` và `server.go`: **Kiến Trúc Plugin Tách Tiến Trình Qua IPC (Out-of-Process IPC Plugins)**.
 
-Mỗi plugin của Terraform không phải là một thư viện động nạp vào bộ nhớ, mà là một **tiến trình độc lập (Subprocess)** hoàn chỉnh.
+Với đường plugin dùng `go-plugin`, host giao tiếp với **tiến trình plugin riêng** qua RPC. Không suy rộng cơ chế này thành mọi loại plugin và extension của Terraform.
 
 Quá trình bắt tay diễn ra như sau:
 1. Ứng dụng chính (tiến trình mẹ) fork và exec tiến trình plugin con, truyền một biến môi trường bí mật chứa mã cookie bắt tay (`HandshakeConfig`).
@@ -876,7 +871,7 @@ Bởi vì JSON không hỗ trợ comment và quá cứng nhắc, trong khi YAML 
 
 Mã nguồn của `hcl/v2` được cấu trúc thành hai tầng tách bạch rõ rệt: Tầng Cú Pháp Cấu Trúc (`hclsyntax/parser.go`) và Tầng Đánh Giá Ngữ Cảnh (`eval_context.go`).
 
-HCL cho phép phân tích cú pháp toàn bộ tài liệu cấu hình thành một cây cú pháp trừu tượng (AST) ngay cả khi các biến số bên trong chưa hề tồn tại. Trong `eval_context.go` (`type EvalContext`), các biến và hàm hỗ trợ được lưu trữ trong một bảng ký hiệu có cấu trúc lồng nhau (parent-child scopes). Việc đánh giá giá trị của các biểu thức được trì hoãn (deferred evaluation) cho đến khi đồ thị phụ thuộc (dependency graph) của Terraform xác định được thứ tự khởi tạo của các tài nguyên. Điều này cho phép người dùng viết các biểu thức tham chiếu chéo thanh lịch mà không làm vỡ quá trình phân tích cú pháp ban đầu.
+HCL có thể parse cấu hình trước khi có giá trị cho các biến trong biểu thức. `EvalContext` cung cấp biến và hàm khi caller quyết định evaluate biểu thức; HCL không tự xây hay lập lịch đồ thị phụ thuộc của Terraform. Terraform là application dùng HCL và quyết định lúc nào các giá trị tham chiếu sẵn sàng.
 
 ---
 
@@ -884,7 +879,7 @@ HCL cho phép phân tích cú pháp toàn bộ tài liệu cấu hình thành m�
 
 Nếu `terraform-plugin-framework` (thư viện số 09) là giao diện cấp cao thân thiện dành cho lập trình viên, thì `terraform-plugin-go` là tầng nền móng cấp thấp (Low-Level RPC Protocol) giao tiếp trực tiếp với Terraform Core.
 
-Mã nguồn tại `tfprotov6/server.go` triển khai chính xác giao thức nhị phân Terraform Provider Protocol v6 trên nền gRPC. Tại tầng này, dữ liệu trạng thái không được chuyển đổi thành các kiểu dữ liệu đẹp mắt của Go mà được đóng gói dưới dạng các byte nhị phân Protobuf hoặc MessagePack.
+Package `tfprotov6` định nghĩa hợp đồng RPC của Terraform Provider Protocol v6. Các giá trị động có thể mang dữ liệu MessagePack hoặc JSON theo protocol. Không quy toàn bộ dữ liệu trạng thái thành một định dạng nhị phân duy nhất khi đọc contract này.
 
 `tftypes.Value` biểu diễn type, null và unknown khi trao đổi dữ liệu với Terraform. Caller cần giữ schema và trạng thái ấy qua conversion; có type model không tự bảo đảm mọi adapter của application đều không làm mất thông tin.
 
@@ -894,9 +889,9 @@ Mã nguồn tại `tfprotov6/server.go` triển khai chính xác giao thức nh�
 
 Một scrape workload nhiều target có thể tốn CPU ở parser. Chi phí phụ thuộc số sample, nhãn, format và input; không suy ra trần CPU từ một số target giả định. Đọc parser của expfmt để hiểu grammar, rồi benchmark đúng dữ liệu nếu lựa chọn parser là một quyết định performance.
 
-Mã nguồn tại `expfmt/text_parse.go` triển khai một máy trạng thái phân tích cú pháp dòng văn bản (streaming line-by-line parser) cực kỳ tối ưu.
+`expfmt/text_parse.go` triển khai parser trạng thái cho Prometheus text exposition format.
 
-Bộ giải mã đọc trực tiếp từng byte từ luồng `io.Reader`, trích xuất tên metric, các cặp key-value bên trong dấu ngoặc nhọn `{job="api", status="500"}`, giá trị số thực và timestamp với mục tiêu giảm thiểu cấp phát chuỗi tạm thời trên đường đi nóng. Việc tối ưu hóa định dạng ở mức độ ký tự này là lý do vì sao chuẩn dữ liệu Prometheus có thể trở thành chuẩn mực toàn cầu của hệ sinh thái Observability mà không đòi hỏi hạ tầng thu thập cồng kềnh.
+Bộ giải mã đọc luồng đầu vào và nhận diện tên metric, bộ nhãn, giá trị cùng timestamp theo grammar. Không suy ra số cấp phát, lợi thế performance hoặc mức phổ biến của format từ riêng cấu trúc parser; nếu throughput là tiêu chí chọn format, đo trên dữ liệu thật.
 
 ---
 
@@ -906,9 +901,7 @@ Driver dùng cgo cần C toolchain phù hợp khi build và có thêm allocator/
 
 Driver `modernc.org/sqlite` tại version đã pin không dùng cgo ở đường driver. Đây là lựa chọn triển khai; cần kiểm tra target được hỗ trợ và các dependency của chính version được build.
 
-Cần hiểu đúng bản chất kỹ thuật: Đây không phải là một bản viết lại SQLite bằng tay sang Go! Tác giả sử dụng một trình chuyển dịch mã nguồn mang tên `cznic/ccgo`. Trình chuyển dịch này đọc toàn bộ mã nguồn C chính thức của SQLite và dịch tự động toàn bộ mã C đó sang mã nguồn Go tương đương.
-
-Để làm được điều đó, thư viện giả lập một không gian bộ nhớ ảo (virtual memory space), mô phỏng con trỏ C, cấu trúc ngăn xếp (stack) và cấp phát vùng nhớ (`malloc`/`free`) hoàn toàn bên trong các mảng byte của Go. 
+Đây là driver SQLite không dùng cgo trong đường build được tài liệu hóa, không phải lời hứa tương thích và hiệu năng cho mọi target. Cơ chế chuyển dịch C sang Go, biểu diễn con trỏ và allocator là chi tiết implementation cần đọc đúng source ở version được ghim; không dùng suy đoán về bố trí bộ nhớ để chọn driver.
 
 Tránh cgo có thể đơn giản hóa build trên target mà driver hỗ trợ. Không kết luận driver Go luôn dùng nhiều memory hơn hay luôn chậm hơn bản C: so sánh cần cùng SQLite version, query, concurrency, database, hardware và cấu hình. Chọn driver theo compatibility, lifecycle và chi phí vận hành trước; nếu performance quyết định lựa chọn, benchmark đúng workload.
 
@@ -923,8 +916,8 @@ Viên ngọc sáng nhất trong gói này là middleware `otelhttp` tại `instr
 Khi bọc một `http.Handler` tiêu chuẩn bằng `otelhttp.NewHandler(handler, "my-operation")`, middleware thực hiện một chu trình hoàn chỉnh:
 1. Trích xuất metadata ngữ cảnh vết từ HTTP header `traceparent` thông qua propagator.
 2. Khởi tạo một Server Span mới và nhúng vào `r.Context()`.
-3. Bọc đối tượng `http.ResponseWriter` bằng một struct trung gian tùy biến (`responseWriterInterceptor`) để bắt trộm mã phản hồi HTTP (`StatusCode`) và số lượng byte đã ghi, vì chuẩn `http.ResponseWriter` của Go không cung cấp hàm đọc lại status code sau khi đã ghi.
-4. Khi handler nghiệp vụ kết thúc, middleware tự động gắn status code vào Span, ghi nhận lỗi nếu có mã 5xx, và kết thúc span (`span.End()`).
+3. Dùng `request.NewRespWriterWrapper` cùng `httpsnoop.Wrap` để ghi nhận status code và số byte phản hồi, đồng thời giữ các interface tùy chọn của writer gốc. `http.ResponseWriter` chuẩn không có hàm đọc lại status code sau khi ghi.
+4. Khi handler kết thúc, middleware đặt span status theo semantic convention, ghi response attributes và kết thúc span. Cách diễn giải mã 5xx thuộc semantic convention được dùng, không phải một lệnh `RecordError` vô điều kiện trong handler.
 
 Một dòng code bọc duy nhất nâng cấp toàn bộ máy chủ web của bạn thành một nút quan sát được chuẩn mực trong đồ thị phân tán.
 
@@ -981,7 +974,7 @@ Thư viện Cloud Storage của Google giải quyết bài toán phục hồi d�
 
 `Reader` có API `io.ReadCloser`. Trong đường HTTP của `storage/http_client.go`, `httpReader` giữ số byte đã đọc và callback reopen; lỗi retryable có thể mở lại range theo offset và generation. Không phải mọi lỗi hoặc transport đều cùng behavior. Đường decompressive transcoding còn có trường hợp phải đọc bỏ byte đã thấy; kiểm tra source và generation condition thay vì hứa mọi lần resume đều không lặp dữ liệu truyền.
 
-Đồng thời, mã nguồn tại `compute/metadata/metadata.go` cung cấp cơ chế tự động khám phá danh tính máy chủ thông qua Workload Identity, tự động lấy token OAuth2 từ Compute Engine Metadata Server mà không yêu cầu lập trình viên phải nhúng file khóa JSON nguy hiểm vào container.
+Metadata server là một nguồn credential trong môi trường Google Cloud được cấu hình phù hợp. Việc ứng dụng nhận identity nào phụ thuộc môi trường và cấu hình xác thực, kể cả đường Workload Identity; không suy ra từ riêng `storage.Reader` hay `compute/metadata` rằng mọi container đều có token đúng quyền.
 
 ---
 
@@ -990,9 +983,9 @@ Thư viện Cloud Storage của Google giải quyết bài toán phục hồi d�
 Azure SDK for Go dùng policy pipeline để tổ chức các bước như authentication, retry và transport. Với client ARM đang xét, xem `sdk/azcore/runtime/pipeline.go`; không suy ra rằng mọi lời gọi HTTP trong một ứng dụng đều đi qua pipeline này.
 
 Một pipeline của Azure là một chuỗi các `Policy` được thực thi tuần tự:
-- **Authentication Policy:** Tự động lấy Bearer Token từ Azure Active Directory / Managed Identity và xoay vòng token khi hết hạn.
-- **Telemetry Policy:** Tự động gắn User-Agent chuẩn hóa để Azure portal theo dõi phiên bản SDK.
-- **Retry Policy:** Áp dụng thuật toán thử lại thích ứng riêng biệt cho các mã lỗi đặc thù của Azure (như `HTTP 429 Too Many Requests` với header `Retry-After`).
+- **Authentication Policy:** Dùng `TokenCredential` mà caller cấp; Managed Identity chỉ là một cách cung cấp credential, không mặc định cho mọi client.
+- **Telemetry Policy:** Gắn metadata nhận diện SDK/request theo cấu hình; không khẳng định Azure portal trực tiếp dùng trường đó cho mọi request.
+- **Retry Policy:** Áp dụng retry theo policy cho response/error phù hợp, có xét thông tin server như `Retry-After` khi đường thực thi hỗ trợ.
 
 Thiết kế mô-đun này cho phép các kỹ sư DevOps dễ dàng chèn thêm các policy tùy biến (như ghi log kiểm toán nội bộ hoặc chèn header giám sát phân tán) vào toàn bộ các dịch vụ của Azure chỉ bằng một dòng cấu hình duy nhất ở cấp client.
 
