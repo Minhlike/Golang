@@ -9,3 +9,5 @@ library_sources/repos/
 *.prof
 *.pprof
 *.out
+runtime/document-cache/
+tools/document_ingestion/.venv/
