@@ -49,3 +49,11 @@ Không đánh đồng 40 source-file/symbol review có mục tiêu với full-tr
 - BOOK_CONTENT_STATUS: `READY`; PUBLICATION_STATUS: `READY` cho đúng PDF SHA nêu trên. KNOWN_LIMITATIONS: không live AWS/Kubernetes production/eBPF Linux; kiểm định hình ảnh không thay thế xác minh mọi runtime/version trong mọi môi trường. WIP ngoài scope không được đưa vào commit.
 
 Pass dừng tại đây; không mở wave/hotfix tiếp theo.
+
+## Bổ sung 30-09-2026 — thay sơ đồ Chương 22
+
+Bản PDF hiện hành sau micro-pass này có SHA-256 `f7867dad1f79ca1f9efc2801deb367f7aa72bc76500509d08b3471a3d866f8d8`, vẫn gồm `457` trang. Biên bản phía trên tiếp tục mô tả đúng baseline `82f7aac3...`, không được dùng riêng nó để xác nhận trang đã thay đổi.
+
+- Hai sơ đồ kiến trúc và List/Watch ở trang 270–271 thay khối ký tự monospace. Source có thể sửa tại `scripts/render_ch22_diagrams.py`; hai ảnh grayscale có provenance và checksum trong `assets/visual-manifest.json`. Khối ký tự WorkQueue dư thừa được chuyển thành văn xuôi; không đổi hành vi code/lab.
+- So sánh raster 2× từng trang với baseline: chính xác 8 trang đổi (`269–275`, `392`), 449 trang còn lại khớp pixel. Cả 8 trang đổi đã được mở riêng từ candidate cuối ở độ phân giải cao; hình/chữ/code/bảng/folio và ngắt trang ở đó không thấy clipping hay lỗi xuất bản mới. Trang 392 chỉ đổi số thứ tự hình do thêm hai hình trước nó. Bằng chứng render và preflight nằm trong `.workspace/ch22-diagram-pass/`.
+- Preflight candidate: `PASS` cho 457 trang về A4/box/rotation, font, printable frame, bookmark, DPI ảnh, grayscale và markup. Code-width, zero-bullet, Error Atlas, diagram encoding/semantics, visual manifest, library source lock và 14 publication regression tests: `PASS`. Phạm vi bổ sung này là layout và provenance của thay đổi, không phải một lượt phản biện khoa học toàn sách mới.

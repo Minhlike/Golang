@@ -32,37 +32,10 @@ Quy tắc bất biến của Kubernetes Controller:
 
 ## 2. Kiến trúc toàn cảnh của một client-go Controller
 
-Sơ đồ khái niệm phân nhánh dưới đây mô tả chính xác luồng dữ liệu một chiều từ cụm Kubernetes qua `client-go` vào worker điều hòa:
+Luồng chính đi từ API Server qua `Reflector` và `DeltaFIFO` tới `SharedInformer`. Cache được cập nhật trước khi handler phát key cho hàng đợi; lúc xử lý, worker đọc lại observation cục bộ thay vì giữ payload sự kiện cũ.
 
-~~~
-[Kubernetes API Server]
-         │ (HTTP Stream / Chunked)
-         ▼
-    [Reflector] ──> List / Watch
-         │
-         ▼
-    [DeltaFIFO]
-         │
-         ├── Cập nhật ──> [Indexer Cache]
-         │                       ▲
-         ▼                       │ (Đọc snapshot)
-   [SharedInformer]              │
-         │                       │
-         ▼                       │
-  (ResourceEventHandler)         │
-         │ (Chỉ lấy Key)         │
-         ▼                       │
-[Typed Rate-Limited WorkQueue]   │
-  - queue:      thứ tự chờ       │
-  - dirty:      gộp trùng lặp    │
-  - processing: khóa độc quyền   │
-         │                       │
-         ▼                       │
-     [Worker] ───────────────────┘
-         │
-         ▼ (Thực thi Reconcile)
-   [Ghi API Server / Ngoại vi]
-~~~
+![Luồng sự kiện từ API Server qua Informer tới worker, với Indexer là cache cục bộ](../../assets/diagrams/client-go-controller-flow.png)
+@figure Luồng sự kiện của controller. Đường nét đứt biểu thị cache cục bộ: dữ liệu này có thể trễ so với API Server.
 
 ### Bốn thành phần then chốt trong chuỗi cung ứng dữ liệu
 
@@ -79,24 +52,8 @@ Sơ đồ khái niệm phân nhánh dưới đây mô tả chính xác luồng d
 
 Vì sao Kubernetes không dùng truy vấn định kỳ (Polling) và cũng không dùng WebSocket đơn thuần? Câu trả lời nằm ở sự kết hợp hoàn hảo giữa **List** và **Watch** thông qua biến định danh **resourceVersion**.
 
-~~~
-Client                                    API Server
-  │                                           │
-  │ 1. GET /api/v1/pods (List)                │
-  ├──────────────────────────────────────────>│
-  │ <── Danh sách Pods + rv = "1040" ─────────┤
-  │                                           │
-  │ 2. Watch: resourceVersion="1040"          │
-  ├──────────────────────────────────────────>│
-  │ <── HTTP 200 OK (chunked stream) ─────────┤
-  │ <── Event: ADDED pod-a (rv=1041) ─────────┤
-  │ <── Event: MODIFIED pod-b (rv=1042) ──────┤
-  │     ... (Mạng bị ngắt đột ngột) ...       │
-  │                                           │
-  │ 3. Watch: resourceVersion="1042"          │
-  ├──────────────────────────────────────────>│
-  │ <── Tiếp tục nếu lịch sử còn giữ được ────┤
-~~~
+![Trình tự Reflector List rồi Watch với API Server và xử lý khi lịch sử Watch hết hạn](../../assets/diagrams/client-go-list-watch.png)
+@figure List tạo mốc quan sát cho Watch; khi nối lại không thể tiếp tục vì lịch sử đã hết, Reflector phải List lại.
 
 ### Cơ chế hoạt động
 
@@ -156,22 +113,7 @@ Trong Go chuẩn, `chan` chỉ là một hàng đợi FIFO đơn thuần. `clien
 
 ### Quy trình điều phối của WorkQueue
 
-~~~
-Sự kiện tới: Add(key)
-  │
-  ├─> Đã có trong dirty? ──(Có)──> [Bỏ qua - Đã gộp!]
-  │         │ (Không)
-  │         ▼
-  │     Thêm vào dirty
-  │
-  ├─> Đang xử lý? ─────────(Có)──> [Chờ worker hiện tại]
-  │         │ (Không)
-  │         ▼
-  └─> Đẩy vào queue slice ──> Worker gọi Get() lấy ra
-                                 │
-                                 ├─> Xóa khỏi dirty
-                                 └─> Thêm vào processing
-~~~
+`Add(key)` trước hết đánh dấu key trong `dirty`; key đã bẩn thì không được xếp thêm một bản sao. Nếu key đang ở `processing`, sự kiện mới chờ lượt xử lý hiện tại kết thúc. Nếu không, key được đưa vào `queue`. `Get()` lấy key ra, xóa dấu `dirty` và đánh dấu nó đang xử lý.
 
 Khi worker xử lý xong, nó bắt buộc phải gọi `queue.Done(key)`. Lúc này WorkQueue sẽ xóa key khỏi tập `processing`. Nếu trong quá trình worker đang chạy mà có sự kiện mới tới (key đã được đánh dấu vào `dirty`), `Done()` sẽ tự động đưa key đó trở lại `queue` để xử lý tiếp!
 
