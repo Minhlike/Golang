@@ -1,0 +1,15 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>MỘT REQUEST</b>\n/probe?mode=timeout" as request
+rectangle "<b>LOG</b>\nmode / outcome / status\nduration_ms của event" as log
+rectangle "<b>TRACE</b>\nrequest span\nchild: dependency\ndeadline exceeded" as trace
+rectangle "<b>COUNTER</b>\nprobe_requests_total\noutcome=timeout" as counter
+rectangle "<b>HISTOGRAM</b>\nprobe_request_duration_seconds\noutcome=timeout" as histogram
+request -down-> log
+request -down-> trace
+request --> counter
+request --> histogram
+log -[hidden]down-> counter
+trace -[hidden]down-> histogram
+@enduml

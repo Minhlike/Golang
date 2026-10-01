@@ -1,0 +1,13 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>TRI THỨC VẬN HÀNH</b>\nQuy tắc của ứng dụng" as knowledge
+rectangle "<b>OPERATOR</b>\nHiện thực tri thức bằng Go" as operator
+rectangle "<b>API / CRD</b>\nBiểu đạt ý định" as crd
+rectangle "<b>CONTROLLER</b>\nĐiều hòa trạng thái" as controller
+rectangle "<b>TÍCH HỢP NGOÀI</b>\nQuản lý vòng đời\ntài nguyên ngoại vi" as external
+knowledge -down-> operator
+operator -down-> crd
+operator -down-> controller
+operator -down-> external
+@enduml

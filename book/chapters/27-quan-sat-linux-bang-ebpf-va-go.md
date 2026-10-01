@@ -46,19 +46,8 @@ Khi lập trình eBPF với Go, nhiều người lầm tưởng rằng bắt bu�
 
 Thư viện **`github.com/cilium/ebpf`** cung cấp đường nạp và quản lý object eBPF từ Go không phụ thuộc cgo ở phía userspace:
 
-~~~
-[exec_observer.c] ──(clang dev)──> [exec_observer.o]
-                                         │
-                                   (bpf2go sinh mã)
-                                         │
-                                         ▼
-[Binary Go: main] <──(go build)── [exec_observer.go]
-       │
- (Chạy độc lập trên production, CGO_ENABLED=0)
-       │
-       ▼
-unix.Syscall(unix.SYS_BPF, ...) ──> Nạp vào Kernel
-~~~
+![Tách giai đoạn build eBPF và giai đoạn load trên Linux](../../assets/diagrams/ebpf-build-load.png)
+@figure Clang và bpf2go thuộc toolchain build. Binary Go mang object BPF đến runtime; kernel vẫn kiểm tra program, quyền và khả năng hỗ trợ trước khi load hoặc attach thành công.
 
 Đường build dưới đây yêu cầu Linux có BTF, `bpftool`, Clang hỗ trợ target BPF và header libbpf. Chạy từ thư mục lab; `vmlinux.h` cung cấp kiểu tracepoint mà header `linux/bpf.h` không khai báo. Header được sinh từ kernel mục tiêu, không phải source Go viết tay:
 

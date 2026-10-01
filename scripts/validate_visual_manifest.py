@@ -34,6 +34,12 @@ def main() -> int:
             source = ROOT / item["source"]
             if hashlib.sha256(source.read_text(encoding="utf-8").encode("utf-8")).hexdigest() != item["source_sha256"]:
                 errors.append(f"{item['asset_id']}: source checksum mismatch")
+            if item.get("style_source"):
+                style = (ROOT / item["style_source"]).resolve()
+                if (not style.is_relative_to(ROOT / "assets") or not style.is_file()
+                        or hashlib.sha256(style.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+                        != item.get("style_sha256")):
+                    errors.append(f"{item['asset_id']}: shared style checksum mismatch")
         if path in indexed:
             errors.append(f"{item['asset_id']}: duplicate manifest path")
         indexed[path] = item

@@ -86,16 +86,10 @@ Test đặt `wg.Add(workers)` trước khi tạo goroutine. Mỗi worker gọi `
 
 Đường chứng minh cho một worker có thể đọc thành lời:
 
-~~~text
-Add append reports
-  → Unlock registry.mu
-  → Done
-  → Wait returns
-  → Snapshot Lock
-  → copy reports
-~~~
+![Mốc hoàn tất giữa worker và bên chờ WaitGroup](../../assets/diagrams/waitgroup-completion-proof.png)
+@figure Đường chứng minh cho một worker: các bước trong từng goroutine giữ thứ tự code; cạnh đứt là quan hệ Done mở khóa lượt Wait này. Snapshot chỉ chạy sau khi Wait trả về.
 
-Mũi tên đầu, thứ hai và mũi tên sau `Wait` là thứ tự trong code; `Done → Wait returns` là điều `sync.WaitGroup` công bố. Mutex giữ các access vào slice không chồng lên nhau. `WaitGroup` không thay thế lock: nếu các worker cùng append vào một slice mà không khóa, chúng vẫn race dù main có chờ đến khi tất cả xong mới đếm kết quả.
+Các mũi tên liền là thứ tự trong code; `Done → Wait returns` là điều `sync.WaitGroup` công bố. Mutex giữ các access vào slice không chồng lên nhau. `WaitGroup` không thay thế lock: nếu các worker cùng append vào một slice mà không khóa, chúng vẫn race dù main có chờ đến khi tất cả xong mới đếm kết quả.
 
 Sau khi tự làm, chạy bản tham chiếu độc lập:
 

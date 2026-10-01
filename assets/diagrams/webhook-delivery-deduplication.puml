@@ -1,0 +1,11 @@
+@startuml
+!include publication-flow.iuml
+participant "Nguồn delivery" as source
+participant "Webhook server Go" as server
+source -> server : Delivery ID: 7a1b...
+server -> server : Kiểm tra / ghi nhận ID\nXử lý theo policy của lab
+server --> source : HTTP 200
+source -> server : Redelivery: cùng ID 7a1b...
+server -> server : Nhận diện delivery đã xử lý\nKhông lặp lại side effect
+server --> source : HTTP 200
+@enduml

@@ -1,0 +1,7 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>TAG</b>\nmy-app:v1.2.0\nTên tham chiếu có thể đổi đích" as tag
+rectangle "<b>DIGEST</b>\nsha256:7f83b1657ff1...\nĐịnh danh theo nội dung\n(hash rút gọn chỉ để minh họa)" as digest
+tag -down-> digest : phân giải tại thời điểm lấy image
+@enduml

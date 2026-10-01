@@ -1,0 +1,9 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>CHUẨN BỊ REQUEST</b>\nInitialize\nSerialize\nBuild" as prepare
+rectangle "<b>FINALIZE</b>\nMiddleware ký / thử lại\ntheo operation và cấu hình" as finalize
+rectangle "<b>DESERIALIZE</b>\nGọi handler HTTP bên trong\nGiải mã response trả về" as decode
+prepare -down-> finalize : gọi handler bên trong
+finalize -down-> decode : gọi handler bên trong
+@enduml

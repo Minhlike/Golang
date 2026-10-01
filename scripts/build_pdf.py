@@ -873,6 +873,10 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
 
 
 def build(*, candidate_only: bool = False) -> None:
+    import validate_manuscript_diagrams
+    diagram_issues = validate_manuscript_diagrams.validate()
+    if diagram_issues:
+        raise RuntimeError("Diagram preflight failed:\n" + "\n".join(diagram_issues))
     # Preflight: code line width validation
     import validate_code_width
     violations = validate_code_width.validate_all_code_blocks()

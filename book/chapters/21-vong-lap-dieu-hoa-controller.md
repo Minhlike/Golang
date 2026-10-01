@@ -10,10 +10,8 @@ Chương này chuyển từ quan sát sang điều hòa: controller đọc trạ
 
 Để hiểu vòng lặp điều hòa trong controller của chương này, ta phân biệt hai cách thiết kế: **Edge-Triggered (Kích hoạt theo cạnh)** và **Level-Triggered (Kích hoạt theo mức)**. Đây không phải lựa chọn bắt buộc của mọi hệ thống phân tán đáng tin cậy.
 
-~~~
-Edge:  Bắn sự kiện "Down" -> [Drop mạng] -> Mất tín hiệu
-Level: "Actual != Desired" -> Can thiệp -> Hội tụ về chuẩn
-~~~
+![Điều khiển theo sự kiện và theo trạng thái](../../assets/diagrams/edge-level-comparison.png)
+@figure Khi một thông điệp bị mất, controller dựa vào trạng thái có thể đọc lại observation và tiếp tục điều hòa. Khả năng hội tụ vẫn phụ thuộc việc quan sát và điều chỉnh thành công.
 
 Trong mô hình edge-triggered, consumer phản ứng với chuyển trạng thái. Nếu mất event mà không có replay, resync hoặc quan sát bổ sung, consumer có thể không biết state đã đổi và giữ kết luận cũ. Đây là lý do một controller cần recovery từ observation hiện tại, không chỉ một chuỗi event được giả định không bao giờ mất.
 

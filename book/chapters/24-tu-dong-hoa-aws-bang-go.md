@@ -18,24 +18,8 @@ Chương này trang bị cho bạn tư duy thiết kế hệ thống tự độn
 
 Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời lượng phiên của IAM Role có thể cấu hình linh hoạt từ 15 phút tới 12 giờ tùy theo cấu hình vai trò, trong khi các cơ chế phiên liên kết (chained roles) hay `AssumeRoleWithWebIdentity` áp dụng giới hạn riêng. Mỗi bộ thông tin xác thực tạm thời luôn gắn liền với một Session Token (`AWS_SESSION_TOKEN`). Cần đặc biệt lưu ý: nếu khóa tạm thời bị rò rỉ trong thời gian còn hiệu lực, kẻ tấn công vẫn có thể sử dụng hợp lệ cho đến khi hết hạn hoặc cho đến khi quản trị viên chủ động thu hồi phiên (thông qua IAM revocation policy, cập nhật inline policy, hoặc vô hiệu hóa IAM role).
 
-~~~
-[Chương trình Go gọi config.LoadDefaultConfig]
-                   │
-                   ▼
-    [Default Credential Provider Chain]
-    ├── 1. Biến môi trường (AWS_ACCESS_KEY_ID, Web Identity)
-    ├── 2. Tệp cấu hình (~/.aws/config, credentials, SSO)
-    ├── 3. Container credentials (ECS Task Role / Pod ID)
-    └── 4. EC2 Instance Metadata Service (IMDSv2 / IMDSv1)
-                   │
-                   ▼
-     [aws.Credentials struct]
-     - AccessKeyID:     ASIA... (Khóa tạm thời)
-     - SecretAccessKey: ...
-     - SessionToken:    ...     (Bắt buộc có)
-     - CanExpire:       true    (Đánh dấu có hạn dùng)
-     - Expires:         2026-09-24T13:00:00Z
-~~~
+![Chọn nguồn credential trong AWS SDK for Go v2](../../assets/diagrams/aws-credentials-resolution.png)
+@figure Cấu hình quyết định provider được chọn; đây là bản đồ nguồn, không phải thứ tự ưu tiên bất biến. Credential có thể là static hoặc tạm thời. Cache lấy credential khi có lượt Retrieve cần dữ liệu hợp lệ.
 
 ### Cơ chế bộ đệm và xác thực đồng bộ của SDK (`aws.CredentialsCache`)
 
@@ -57,22 +41,10 @@ Nhằm giảm thiểu số lượt gọi mạng lặp lại trước mỗi HTTP 
 
 AWS SDK for Go v2 dùng Smithy, một ngôn ngữ mô hình hóa service và bộ công cụ sinh SDK. Smithy không phải wire protocol thay cho HTTP hay SigV4; stack middleware là phần tổ chức đường gọi của SDK.
 
-Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra mạng, mà phải di chuyển qua một ngăn xếp gồm 5 pha xử lý tuần tự (**Middleware Stack**):
+Một operation như `s3.PutObject` đi qua năm step của **Middleware Stack**. Các step gọi handler bên trong; response đi ngược ra ngoài. Vì vậy Deserialize gọi bước trao đổi HTTP trước khi giải mã response trả về:
 
-~~~
-Ý định gọi hàm (PutObjectInput)
-             │
-             ▼
-   [Smithy Middleware Stack]
-   ├── 1. Initialize  ──> Khởi tạo tham số và kiểm tra đầu vào
-   ├── 2. Serialize   ──> Chuyển Go Struct sang HTTP Request
-   ├── 3. Build       ──> Gắn header, định tuyến endpoint
-   ├── 4. Finalize    ──> Ký chữ ký số SigV4 & Checksum
-   └── 5. Deserialize ──> Đọc HTTP Response thành Go Struct
-             │
-             ▼
-  [HTTP RoundTripper / Mạng] ──> [AWS Cloud Service Endpoint]
-~~~
+![Đường request và response qua Smithy middleware](../../assets/diagrams/smithy-request-response.png)
+@figure Mũi tên liền biểu diễn đường gọi vào handler, mũi tên đứt biểu diễn response trở về Deserialize. Middleware cụ thể và vị trí xử lý checksum phụ thuộc operation cùng cấu hình; sơ đồ không mô tả từng lần retry.
 
 ### Chữ ký số SigV4 (Signature Version 4)
 

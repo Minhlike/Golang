@@ -1,0 +1,16 @@
+@startuml
+!include publication-flow.iuml
+skinparam Padding 6
+start
+:Gắn và lưu finalizer của controller;
+:Nhận yêu cầu xóa\nObject có deletionTimestamp;
+:Reconciler dọn tài nguyên ngoài;
+if (Cleanup thành công?) then (có)
+  :Gỡ finalizer của controller\nvà lưu qua API server;
+  :API server xét điều kiện xóa;
+  stop
+else (không)
+  :Giữ finalizer\nThử lại theo policy;
+  stop
+endif
+@enduml

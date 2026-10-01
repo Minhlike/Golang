@@ -1,0 +1,13 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>SOURCE REVISION</b>\nCommit nguồn đã chọn" as source
+rectangle "<b>JOB · verify</b>\nTest part16 / part18" as verify
+rectangle "<b>JOB · build-artifact</b>\nBuildx metadata\nPhân biệt image ID / digest" as build
+rectangle "<b>JOB · promote-production</b>\nEnvironment production\nOIDC: id-token write\nCLI kiểm tra candidate" as promote
+rectangle "<b>QUYẾT ĐỊNH</b>\nThiếu bằng chứng: từ chối\nĐược duyệt: cập nhật\ndesired bằng manifest digest" as decision
+source -down-> verify
+verify -down-> build
+build -right-> promote
+promote -up-> decision
+@enduml

@@ -1,0 +1,47 @@
+' Shared print style for the replacement diagrams. No semantic content here.
+skinparam dpi 300
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 22
+skinparam defaultFontColor #000000
+skinparam ArrowColor #333333
+skinparam ArrowThickness 1.5
+skinparam nodesep 24
+skinparam ranksep 24
+skinparam Padding 10
+skinparam rectangle {
+  BackgroundColor #F4F4F4
+  BorderColor #555555
+  FontColor #000000
+  RoundCorner 10
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+  FontColor #000000
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+  FontColor #000000
+  FontSize 22
+}
+skinparam activity {
+  BackgroundColor #F4F4F4
+  BorderColor #555555
+  FontColor #000000
+}
+skinparam sequence {
+  ParticipantBackgroundColor #F4F4F4
+  ParticipantBorderColor #555555
+  ParticipantFontColor #000000
+  LifeLineBorderColor #999999
+  LifeLineBackgroundColor #FFFFFF
+  ArrowFontSize 22
+  GroupFontSize 22
+  GroupHeaderFontSize 22
+  GroupBackgroundColor #FFFFFF
+  GroupBorderColor #999999
+}
+hide footbox

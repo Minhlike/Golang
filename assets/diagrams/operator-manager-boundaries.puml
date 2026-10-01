@@ -1,0 +1,17 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>MANAGER</b>\nQuản lý lifecycle và các component" as manager
+rectangle "<b>SCHEME</b>\nGo type và GVK" as scheme
+rectangle "<b>CONTROLLER</b>\nWatch / queue\nGọi Reconcile(ctx, req)" as controller
+rectangle "<b>RECONCILER</b>\nĐọc AppService\nĐiều chỉnh Deployment\nCleanup / cập nhật Status" as reconcile
+rectangle "<b>CLIENT + CACHE</b>\nĐọc cache nếu được cấu hình\nGhi tới API server" as client
+rectangle "<b>API SERVER</b>\nLưu resource và phục vụ watch" as api
+manager -left-> scheme
+manager -down-> controller
+manager -right-> client
+controller -down-> reconcile
+reconcile -right-> client : Get / write
+client -down-> api : đường HTTP
+api -up[dashed]-> client : list / watch\nnuôi cache
+@enduml

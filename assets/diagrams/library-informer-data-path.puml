@@ -1,0 +1,16 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>API SERVER</b>\nList / watch" as api
+rectangle "<b>REFLECTOR</b>\nNhận observation" as reflector
+rectangle "<b>DeltaFIFO</b>\nDelta theo khóa" as delta
+rectangle "<b>INFORMER</b>\nXử lý delta\nCập nhật Indexer; phát event" as informer
+rectangle "<b>WORKQUEUE</b>\nHandler đưa khóa vào queue" as queue
+rectangle "<b>WORKER</b>\nĐọc observation từ cache\nĐiều hòa theo khóa" as worker
+api -down-> reflector
+reflector -down-> delta
+delta -right-> informer
+informer -up-> queue
+queue -up-> worker
+worker ..> informer : đọc cache
+@enduml

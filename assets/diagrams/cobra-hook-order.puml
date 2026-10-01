@@ -1,0 +1,12 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>TRƯỚC LỆNH</b>\nPersistentPreRun / E\nsau đó PreRun / E" as pre
+rectangle "<b>THỰC THI LỆNH</b>\nRun / RunE" as run
+rectangle "<b>SAU LỆNH</b>\nPostRun / E\nsau đó PersistentPostRun / E" as post
+rectangle "<b>DỪNG ĐƯỜNG CHẠY</b>\nTrả lỗi cho bên gọi" as fail
+pre -down-> run : hook được chọn\nhoàn tất không lỗi
+run -down-> post : hoàn tất không lỗi
+pre -right-> fail : hook E trả lỗi
+run -right-> fail : RunE trả lỗi
+@enduml

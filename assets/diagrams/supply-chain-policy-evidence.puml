@@ -1,0 +1,15 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>01 · NGUỒN</b>\nCommit đã chọn" as source
+rectangle "<b>02 · PHỤ THUỘC</b>\nModule / go.sum\nNguồn kiểm tra checksum" as deps
+rectangle "<b>03 · BUILD</b>\nMôi trường build\nBằng chứng provenance" as build
+rectangle "<b>04 · ARTIFACT</b>\nĐịnh danh bằng digest" as artifact
+rectangle "<b>05 · XÁC MINH</b>\nChữ ký / identity\nBằng chứng theo policy" as verify
+rectangle "<b>06 · CỔNG POLICY</b>\nĐủ bằng chứng: ALLOW\nThiếu / không hợp lệ: DENY" as policy
+source -down-> deps
+deps -down-> build
+build -right-> artifact
+artifact -up-> verify
+verify -up-> policy
+@enduml

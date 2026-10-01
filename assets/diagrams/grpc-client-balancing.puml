@@ -1,0 +1,15 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>ClientConn</b>\nỨng dụng gửi RPC" as client
+rectangle "<b>RESOLVER</b>\nCung cấp endpoint\ntheo scheme / cấu hình" as resolver
+rectangle "<b>BALANCER / PICKER</b>\nVí dụ: round_robin\nChọn SubConn ready" as balancer
+rectangle "SubConn 1\nBackend 1" as one
+rectangle "SubConn 2\nBackend 2" as two
+rectangle "SubConn 3\nBackend 3" as three
+resolver -down-> balancer : cập nhật endpoint
+client -right-> balancer : chọn đường RPC
+balancer -down-> one
+balancer -down-> two
+balancer -down-> three
+@enduml

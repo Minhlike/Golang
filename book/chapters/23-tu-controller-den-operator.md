@@ -17,15 +17,8 @@ Câu hỏi trung tâm của chương này là:
 
 Operator dùng controller để tự động hóa vòng đời một ứng dụng hay domain cụ thể, thường cùng một CRD. Controller nói chung cũng có thể làm việc với custom resource; không có quy tắc rằng nó chỉ hiểu tài nguyên dựng sẵn. Điểm khác biệt hữu ích là tri thức vận hành mà reconciliation thể hiện, không một loại controller đặc biệt do Go hay Kubernetes compiler nhận diện.
 
-~~~
-Tri thức chuyên gia (Domain Knowledge)
-      │ (Đóng gói vào mã nguồn Go)
-      ▼
-[Kubernetes Operator]
-      ├── 1. CRD              ──> Khai báo ý định
-      ├── 2. Controller       ──> Vòng lặp điều hòa
-      └── 3. Tích hợp ngoài   ──> Quản trị vòng đời
-~~~
+![Tri thức vận hành trong một operator](../../assets/diagrams/operator-capabilities.png)
+@figure Operator biểu đạt tri thức vận hành qua API, vòng lặp điều hòa và các tích hợp quản lý tài nguyên. Các thành phần này là vai trò thiết kế, không phải ba bước chạy tuần tự.
 
 Thay vì bắt người dùng phải tự tạo `Deployment`, gắn `ConfigMap`, tạo `Secret` và mở `Service`, Operator cung cấp một tài nguyên duy nhất gọn gàng:
 
@@ -48,27 +41,10 @@ Khi bạn nộp khai báo trên, Operator sẽ tự động sinh ra Deployment t
 
 Viết Operator bằng `client-go` thuần túy đòi hỏi tự nối các phần quản lý cache, queue và lifecycle. Thư viện `sigs.k8s.io/controller-runtime` cung cấp lớp tổ chức chung cho các phần này; lượng code tiết kiệm phụ thuộc yêu cầu của operator, không có con số chung.
 
-Sơ đồ phân nhánh dưới đây mô tả cấu trúc của một hệ thống Operator hiện đại:
+Sơ đồ dưới đây tách trách nhiệm quản lý tiến trình, xử lý khóa và truy cập tài nguyên:
 
-~~~
-[Custom Resource: AppService]
-              │
-              ▼
-   [controller-runtime Manager]
-   ├── Scheme:       Ánh xạ Go Struct <-> GVK
-   ├── SharedCache:  Đọc snapshot cực nhanh (In-Memory)
-   ├── SplitClient:  Đọc từ Cache / Ghi thẳng API Server
-   └── Controller:   Hàng đợi và phân phối Reconcile
-              │
-              ▼
-    [Reconciler Function]
-    (ctx context.Context, req ctrl.Request)
-              │
-              ├───> Đọc Trạng thái Thực tế (Get từ Cache)
-              ├───> Dọn dẹp ngoại vi nếu có DeletionTimestamp
-              ├───> Tạo / Điều chỉnh Tài nguyên Con (Deployment)
-              └───> Cập nhật Status (r.Status().Update)
-~~~
+![Ranh giới giữa Manager, Reconciler và Client](../../assets/diagrams/operator-manager-boundaries.png)
+@figure Manager tổ chức các component; controller gọi Reconciler cho một khóa. Client dùng cache cho đường đọc được cấu hình và HTTP cho đường ghi; sơ đồ lược bỏ các đường đọc không qua cache.
 
 ### Bốn trụ cột của controller-runtime
 
@@ -143,22 +119,8 @@ Nếu đối tượng `AppService` bị xóa trước khi cleanup hoàn tất, c
 
 Đây chính là sứ mệnh của **Finalizer** (Bộ chốt vòng đời).
 
-~~~
-1. Khởi tạo tài nguyên:
-   AddFinalizer(...) -> Update qua API server
-
-2. Người dùng gõ "kubectl delete":
-   API Server KHÔNG XÓA NGAY!
-   Set deletionTimestamp = "2026-09-24T12:00:00Z"
-   Tài nguyên chuyển sang trạng thái "Terminating"
-
-3. Reconciler thức dậy:
-   Thấy deletionTimestamp != nil
-   ──> Thực thi dọn dẹp tài nguyên đám mây
-   ──> Dọn dẹp thành công?
-       -> Thành công: gỡ finalizer của controller và Update
-       -> Lỗi: giữ finalizer và xử lý retry theo policy
-~~~
+![Luồng dọn tài nguyên bằng finalizer](../../assets/diagrams/operator-finalizer-lifecycle.png)
+@figure Cleanup thất bại giữ finalizer để có thể thử lại. Cleanup thành công chỉ cho phép gỡ finalizer của controller này; API server còn phải xét các điều kiện xóa khác.
 
 API server chỉ có thể hoàn tất xóa khi các điều kiện lifecycle, gồm toàn bộ finalizer còn lại, cho phép. Gỡ finalizer của controller này không hứa object biến mất ngay; controller không trực tiếp gọi etcd để xóa.
 

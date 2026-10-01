@@ -5,17 +5,7 @@ Phụ bản này đứng sau Chương 29 và ngay trước Atlas Lỗi Go. Các 
 
 Phụ bản chọn 50 thư viện Go trong các lĩnh vực DevOps, cloud, networking, observability, IaC và hạ tầng Agent. Mỗi mục ghi version/commit được ghim để người đọc có thể đối chiếu. Mô tả API hoặc hợp đồng công khai không đồng nghĩa đã kiểm chứng mọi chi tiết implementation; câu nào nói đến cơ chế nội bộ phải có điểm neo source tương ứng ở bản đã ghim.
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    ZERO-GUESS PROTOCOL                     │
-│        NO VERIFIED SOURCE = NO IMPLEMENTATION CLAIM        │
-│                                                            │
-│ 1. Không đoán version, tag, module path hay tên hàm.       │
-│ 2. Mọi cơ chế được neo vào type/struct/file thực tế.       │
-│ 3. Không viết brochure tiếp thị; chỉ phân tích cơ chế code.│
-│ 4. Sau mỗi thư viện, rút ra góc nhìn kỹ thuật đích đáng.   │
-└────────────────────────────────────────────────────────────┘
-```
+> Quy tắc kiểm chứng: không đoán version, tag, module path hay tên hàm. Một claim về implementation phải có source đã xác minh; cơ chế được neo vào type, struct hoặc file cụ thể. Mỗi mục phân tích cơ chế và ý nghĩa kỹ thuật, không dùng lời quảng bá thay cho bằng chứng.
 
 ---
 
@@ -29,21 +19,8 @@ Reflector duy trì observation bằng list/watch và xử lý thay đổi resour
 
 Dữ liệu nhận về không được chuyển ngay cho người dùng mà đẩy vào một hàng đợi gom cụm đột biến mang tên `DeltaFIFO` (`tools/cache/delta_fifo.go`). Khi một Pod bị sửa đổi dồn dập 10 lần trong nửa giây, `DeltaFIFO` lưu trữ chuỗi delta theo khóa định danh `namespace/name`. Từ đây, vòng lặp xử lý nội bộ của Informer (`controller.processLoop`) rút delta ra, cập nhật đối tượng vào một bộ nhớ đệm luồng an toàn cục bộ gọi là `Indexer` (`tools/cache/index.go`), được bảo vệ bởi `sync.RWMutex`.
 
-```
-API Server Watch Stream
-         │
-         ▼
-[Reflector: ListAndWatch]
-         │ (enqueue)
-         ▼
-[DeltaFIFO Queue]
-         │ (controller.processLoop)
-         ▼
-[SharedIndexInformer] ───► [Thread-Safe Cache Indexer]
-         │ (dispatch)
-         ▼
-[Typed workqueue] ───► [Worker Goroutines]
-```
+![Đường observation và khóa công việc trong informer](../../assets/diagrams/library-informer-data-path.png)
+@figure Informer cập nhật cache rồi phát event tới handler; handler của ứng dụng đưa khóa vào workqueue. Worker đọc observation hiện có khi điều hòa, không coi payload event là trạng thái cuối cùng.
 
 Điểm neo kỹ thuật đáng giá nhất để học trong `client-go` nằm ở `util/workqueue/queue.go` (`type Typed[T]`). `TypedInterface[T]` là giao diện public; `TypedQueueConfig[T]` là cấu hình. Triển khai `Typed[T]` phối hợp hàng đợi có thể thay thế và hai tập khóa:
 
@@ -100,11 +77,8 @@ Một lời gọi S3 được SDK serialize, resolve endpoint, ký khi operation
 
 SDK dùng `middleware.Stack` của module `github.com/aws/smithy-go`, không phải type khai báo trong `aws/middleware/stack.go`. Năm stage tổ chức request và response path như sau:
 
-```
-[1. Initialize] ──► [2. Serialize] ──► [3. Build]
-                                            │
-[5. Deserialize] ◄── [4. Finalize] ◄────────┘
-```
+![Các step lồng handler trong Smithy](../../assets/diagrams/library-smithy-step-order.png)
+@figure Năm step tổ chức đường gọi vào bên trong. Deserialize gọi handler HTTP trước khi giải mã response; sơ đồ lược bỏ đường response đi ngược ra ngoài các step.
 
 1. **Initialize:** Kiểm tra hợp lệ các tham số đầu vào và nạp giá trị mặc định vào ngữ cảnh.
 2. **Serialize:** Đưa input operation vào request của transport; đường HTTP dùng `transport/http.Request` của smithy-go cho URL, method, headers và body.
@@ -193,10 +167,8 @@ Nếu SDK đo telemetry trong tiến trình, Collector là đường tiếp nh�
 
 Hợp đồng cấu hình Collector nối ba loại component trong pipeline:
 
-```
-[Receiver] ──► [Processor(s)] ──► [Exporter]
- (Fan-In)       (Biến đổi)       (Fan-Out)
-```
+![Ba vai trò trong pipeline OpenTelemetry Collector](../../assets/diagrams/collector-pipeline.png)
+@figure Pipeline nối receiver, các processor được cấu hình và exporter. Fan-in, fan-out, queue và retry phụ thuộc cách nối component cùng cấu hình cụ thể.
 
 1. **Receiver:** Lắng nghe trên cổng mạng (gRPC/HTTP), chuyển đổi payload của các giao thức khác nhau về mô hình dữ liệu nội bộ chuẩn hóa mang tên `pdata` (`go.opentelemetry.io/collector/pdata`).
 2. **Processor:** Áp dụng các quy tắc biến đổi: gom lô (`batch`), lọc dữ liệu (`filter`), hoặc lấy mẫu (`probabilistic_sampler`).
@@ -248,15 +220,8 @@ Nếu daemon quản lý container gặp sự cố, vòng đời của task đang
 
 Câu trả lời nằm ở ranh giới daemon–shim của runtime v2; phía daemon được triển khai trong `core/runtime/v2/shim.go`. `containerd-shim-runc-v2` là một shim cụ thể, không đại diện mọi runtime.
 
-```
-[containerd daemon] (Quản lý cấp cao)
-        │
-        ▼ (khởi tạo shim process riêng)
-[containerd-shim-v2] (Boundary lifecycle task)
-        │
-        ▼ (runtime được chọn)
-[Ứng dụng Container] (Chạy trực tiếp trên Linux Kernel)
-```
+![Ranh giới daemon, runtime shim và container task](../../assets/diagrams/containerd-shim-boundary.png)
+@figure Daemon giao tiếp với shim qua endpoint; shim quản lý task qua runtime được chọn. Ranh giới tiến trình này không bảo đảm mọi failure của daemon đều vô hại với workload.
 
 Daemon dùng shim process riêng để quản lý task. Ở commit được pin, `core/runtime/v2/shim.go` cho thấy containerd nạp shim, đọc bootstrap result và nối tới endpoint của shim. File này không chứng minh shim nào cũng trở thành subreaper, dùng đúng syscall `wait4` hay trực tiếp giữ mọi luồng I/O; muốn khẳng định các chi tiết ấy phải đọc implementation của shim được chọn.
 
@@ -409,17 +374,8 @@ Ranh giới là connection so với request: cân bằng L4 không tự phân ph
 
 Để cân bằng tải thực sự, `grpc-go` triển khai kiến trúc **Cân Bằng Tải Phía Máy Khách (Client-Side Load Balancing)** tại `clientconn.go` (`type ClientConn`) và `balancer_conn_wrappers.go`.
 
-```
-[gRPC Client]
-      │
-      ▼ (phân giải headless service DNS)
-[Resolver] ──► Trả về danh sách IP: [Pod-1, Pod-2, Pod-3]
-      │
-      ▼ (tạo kết nối vật lý độc lập)
-[Balancer] ──► SubConn 1 ──► [Pod-1]
-           ──► SubConn 2 ──► [Pod-2]
-           ──► SubConn 3 ──► [Pod-3]
-```
+![Resolver và balancer trong gRPC client](../../assets/diagrams/grpc-client-balancing.png)
+@figure Resolver cung cấp endpoint, balancer quản lý SubConn và picker chọn đường cho RPC. Ba backend cùng policy round_robin là cấu hình minh họa, không phải mặc định của mọi ClientConn.
 
 Resolver cung cấp endpoint theo scheme và implementation. Với DNS headless service phù hợp, endpoint có thể là Pod IP; không hứa danh sách luôn mới hoặc đầy đủ. Policy `round_robin` có thể tạo SubConn tới endpoint và chọn đường ready cho RPC; nó không phải mặc định duy nhất. SubConn là abstraction kết nối của balancer, không tên một type trong file transport cũ.
 
@@ -651,12 +607,8 @@ Cobra tổ chức toàn bộ ứng dụng CLI dưới dạng một **Cây Lệnh
 
 Trong đường command execution của version ghim, các hook được chọn có thứ tự sau; hook có thể vắng, bản `E` có thể trả lỗi làm dừng đường chạy:
 
-```
-PersistentPreRun/E -> PreRun/E -> Run/E
-                                |
-                                v
-                       PostRun/E -> PersistentPostRun/E
-```
+![Thứ tự hook và đường trả lỗi của Cobra](../../assets/diagrams/cobra-hook-order.png)
+@figure Chỉ các hook được chọn mới chạy; hook có thể vắng. Lỗi từ hook E hoặc RunE ngắt đường chạy trước các hook phía sau.
 
 Cobra phân biệt `Flags()` của lệnh với `PersistentFlags()` có thể kế thừa xuống cây lệnh. Lệnh con có thể khai báo flag trùng tên hoặc đổi behavior; đọc resolution thực tế thay vì mặc định một flag luôn có cùng nghĩa ở mọi cấp.
 
@@ -675,19 +627,8 @@ Làm thế nào để kết hợp tất cả các nguồn cấu hình này mà k
 
 Viper ở version đã pin có thứ tự ưu tiên gồm explicit `Set`, flag đã bind, environment, config file, remote key/value store và default. Đây là quy tắc tìm value, không thay validation miền giá trị hay policy secret:
 
-```
-1. Explicit Set                         [Ưu tiên cao nhất]
-        ▲
-2. Cờ dòng lệnh (Flags đã bind qua pflag)
-        ▲
-3. Biến môi trường (Environment variables)
-        ▲
-4. File cấu hình (YAML, JSON, TOML...)
-        ▲
-5. Key/Value store từ xa (Consul, etcd)
-        ▲
-6. Giá trị mặc định (SetDefault)          [Ưu tiên thấp nhất]
-```
+![Thứ tự ưu tiên nguồn giá trị trong Viper](../../assets/diagrams/viper-value-precedence.png)
+@figure Với một key, Viper ưu tiên nguồn phía trên khi nguồn ấy có giá trị hợp lệ theo cấu hình. Đây là thứ tự ưu tiên khi đọc, không phải lịch nạp file.
 
 `GetInt` đọc theo precedence đó. `DATABASE_PORT` chỉ là key môi trường tương ứng khi đã cấu hình binding hoặc key replacer phù hợp; dấu chấm trong config key không tự luôn đổi thành gạch dưới. Nếu `Set` đã override key, nó đứng trên cả flag. Sau khi tìm và chuyển giá trị, application vẫn cần kiểm tra range và báo lỗi config phù hợp.
 
@@ -1067,9 +1008,8 @@ Khi nhiều Agent cùng sửa state có pointer dùng chung, chương trình v�
 
 `agentscope-go` là một lựa chọn tổ chức Agent, message và lifecycle. Khi đọc source đã pin, phải phân biệt abstraction Actor với những mechanism implementation thực sự có; tên framework không chứng minh isolation hoặc mọi failure đã được giải quyết.
 
-```
-[Agent A] ──(Gửi Message qua Mailbox)──► [Agent B]
-```
+![Giao tiếp qua mailbox theo contract của ứng dụng](../../assets/diagrams/agent-mailbox-contract.png)
+@figure Mailbox là mental model của policy giao tiếp. Go và framework không tự cấm direct call hay chia sẻ pointer giữa các agent.
 
 Một mô hình actor có thể đặt state và mailbox riêng cho từng Agent, nhưng Go không tự cấm direct call hay chia sẻ pointer. Thiết kế ứng dụng phải quy định giao tiếp và ownership, rồi kiểm tra các access thực tế. Không suy ra an toàn chỉ từ tên pattern.
 
@@ -1079,22 +1019,7 @@ README mô tả agent, tools, workflow, contexts và channels. Diagram mailbox p
 
 ## 5. TỔNG KẾT & QUY TẮC BẢO TOÀN KIẾN TRÚC
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                  BẢN ĐỒ VỊ TRÍ CUỐI SÁCH                   │
-│                                                            │
-│   Chương 20: Dự án tổng kết opsprobe                       │
-│   Chương 29: Kỹ sư và bằng chứng trong kỷ nguyên Agent      │
-│                                                            │
-│   ─────────────────── BACK MATTER ─────────────────────────│
-│   ► ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD           │
-│                                                            │
-│   ─────────────────── APPENDIX CUỐI CÙNG ──────────────────│
-│   ► PHỤ LỤC A: ATLAS LỖI GO (LUÔN Ở TRANG CUỐI SÁCH)       │
-│                                                            │
-│       * INVARIANT BẤT BIẾN: PHỤ LỤC A LUÔN Ở CUỐI CÙNG *   │
-└────────────────────────────────────────────────────────────┘
-```
+Sau các chương, sách đặt Atlas mã nguồn 50 thư viện Go DevOps và cloud để nối kiến thức với implementation thực tế. Phụ lục A — Atlas Lỗi Go — nằm sau Atlas mã nguồn và luôn là nội dung cuối cùng của sách.
 
 Atlas này không tồn tại độc lập mà là điểm tựa thực tế cho các chương trước đó trong cuốn sách:
 - Informer và controller-runtime liên hệ **Chương 17, 21–23**; Chương 16 dạy observability, không phải Kubernetes client API.

@@ -1,0 +1,13 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>LÚC BUILD · C</b>\nexec_observer.c\nClang biên dịch BPF" as source
+rectangle "<b>LÚC BUILD · bpf2go</b>\nSinh Go bindings và\nobject BPF để nhúng" as generate
+rectangle "<b>LÚC BUILD · GO</b>\ngo build\nBinary chứa object BPF" as binary
+rectangle "<b>LÚC CHẠY · USER SPACE</b>\nGo loader gọi bpf(2)\nqua thư viện cilium/ebpf" as loader
+rectangle "<b>LÚC CHẠY · KERNEL</b>\nVerifier kiểm tra program\nLoad / attach theo quyền\nvà khả năng của kernel" as kernel
+source -down-> generate
+generate -down-> binary
+binary -right-> loader
+loader -up-> kernel
+@enduml

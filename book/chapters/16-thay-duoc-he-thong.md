@@ -138,15 +138,8 @@ span `probe.dependency`; kết quả cuối cùng được ghi thành JSON log, 
 counter và histogram. Console exporter in trace ra stdout để thấy quan hệ
 parent-child ngay trên máy local.
 
-~~~text
-HTTP /probe?mode=timeout
-    |
-    +-- structured log: mode, outcome, status, duration_ms
-    +-- counter: probe_requests_total{outcome="timeout"}
-    +-- histogram: probe_request_duration_seconds
-    |   {outcome="timeout"}
-    `-- trace: request -> dependency (deadline exceeded)
-~~~
+![Các đường ghi nhận kết quả của một request probe](../../assets/diagrams/probe-observation-path.png)
+@figure Cùng request cung cấp dữ liệu cho log, trace, counter và histogram. Các đường ghi nhận thể hiện những góc nhìn khác nhau, không phải log sinh counter hay trace sinh histogram.
 
 Đây là một evidence path, không phải ba cách đặt tên cho cùng một dòng. Counter
 trả lời *bao nhiêu lần đã hoàn tất theo outcome*. Histogram trả lời *duration

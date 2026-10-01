@@ -1,0 +1,16 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>IMAGE SAU BUILD</b>\nprobe-api:dev" as image
+package "KUBERNETES" {
+  rectangle "<b>DEPLOYMENT</b>\nDesired state\nPod template + probes" as deployment
+  rectangle "<b>SERVICE</b>\nChọn endpoint\nĐường traffic" as service
+  rectangle "<b>POD · RUNTIME CHẠY IMAGE</b>\nProbes: /readyz · /livez" as pod
+  deployment -down-> pod : điều phối
+  service -down-> pod : định tuyến
+}
+rectangle "<b>OBSERVER Go · client-go</b>\nGet / Watch; chỉ đọc" as observer
+image -down-> deployment
+deployment -down[dashed]-> observer : observation\nqua API server
+pod -[hidden]down-> observer
+@enduml

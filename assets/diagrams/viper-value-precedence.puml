@@ -1,0 +1,7 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>ƯU TIÊN CAO</b>\n1. Explicit Set\n2. Flag đã bind\n3. Biến môi trường" as high
+rectangle "<b>ƯU TIÊN THẤP HƠN</b>\n4. File cấu hình\n5. Remote key/value store\n6. SetDefault" as low
+high -down-> low : tìm giá trị cho một key;\nnguồn trên ghi đè nguồn dưới
+@enduml

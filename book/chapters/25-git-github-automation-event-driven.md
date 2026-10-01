@@ -17,19 +17,8 @@ Chương này phân tích sâu bản chất kỹ thuật của Git và GitHub d�
 Câu hỏi trung tâm của chương này là:
 > *Vì sao một hệ thống tự động hóa tin cậy phải tách bạch hoàn toàn giữa Trạng thái Git (Local Git State) và Trạng thái GitHub (GitHub Hosted State)?*
 
-~~~
-           [THẾ GIỚI GIT CỤC BỘ]
-   (Độc lập, Phi tập trung, Nội dung định danh)
-   ├── Object Store: Blob, Tree, Commit, Tag
-   ├── DAG:          Đồ thị có hướng không chu trình
-   └── Commit SHA:   Khóa băm toàn vẹn SHA-1 / SHA-256
-                           ≠
-          [THẾ GIỚI GITHUB HOSTED]
-       (Tập trung, Phụ thuộc mạng & Quota)
-   ├── Pull Requests, Issue Comments, Reviews
-   ├── Check Runs, Status API, Releases
-   └── Webhooks, Permission RBAC, Rate Limits
-~~~
+![Ranh giới giữa Git cục bộ và dịch vụ GitHub](../../assets/diagrams/git-github-boundaries.png)
+@figure Git quản lý object và lịch sử trong kho; GitHub bổ sung các dịch vụ cộng tác có API, quyền truy cập và giới hạn riêng.
 
 ### Hai mô hình dữ liệu song hành
 
@@ -46,21 +35,8 @@ Khi GitHub gửi một sự kiện (ví dụ `pull_request.opened`) đến máy 
 GitHub ký toàn bộ nội dung gói tin (raw payload) bằng mã khóa bí mật (Webhook Secret) thông qua thuật toán HMAC-SHA256, và đính kèm vào header:
 `X-Hub-Signature-256: sha256=<hex_digest>`
 
-~~~
-GitHub phát sự kiện                   Máy chủ nhận sự kiện (Go)
-       │                                         │
-       ▼                                         ▼
-[Tính HMAC-SHA256]                       [Tính HMAC-SHA256]
-(Secret + Payload)                       (Secret + Payload)
-       │                                         │
-       ▼                                         ▼
-Header: sha256=a1b2c3...          Expected: sha256=a1b2c3...
-       │                                         │
-       └────────── Gửi HTTP POST ───────────────>┤
-                                                 │
-                                       [So sánh an toàn:]
-                                    subtle.ConstantTimeCompare
-~~~
+![Xác minh chữ ký HMAC của webhook GitHub](../../assets/diagrams/webhook-hmac-verification.png)
+@figure Server tính chữ ký từ chính raw body đã nhận rồi so sánh với header. Không tuần tự hóa lại JSON trước khi kiểm tra chữ ký.
 
 ### Rủi ro rò rỉ thông tin qua thời gian thực thi (Timing Side-Channel)
 
@@ -110,15 +86,8 @@ Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho 
 Mỗi lần phát sự kiện, GitHub đính kèm một mã UUID duy nhất tại header:
 `X-GitHub-Delivery: 7a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d`
 
-~~~
-GitHub / Quản trị viên / API         Máy chủ Webhook (Go)
-      │                                       │
-      ├─ 1. Delivery "7a1b..." ──────────────>│ (Xử lý OK)
-      │                                       │
-      ├─ 2. Delivery "7a1b..." (Redeliver) ──>│
-      │                                       ├─ Đã lưu ID?
-      │  <── HTTP 200 OK (duplicate) ─────────┴─ BỎ QUA!
-~~~
+![Nhận diện webhook được gửi lại bằng Delivery ID](../../assets/diagrams/webhook-delivery-deduplication.png)
+@figure Lab nhận diện cùng Delivery ID để tránh lặp side effect trong đường chạy được kiểm thử. Lưu bền, xử lý crash và delivery đồng thời cần policy cùng cơ chế riêng.
 
 Delivery ID giúp nhận diện cùng một delivery khi redeliver. Nó không được HMAC payload ký kèm như một phần header, nên riêng việc lưu ID chưa chống replay từ bên giữ payload/chữ ký hợp lệ rồi đổi ID. Sau xác thực, cần ràng buộc event, repository và operation identity; state xử lý phải bền vững nếu muốn giữ kết quả qua crash.
 

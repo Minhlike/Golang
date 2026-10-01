@@ -19,27 +19,8 @@ Chương này hướng dẫn bạn tư duy và xây dựng một **Cổng kiểm
 
 Mô hình dưới đây nối sáu chặng của một policy delivery. Mỗi mũi tên đòi bằng chứng riêng; đây không phải chuỗi tự bảo chứng:
 
-~~~
-[Mã nguồn Git] (Commit SHA bất biến)
-      │
-      ▼
-[Đồ thị phụ thuộc] (go.sum + Checksum Database)
-      │
-      ▼
-[Quy trình Build cô lập] (Tạo SLSA Provenance Attestation)
-      │
-      ▼
-[Artifact Container] (Định danh bằng sha256 Content Digest)
-      │
-      ▼
-[Ký số mật mã] (Cosign / Sigstore Keyless Signature)
-      │
-      ▼
-[Cổng chính sách Fail-Closed] (Chặn đứng mọi sai lệch)
-      │
-      ▼
-[Quyết định Triển khai] (ALLOW hoặc DENY)
-~~~
+![Chuỗi bằng chứng và cổng chính sách triển khai](../../assets/diagrams/supply-chain-policy-evidence.png)
+@figure Cổng chỉ xác minh các bằng chứng mà policy yêu cầu. Digest, chữ ký và provenance có vai trò khác nhau; đủ bằng chứng theo policy không chứng minh artifact không có mọi lỗi hoặc lỗ hổng.
 
 Mỗi mắt xích cần bằng chứng phù hợp, nhưng không một file hay label nào tự chứng minh toàn bộ chuỗi. `go.sum` ghi checksum module mà toolchain đã biết và kiểm tra, chứ không khóa hoàn toàn graph như lockfile. Provenance chỉ hữu ích sau khi verifier kiểm tra subject, identity và expectation của policy. Digest nhận diện nội dung; Cosign keyless verification còn kiểm tra trust root, certificate identity/issuer và claim digest. Lab dưới đây mô hình hóa policy fail-closed, không thực hiện các bước Cosign/SLSA đó.
 
@@ -82,13 +63,8 @@ Xét một scenario: project dùng `golang.org/x/crypto`, và version đang dùn
 ### Cơ chế phân tích đồ thị cuộc gọi của `govulncheck`
 Ở chế độ source, `govulncheck` còn phân tích khả năng vươn tới của ký hiệu, thay vì chỉ báo module có finding. Phải đọc chế độ scan và coverage của kết quả đang dùng.
 
-~~~
-[Ứng dụng: main.go]
-      │
-      ├──> bcrypt.GenerateFromPassword (Được gọi)
-      │
-      └──X (Bỏ qua) ssh.ParsePrivateKey [CRITICAL]
-~~~
+![Phân biệt phụ thuộc có symbol và đường gọi có thể tới](../../assets/diagrams/vulnerability-call-reachability.png)
+@figure Trong ví dụ phân tích này, ứng dụng có đường gọi tới bcrypt nhưng không thấy đường gọi tới ssh.ParsePrivateKey. Kết quả phải được hiểu trong giới hạn của bộ phân tích và build đang xét.
 
 JSON của govulncheck là stream message theo schema của version dùng, có OSV và finding với trace; không phải một object cố định chứa `Modules` và `Traces` viết hoa. Trong lab, `Severity` và `Reachable` là input fixture đã chuẩn hóa, không được parse từ output scanner. Finding có trace tới symbol chỉ là kết quả phân tích tĩnh về đường gọi có thể tới, không chứng minh đường ấy chạy hoặc khai thác được. Adapter thật phải ghi version/schema, chế độ source hay binary, scanner coverage và cách suy ra policy từ finding.
 
@@ -109,13 +85,8 @@ Khi container image được đóng gói và đẩy lên OCI Registry (Docker Hu
 Tuy nhiên, trong thế giới container:
 > **Tag là con trỏ có thể thay đổi (Mutable Pointer), chỉ có Digest mới là Nguồn chân lý bất biến (Immutable Truth).**
 
-~~~
-Tag:    my-app:v1.2.0 (Con trỏ có thể bị ghi đè)
-             │
-             ▼
-Digest: sha256:7f83b1657ff1... (Mã băm bất biến)
-        (Định danh duy nhất theo nội dung)
-~~~
+![Tag có thể đổi đích và digest định danh nội dung](../../assets/diagrams/container-tag-digest.png)
+@figure Tag được phân giải thành digest tại một thời điểm. Dùng digest cố định nội dung được tham chiếu, không tự xác minh người tạo hay độ an toàn của nội dung ấy.
 
 Nếu tag được trỏ sang image khác, một lần pull tiếp theo có thể nhận nội dung khác dù Pod template vẫn cùng chuỗi tag. Kết quả còn phụ thuộc imagePullPolicy, cache node và policy registry. Ghim digest giúp ràng buộc nội dung đã xét, không tự xác thực builder hay chứng minh artifact vô hại.
 

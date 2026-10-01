@@ -1,0 +1,7 @@
+@startuml
+!include publication-flow.iuml
+left to right direction
+rectangle "<b>GIT · KHO CỤC BỘ</b>\nObject: blob / tree / commit / tag\nĐồ thị lịch sử commit\nĐịnh danh nội dung bằng hash\nThao tác không cần GitHub" as git
+rectangle "<b>GITHUB · DỊCH VỤ HOSTED</b>\nPull request / issue / review\nChecks / releases / webhook\nAPI, quyền truy cập và quota\nThao tác dịch vụ cần mạng" as github
+git -[hidden]-> github
+@enduml

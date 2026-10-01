@@ -165,22 +165,8 @@ Terraform thiết lập cầu nối OIDC với hạ tầng đám mây.
 | `Promotion decision` | Quyết định phê duyệt hoặc từ chối fail-closed. | Cổng chặn ngăn chặn việc triển khai khi thiếu bằng chứng. |
 | `Actual deployment` | Cập nhật desired state của workload bằng manifest digest đã duyệt. | Thực thi đưa phiên bản đã duyệt vào vận hành. |
 
-~~~text
-Source Revision (git commit SHA)
-      |
-      v
-Job: verify (test từng module: part16, part18)
-      |
-      v
-Job: build-artifact (Docker Buildx metadata)
-      |  --> phân biệt Image ID và OCI Manifest Digest
-      v
-Job: promote-production (environment: production)
-      |  --> quyền id-token: write cho OIDC
-      |  --> chạy promote-gate CLI (kiểm tra candidate)
-      |  --> từ chối nếu thiếu verified evidence
-      |  --> cập nhật desired state bằng manifest digest
-~~~
+![Các job từ source revision tới quyết định promotion](../../assets/diagrams/workflow-promotion-jobs.png)
+@figure Workflow truyền định danh và bằng chứng qua các job; quyền OIDC và environment không tự thay thế việc gate xác minh candidate. Chỉ quyết định được duyệt mới cập nhật desired state bằng digest.
 
 ### Workflow GitHub Actions mẫu và kiểm tra repo multi-module
 

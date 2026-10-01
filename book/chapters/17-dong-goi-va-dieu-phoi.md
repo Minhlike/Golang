@@ -181,25 +181,8 @@ giao phó cho một hệ điều phối. `labs/part17-container-kubernetes` dùn
 HTTP service `probe-api` từ `labs/part16-real-signals` để thực hành các
 ranh giới này trên môi trường cục bộ có Docker và Kubernetes.
 
-~~~text
-Dockerfile (multi-stage, non-root)
-    |
-    v
-Image: probe-api:dev  --->  Container runtime
-                                  | (signal, port, read-only)
-                                  v
-                            Cluster (kind)
-                                  |
-            +-------------------+-------------------+
-            |                                       |
-            v                                       v
-      Deployment (desired)                  Service (traffic)
-       - readiness: /readyz                  - cluster IP
-       - liveness: /livez                    - port fwd
-            |
-            v
-   client-go observer (read-only Get/Watch)
-~~~
+![Đường từ image đến workload và observation trong cluster](../../assets/diagrams/container-cluster-observation.png)
+@figure Deployment khai báo Pod template cùng probes, Service chọn đường traffic, runtime trên node chạy image. Observer chỉ đọc qua API server; sơ đồ lược bỏ các component điều phối trung gian.
 
 Trước khi bắt đầu, lab kiểm tra các công cụ bắt buộc bằng script
 `scripts/verify-prereqs.ps1`. Nó đòi hỏi `docker`, `kubectl` và `kind` có mặt

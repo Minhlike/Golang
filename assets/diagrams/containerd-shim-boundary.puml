@@ -1,0 +1,9 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>containerd DAEMON</b>\nĐiều phối và quản lý trạng thái" as daemon
+rectangle "<b>RUNTIME v2 SHIM</b>\nTiến trình quản lý task riêng\nEndpoint theo bootstrap result" as shim
+rectangle "<b>CONTAINER TASK</b>\nỨng dụng chạy trên kernel host" as task
+daemon -down-> shim : quản lý qua endpoint
+shim -down-> task : runtime được chọn
+@enduml

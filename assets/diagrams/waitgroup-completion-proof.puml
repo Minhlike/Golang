@@ -1,0 +1,16 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>WORKER</b>\nAppend reports\ntrong Registry.Add" as append
+rectangle "Unlock registry.mu" as unlock
+rectangle "wg.Done()" as done
+rectangle "<b>BÊN CHỜ</b>\nwg.Wait() trả về" as wait
+rectangle "Snapshot: Lock" as lock
+rectangle "Copy reports" as copy
+append -down-> unlock
+unlock -down-> done
+wait -down-> lock
+lock -down-> copy
+append -[hidden]right-> wait
+done -right[dashed]-> wait : Done mở khóa\nlượt Wait này
+@enduml

@@ -17,6 +17,13 @@ from pypdf import PdfReader
 
 
 class PublicationContracts(unittest.TestCase):
+    def test_character_diagram_preflight_blocks_render_before_pdf_write(self):
+        with patch('validate_manuscript_diagrams.validate', return_value=['chapter:21: character diagram']):
+            with patch.object(build_pdf, 'build_document') as renderer:
+                with self.assertRaisesRegex(RuntimeError, 'Diagram preflight failed'):
+                    build_pdf.build(candidate_only=True)
+                renderer.assert_not_called()
+
     def test_current_atlas_intro_fits_one_page_without_losing_last_row(self):
         build_pdf.register_fonts()
         story = []

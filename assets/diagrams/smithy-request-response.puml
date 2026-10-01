@@ -1,0 +1,16 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>01 · INITIALIZE</b>\nChuẩn bị tham số" as init
+rectangle "<b>02 · SERIALIZE</b>\nDựng HTTP request" as serialize
+rectangle "<b>03 · BUILD</b>\nHoàn thiện request" as build
+rectangle "<b>04 · FINALIZE</b>\nThử lại / ký request\ntheo middleware được cài" as finalize
+rectangle "<b>05 · DESERIALIZE</b>\nGọi handler bên trong;\ngiải mã response khi trả về" as deserialize
+rectangle "<b>HTTP ROUND TRIP</b>\nTransport trao đổi\nvới AWS endpoint" as transport
+init -down-> serialize
+serialize -down-> build
+build -right-> finalize
+finalize -up-> deserialize
+deserialize -up-> transport : request
+transport -down[dashed]-> deserialize : response
+@enduml

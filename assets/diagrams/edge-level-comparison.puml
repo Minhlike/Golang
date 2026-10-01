@@ -1,0 +1,12 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>ĐIỀU KHIỂN THEO SỰ KIỆN</b>\nSự kiện Down được gửi" as edge
+rectangle "Thông điệp bị mất\nKhông còn tín hiệu này\nđể kích hoạt xử lý" as missed
+rectangle "<b>ĐIỀU KHIỂN THEO TRẠNG THÁI</b>\nĐọc lại actual và desired" as level
+rectangle "Phát hiện chênh lệch\nĐiều chỉnh; quan sát lại\nđể kiểm tra hội tụ" as reconcile
+edge -down-> missed
+level -down-> reconcile
+edge -[hidden]right-> level
+missed -[hidden]right-> reconcile
+@enduml

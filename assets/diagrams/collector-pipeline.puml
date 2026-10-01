@@ -1,0 +1,9 @@
+@startuml
+!include publication-flow.iuml
+top to bottom direction
+rectangle "<b>RECEIVER</b>\nTiếp nhận và chuyển về pdata" as receive
+rectangle "<b>PROCESSOR</b>\nBiến đổi dữ liệu theo cấu hình\nCó thể không có processor" as process
+rectangle "<b>EXPORTER</b>\nGửi dữ liệu tới hệ thống đích" as export
+receive -down-> process
+process -down-> export
+@enduml

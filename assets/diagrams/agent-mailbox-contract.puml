@@ -1,0 +1,9 @@
+@startuml
+!include publication-flow.iuml
+left to right direction
+rectangle "<b>AGENT A</b>\nGửi message" as a
+rectangle "<b>MAILBOX B</b>\nĐường giao tiếp\ndo ứng dụng quy định" as mailbox
+rectangle "<b>AGENT B</b>\nTiếp nhận message" as b
+a --> mailbox
+mailbox --> b
+@enduml

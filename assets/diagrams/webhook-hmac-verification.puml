@@ -1,0 +1,10 @@
+@startuml
+!include publication-flow.iuml
+participant "GitHub" as github
+participant "Webhook server Go" as server
+github -> github : HMAC-SHA256(secret, payload)
+github -> server : POST: body + chữ ký trong header
+server -> server : Body có giới hạn\nHMAC-SHA256(secret, raw body)
+server -> server : subtle.ConstantTimeCompare\nchữ ký nhận và chữ ký tính lại
+server -> server : Hợp lệ: xử lý theo policy\nKhông hợp lệ: từ chối request
+@enduml

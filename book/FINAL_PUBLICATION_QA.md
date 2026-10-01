@@ -1,6 +1,64 @@
-# Content correctness and publication close-out — 01-10-2026
+# Diagram repair close-out — 02-10-2026
 
-Biên bản hiện hành chỉ áp dụng cho `Golang_Master.pdf` SHA-256
+Biên bản sửa sơ đồ này áp dụng cho `Golang_Master.pdf` SHA-256
+`1e82d255ae16b288915b09f282d872f065db9d78d4d324a5f7478e25dfadde62`,
+480 trang, xuất phát từ HEAD `7b0d61470b18e34933f096625fe95091f683d50b`.
+Bản 470 trang bên dưới là lịch sử: kết quả visual toàn sách của bản đó không
+được chuyển thành kết quả visual toàn sách của PDF mới.
+
+## Phạm vi sửa và bằng chứng hiện tại
+
+Thay 25 sơ đồ luồng/kiến trúc bằng ký tự trong Ch08, Ch16–18, Ch21, Ch23–27
+và Library Atlas bằng sơ đồ PlantUML có source chỉnh sửa được. Hai khung chữ
+trang trí được chuyển thành callout thực. Giữ hai cây thư mục, code và output
+chẩn đoán nguyên văn. Không thêm chương, không sửa labs, không thay font thân
+bài hoặc thu nhỏ font code. Sơ đồ AWS từng ở trang 309 nay nằm ở trang 313.
+
+Các sơ đồ mới dùng cùng theme trắng/xám, không bóng đổ, heading sans-serif,
+nhãn và mũi tên thực. Cỡ chữ nhỏ nhất theo kích thước figure thực tế là
+12.458 pt; không ép một sơ đồ rộng vào trang bằng chữ nhỏ. Caption phân biệt
+bản đồ khái niệm với thứ tự thực thi. AWS credential resolution và Smithy
+request/response được đối chiếu tài liệu chính thức tương ứng trước khi vẽ.
+
+Build chặn character-art diagram trước khi render; năm regression test giữ
+riêng sơ đồ ký tự, cây thư mục, code và output compiler. Manifest kiểm tra cả
+checksum source, ảnh và shared style. 16 publication contract test cũng PASS.
+
+Render lại toàn bộ 480 trang bằng Poppler ở 150 dpi. Kiểm tra độc lập đạt A4,
+MediaBox/CropBox, rotation, embedded fonts thực sự được dùng, blank pages,
+effective raster DPI, printable text frame và vị trí folio ngoài trên 479
+trang có số trang. Pixel scan không có pixel màu ngoài dung sai R/G/B = 1.
+Đối chiếu 33 entry TOC với heading thực, 34 bookmark với destination thực;
+không có mismatch. Perceptual dHash pairwise không có cặp gần trùng ở ngưỡng
+Hamming <= 10. Tham chiếu đánh số Chương/Hình/Bảng và Atlas ID hợp lệ; phép
+kiểm tra này không phải chứng minh ý nghĩa của mọi tham chiếu trong prose.
+
+Visual thực tế: 25 trang chứa 25 sơ đồ mới đã được mở riêng ở độ phân giải
+gốc, cùng 27 trang mục lục, lân cận và đầu/cuối Atlas: tổng cộng 52 trang
+cuối có bằng chứng quan sát, 52 PASS, không issue mở. D01 ở trang 219
+(mũi tên cắt tiêu đề khung Kubernetes) đã sửa trong source và mở lại bản cuối.
+24 quyết định quan sát từ candidate trước được giữ bằng đối chiếu SHA-256
+PNG byte-identical với render cuối; chỉ trang 219 thay đổi giữa hai candidate.
+Không dùng contact sheet để thay kiểm tra từng trang hoặc tự điền PASS.
+
+Checkpoint cuối vẫn giữ 428 trang khác ở NOT_REVIEWED trong lượt sửa này.
+Do đó trạng thái hiện tại là `SCOPED_DIAGRAM_REPAIR_QA_PASS`, không phải
+chứng nhận mới `PUBLICATION_READY` cho toàn bộ 480 trang. Không chuyển PASS
+tự động thành VISUAL_PASS. Go/labs không đổi nên không chạy lại Go suite.
+
+Bằng chứng workspace: `.workspace/diagram-repair/pdf-qa-v3/independent.json`,
+`preflight/PREFLIGHT_RAW.json`, `page_review.csv`,
+`actual_observation_identity.json` và `diagram-readability.json` ở thư mục
+cha. Manifest ghi đúng SHA PDF, trang, số hình và hash render của 25 hình mới;
+metadata review của hình cũ vẫn giữ SHA lịch sử. CODE_WIDTH, ZERO_BULLET,
+ERROR_ATLAS, encoding, semantics, visual manifest và `git diff --check` PASS.
+Rollback giữ nguyên bản PDF 470 trang SHA `6840c1a3…d147d75`.
+
+---
+
+# Content correctness and publication close-out — 01-10-2026 (historical)
+
+Biên bản lịch sử này chỉ áp dụng cho `Golang_Master.pdf` SHA-256
 `6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75`,
 470 trang. Các biên bản dưới đây là lịch sử theo SHA riêng, không được dùng thay
 cho kiểm tra bản này.
