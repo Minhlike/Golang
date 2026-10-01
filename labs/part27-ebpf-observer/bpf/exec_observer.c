@@ -1,5 +1,5 @@
 // +build ignore
-#include <linux/bpf.h>
+#include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 
@@ -12,6 +12,8 @@ struct exec_event {
     char  comm[16];
     char  filename[128];
 };
+
+_Static_assert(sizeof(struct exec_event) == 156, "event ABI mismatch");
 
 struct {
     __uint(type, BPF_MAP_TYPE_RINGBUF);
@@ -29,18 +31,27 @@ int trace_execve(struct trace_event_raw_sys_enter *ctx) {
     }
 
     __u64 pid_tgid = bpf_get_current_pid_tgid();
-    event->pid = (__u32)(pid_tgid >> 32);
-
     __u64 uid_gid = bpf_get_current_uid_gid();
+
+    // Initialize the full record: string helpers need not fill trailing bytes.
+    __builtin_memset(event, 0, sizeof(*event));
+    event->pid = (__u32)(pid_tgid >> 32);
     event->uid = (__u32)(uid_gid);
     event->gid = (__u32)(uid_gid >> 32);
 
-    // Read current process task name
-    bpf_get_current_comm(&event->comm, sizeof(event->comm));
+    // Do not publish an incomplete record when a helper fails.
+    if (bpf_get_current_comm(&event->comm, sizeof(event->comm)) < 0) {
+        bpf_ringbuf_discard(event, 0);
+        return 0;
+    }
 
     // Read executable path from syscall argument (first argument of execve)
     const char *filename_ptr = (const char *)ctx->args[0];
-    bpf_probe_read_user_str(&event->filename, sizeof(event->filename), filename_ptr);
+    if (bpf_probe_read_user_str(&event->filename,
+                              sizeof(event->filename), filename_ptr) < 0) {
+        bpf_ringbuf_discard(event, 0);
+        return 0;
+    }
 
     // Submit event to ring buffer for Go userspace consumption
     bpf_ringbuf_submit(event, 0);

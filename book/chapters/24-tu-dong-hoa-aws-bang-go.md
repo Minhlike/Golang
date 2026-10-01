@@ -39,7 +39,7 @@ Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời l
 
 ### Cơ chế bộ đệm và xác thực đồng bộ của SDK (`aws.CredentialsCache`)
 
-Khi ứng dụng gọi `config.LoadDefaultConfig(ctx)`, SDK thiết lập chuỗi tìm kiếm định danh mặc định theo thứ tự ưu tiên chuẩn mực: bắt đầu từ các biến môi trường trực tiếp (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), nạp cấu hình chia sẻ cục bộ (`~/.aws/config`), định danh Web Identity hoặc container, và sau cùng là dịch vụ siêu dữ liệu máy chủ ảo EC2 (IMDSv2).
+Ở source SDK được ghim, credential resolution có nhánh theo cấu hình, không phải một danh sách ưu tiên bất biến: profile được chọn tường minh, environment credentials và web-identity token có các nhánh riêng; profile có thể dùng source profile, SSO hay credential process trước khi tới container/IMDS. Đọc `config/resolve_credentials.go` cùng options của caller khi cần giải thích vì sao một provider được chọn. Không suy ra credential tạm thời chỉ từ việc gọi `LoadDefaultConfig`.
 
 Đối với các khối lượng công việc container hóa và điều phối đám mây, SDK phân định rõ ba cơ chế cấp phát định danh độc lập thay vì gộp chung mọi môi trường:
 
@@ -55,7 +55,7 @@ Nhằm giảm thiểu số lượt gọi mạng lặp lại trước mỗi HTTP 
 
 ## 2. Luồng thực thi của AWS SDK v2 và Smithy Middleware
 
-Khác với SDK v1 trước đây, AWS SDK for Go v2 được tái cấu trúc hoàn toàn dựa trên kiến trúc **Smithy** — một giao thức mô hình hóa dịch vụ mở của Amazon.
+AWS SDK for Go v2 dùng Smithy, một ngôn ngữ mô hình hóa service và bộ công cụ sinh SDK. Smithy không phải wire protocol thay cho HTTP hay SigV4; stack middleware là phần tổ chức đường gọi của SDK.
 
 Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra mạng, mà phải di chuyển qua một ngăn xếp gồm 5 pha xử lý tuần tự (**Middleware Stack**):
 
@@ -76,7 +76,7 @@ Mọi yêu cầu gửi tới AWS (như `s3.PutObject`) không đi thẳng ra m�
 
 ### Chữ ký số SigV4 (Signature Version 4)
 
-Tại pha **Finalize**, middleware bảo mật của SDK thực hiện thuật toán ký số SigV4 để bảo đảm tính toàn vẹn và nguồn gốc của gói tin. Quá trình này bắt đầu bằng việc chuẩn hóa phương thức HTTP, đường dẫn tài nguyên, tham số truy vấn và các header thành một chuỗi đại diện duy nhất (Canonical Request). Chuỗi này được băm bằng thuật toán SHA-256 để tạo mã tóm lược nội dung.
+Trong đường gọi SigV4 đang xét, middleware ký ở pha **Finalize** xây canonical request từ phương thức HTTP, đường dẫn, query, các header được ký và giá trị payload hash theo chế độ signing. Đây là đại diện của request cho thuật toán xác thực, không phải chữ ký của từng packet mạng.
 
 SDK dùng signing key suy ra từ secret, ngày, region và service để tạo chữ ký SigV4 cho canonical request. Server kiểm tra những phần được ký; không phải mọi header đều được đưa vào SignedHeaders và một số chế độ cho phép unsigned payload. Sửa phần được bao phủ có thể gây lỗi xác minh, nhưng không suy ra một mã lỗi HTTP cố định cho mọi service. TLS vẫn cần bảo vệ đường truyền; SigV4 không thay thế TLS.
 
@@ -86,7 +86,7 @@ SigV4 xác thực yêu cầu cho AWS và bảo vệ các phần được ký; n�
 
 ## 3. Quản lý dữ liệu lớn bằng Paginator
 
-Một lỗi sơ đẳng nhưng cực kỳ tai hại khi viết công cụ lưu trữ là sử dụng lệnh liệt kê cơ bản để tải danh sách file trong bucket:
+Nếu chỉ gọi một trang của API liệt kê, công cụ có thể bỏ sót object ở các trang sau:
 
 ~~~go
 // CẢNH BÁO: Chỉ lấy tối đa 1.000 file đầu tiên!
@@ -101,7 +101,7 @@ Nếu bạn tự viết vòng lặp `for` với token thủ công, mã nguồn s
 
 ### Mẫu hình chuẩn: SDK Paginator
 
-AWS SDK v2 cung cấp cấu trúc `NewListObjectsV2Paginator` giúp duyệt dữ liệu theo phong cách stream O(1) về bộ nhớ:
+`NewListObjectsV2Paginator` quản lý continuation token và trả từng trang. Nó không hứa tổng bộ nhớ O(1) theo mọi input: kích thước trang và cách caller giữ kết quả vẫn phải có budget.
 
 ~~~go
 paginator := s3.NewListObjectsV2Paginator(
@@ -130,7 +130,7 @@ Paginator chỉ giữ trang đang xử lý; mức nhớ của caller còn phụ 
 
 Khi một lệnh gọi AWS thất bại, bạn không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
 
-Phân loại lỗi chính xác là điều kiện tiên quyết để chương trình đưa ra phản ứng phù hợp. Các lỗi nghiệp vụ như `NoSuchKey` (đối tượng không tồn tại) hoặc `AccessDenied` (thiếu quyền hạn IAM) phản ánh vi phạm logic hoặc rào chắn phân quyền; việc gửi lại yêu cầu trong tình huống này chỉ gây lãng phí băng thông và làm tắc nghẽn hàng đợi. Ngược lại, các mã lỗi chỉ thị quá tải tạm thời như `SlowDown`, `ThrottlingException`, `RequestTimeout` hay `ServiceUnavailable` đòi hỏi cơ chế thử lại có kiểm soát, áp dụng thuật toán lùi lũy thừa (exponential backoff) kết hợp dao động ngẫu nhiên (jitter) để bảo vệ dịch vụ hạ tầng.
+Trong policy của lab, `AccessDenied` không được retry như lỗi tạm thời. Các lỗi throttling hay service unavailable có thể cần backoff/jitter, nhưng retry còn phụ thuộc operation, budget và idempotency. Với timeout sau write, server có thể đã thực hiện side effect; không lặp mù quáng chỉ vì tên lỗi chứa `RequestTimeout`. Dùng classifier cùng contract service và retryer đã cấu hình.
 
 ~~~go
 func ClassifyError(err error) (bool, string) {
@@ -253,7 +253,7 @@ ok      part24-aws-sdk-go-v2   3.665s
 ~~~
 
 ### 1. Tự động làm mới khóa hết hạn (TestTemporaryCredentialRefresh)
-Khởi tạo provider với thời hạn sống 50ms. Lần đọc đầu tiên lấy khóa `ASIA-TEMP-KEY-1`. Sau khi chờ 60ms để khóa hết hạn, lần gọi tiếp theo tự động kích hoạt `Retrieve()` lần hai và nhận khóa mới `ASIA-TEMP-KEY-2`, chứng minh cơ chế tự động xoay vòng hoạt động trơn tru.
+Test dùng provider giả có TTL 50 ms, chờ 60 ms rồi retrieve lại. Nó xác nhận cache gọi provider sau expiration trong lịch thử này; không gọi STS và không chứng minh role credential thật được refresh thành công khi mạng hay IAM lỗi.
 
 ### 2. Tiêm Header qua Smithy Middleware (TestCustomSmithyMiddlewareAuditHeader)
 Máy chủ HTTP cục bộ bắt gói tin `PutObject` và kiểm tra header `X-Audit-Origin`. Giá trị nhận được chính xác là `"automated-backup-worker"`, chứng minh middleware đã can thiệp thành công vào luồng gửi tin của SDK.
@@ -273,7 +273,7 @@ Kiểm chứng hàm phân loại bóc tách chính xác mã lỗi `SlowDown` (đ
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Hardcode Access Key** trong mã nguồn hoặc docker image. | Khóa bị quét và rò rỉ khi đẩy lên kho mã nguồn, gây mất quyền kiểm soát đám mây. | Luôn dùng IAM Role / IRSA và nạp quyền qua `config.LoadDefaultConfig`. |
+| **Hardcode Access Key** trong mã nguồn hoặc image. | Có thể lộ credential và các quyền credential cho phép. | Chọn provider credential tạm thời phù hợp môi trường; `LoadDefaultConfig` còn có thể chọn static credential nếu cấu hình để nó làm vậy. |
 | **Không đóng Response Body** khi gọi `s3.GetObject`. | Body và tài nguyên Transport có thể bị giữ lại, làm tăng áp lực tài nguyên khi lặp nhiều request. | Đặt `defer resp.Body.Close()` sau khi `GetObject` thành công; việc tái sử dụng kết nối còn có điều kiện riêng. |
 | **Tự viết vòng phân trang mà không xử lý token và ngân sách.** | Có thể lặp lại trang, bỏ sót dữ liệu hoặc giữ quá nhiều object. | Ưu tiên paginator của SDK; vẫn kiểm tra context, error, số trang và lượng dữ liệu giữ lại. |
 | **Thử lại mù quáng** với lỗi phân quyền `AccessDenied`. | Làm tắc nghẽn hàng đợi và kích hoạt các cảnh báo bảo mật bất thường trong SIEM. | Dùng `errors.As(err, &apiErr)` để chỉ thử lại các lỗi tạm thời (`SlowDown`, `5xx`). |
@@ -348,4 +348,4 @@ func WaitForBucketReady(
 
 ---
 
-Làm chủ kiến trúc **Temporary Credentials + Smithy Middleware + Paginators** giúp bạn xây dựng những hệ thống tự động hóa đám mây có độ tin cậy và bảo mật cấp doanh nghiệp. Trong Chương 25, chúng ta sẽ kết nối chuỗi tự động hóa này với hạ tầng quản lý mã nguồn: xây dựng hệ thống **Tự động hóa Git và GitHub hướng sự kiện** bằng Go với khả năng xác thực Webhook HMAC, phân loại ID phát hàng lũy đẳng và kiểm soát giới hạn tần suất gọi API (Rate Limiting).
+Credential provider, middleware và paginator giải quyết các boundary khác nhau. Trước khi dùng trên AWS thật, cần kiểm tra role, IAM policy, budget retry và side effect của operation. Chương 25 chuyển sang webhook và GitHub API, nơi identity của delivery cũng không đồng nghĩa identity của một thao tác nghiệp vụ.

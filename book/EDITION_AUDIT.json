@@ -1,5 +1,7 @@
 {
   "schema": 1,
+  "historical_record": true,
+  "evidence_scope": "2026-09-29 source snapshot only; not current PDF or current-pass QA. Targeted file/symbol claims are not full-tree reviews.",
   "verification_date": "2026-09-29",
   "starting_head": "666e0aec1455f46083cbb7e01edc44fce47cc953",
   "go_version": "go1.27.1 windows/amd64",

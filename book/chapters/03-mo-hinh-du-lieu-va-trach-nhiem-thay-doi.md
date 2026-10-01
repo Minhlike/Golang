@@ -41,7 +41,7 @@ Nếu function cần tạo một value mới, cách trên rất tốt: giá tr�
 | Khái niệm trong Go Semantics | Định nghĩa kỹ thuật chuẩn xác | Ví dụ tương ứng |
 | :--- | :--- | :--- |
 | **Variable** | Vị trí lưu trữ dữ liệu được cấp phát, có thể đọc hoặc gán giá trị mới. | Biến `balance` |
-| **Value** | Dữ liệu bit cụ thể được diễn giải theo kiểu dữ liệu quy định. | Giá trị số nguyên `100` |
+| **Value** | Dữ liệu thuộc một kiểu; chưa cần giả định representation vật lý. | Giá trị số nguyên `100` |
 | **Address** | Kết quả của phép toán trích xuất địa chỉ ô nhớ bằng toán tử `&`. | Biểu thức `&balance` |
 | **Pointer value** | Giá trị mang kiểu con trỏ (như `*int`), chứa địa chỉ của một biến hoặc `nil`. | Biến con trỏ `p` |
 | **Pointee** | Biến đích tại ô nhớ mà con trỏ đang trỏ tới. | Ô nhớ chứa `balance` |
@@ -407,7 +407,7 @@ fmt.Println(billing.Healthy, billing.Retries) // false 1
 
 @figure Method vẫn dựa trên receiver value. `Summary` dùng Service value; `Record` cần `*Service` để chọn pointee làm đích mutation. Mũi tên là trace semantics, không mô tả bộ nhớ vật lý.
 
-Điều này giải thích một lỗi compiler rất có ích. Map index không addressable, nên Go không thể tự lấy địa chỉ ổn định cho một value trả về từ map để gọi pointer-receiver method:
+Map index không addressable theo spec, nên cách viết ngắn lấy địa chỉ để gọi pointer-receiver method không áp dụng cho nó. Đây là giới hạn ở tầng source, không phải kết luận rằng một địa chỉ vật lý “không ổn định” trong mọi implementation:
 
 ~~~go
 // services["billing"].Record(false) // không hợp lệ
@@ -507,13 +507,13 @@ markFailed(&billing) // *Service thỏa ProbeRecorder
 // markFailed(billing) // sai: Service thiếu Record
 ~~~
 
-### Bản chất Thời gian chạy của Interface và Cạm bẫy Typed Nil
+### Typed nil: có kiểu động nhưng giá trị pointer là nil
 
-Để không biến interface thành một khái niệm trừu tượng mơ hồ, ta cần nhìn vào cấu trúc dữ liệu thực tế mà trình biên dịch tạo ra. Trong đặc tả ngôn ngữ Go, một giá trị interface đại diện cho một cặp giá trị gồm kiểu động (dynamic type) và giá trị động (dynamic value). 
+Để dự đoán một interface có bằng `nil` hay không, hãy tách kiểu động khỏi giá trị động. Kiểu động là kiểu của giá trị được gán vào interface; giá trị động là giá trị cụ thể ấy. Interface nil chưa có cả hai. Đây là mô hình ngữ nghĩa đủ để giải thích ví dụ dưới đây, không cần biết địa chỉ hay bảng con trỏ hàm.
 
-Ở tầng triển khai thực tế của Go 1.27.1 trên kiến trúc amd64 đang dùng để kiểm thử sách (mã nguồn tại `src/runtime/iface.go`), một interface có chứa method như `SummarySource` được biểu diễn bằng cấu trúc `iface` gồm hai con trỏ 64-bit: con trỏ thứ nhất `tab *itab` trỏ tới bảng thông tin kiểu (chứa mô tả kiểu cụ thể, bảng con trỏ hàm thỏa mãn interface, và hash định danh kiểu); con trỏ thứ hai `data unsafe.Pointer` trỏ tới dữ liệu thực tế của đối tượng. Đối với interface rỗng (`any` hoặc `interface{}`), runtime sử dụng cấu trúc `eface` với con trỏ `_type *_type` và con trỏ `data`. Kích thước con trỏ phụ thuộc kiến trúc; biểu diễn này không phải cam kết của đặc tả ngôn ngữ.
+Nếu muốn đối chiếu tầng triển khai, source Go 1.27.1 ở `runtime/runtime2.go` định nghĩa `iface` với `tab *itab` và `data unsafe.Pointer`, còn `eface` với `_type *_type` và `data`. Trên amd64, đó là hai trường con trỏ 64 bit. Cách concrete value được đưa vào trường data còn phụ thuộc kiểu; không coi nó như một object luôn được cấp phát riêng trên heap. Biểu diễn này không phải contract của specification và không cần dùng để quyết định nhánh `src == nil`.
 
-Biểu diễn hai con trỏ này giải thích trực diện cạm bẫy kinh điển mang tên **typed nil**:
+Hãy dự đoán phép so sánh trước khi nhìn representation:
 
 ~~~go
 var s *Service = nil
@@ -550,6 +550,6 @@ var b any = []int{1}
 
 Hàm `func (service *Service) Record(bool)` tiếp nhận receiver dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
 
-Hàm `func renderSummary(SummarySource) string` tiếp nhận một giá trị interface, chỉ phụ thuộc vào hành vi tối thiểu mà bên tiêu thụ thực sự cần, tách rời hoàn toàn việc hiển thị khỏi cấu trúc dữ liệu cụ thể của bên cung cấp.
+Hàm `func renderSummary(SummarySource) string` nhận interface với hành vi mà consumer cần. Nó gọi `Summary` thay vì đọc field của một struct cụ thể; đây là boundary có thể thay provider mà không đổi code hiển thị.
 
 Mô hình cấu thành (composition) giúp dữ liệu có đường đi rõ ràng; method đặt hành vi cạnh kiểu dữ liệu; interface xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi nhà cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.

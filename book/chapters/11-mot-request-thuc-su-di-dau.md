@@ -42,7 +42,7 @@ req = req.WithContext(traceCtx)
 
 Tên miền là input ở mức application. `net.Resolver.LookupHost` hỏi resolver cục bộ và trả về một danh sách địa chỉ cho host. Resolver thực tế thay đổi theo hệ điều hành, cấu hình mạng và build; trên Unix, tài liệu `net` mô tả cả pure-Go resolver lẫn đường đi qua C library trong một số điều kiện. Đừng dạy chương trình rằng “Go luôn tự gửi một DNS packet đến đâu đó”. Hãy ghi nhận lỗi DNS là lỗi của lớp resolution, cùng với host và deadline, rồi để configuration mạng là một boundary riêng.
 
-Một địa chỉ khả dụng chưa phải identity đã được xác thực. Khi URL là HTTPS và cần một connection mới, TLS handshake thương lượng kết nối bảo mật. `tls.Config.ServerName` được dùng để xác minh hostname trên certificate, đồng thời thường được đưa vào handshake để hỗ trợ virtual hosting khi nó không phải IP. Tắt `InsecureSkipVerify` để “sửa certificate error” là bỏ một security boundary, không phải sửa network. Nếu môi trường dùng CA nội bộ, hãy thiết kế root CA và hostname policy có chủ đích; đừng biến bỏ xác minh thành default.
+Một địa chỉ khả dụng chưa phải identity đã được xác thực. Khi URL là HTTPS và cần một connection mới, TLS handshake thương lượng kết nối bảo mật. `tls.Config.ServerName` được dùng để xác minh hostname trên certificate, đồng thời thường được đưa vào handshake để hỗ trợ virtual hosting khi nó không phải IP. Đặt `InsecureSkipVerify=true` để “sửa certificate error” là bỏ xác minh chain và hostname mặc định, không phải sửa network. Mặc định false giữ bước xác minh ấy; nếu dùng callback để xác minh tùy chỉnh thì phải tự giữ contract tương ứng. Với CA nội bộ, cấu hình root CA và hostname policy có chủ đích thay vì bỏ xác minh.
 
 TCP, TLS và HTTP là các lớp khác nhau. Connection được tạo tới địa chỉ/port; TLS xác minh peer và thương lượng; HTTP chạy request/response bên trên. Với HTTP/2, nhiều request có thể cùng chia một connection. Vì thế “một request = một TCP connection” là mental model sai ngay từ đầu.
 
@@ -82,7 +82,7 @@ Một timeout không trả lời retry có an toàn hay không. `Transport` có 
 
 ## Response body là khoản nợ của caller
 
-`Client.Do` trả `Response` với `Body` không nil khi không có error. Caller phải đóng nó. Nếu body không được đọc đến EOF và đóng, transport có thể không reuse được persistent HTTP/1.x connection cho request kế tiếp. Đây là lý do một helper client nhỏ cần nhận quyền sở hữu body rõ ràng: hoặc trả `*http.Response` và document caller phải close; hoặc đọc body, close nó, rồi trả một value đã độc lập.
+`Client.Do` trả `Response` với `Body` không nil khi không có error. Caller phải đóng nó. Đọc đến EOF rồi đóng tạo điều kiện reuse persistent HTTP/1.x connection, không hứa request kế tiếp sẽ dùng nó. Từ Go 1.27, khi `Close`, implementation HTTP/1 tự drain phần chưa đọc đến một giới hạn bảo thủ để hỗ trợ reuse. Điều đó không có nghĩa đóng một body bất kỳ sẽ đọc hết hoặc giữ được connection; không chuyển mẹo implementation này thành ownership policy. Helper hoặc trả `*http.Response` và document caller phải close, hoặc đọc body, close nó rồi trả một value độc lập.
 
 Lab của chương chọn policy thứ hai. Contract bắt đầu bằng test đỏ: `Fetch` phải tạo request bằng context caller, đọc toàn bộ body, đóng body, và đổi status ngoài 2xx thành `StatusError`. Không dùng `http.DefaultClient`; test đưa một transport giả vào client để quan sát request mà không hề chạm network thật.
 
@@ -120,3 +120,4 @@ Khi nhìn một request chậm, đừng hỏi “API nào chậm?”. Hãy hỏi
 2. Go Team. Package `crypto/tls`, phần `Config.ServerName` và `InsecureSkipVerify`. pkg.go.dev/crypto/tls
 3. Go Team. Package `net/http`, phần Clients and Transports, `Request`, `Client` và `Transport`. pkg.go.dev/net/http
 4. Go Team. Package `net/http/httptrace`. pkg.go.dev/net/http/httptrace
+5. Go Team. Go 1.27 Release Notes, net/http: bounded drain khi đóng HTTP/1 response body. go.dev/doc/go1.27

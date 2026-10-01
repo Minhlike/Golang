@@ -1,6 +1,7 @@
 @startuml
 top to bottom direction
 skinparam shadowing false
+skinparam dpi 300
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam rectangle {
@@ -16,11 +17,11 @@ skinparam note {
 
 rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao,\nchính sách" as desired
 rectangle "bộ điều khiển (Controller)\nquan sát -> phán đoán -> hành động" as controller
-rectangle "trạng thái thực tế (Status)\nPod, tiến trình, độ sẵn sàng" as current
+rectangle "workload được điều khiển\nPod, tiến trình, độ sẵn sàng" as current
 
 desired -down-> controller : cấu hình khai báo (Spec)
-current -up-> controller : dữ liệu quan trắc thực tế
-controller -down-> current : tác động điều chỉnh
+current -up-> controller : quan sát\n(có thể trễ)
+controller -down-> current : điều chỉnh
 
 note right of controller
   Một vòng lặp không cam kết

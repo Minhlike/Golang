@@ -146,7 +146,7 @@ func NextAction(desired, current int) (Action, error) {
 
 Hàm cố tình không `for` cho đến khi count bằng nhau. Nếu nó tự gọi “start” ba lần, nó sẽ che những event thật giữa các action: create có thể fail, instance có thể chưa ready, current state có thể thay đổi bởi một actor khác, hoặc controller có thể cần rate limit. `ActionNone` không chứng minh application healthy; nó chỉ nói snapshot count được đưa vào hàm đang bằng desired count. Sự khiêm tốn này là một property quan trọng của code điều phối.
 
-Trong controller thật, desired state không phải immutable code constant và current state không phải biến local đáng tin vĩnh viễn. Spec có thể đổi lúc controller đang xử lý; cache có thể cũ; action trả lỗi hoặc thành công một phần. Vì vậy reconciliation phải idempotent: cùng desired/current observation thì `NextAction` đưa cùng action, và action đó có ý nghĩa an toàn khi vòng lặp chạy lại. Đây là documented control-loop pattern; chi tiết retry queue, status condition và ownership reference là implementation/API design của Kubernetes, không phải language semantics của Go.
+Trong controller thật, desired state có thể đổi, cache có thể cũ, còn action có thể thành công trước khi caller nhận được response. `NextAction` trả cùng action cho cùng input chỉ chứng minh tính tất định của phép tính, không chứng minh side effect an toàn khi lặp. Với snapshot desired 3/current 1, thực thi “tạo 2” hai lần có thể tạo thành 5 instance. Muốn lặp an toàn, controller cần đọc lại trạng thái và thiết kế identity/ownership cho thao tác tạo; timeout không cho biết thao tác trước đã xảy ra hay chưa. Chương 21 và 23 sẽ kiểm tra boundary này với queue, observation cũ và cửa sổ crash. Đây là bài toán của control loop và API, không phải ngữ nghĩa ngôn ngữ Go.
 
 @table Điều một vòng reconciliation được phép kết luận
 
@@ -158,7 +158,7 @@ Trong controller thật, desired state không phải immutable code constant và
 
 ## Lab: tự hoàn thành vòng lặp một bước
 
-Mở `labs/part17-reconciliation-contract/exercise/reconcile_test.go` trước. Bài không cần Docker daemon, cluster, credential hay network. Test đưa desired/current count vào và đòi action bounded, idempotent về kết quả, không biến input âm thành một action “lạ”. Đây không phải Kubernetes giả lập; đó là cách tách mental model của reconciliation khỏi số lượng API mà người học chưa cần biết.
+Mở `labs/part17-reconciliation-contract/exercise/reconcile_test.go` trước. Bài không cần Docker daemon, cluster, credential hay network. Test đưa desired/current count vào và đòi action bounded, tất định, không biến input âm thành một action “lạ”. Test không thực thi side effect, nên không chứng minh idempotency của một API tạo instance. Đây là cách tách phép tính chênh lệch khỏi hệ thống điều phối thật.
 
 ~~~powershell
 cd labs/part17-reconciliation-contract
@@ -168,7 +168,7 @@ go vet ./fixed
 go test -race ./fixed
 ~~~
 
-Hãy viết `NextAction` từ contract, không mở `fixed/` trước. Câu hỏi trước khi code là: action nào mang **chênh lệch** giữa desired và current, và case equal cần trả gì để caller không phải đoán? Sau khi tests xanh, tự thay current bằng kết quả giả định của action rồi gọi lại. Điều gì xảy ra ở vòng thứ hai? Đó là trực giác idempotency tối thiểu của chapter.
+Hãy viết `NextAction` từ contract, không mở `fixed/` trước. Câu hỏi trước khi code là: action nào mang **chênh lệch** giữa desired và current, và case equal cần trả gì để caller không phải đoán? Sau khi tests xanh, tự thay current bằng kết quả giả định của action rồi gọi lại. Điều gì xảy ra ở vòng thứ hai? Đó là phép thử hội tụ khi observation được cập nhật, chưa phải bằng chứng lặp side effect an toàn.
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Validate cả hai count trước, vì `desired - current` với số âm có thể biến một configuration lỗi thành action hợp lệ giả. Sau đó trả `create` hay `delete` với `Count` đúng bằng độ chênh; equal trả `ActionNone` với `Count` zero. Không mutate input, không loop, không sleep và không cố “chờ ready”: mỗi thứ đó thuộc boundary khác.
 
@@ -178,8 +178,8 @@ Vòng lặp `NextAction` ở trên giúp ta hiểu bản chất của reconcilia
 cần tới cluster thật. Nhưng khi đưa một service Go vào vận hành, code không còn
 chạy trực tiếp trên máy lập trình. Nó phải được đóng gói vào một OCI image và
 giao phó cho một hệ điều phối. `labs/part17-container-kubernetes` dùng chính
-HTTP service `probe-api` từ `labs/part16-real-signals` để kiểm chứng trọn vẹn
-chuỗi ranh giới này trên môi trường cục bộ.
+HTTP service `probe-api` từ `labs/part16-real-signals` để thực hành các
+ranh giới này trên môi trường cục bộ có Docker và Kubernetes.
 
 ~~~text
 Dockerfile (multi-stage, non-root)
@@ -236,12 +236,12 @@ USER 65532:65532
 ENTRYPOINT ["/probe-api"]
 ~~~
 
-Contract khởi động ở đây rất chặt chẽ: `ENTRYPOINT` ở exec form đảm bảo binary
-là PID 1 trong container. Cổng lắng nghe được cấu hình qua biến môi trường
-`PORT`, khớp hoàn toàn với contract của HTTP server ở Chương 12 và 16. Khi chạy
-container, ta áp dụng nguyên tắc đặc quyền tối thiểu: `--read-only` khóa toàn bộ
-root filesystem, `--cap-drop ALL` tước bỏ mọi Linux capability thừa, và `USER
-65532:65532` ngăn chặn việc chạy dưới quyền root.
+Với lệnh chạy dưới đây, `ENTRYPOINT` ở exec form chạy binary trực tiếp làm PID 1
+trong container; nếu thêm `--init`, tiến trình init sẽ giữ vị trí ấy. Server đọc
+cổng từ `PORT` như ở Chương 12 và 16. `--read-only` đặt root filesystem ở chế độ
+chỉ đọc, không cấm ghi vào volume hay tmpfs được mount riêng. `--cap-drop ALL`
+bỏ Linux capabilities, còn `USER 65532:65532` chọn tài khoản không phải root.
+Các cấu hình này thu hẹp quyền, không thay thế toàn bộ chính sách cô lập container.
 
 ~~~powershell
 # Chạy từ thư mục gốc của repository (minh họa)
@@ -264,13 +264,14 @@ docker inspect --format '{{.Config.User}}' probe-api
 docker stop -t 5 probe-api
 ~~~
 
-Lệnh `docker stop -t 5` gửi tín hiệu `SIGTERM` tới process và cho phép 5 giây để
-server hoàn tất các request đang xử lý trước khi runtime gửi `SIGKILL`. Đây chính
-là phép thử cho contract graceful shutdown mà ta đã xây dựng. Đánh đổi của
+Trong image của lab, `docker stop -t 5` gửi `SIGTERM` tới process chính và chờ tối
+đa 5 giây; nếu process chưa thoát, Docker mới dùng `SIGKILL`. Khoảng chờ không
+bảo đảm mọi request hoàn tất: cần quan sát drain và exit của chương trình để
+kiểm tra contract graceful shutdown. Đánh đổi của
 distroless và read-only filesystem là gì? Container sẽ không có shell (`/bin/sh`),
 không có trình quản lý gói, và binary không thể tùy tiện ghi file tạm nếu không
-được mount một thư mục riêng biệt. Sự bất tiện khi debug tại chỗ này đổi lại một
-bề mặt tấn công cực kỳ hẹp.
+được mount một thư mục riêng biệt. Ít công cụ và package hơn giúp giảm phần mềm
+cần quản lý, nhưng không chứng minh binary, dependency hay cấu hình không có lỗ hổng.
 
 Cần lưu ý: nhãn `probe-api:dev` chỉ là định danh cục bộ trên máy phát triển. Nó
 không phải là một định danh bất biến dùng cho môi trường production; Chương 18
@@ -293,9 +294,9 @@ kubectl -n go-book get deploy,pod,service
 kubectl -n go-book port-forward service/probe-api 18080:80
 ~~~
 
-Trong `deployment.yaml`, hai probe phục vụ hai mục đích hoàn toàn khác biệt:
+Trong `deployment.yaml`, hai probe dẫn tới hai quyết định khác nhau:
 
-Thứ nhất là Readiness Probe (`/readyz`): Trả lời câu hỏi "Pod này có sẵn sàng nhận traffic từ Service ngay lúc này không?". Nếu readiness thất bại, endpoint controller sẽ tạm thời gỡ Pod khỏi danh sách IP nhận tải của Service, nhưng container **không** bị restart.
+Thứ nhất là Readiness Probe (`/readyz`): Trả lời câu hỏi “Pod này có sẵn sàng nhận traffic từ Service ngay lúc này không?”. Sau khi đạt ngưỡng failure, kubelet đặt điều kiện Ready thành false. Với Service thông thường, endpoint không ready không được chọn để nhận traffic; EndpointSlice vẫn có thể giữ địa chỉ với điều kiện ready=false. Service có `publishNotReadyAddresses` là ngoại lệ cần đọc riêng. Readiness failure không tự restart container.
 
 Thứ hai là Liveness Probe (`/livez`): kiểm tra điều kiện mà policy coi là cần restart container. Kubelet áp dụng threshold và termination policy, không restart chỉ vì một mẫu fail. Tránh dùng lỗi dependency xa làm liveness failure nếu restart không chữa được nó; điều đó có thể tạo cascading restart. Readiness và liveness phục vụ quyết định khác nhau.
 
@@ -321,7 +322,8 @@ kubectl apply -f k8s/deployment.yaml
 kubectl -n go-book rollout status deployment/probe-api
 ~~~
 
-Lệnh `rollout status` sẽ timeout sau 45 giây. Người mới thường vội kết luận
+Nếu image vẫn không pull được và chưa có ai sửa Deployment, lệnh `rollout status`
+dự kiến timeout sau 45 giây. Người mới thường vội kết luận
 "Kubernetes bị treo". Nhưng khi kiểm tra `get events` và `describe pod`, control
 plane cho ta bằng chứng cụ thể: `ErrImagePull` và `ImagePullBackOff`. Sau khi xác
 định đúng nguyên nhân, ta khôi phục bằng cách apply lại `deployment.yaml` gốc.
@@ -356,8 +358,10 @@ get: generation=1 observed=1 desired=1 updated=1 available=1
 
 Chương trình này cố ý giữ phạm vi hẹp: nó không tạo, sửa hay xóa bất kỳ tài
 nguyên nào. Nó minh họa sự khác biệt giữa `Generation` (số phiên bản spec mà
-người dùng muốn) và `ObservedGeneration` (phiên bản spec mà controller đã xử lý).
-Nếu hai con số này lệch nhau, hệ thống đang trong quá trình chuyển trạng thái.
+người dùng muốn) và `ObservedGeneration` (generation mà controller báo đã quan sát).
+Hai số lệch nhau cho biết status chưa theo kịp generation hiện tại, không chứng minh
+controller đang tiến triển: nó có thể đang lỗi hoặc chưa chạy. Hai số bằng nhau
+cũng không chứng minh workload healthy; còn phải đọc conditions và replica status.
 
 @table Các lớp kiểm soát từ binary đến cluster
 

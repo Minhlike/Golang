@@ -76,7 +76,7 @@ Sơ đồ phân nhánh dưới đây mô tả cấu trúc của một hệ thố
 | :--- | :--- | :--- |
 | `Manager` | Quản lý vòng đời tiến trình Operator | Quản lý bộ đệm chung, leader election, server metrics và probe. |
 | `Scheme` | Đăng ký ánh xạ kiểu dữ liệu | Ánh xạ giữa Go struct (`v1alpha1.AppService`) và `GroupVersionKind`. |
-| `Split Client` | Phân tách đọc từ cache và ghi vào API | Đọc từ Informer Cache (0 HTTP), ghi gửi trực tiếp API Server. |
+| `Client` với cache | Phân tách đường đọc và ghi theo cấu hình | Get/List có thể đọc cache; kiểu bị DisableFor, metadata discovery hay cache chưa khởi tạo vẫn có đường HTTP. Writes đi tới API. |
 | `Reconciler` | Hiện thực logic điều hòa cốt lõi | Nhận `ctrl.Request` chứa `NamespacedName`, hội tụ trạng thái. |
 
 ---
@@ -88,7 +88,7 @@ Với API của lab, ta tách **Spec** — ý định người dùng — khỏi 
 | Khối dữ liệu | Ý nghĩa | Ai có quyền ghi? | Trách nhiệm |
 | :--- | :--- | :--- | :--- |
 | **Spec** | Trạng thái mong muốn (Desired State). | Người dùng, Helm, CI/CD pipeline, GitOps (ArgoCD). | Khai báo hệ thống cần đạt được điều gì. |
-| **Status** | Trạng thái quan sát được (Observed State). | Duy nhất **Operator Controller** chịu trách nhiệm. | Báo cáo thực tế hệ thống đang chạy ra sao. |
+| **Status** | Trạng thái quan sát được. | Controller được policy giao trách nhiệm; RBAC quyết định quyền ghi thực tế. | Báo observation và generation đã quan sát. |
 
 ### Quy tắc chống trượt (Anti-Drift Rule)
 
@@ -109,7 +109,7 @@ if err := r.Status().Update(ctx, appService); err != nil {
 }
 ~~~
 
-Nếu bạn gọi nhầm `r.Update(ctx, appService)`, Kubernetes sẽ coi đó là một thay đổi trên toàn bộ đối tượng, làm tăng biến đếm `metadata.generation`, và phát ra sự kiện kích hoạt hàm `Reconcile` chạy lại. Điều này dễ dẫn đến vòng lặp vô tận (reconcile loop storm).
+Với CRD bật status subresource, write vào resource chính bỏ qua thay đổi Status. Generation tăng khi phần dữ liệu thuộc quy tắc generation của CRD thay đổi, không phải cứ gọi Update là tăng. Một write tạo event cũng chưa chứng minh loop vô tận: predicate, nội dung thay đổi và logic reconcile đều ảnh hưởng. Đọc status qua đường đúng và xử lý conflict của write đó.
 
 ---
 
@@ -129,7 +129,7 @@ if err := controllerutil.SetControllerReference(
 
 ### Lợi ích tối cao của OwnerReference
 
-Thứ nhất là khả năng tự động dọn dẹp (Cascading Deletion): Khi người dùng xóa `AppService`, bộ dọn rác (Garbage Collector) của Kubernetes tự động xóa tất cả `Deployment`, `Pod`, `Service` con thuộc về nó mà Operator không cần viết thêm dòng code nào.
+Thứ nhất là cascading deletion theo policy: garbage collector dùng ownerReferences hợp lệ để xét dependent, nhưng propagation policy, owner khác còn tồn tại và finalizer có thể giữ object. Lab gắn owner cho Deployment; không suy ra mọi tài nguyên con bị xóa ngay hay tài nguyên ngoài cluster được thu hồi.
 
 Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): Controller có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
 
@@ -145,7 +145,7 @@ Nếu đối tượng `AppService` bị xóa trước khi cleanup hoàn tất, c
 
 ~~~
 1. Khởi tạo tài nguyên:
-   AddFinalizer("apps.example.com/finalizer") ──> Lưu vào etcd
+   AddFinalizer(...) -> Update qua API server
 
 2. Người dùng gõ "kubectl delete":
    API Server KHÔNG XÓA NGAY!
@@ -156,13 +156,15 @@ Nếu đối tượng `AppService` bị xóa trước khi cleanup hoàn tất, c
    Thấy deletionTimestamp != nil
    ──> Thực thi dọn dẹp tài nguyên đám mây
    ──> Dọn dẹp thành công?
-       ──(Có)──> RemoveFinalizer(...) ──> etcd xóa hẳn!
-       ──(Lỗi)──> Giữ nguyên Finalizer ──> Thử lại sau
+       -> Thành công: gỡ finalizer của controller và Update
+       -> Lỗi: giữ finalizer và xử lý retry theo policy
 ~~~
+
+API server chỉ có thể hoàn tất xóa khi các điều kiện lifecycle, gồm toàn bộ finalizer còn lại, cho phép. Gỡ finalizer của controller này không hứa object biến mất ngay; controller không trực tiếp gọi etcd để xóa.
 
 ### Cạm bẫy Finalizer Deadlock
 
-Một lỗi vận hành nghiêm trọng là thiết kế hàm dọn dẹp không có tính **lũy đẳng (idempotency)**. Nếu dịch vụ đám mây trả về lỗi `404 Not Found` (nghĩa là tài nguyên đã bị ai đó xóa trước rồi), hàm dọn dẹp không được coi đó là lỗi! 
+Cleanup cần an toàn khi gọi lại. Một response not-found có thể được coi là đã hoàn tất nếu API và identity chứng minh đúng tài nguyên đích đã mất; không bỏ qua mọi 404, vì nó cũng có thể liên quan endpoint, quyền hoặc identity sai.
 
 Nếu coi mọi 404 khi cleanup là lỗi phải retry, controller có thể giữ finalizer dù resource ngoài đã mất. Object có thể kẹt `Terminating` cho tới khi logic được sửa hoặc có can thiệp. Chỉ coi not-found là cleanup thành công khi đã xác nhận đúng identity và contract API, không bỏ qua mọi lỗi ngoài bằng cùng một nhánh.
 
@@ -170,7 +172,7 @@ Nếu coi mọi 404 khi cleanup là lỗi phải retry, controller có thể gi�
 
 ## 6. Hiện thực Operator hoàn chỉnh trong Go
 
-Dưới đây là phần mã nguồn hiện thực bộ Reconciler chuẩn mực được trích xuất từ dự án `labs/part23-controller-runtime-operator/`:
+Dưới đây là phần lõi Reconciler của `labs/part23-controller-runtime-operator/`:
 
 Định nghĩa cấu trúc điều hòa với khả năng tiêm phụ thuộc (Dependency Injection) cho bộ dọn dẹp ngoại vi:
 
@@ -249,12 +251,13 @@ func (r *AppServiceReconciler) handleDeletion(
 				"external cleaner is required",
 			)
 		}
-		if err := r.ExternalCleaner.Cleanup(ctx, app); err != nil {
+		err := r.ExternalCleaner.Cleanup(ctx, app)
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf(
 				"cleanup lỗi: %w", err,
 			)
 		}
-		// Dọn dẹp xong -> Gỡ finalizer để etcd dọn dẹp
+		// Dọn dẹp xong: gỡ finalizer của controller này
 		controllerutil.RemoveFinalizer(
 			app, AppServiceFinalizer,
 		)
@@ -335,8 +338,8 @@ Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Re
 | :--- | :--- | :--- |
 | **Ghi observation vào Spec** dù API quy định user sở hữu Spec. | Có thể xung đột với GitOps và gây reconcile lặp. | Giữ observation ở Status; xác định field ownership khi có chức năng sửa Spec. |
 | **Dùng `Update` cho Status khi CRD bật status subresource.** | Status có thể bị bỏ qua; generation không phải cứ Update là tăng. | Dùng `Status().Update` cho status và kiểm tra conflict/observedGeneration theo API. |
-| **Xử lý Finalizer không lũy đẳng (Non-idempotent)** khi dịch vụ ngoài báo 404. | Tài nguyên bị kẹt vĩnh viễn ở trạng thái `Terminating`, cụm máy chủ không thể dọn rác. | Nếu lệnh xóa ngoại vi trả về 404 Not Found, coi như đã xóa thành công và gỡ Finalizer. |
-| **Quên gán OwnerReference** cho tài nguyên con do Operator sinh ra. | Khi xóa đối tượng cha, tài nguyên con bị mồ côi (orphaned), gây rò rỉ tài nguyên cụm. | Luôn gọi `controllerutil.SetControllerReference(owner, child, r.Scheme)` trước khi tạo. |
+| **Cleanup coi mọi not-found là lỗi hoặc mọi 404 là thành công.** | Có thể giữ finalizer không cần thiết hoặc bỏ cleanup sai đích. | Xác minh resource identity và contract API trước khi coi not-found là hoàn tất. |
+| **Không thiết kế ownership** cho tài nguyên con. | Garbage collector không suy ra quan hệ cha/con từ tên; tài nguyên có thể còn lại khi cha bị xóa. | Nếu policy giao cleanup cho garbage collector, gắn owner reference hợp lệ; kiểm tra scope và deletion policy, không gắn owner tùy tiện cho tài nguyên chia sẻ. |
 
 ---
 

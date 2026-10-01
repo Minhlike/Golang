@@ -26,11 +26,11 @@
       "semantic_sha256": "8f845b3c3cc086d965fa5f494a90b039630a07be3f7ce1a6fca7398e1438d964",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Replace a rendered arrow-as-text with a real repeat/decision/backward loop.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
       "rendered_page": 12,
       "figure_number": 3,
-      "rendered_page_png_sha256": "dde62360f53afa4cdfcd3c0ee4a981937281f46e26893467eb0e461c5d4abdb4",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "d6e1d3673158cf40608230f81ab1367e87246f84b8e411122b1de30fdc3de6a2",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "go-history-timeline",
@@ -53,11 +53,11 @@
       "sha256": "fb65272fe7211fefdf3d38fc65b72bb9558a0aa16e91bd61c6c1ea3b8e5afff0",
       "source_sha256": "3c535b33a4e24c3bc50cecae7ba680af8e536cc57d330e445736af16db81a046",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
       "rendered_page": 4,
       "figure_number": 1,
-      "rendered_page_png_sha256": "d10c7321566483431d6553e3464142d56ddb9e4c4930b1e9151754c1a087ebd5",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "43f69aa4b6a013cb506d8aba7345b697bfbd6611b7a2ca1982d59bd6ff47ddac",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "go-idea-lineage",
@@ -83,11 +83,11 @@
       "semantic_sha256": "2d0d2ca8874463262bace829f1e1b0ad4ab84c92896a228486cfa1b472380e97",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Remove literal bold delimiters rendered in the root label; retain relationships.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
       "rendered_page": 6,
       "figure_number": 2,
-      "rendered_page_png_sha256": "dc6bf3a1fbc4706f771bbaa767df2776ab41e4b76e1c2477e0e8bdeec5b1242a",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "a1d66d5acd46ef5fbf77e2bf2d995c9d4468e88c6c07326bf7d9c50fa9bb013d",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "go-source-anatomy",
@@ -107,14 +107,17 @@
       "factual_verification": "schematic / conceptual model; not measured runtime trace",
       "redistribution_status": "same authority as manuscript",
       "modifications": "rendered at 300 dpi; unchanged semantic source",
-      "sha256": "380f6cd3006d2d9d0987a0b6fdebce2953062540eaeccf95ce904428ad891bc1",
-      "source_sha256": "9fd98795ae7756bd802a15c15ab898f9f814d93d5c20b908e72ae19df15d0c68",
+      "sha256": "320608c017a2e7083b7d48606a03e3782e327bac0642501d067c73453b173261",
+      "source_sha256": "9a78d5f15a3df3c0962185fb1c2134530d50774d71de22d9b6ff53fd41370259",
+      "semantic_sha256": "9a78d5f15a3df3c0962185fb1c2134530d50774d71de22d9b6ff53fd41370259",
+      "semantics_reviewed": true,
+      "semantic_repair_reason": "Import declares dependency and a file-scoped name; const and func in this example are package-level declarations, not runtime loading. Source and300dpi render inspected.",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
       "rendered_page": 15,
       "figure_number": 4,
-      "rendered_page_png_sha256": "7efa27385a6aa75b8f224daea54ac022edd107649c8677992acfab8bf8cc5375",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "c76df9e2bd66e5e069144d30a2776d3f0b4958f4ce55bd6c08f62e65e4c04aa4",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "compiler-doc-go",
@@ -137,11 +140,11 @@
       "sha256": "0ecc0f91a2a95bcb3ef5163696a2c9c477acc499ccdf2f408e1a4a2fe7caa976",
       "source_sha256": "2d5b831501458038901e12a961632ba79b0514961fb20e325a71c339a5aaf017",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
       "rendered_page": 17,
       "figure_number": 5,
-      "rendered_page_png_sha256": "638d55d3c5eb3fc1468724dd02d4358a3e96320fa517411332c24c2fc692d7ff",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "76d6631517a11e313cf2e26a5e000ec44597a95171f2b3fcd3b91323372e042f",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "go-scope-trace",
@@ -164,11 +167,11 @@
       "sha256": "80c548a2e7137fd6a15807628de04c3ce519e63ffece7d9c38e83be9c2326ae6",
       "source_sha256": "a57626231c4ec0f4b2a2c970c6357747e97a39f1c4abb925dfbefe2addb74245",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 22,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 24,
       "figure_number": 6,
-      "rendered_page_png_sha256": "d9272077641c5b18ec5a0a6a9678065f1234fae200b38023dd2f576ee1292f8c",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "9b5086f7104f2a0fcf987690fe3d0367b59f0f09a7edf10760f05da927fd5635",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "array-copy",
@@ -191,11 +194,11 @@
       "sha256": "14f9ba5e0d96ec641f0782d2a949e3a4fb0248ebd7337c80fdc51f6df5229f4a",
       "source_sha256": "7a40a2ad1e5abb77b7765fb6355f2242b76074c4ed25acd1c2e1ec65c9ba7c55",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 35,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 36,
       "figure_number": 7,
-      "rendered_page_png_sha256": "b011800002f25bfc80b3e925e83069367be557382d43cc40a3e933b966404d1a",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "49461718e4a9455026d3152c0c0ded86bb57fba909fbd02170e2f841c702ab42",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "slice-sharing",
@@ -218,11 +221,11 @@
       "sha256": "b0a08c2dcdddb72b49079e0ddb15ce19a2cd6f79acd55bebbe13e908f0683b9b",
       "source_sha256": "02d6b64aed8db83cfe206264fcdd0fbc53a74e7164caec10a73129c758cc6b65",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 36,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 37,
       "figure_number": 8,
-      "rendered_page_png_sha256": "c0052b30c90dd7bda6a7a3e2f3b5e232d0d1cfa24a1fd0fce03ea8ab235e6e5b",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "00d26e52af97ab43c6be91bee74f0b5f29fc00aa4ef645439f2b2542d4e7a857",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "slice-window",
@@ -245,11 +248,11 @@
       "sha256": "daa87968900b666bceb5b78d223283cf9d7d335e60068d3ee89a3c98fd6166b9",
       "source_sha256": "2799e3251f616260c1093f271c38252c34f9d639ed2e254a777dfc0341baae42",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 37,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 38,
       "figure_number": 9,
-      "rendered_page_png_sha256": "c06fa404ba2f92826e56b263774759670ab61195d2ffc024c2fbce974186e545",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "9b7fe546dc1dfb65f1837826e52dd66603c0437715eefb70713eb4ee3d51d7bc",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "append-storage",
@@ -272,11 +275,11 @@
       "sha256": "96d6c268cb469d203cf47899201ff56dfc1c4883d2bc9b834cb5006bc9725d16",
       "source_sha256": "9d1eebc54a3f6d4fe1da2300bedfee875fcb28a0e8ff92ab9550fb501ea4ef1e",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 39,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 40,
       "figure_number": 10,
-      "rendered_page_png_sha256": "135c5993bcf731140dc17a9c9d69ebe87e1584f811a2e94df7eca21eee0e3bbe",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "3134c61aaae71cc5bdc981e8b0aca713c6b872544b30056cba4c6c178f829e73",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "pointer-value-call",
@@ -299,11 +302,11 @@
       "sha256": "95f3db0342e5b113a4bc170fe297e8b967f0caaf8caeed16cfe4c660d1c163a3",
       "source_sha256": "9672e6f07e6a4bc4df79878720654dfa7f14b1e4e9789db4537c93196f547e1c",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 45,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 46,
       "figure_number": 11,
-      "rendered_page_png_sha256": "45e924bb371ebd050d5a8811bd0e766c292d0d28d412cb7a7b9104bf81e3814a",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "688c145189b1786c06d5817e75680b6aee35e3f0c844449c920c80094c4ed813",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "pointer-pointee",
@@ -329,11 +332,11 @@
       "semantic_sha256": "fdbc0cc000015a0d56e8e5585f55189c51c8f59d5f4ccf071c78df93a5b5bb1b",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Escape Creole bullet interpretation so actual dereference asterisks render literally; unchanged pointee relation.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 46,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 47,
       "figure_number": 12,
-      "rendered_page_png_sha256": "e34178f8ac48d81f98fac8c3faa12dd296ecac9c2dcca8e40cad2513d6b8bd1f",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "96a7139f84c177dd149b1f50767866f3a722c73edc0925783b88872e507813f3",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "struct-copy",
@@ -353,14 +356,17 @@
       "factual_verification": "schematic / conceptual model; not measured runtime trace",
       "redistribution_status": "same authority as manuscript",
       "modifications": "rendered at 300 dpi; unchanged semantic source",
-      "sha256": "b55dd21b7fb00a62e08f111e9c0e75ee2cb47ff1825a1108096c9b7e3a481193",
-      "source_sha256": "e302ee8122b7a90e6b9d03aaf64e2ccb2734444c1565605e601f1ac774683f49",
+      "sha256": "0a402a564c1e530bb2b376d5f266762d0f717415354d28932a1ebd71b6653835",
+      "source_sha256": "de344cf5672a823dcc2302e15c4744312786f2aa25399dd3d7c5c6620a8b5e0a",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 48,
+      "semantics_reviewed": true,
+      "semantic_sha256": "de344cf5672a823dcc2302e15c4744312786f2aa25399dd3d7c5c6620a8b5e0a",
+      "semantic_repair_reason": "Retain Retries1 in both struct copies after the preceding increment; source and raster opened.",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 49,
       "figure_number": 13,
-      "rendered_page_png_sha256": "8b0e667ee893c7881e2feab9ca5a4a7cc7e683d93c7a9d9d436f083545478949",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "15ef13f3ded09ccda28ed17805ab5f2a351c8e072efbae600c3f0edde287134e",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "map-sharing",
@@ -386,11 +392,11 @@
       "semantic_sha256": "472873c7bfc4c99e6e2a3d90fee5dcb3c703408ffc55d4cf9bdabb421219250d",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Render literal quotes and describe map-value sharing rather than asserting an implementation header pointer.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 55,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 56,
       "figure_number": 14,
-      "rendered_page_png_sha256": "520c6c88f2766a91dc8e17a470466763d16ca44b3ca9b213b0870e54b863946f",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "03e289c784bb4ab87c0681526e4c0ff813f3aa97534cd8c9280fba98d0dda4e1",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "method-receiver-trace",
@@ -413,11 +419,11 @@
       "sha256": "8bea7143d83494245711c1345bfee0ffe9a57459b1cdf8c969db8f04c8647864",
       "source_sha256": "8a449c9c7533f647c4e8abb6aa3cada4c56595e58cf1dcd295fe05c946a1d907",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 60,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 61,
       "figure_number": 15,
-      "rendered_page_png_sha256": "3cd0eb52a86603149222ec92c6c475e91673a718aec5aed253c4205f6ad5e726",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "f537404bbc0f5dce630c89797f86a1ea2067c789d853b19ca9f187dc27ec49e3",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "interface-contract",
@@ -440,11 +446,11 @@
       "sha256": "7680602fec1db202b171a69b7e90b1e066f767be8231c0fbd1d107375b34b18d",
       "source_sha256": "ad6ba71fd684b29bacef98ce66c9fc722af2eb501d15729ad6a7c3d7cef59791",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 63,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 64,
       "figure_number": 16,
-      "rendered_page_png_sha256": "46b34971ac484e4b88033b2a48fe714f9de7aab16d591c3f98c84b9114251b24",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "6a2188ad2c9d3daef5734c49c872d1e7b4ee61fa9bd6bbc0356e0b75045e0d67",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "error-boundary-trace",
@@ -467,11 +473,11 @@
       "sha256": "c5c818a86caa7140ca80e39af38645aadd8e94de3f2708f4b844f3e9c69d2b3f",
       "source_sha256": "1d703b962d4256317283753e5b2cc3394e3bdde25deb4a7f82712682d58aed76",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 69,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 70,
       "figure_number": 17,
-      "rendered_page_png_sha256": "10d4a26b5373c17bffec34db7c28ab6f7326152db82a8f35d2f1c88706ee6afb",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "a49880d612cb70a6f3291465ac9bfb4356d1ad9976997245339ba46fb1160e1e",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "cancellation-cleanup-trace",
@@ -490,15 +496,18 @@
       "alt_text_vi": "Ba đường đi của một probe có cancellation và session: cancellation trước acquisition không tạo resource; mọi return sau acquisition đi qua Close trước khi error trở về caller.",
       "factual_verification": "schematic / conceptual model; not measured runtime trace",
       "redistribution_status": "same authority as manuscript",
-      "modifications": "rendered at 300 dpi; unchanged semantic source",
-      "sha256": "df4cead5d0c6e6550a04e75bfbe9a5c421c5a1ec8f6b7663597bae40d13b4f9d",
-      "source_sha256": "82d28f53533e81839d50637f64aaa12b9b14ef9fa0fa3715bbcb98705f4adf33",
+      "modifications": "Three ownership stages with explicit pre-acquisition exit note for readable print-size labels; font increased to 20, rendered at 300 dpi.",
+      "sha256": "92e66f4d6be7fca71674233675f46bc404eea43652442a53e2ee8d5c10f8c4ca",
+      "source_sha256": "76d1cc53908858b00e0f2a1c58c436cc4479ff0b009e33ba230e780315ad1538",
+      "semantics_reviewed": true,
+      "semantic_sha256": "76d1cc53908858b00e0f2a1c58c436cc4479ff0b009e33ba230e780315ad1538",
+      "semantic_repair_reason": "Equivalent normal-return flow checked against runWithSession: cancellation/open failure exits before ownership, successful acquisition registers defer, Close error replaces nil only; compact branches close F48 readability issue.",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 76,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 78,
       "figure_number": 18,
-      "rendered_page_png_sha256": "329859fa6e416de03ae33d49549581c0ffa917ece0a4fd17839c37d089db115b",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "5dc25bd225e7fa4da9ee3efabeeb0991eccca5d58de33a621ec15b7307aa6b03",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "package-boundary-graph",
@@ -521,11 +530,11 @@
       "sha256": "29757293adae15ee4f0bb7cd9d01a1b5b696d8878807a6bb70110a7486ac34cf",
       "source_sha256": "25cdf0ef5a520c75122640013d593547b73c20e355a31b528a56d3aca3fecab4",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 80,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 82,
       "figure_number": 19,
-      "rendered_page_png_sha256": "fde583f92efc0b67c66cf09196b171e233a4b96cc50030c567b2499ce1c7f552",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "3127edff40bb2444935c333d6ac33075814e71e4e6125aa4415a3d28273f8bc3",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "channel-work-lifecycle",
@@ -548,11 +557,11 @@
       "sha256": "a315c48d427fa748baa8f0c43a4192c45694b0238d7900db3b0a376b9af88357",
       "source_sha256": "65672f0d994d1d7f8e4fbfec8384ecbd66aef71735cc3ba0adfb128db7dae7d8",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 132,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 134,
       "figure_number": 20,
-      "rendered_page_png_sha256": "034a1ab1b6aaa611214df19c0f811a4c0c470f3efe7ba517fd9dc50a51f9f0af",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "6300d1a8f3007df1e8c7fb86864d5673c8e9c5446853a4432fc1675717012d24",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "performance-evidence-path",
@@ -575,11 +584,11 @@
       "sha256": "6d63a867e35481a44d235515c21692a0e6670e1baf49350403738fabc72f8068",
       "source_sha256": "91b1b2614f50a299c34c1d95d69002c99b7958291b02962b1209fbe44d98e75d",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 144,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 146,
       "figure_number": 21,
-      "rendered_page_png_sha256": "f563f4a73bbe249efd8a19df46f0a92a763495fc66fe9f792340bd6c3560431d",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "7c72aead8e523bb3b7ba16f3d72517764e470ac796e21995fbb59ac1ea61929b",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "http-client-request-path",
@@ -602,11 +611,11 @@
       "sha256": "2667ed4d53ba09a78765316ae6f8db1b7b02b6e6bb861c59941953750fc14c23",
       "source_sha256": "146a35a42bc1116f0eb2957408b23c7e4e11800225850d9c70d3838338fbc404",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 149,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 151,
       "figure_number": 22,
-      "rendered_page_png_sha256": "6f102ca8991dc87340dd3c3ab8189ae8b16a19e176a0458a043fec8537994dd1",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "587205eca9c652bad7c0ac7a91ebc139a465c8f33d40ed51dffde311636a35be",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "http-service-lifecycle",
@@ -632,11 +641,11 @@
       "semantic_sha256": "027c4bdcccb015cef94cd4002df188b8a6cc277a6a8188d3f1100cce766ef308",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Stack the same three states vertically and move the same drain note right to keep labels readable at actual PDF size.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 155,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 157,
       "figure_number": 23,
-      "rendered_page_png_sha256": "039fa55b95bf117c343eaf39265108c7ddc38073b69e87b06cfdcc0071120af7",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "2d28670a0f1305f6dff4424c4f26f3b1c6c695219649717f6752f917261f22aa",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "transaction-boundary",
@@ -659,11 +668,11 @@
       "sha256": "6279a52579e6c829e370aa51780b0b60ed55dcf0229ec8da390cd82dcfa08ce0",
       "source_sha256": "9d54697df150df5a37dd372e22b1de9ca0d5516fa13122af64aa10d50a03d8d7",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 165,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 167,
       "figure_number": 24,
-      "rendered_page_png_sha256": "62e792151071e6d6f94cc1fdecc81ea696d4b5a8241adae9532a250441971ab1",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "cdf7e26550b24ced51d6b4916f3c727f48f040ce1bb77638721a3d5295de66cf",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "incident-command-lifecycle",
@@ -686,11 +695,11 @@
       "sha256": "0b0a578739e790e2e1ca6b920be73b13002499ac8a7946df69346d65086d3f79",
       "source_sha256": "4d4ef2994129062d6e55cb048eee07363a06b07c9c489e475c90805498dacfdd",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 186,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 188,
       "figure_number": 25,
-      "rendered_page_png_sha256": "c47e99c4599abd67ece0a041f064d82a607393f3979e4086d9817a95375262c9",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "104db3ea587894657b0f035e2887bd750afd054bc8437bdde6e0a52a8340c0b6",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "observability-projections",
@@ -716,11 +725,11 @@
       "semantic_sha256": "4e090632843c052734abf76591caed0d8cfd88ee249e025c49f361997b59fffe",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Remove literal root emphasis delimiters and group each unchanged set of three details into one multiline leaf to improve actual-size readability.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 195,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 197,
       "figure_number": 26,
-      "rendered_page_png_sha256": "3761bf6b53749ffd4c14446371f40ac947b06a2749e6716d99495e96c94cd683",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "bedf94dda981788afd7241b5fc88a10d54981d6588211af644484f4e9f137c0c",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "reconciliation-loop",
@@ -739,18 +748,18 @@
       "alt_text_vi": "Vòng reconciliation",
       "factual_verification": "schematic / conceptual model; not measured runtime trace",
       "redistribution_status": "same authority as manuscript",
-      "modifications": "Stack Spec/Controller/Status, wrap the same convergence note and preserve all directed relations to avoid unreadably wide output.",
-      "sha256": "f872c0200f3e92f3d8e667680bacbe6af715aef3fd381d92e0ee9484da0e8075",
-      "source_sha256": "09aa651589e282ce5a2092291be57f727ba37d1c4997005081c83aeeed686d32",
+      "modifications": "Separate controlled workload from reported Status; label observation as potentially stale; wrap labels and render at 300 DPI.",
+      "sha256": "1e3131d246d34be82b09f395d66fe1f2a1508052206f095cbfccf7d1fdf41076",
+      "source_sha256": "ba0a316e9bbf3471d22830c62996d73f392260896cabb157f4409888d9589d7d",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "semantic_sha256": "09aa651589e282ce5a2092291be57f727ba37d1c4997005081c83aeeed686d32",
+      "semantic_sha256": "ba0a316e9bbf3471d22830c62996d73f392260896cabb157f4409888d9589d7d",
       "semantics_reviewed": true,
-      "semantic_repair_reason": "Stack Spec/Controller/Status, wrap the same convergence note and preserve all directed relations to avoid unreadably wide output.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 205,
+      "semantic_repair_reason": "Status is an observation, not the controlled physical workload. Conceptual reconciliation separates action and potentially stale observation; no immediate convergence guarantee.",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 209,
       "figure_number": 27,
-      "rendered_page_png_sha256": "bacb163a7f2c75d2e2060d0d6f33a555f3b839a7c3c40b91234e604ed92030a5",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "91d972659ce5a029355b14992715c5b3ddef889e7a3aa02b6745970402b0664c",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "pleiades-grayscale",
@@ -773,11 +782,11 @@
       "sha256": "26a520266efb4732e4fcb7f60839ab80a2cccc72152ff40a9ea996a2efc43719",
       "source_sha256": "4c1e2147c9d865d3017521cde4fdd033b3ff2128df311ce0b18a4cc51a5a0cdf",
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 207,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 211,
       "figure_number": 28,
-      "rendered_page_png_sha256": "27c19e9b257e6856252a78681c95d07575f281e0f3170b1384c6847f2be075b7",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "94fba335cb7b4810cd020bb158f3d5ac7420bb0096659f2cb7e58e8a5ff7a8d1",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "delivery-evidence-chain",
@@ -803,11 +812,11 @@
       "semantic_sha256": "e3ca345b98176d69bb605403d830a55c1b2789524b9f62d8f1bd67b3c2530536",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Lay out the same six directed stages in two rows with explicit arrows rather than an unreadably wide single row.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 221,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 226,
       "figure_number": 29,
-      "rendered_page_png_sha256": "e6631a4bcee205422ec53f939537ba88ffa44451f7e9e931d8c7581c540dded6",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "d4787b2631f227b4b07ffc7cfc9576b7f31949e4767ea6c25edd2fd1e00abb36",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "type-information-boundaries",
@@ -833,11 +842,11 @@
       "semantic_sha256": "7c9a9dffe43b26f2b95eb9334026a92591b64c806a1cf5630e034ae8c62b611d",
       "semantics_reviewed": true,
       "semantic_repair_reason": "Remove literal root emphasis markers; replace unmeasured performance claims with type-assertion semantics and workload measurement guidance.",
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 238,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 244,
       "figure_number": 30,
-      "rendered_page_png_sha256": "b25bf82af04da171fa78316fc2d50185b93c7899d59f4a06d0bceae31c3fe855",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "d9b0464ecec7af41c743df9f8a4b2ff32c50c6de7ad77b17e86268b2179566b4",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "change-evidence-gate",
@@ -862,11 +871,11 @@
       "review_status": "SOURCE_AND_RENDER_REVIEWED",
       "semantic_sha256": "70cfddd5cdbeb73335ca595138ab417fefb325b7c4b654fc0bd71aab2f1a5cc3",
       "semantics_reviewed": true,
-      "rendered_pdf_sha256": "ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d",
-      "rendered_page": 392,
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 404,
       "figure_number": 31,
-      "rendered_page_png_sha256": "87955eb5b84027a2094ed82a7f071acd43449f84c584a32fabb14a77394adc51",
-      "visual_review_evidence": ".workspace/encyclopedia-pass/pdf-qa-final-v11/page_review.csv"
+      "rendered_page_png_sha256": "ce7f4998458c909df777fdc54ca7bb29f90e50be365be59aabc9505abafdef8c",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "client-go-controller-flow",
@@ -888,7 +897,11 @@
       "modifications": "Replace monospace ASCII architecture with a project-authored grayscale diagram.",
       "sha256": "5626467a507a37ec22a4434968e027421c274cad8c717a8e5de64ef1ff77b051",
       "source_sha256": "f2a4815c3b01da66a9bf32fac7a1e9ab4a148ef279ea45f5d2c1805b0f292808",
-      "review_status": "SOURCE_AND_RENDER_REVIEWED"
+      "review_status": "SOURCE_AND_RENDER_REVIEWED",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 277,
+      "rendered_page_png_sha256": "3144d2dfa7ca9be830da1fcf186304d1ec2a8f7b39be5d06822d4874a2647fee",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     },
     {
       "asset_id": "client-go-list-watch",
@@ -910,7 +923,11 @@
       "modifications": "Replace monospace ASCII sequence with a project-authored grayscale diagram.",
       "sha256": "2b87d241a0bf2e2b297edaed7950b91c27f035e83bc0c6399c1a184f200ce58f",
       "source_sha256": "f2a4815c3b01da66a9bf32fac7a1e9ab4a148ef279ea45f5d2c1805b0f292808",
-      "review_status": "SOURCE_AND_RENDER_REVIEWED"
+      "review_status": "SOURCE_AND_RENDER_REVIEWED",
+      "rendered_pdf_sha256": "6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75",
+      "rendered_page": 278,
+      "rendered_page_png_sha256": "889373ab15cbd2bb44efa08489562be3224c6f7582562718e6322630118deca8",
+      "visual_review_evidence": ".workspace/content-deepening/pdf-qa-final-v7/page_review.csv"
     }
   ],
   "non_published_semantic_repairs": [

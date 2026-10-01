@@ -63,7 +63,7 @@ b[0] = 99
 
 []int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của underlying array. 
 
-Về mặt biểu diễn nội bộ trong Go runtime (`src/runtime/slice.go`), một slice value thường được mô tả bởi mô hình ba từ máy (three-word descriptor, tương ứng 24 byte trên kiến trúc 64-bit hiện hành): con trỏ `array unsafe.Pointer` trỏ tới phần tử bắt đầu của mảng nền, trường độ dài `len int`, và trường sức chứa `cap int`. Cần lưu ý con số 24 byte là kích thước quan sát được trên các target 64-bit cụ thể, không phải cam kết bất biến của đặc tả ngôn ngữ.
+Trong source runtime Go 1.27.1 (`src/runtime/slice.go`), mô hình descriptor gồm con trỏ tới dữ liệu, `len int` và `cap int`. Với target amd64 đang dùng, ba trường này tương ứng 24 byte. Đây là biểu diễn đã pin, không phải kích thước mà specification bắt mọi implementation phải giữ. Để dự đoán mutation ở đây, chỉ cần biết slice nhìn vào array nền và có length, capacity riêng.
 
 Khi phép gán `b := a` diễn ra, ngôn ngữ thực hiện sao chép giá trị theo ngữ nghĩa (copy by value). Trong mô hình ba từ máy, các thành phần của descriptor được sao chép sang `b` với cùng con trỏ dữ liệu, cùng `len` và cùng `cap`. Trình tối ưu hóa có thể giữ các trường này trên thanh ghi mà không bắt buộc phải phát sinh một lệnh chép 24 byte vật lý ở bộ nhớ. Biến `b` sở hữu một bản sao giá trị riêng biệt về cửa sổ nhìn (`len` và `cap`), nhưng con trỏ bên trong vẫn dẫn về cùng mảng nền ban đầu.
 
@@ -132,7 +132,7 @@ fmt.Println(old) // [99 20]
 fmt.Println(s)   // [99 20 30]
 ~~~
 
-Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Về mặt ngữ nghĩa, đặc tả chỉ bảo đảm rằng slice trả về từ `append` sẽ có đủ chỗ chứa cho các phần tử mới. Khi vượt quá capacity hiện tại, runtime tiêu chuẩn thường ủy thác việc cấp phát mảng nền mới cho cơ chế tăng trưởng bộ nhớ heap (như `runtime.growslice`), dù trình biên dịch trong một số kịch bản tĩnh có thể tối ưu trực tiếp. Trong thuật toán tăng trưởng thông thường của runtime tiêu chuẩn từ Go 1.18 trở đi, ngưỡng chuyển dịch diễn ra mượt mà: dưới 256 phần tử dung lượng có xu hướng nhân đôi; vượt ngưỡng 256, dung lượng tăng dần theo tỷ lệ `newcap += (newcap + 3*256) / 4`. Số byte cấp phát thực tế còn được bộ quản lý heap làm tròn lên kích thước size-class phù hợp, khiến `cap` thực tế có thể nhỉnh hơn con số tính toán lý thuyết.
+Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Không dùng chuỗi capacity tình cờ đo được để thiết kế ownership. Trong Go 1.27.1, `nextslicecap` ở `runtime/slice.go` chọn capacity mới theo cả length cần có và capacity cũ; nếu length mới vượt hai lần capacity cũ, nó có thể chọn thẳng length mới. Đường thông thường tăng gấp đôi dưới ngưỡng 256, rồi chuyển dần về mức tăng nhỏ hơn; `growslice` còn tính kích thước element và làm tròn allocation. Đây là thuật toán triển khai, không phải luật để dự đoán mọi lần `append` hay kết luận dữ liệu nhất thiết nằm trên heap.
 
 Để chủ động phòng vệ, Go cung cấp cú pháp lát cắt ba chỉ số đầy đủ `s[low:high:max]` (Full Slice Expression). Cú pháp này giới hạn sức chứa của lát cắt mới ở mức `max - low`. Khi ta đặt `max = high` (như `s[:n:n]`), capacity của lát cắt mới bị giới hạn đúng bằng độ dài nhìn thấy; thao tác `append` thêm phần tử vào lát cắt này sẽ không thể dùng tiếp phần capacity nằm ngoài phạm vi quan sát của lát cắt cũ, loại bỏ nguy cơ vô tình ghi đè lên các phần tử phía sau của mảng nền chung:
 
@@ -208,7 +208,7 @@ Lab chạy đoạn này với kết quả:
 
 V và i mỗi chiếm một byte. ệ được mã hóa bằng ba byte UTF-8, vì vậy rune tiếp theo bắt đầu ở byte index 5. range trên string decode UTF-8: giá trị thứ hai là rune, thường dùng để biểu diễn Unicode code point. byte là alias của uint8; rune là alias của int32. Code point vẫn không đồng nghĩa với “một ký tự người dùng nhìn thấy”: một grapheme có thể gồm nhiều code point. Ta chưa cần giải quyết segmentation ở đây; chỉ cần không nhầm len với số ký tự hiển thị.
 
-String không cho phép gán trực tiếp `text[0] = 'v'`. Khi cần dữ liệu byte có thể sửa đổi, ta bắt buộc phải chuyển đổi sang `[]byte`, thao tác, rồi tạo chuỗi mới nếu cần. 
+String không cho phép gán trực tiếp `text[0] = 'v'`. Với thao tác theo byte trong ví dụ này, chuyển sang `[]byte`, sửa slice rồi tạo string kết quả là một cách rõ ràng. Đó không phải con đường duy nhất tạo text mới: thao tác theo điểm mã có thể dùng rune, còn ghép chuỗi có thể dùng builder. Chọn đơn vị dữ liệu trước khi chọn công cụ sửa nó.
 
 Conversion giữa string và byte slice phải giữ semantics của giá trị: sửa byte slice tạo từ string không được làm đổi string gốc; string tạo từ slice giữ giá trị dù slice về sau bị sửa. Specification không bắt một lần cấp phát hay physical copy ở mọi biểu thức. Compiler có thể bỏ allocation/copy khi chứng minh behavior quan sát không đổi. Nếu cần biết một biểu thức có allocate không, đo và xem output compiler của đúng version thay vì suy ra từ syntax.
 

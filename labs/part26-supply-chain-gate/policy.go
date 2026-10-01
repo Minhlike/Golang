@@ -71,7 +71,8 @@ type EvaluationResult struct {
 	Warnings   []string `json:"warnings,omitempty"`
 }
 
-// DefaultSignatureVerifier validates ECDSA P-256 signatures against trusted OIDC identity issuers.
+// DefaultSignatureVerifier is a fixture-only model: Issuer is a caller-provided
+// label and PublicKey is not authenticated. It does not verify OIDC identity.
 type DefaultSignatureVerifier struct {
 	TrustedIssuers []string
 }
@@ -107,7 +108,7 @@ func (v *DefaultSignatureVerifier) VerifySignature(digest string, sig *Signature
 	return nil
 }
 
-// DefaultProvenanceVerifier validates SLSA attestation subject digest and builder identity.
+// DefaultProvenanceVerifier compares fixture fields, not a signed SLSA attestation.
 type DefaultProvenanceVerifier struct {
 	TrustedBuilders []string
 }

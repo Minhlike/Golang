@@ -209,7 +209,7 @@ Thứ nhất, phân biệt rạch ròi giữa việc di dời ngăn xếp (stack
 
 Thứ hai, `uintptr` là số nguyên đủ lớn để chứa bit của địa chỉ trên kiến trúc đang chạy, không phải một tham chiếu sống. Nếu tách địa chỉ khỏi `unsafe.Pointer` gốc và giữ nó trong `uintptr`, GC không có reason để coi số đó là giữ object sống; stack growth cũng không thể sửa một số nguyên đã chép. Vì vậy object có thể bị thu hồi khi liveness của pointer gốc kết thúc, còn địa chỉ stack có thể trở nên stale.
 
-Thứ ba, quy tắc chuẩn hóa của Go quy định số học con trỏ (pointer arithmetic) chỉ được phép xuất hiện trong **một biểu thức hợp thành duy nhất**:
+Thứ ba, với pattern chuyển pointer qua `uintptr` để cộng offset rồi chuyển ngược, tài liệu `unsafe.Pointer` yêu cầu conversion và phép tính nằm trong **cùng một biểu thức**:
 
 ~~~go
 p = unsafe.Pointer(uintptr(p) + offset)
@@ -217,7 +217,7 @@ p = unsafe.Pointer(uintptr(p) + offset)
 
 Pattern một biểu thức còn phải giữ pointer trong cùng object đã cấp phát và trỏ tới dữ liệu hợp lệ theo contract `unsafe`; nó không cho phép tính một địa chỉ tùy ý. Tách địa chỉ qua `uintptr` trung gian không được hợp thức hóa chỉ bằng `KeepAlive`. Các mô tả runtime và ví dụ ở đây được kiểm tra trong bối cảnh Go 1.27.1; chỉ conversion pattern được package công bố mới là phần caller nên dựa vào.
 
-Thứ tư, hai kiểu `reflect.StringHeader` và `reflect.SliceHeader` đã bị Go chính thức đánh dấu deprecated kể từ Go 1.20 vì chúng khuyến khích việc thao tác sai lệch trên trường `uintptr Data`. Trong Go hiện đại, các thao tác chuyển đổi tầng thấp phải sử dụng các hàm chuẩn mực do package `unsafe` cung cấp:
+Trong API Go 1.27.1, `reflect.StringHeader` và `reflect.SliceHeader` được đánh dấu deprecated; tài liệu cảnh báo trường `Data uintptr` không đủ giữ dữ liệu sống và representation không dùng an toàn hay portable. Khi thực sự cần boundary tầng thấp, đọc contract của các helper `unsafe` thay vì tự dựng header; helper vẫn không miễn yêu cầu về lifetime và mutation:
 
 ~~~go
 // Trích xuất con trỏ byte nền tảng
@@ -251,5 +251,5 @@ Chương này không dạy cách “né Go”. Nó dạy một boundary có trá
 1. Go Team. Package `reflect`: `Value`, `CanSet`, `Type`, `TypeFor`, `StructField` và `StructTag`. pkg.go.dev/reflect
 2. Go Team. Package `unsafe`: `Pointer`, `Sizeof`, `Alignof`, `Offsetof`, `String`, `StringData`, `Slice`, `SliceData`. pkg.go.dev/unsafe
 3. Go Team. The Go Programming Language Specification: struct tags, type identity và address operators. go.dev/ref/spec
-4. Go Team. Go Runtime: Garbage Collection Invariants and Stack Copying. go.dev/doc/gc-guide
+4. Go Team. A Guide to the Go Garbage Collector. go.dev/doc/gc-guide; cơ chế sao chép stack đối chiếu riêng với `src/runtime/stack.go` của Go 1.27.1, không phải contract của ngôn ngữ.
 5. Go Team. `cmd/cgo`, Passing pointers; `runtime.Pinner`; `runtime/cgo.Handle`. Contract kiểm tra với Go 1.27.1. pkg.go.dev/cmd/cgo

@@ -48,6 +48,15 @@ Frontmatter ──────► Các Chương (Chương 01 ──► Chương 
 
 ## 3. Cấu Trúc Thư Mục
 
+Ranh giới bằng chứng ngày 01-10-2026: `lock.json` và fingerprint xác minh identity
+của checkout, không xác minh giải thích API. `source_maps/*.json` là hồ sơ định vị
+chưa được kiểm định từng symbol; một số còn mẫu mô tả chung như `New`, `Init`,
+`Engine` hoặc call path không có trong API thư viện. Không dùng các trường ấy làm
+evidence hay tái chế thành prose. Đối chiếu symbol, file và test thật ở commit đã
+ghim; tên API trong sách được kiểm tra riêng, không nhận nhãn PASS từ việc JSON
+đủ trường. Ví dụ go-plugin dùng `NewClient`, `ClientConfig`, `Serve` và
+`ServeConfig`, không có bộ API `New/Init/Engine` mà source map cũ liệt kê.
+
 ```
 library_sources/
 ├── README.md                      # Tài liệu này

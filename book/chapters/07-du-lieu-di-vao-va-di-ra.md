@@ -4,7 +4,7 @@
 
 Một lệnh vừa in ra một dòng `billing healthy=true` có vẻ như đã giao tiếp được với thế giới bên ngoài. Nhưng terminal chỉ là một `io.Writer` rất đặc biệt. Khi dữ liệu vào chuyển thành tệp cấu hình, pipe từ lệnh khác, body HTTP hay một stream nén, trực giác “đọc file rồi có dữ liệu” bắt đầu che một sự thật quan trọng: dữ liệu không nhất thiết đến cùng lúc, và tài nguyên không tự hết hạn đúng lúc ta muốn.
 
-Mô hình tinh thần của chương này là **một stream là lời hứa về tiến độ, không phải một slice đã nằm sẵn trong bộ nhớ**. Reader hứa sẽ đưa byte theo từng lượt; người gọi phải xử lý từng lượt, biết khi nào dữ liệu kết thúc và biết ai chịu trách nhiệm đóng tài nguyên. Từ đó JSON, file và output không còn là các API rời rạc.
+Mô hình tinh thần của chương này là **stream cung cấp byte theo từng lượt, không phải một slice đã có đủ dữ liệu**. Caller phải xử lý byte nhận được, xác nhận điểm kết thúc và biết ai chịu trách nhiệm đóng tài nguyên. `io.Reader` không tự hứa một deadline hay tiến độ trong thời gian hữu hạn; những chính sách ấy thuộc nguồn dữ liệu và application.
 
 ## Một lần `Read` không có nghĩa là toàn bộ input
 
@@ -30,7 +30,8 @@ Contract tối thiểu của `Read(p)` là: nó trả `n` byte nằm trong `p[:n
 | `n > 0`, `err == nil` | Xử lý `p[:n]`, rồi đọc tiếp | Stream đang tiến lên nhưng chưa kết thúc. |
 | `n > 0`, `err == io.EOF` | Vẫn xử lý `p[:n]`, rồi kết thúc | Lượt cuối vừa có dữ liệu vừa báo hết stream. |
 | `n == 0`, `err == io.EOF` | Kết thúc | Không còn byte để tiêu thụ. |
-| `n == 0`, error khác `nil` | Trả hoặc phân loại lỗi | Reader không tạo được byte kế tiếp. |
+| `n == 0`, error khác `nil` | Trả hoặc phân loại lỗi | Lượt này không trả byte và có lỗi. |
+| `n == 0`, `err == nil` | Không coi là EOF; tránh vòng busy-loop vô hạn | Không có tiến độ trong lượt này; contract không khuyến khích kết quả ấy với buffer không rỗng nhưng caller vẫn phải phân biệt nó. |
 
 Đừng tự viết vòng `Read` chỉ để chứng minh đã hiểu contract nếu standard library đã có primitive đúng. `io.ReadAll` là lựa chọn hợp lý khi input có giới hạn kích thước đáng tin và việc giữ toàn bộ trong memory là chấp nhận được. Khi input có thể lớn hoặc vô hạn, thiết kế phải chuyển sang xử lý dần từng phần. Khác biệt này không phải micro-optimization: nó quyết định chương trình có thể bị ép allocate bao nhiêu memory bởi input không tin cậy.
 
@@ -83,6 +84,12 @@ func Decode(r io.Reader) ([]Target, error) {
 
 Điều này không biến JSON decoder thành lời giải cho mọi format. CSV có record và quoting riêng; line-oriented log có boundary theo newline; body HTTP có lifecycle mạng và limit khác. Chúng sẽ được dạy ở context phù hợp. Ở đây chỉ giữ một câu hỏi trung tâm: input kết thúc ở đâu, và code nào đã xác nhận điều đó?
 
+### Đủ một document chưa có nghĩa mọi decoder hiểu giống nhau
+
+Input `{"port":80,"port":443}` là một document nhưng có tên trùng. API `encoding/json` mà lab dùng vẫn giữ semantics v1: với field số trong ví dụ này, giá trị sau ghi đè giá trị trước. Go 1.27 đưa `encoding/json/v2` và `encoding/json/jsontext` thành API thông thường; mặc định v2 từ chối tên trùng và UTF-8 không hợp lệ. API v1 tiếp tục được hỗ trợ, dù implementation phía dưới đổi và wording lỗi có thể khác. Không đổi import rồi coi đó là migration tương đương.
+
+Trước khi chạy `TestJSONVersionBoundary` trong `labs/edition-contracts`, hãy dự đoán decoder nào chấp nhận document trên và `port` cuối cùng là bao nhiêu. Test chỉ kiểm tra hai trường hợp tên trùng và UTF-8 sai; không chứng minh decoder là bộ kiểm định toàn bộ policy cấu hình. Giới hạn byte, đúng một document, schema được phép và semantics chọn API là bốn câu hỏi riêng.
+
 ## Đóng output cũng là một phần của result
 
 Khi đọc file, `defer file.Close()` gần acquisition giúp không rò file descriptor. Khi ghi file, `Close` còn có thể là nơi buffer được flush và failure cuối cùng lộ ra. Nếu function ghi JSON chỉ trả error của `Encode`, caller có thể báo thành công trước khi biết output có được đóng hoàn chỉnh hay không.
@@ -122,7 +129,7 @@ Một syscall đưa việc thực thi qua ranh giới user/kernel. Nó có chi p
 
 Một ngộ nhận kỹ thuật phổ biến là mặc định rằng mọi lệnh `r.Read(p)` trong mã nguồn Go đều tương ứng với một chỉ thị CPU `SYSCALL` trực tiếp xuống kernel.
 
-Trong thực tế, ranh giới giữa việc xử lý trong không gian người dùng và lời gọi hệ thống phụ thuộc hoàn toàn vào kiểu cụ thể ẩn sau giao diện:
+Đường đi qua user-space hay syscall phụ thuộc implementation cụ thể, OS và trạng thái operation. Bảng dưới tách những trường hợp thường gặp:
 
 | Kiểu cụ thể của Reader | Bản chất cơ chế khi gọi `Read(p)` | Có phát sinh Syscall xuống OS không? |
 | :--- | :--- | :--- |
@@ -130,7 +137,7 @@ Trong thực tế, ranh giới giữa việc xử lý trong không gian người
 | `*bufio.Reader` (khi còn dữ liệu trong đệm) | `Read` sao chép byte từ đệm vào buffer của caller; khác với các API trả một slice nhìn vào đệm. | Không cần gọi underlying Reader trong lượt được phục vụ đủ từ đệm. |
 | `*bufio.Reader` (khi bộ đệm đã cạn) | Gọi `Read` lên đối tượng `io.Reader` bên dưới để nạp lại bộ đệm nội bộ. | Phụ thuộc underlying Reader. Nếu bọc in-memory buffer thì không có syscall; nếu bọc file hoặc socket thì do reader bên dưới quyết định. |
 | `*os.File` chưa đệm | Gửi yêu cầu I/O trực tiếp tới kernel qua bảng mô tả tệp (OS file I/O path). | Có. Thực hiện syscall đọc tệp của hệ điều hành (`read` trên Linux hoặc `ReadFile` trên Windows). |
-| `*net.TCPConn` | Thao tác non-blocking OS I/O kết hợp với Network Poller của runtime khi chưa sẵn sàng dữ liệu. | Có. Vẫn phát sinh syscall đọc non-blocking từ kernel; Network Poller chỉ điều phối việc đỗ và thức của goroutine. |
+| `*net.TCPConn` trong đường đọc Linux đã pin bên dưới | Thử non-blocking I/O; kết hợp poller nếu chưa sẵn sàng. | Có OS I/O; không có quan hệ một-một giữa số lần gọi `Read` và syscall. Windows dùng đường completion khác. |
 
 Với Go 1.27.1 trên Linux, đường đọc socket trong `internal/poll/fd_unix.go` có thể thử non-blocking read, gặp `EAGAIN`, chờ poller rồi thử lại. Đây là mô hình triển khai được pin, không phải lời hứa của `net.Conn`. Không áp nguyên trace readiness Linux cho Windows: backend IOCP dùng completion và đường triển khai khác. API chung vẫn là đọc byte, error và deadline; poller giúp điều phối goroutine chứ không loại bỏ I/O xuống OS. Chương 11 sẽ đặt cơ chế đó vào một request thật.
 
@@ -148,7 +155,7 @@ data, err := fs.ReadFile(files, "fixtures/message.txt")
 
 Imports của đoạn này là `embed` và `io/fs`; bản chạy được nằm trong `labs/edition-contracts`. Directive phải ở package scope, gắn với variable phù hợp. Byte được đưa vào binary lúc build, không tự cập nhật khi file ngoài máy đổi. `embed.FS` có API đọc, không phải nơi lưu runtime secret hoặc config cần sửa sau triển khai. Những byte được bundle có thể bị trích xuất từ binary; “không còn file rời” không phải bảo mật.
 
-Tên hợp lệ theo `fs.ValidPath` không có `..` hoặc dấu `/` ở đầu; điều đó không tự biến mọi implementation thành sandbox. Đặc biệt `os.DirFS` và `fs.Sub` không ngăn symlink bên dưới trỏ ra ngoài directory. Nếu nhận tên file từ bên không tin cậy và cần confinement thực sự, đọc contract `os.Root` cùng giới hạn theo OS trong Go 1.27.1, thay vì ghép path rồi tin `Clean` đã chặn mọi lối thoát. Quyền mở file và quyền parse dữ liệu là hai boundary khác nhau.
+`fs.ValidPath` không cho component `..` hoặc path bắt đầu bằng `/`; tên như `a..b` vẫn có thể hợp lệ, còn `.` là trường hợp đặc biệt chỉ root. Path hợp lệ không tự tạo sandbox. `os.DirFS` và `fs.Sub` không ngăn symlink bên dưới trỏ ra ngoài directory. Nếu nhận tên từ bên không tin cậy và cần confinement, đọc contract `os.Root` cùng giới hạn theo OS trong Go 1.27.1 thay vì tin `Clean` chặn mọi lối thoát. Quyền mở file và quyền parse dữ liệu là hai boundary khác nhau.
 
 **Thực hành.** Viết một function nhận `fs.FS` và tên logic, đọc một tệp rồi đưa byte cho parser đã có. Test với filesystem giả; test riêng tên không hợp lệ và file thiếu. Sau đó thay bằng `embed.FS` mà không đổi parser. Đừng để test filesystem giả được diễn giải thành bằng chứng rằng symlink hoặc quyền truy cập thật trên OS đã an toàn.
 
@@ -180,3 +187,7 @@ Chương này không thêm file config vào `opsprobe`: chưa có yêu cầu v�
 Trước khi chạm một API I/O mới, hãy tự hỏi ba câu. Byte đến theo từng lượt nào, đâu là dấu kết thúc được chấp nhận, và ai quan sát failure của resource sau cùng? Ba câu này không thay thế tài liệu của format hay protocol cụ thể, nhưng chúng ngăn một sai lầm rất phổ biến: coi input/output là vài dòng plumbing nằm ngoài contract của chương trình.
 
 Phần tiếp theo sẽ đặt một áp lực khác lên chương trình: nhiều goroutine cùng sống trong một process. Trước khi chọn channel hay mutex, ta cần nhìn một race không phải như một câu thần chú về thread safety, mà như hai access không có thứ tự an toàn.
+
+@references
+1. Go Team. Go 1.27 Release Notes, encoding/json/v2 và encoding/json/jsontext. go.dev/doc/go1.27
+2. Go Team. Package encoding/json: khác biệt semantics v1/v2. pkg.go.dev/encoding/json

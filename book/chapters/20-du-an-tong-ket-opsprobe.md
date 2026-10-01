@@ -2,15 +2,15 @@
 
 # Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành
 
-Một chương trình Go không bắt đầu bằng Kubernetes hay kiến trúc microservice phức tạp. Nó bắt đầu từ một câu hỏi thực tế rất khiêm tốn: một endpoint dependency của hệ thống hiện còn sống không, và nếu nó chết thì chết ở chặng nào? Ở Chương 1, ta đã viết những dòng lệnh đầu tiên để đọc một URL. Trải qua mười chín chương, câu hỏi ấy dần được đặt vào những áp lực khắc nghiệt nhất của thực tế: áp lực đồng thời, ranh giới lỗi, tính nguyên tử của dữ liệu, rò rỉ socket mạng, khả năng quan sát không suy đoán, và kỷ luật phát hành an toàn ra production.
+Ở Chương 1, ta dùng một kết quả HTTP giả định để học cách đọc chương trình. Các chương sau lần lượt thêm request thật, deadline, đồng thời, lưu trữ và tín hiệu vận hành. Chương này ghép các phần ấy vào một công cụ thăm dò endpoint: khi một lượt probe thất bại, caller cần biết kết quả thuộc boundary nào và dữ liệu nào đã được lưu.
 
-Chương này là điểm hội tụ của toàn bộ hành trình: **xây dựng hoàn chỉnh hệ thống `opsprobe`**. Đây không phải là một bài tập giả lập với các mock rỗng, mà là một hệ thống phần mềm có đầy đủ domain logic, worker pool bị chặn, kho lưu trữ giao dịch nguyên tử SQLite, telemetry Prometheus và OpenTelemetry, HTTP API có backpressure, container distroless non-root, và kịch bản ứng cứu sự cố rò rỉ tài nguyên mạng được chứng minh bằng thực nghiệm.
+Dự án `projects/opsprobe/` là teaching vehicle có domain logic, worker pool giới hạn, SQLite, metrics, trace và HTTP API. Test tái lập những contract cụ thể, trong đó có tình huống quên đóng response body. Có implementation chạy được không đồng nghĩa công cụ đã sẵn sàng cho mọi môi trường production; phần bảo mật và triển khai dưới đây chỉ ra những giả định còn phải giữ.
 
 Mental model của chương là: **một hệ thống Go trưởng thành không phải là một tập hợp các framework cồng kềnh, mà là sự khớp nối chính xác giữa các boundary kỹ thuật nhỏ: value semantics, error contract, áp suất đồng thời, tính nguyên tử của state, tín hiệu quan sát trung thực, và kỷ luật phát hành có trách nhiệm.**
 
 ## Bản đồ kiến trúc và hướng phụ thuộc
 
-Mã nguồn hoàn chỉnh của dự án nằm tại thư mục `projects/opsprobe/`. Ta tổ chức hệ thống theo nguyên tắc phân tách ranh giới rõ ràng, bảo đảm các tầng lõi không bị ô nhiễm bởi các chi tiết vận hành bên ngoài:
+Mã nguồn của dự án nằm tại thư mục `projects/opsprobe/`. Các package tách những trách nhiệm sau:
 
 ~~~
 projects/opsprobe/
@@ -35,7 +35,7 @@ projects/opsprobe/
 | `httpapi` | Nhận request, điều phối, trả JSON. | Backpressure 429, readiness, graceful drain. |
 | `cmd` | Điểm khởi đầu (Composition Root). | Parse cờ, bắt tín hiệu OS, graceful shutdown. |
 
-Đặc điểm quan trọng nhất của kiến trúc này là **hướng phụ thuộc một chiều (unidirectional dependency)**: `probe` và `store` hoàn toàn độc lập, không import `httpapi` hay `cmd`. Điều này cho phép ta kiểm thử riêng rẽ từng năng lực lõi bằng unit test thuần túy mà không cần dựng HTTP server hay giả lập môi trường mạng phức tạp.
+`probe` và `store` không import `httpapi` hay `cmd`, nên có thể kiểm thử mà không khởi động toàn bộ ứng dụng. Điều đó không biến mọi test thành phép tính thuần: test I/O của `probe` dùng HTTP server cục bộ, còn test `store` cần database. Hướng import giúp tách boundary; fixture vẫn phải tái lập đúng hành vi cần kiểm tra.
 
 ## Năm trụ cột kỹ thuật của một hệ thống đáng tin
 
@@ -104,9 +104,9 @@ for w := 0; w < numWorkers; w++ {
 wg.Wait()
 ~~~
 
-Để phản ánh chính xác số worker đang thực sự xử lý công việc mà không suy đoán, `probe.Pool` tích hợp interface `WorkerObserver`. Khi một worker goroutine khởi động và thoát ra, nó thông báo trực tiếp cho hệ thống telemetry cập nhật gauge `opsprobe_active_workers`.
+Gauge `opsprobe_active_workers` đếm worker goroutine đã khởi động và chưa thoát, qua `WorkerObserver`. Nó không đếm riêng worker đang xử lý target: một worker chờ việc vẫn nằm trong gauge. Muốn đo số thao tác đang diễn ra, cần metric khác với điểm tăng/giảm quanh từng thao tác.
 
-Trên tầng HTTP API, ta áp dụng cơ chế áp suất ngược (backpressure) thông qua buffered channel semaphore. Khi số lượng đợt chạy đồng thời vượt quá ngưỡng an toàn, API lập tức từ chối nhận thêm việc với mã `429 Too Many Requests`:
+Ở HTTP API, buffered channel semaphore giới hạn số đợt chạy đồng thời theo cấu hình. Khi hết slot, policy của lab từ chối thêm việc bằng `429 Too Many Requests`; giới hạn này là budget của ví dụ, chưa phải capacity đã được đo là an toàn cho production:
 
 ~~~go
 select {
@@ -201,7 +201,7 @@ Năm là, thời lượng probe phản ánh toàn bộ lifecycle: Đồng hồ �
 
 Một công cụ vận hành chỉ an toàn khi các ranh giới ngoại vi được xác định rành mạch:
 
-Về mô hình đe dọa (Threat Model): `opsprobe` được thiết kế như công cụ chẩn đoán nội bộ (trusted-operator diagnostic tool). Việc kiểm tra URL trong mã nguồn là validation cú pháp cơ bản, **không thay thế được cơ chế chống SSRF toàn diện**. Khi triển khai nhận input từ ngoài, hệ thống bắt buộc phải có network policy chặn các dải Private IP hoặc đặt sau egress proxy.
+`opsprobe` giả định người vận hành và target registry được tin. Validation URL cú pháp không chặn đầy đủ SSRF. Nếu nhận input không tin cậy, cần policy target/egress, xử lý DNS và redirect theo threat model; không mặc định chặn mọi private IP vì công cụ nội bộ có thể cần truy cập đúng các endpoint ấy. Allowlist hoặc proxy cũng cần owner và cấu hình được kiểm chứng.
 
 Về hợp đồng JSON di động: Trường `timeout_ms` trong request payload sử dụng kiểu số nguyên mili-giây (`0 <= timeout_ms <= 60000`), bảo đảm tương thích đa nền tảng thay vì parse cú pháp chuỗi duration của riêng Go.
 
@@ -256,11 +256,11 @@ Kiểm thử `TestIncident_BoundedDrainOversizedBody` xác nhận rằng với b
 
 Một là, Multi-Stage Dockerfile: lab xây binary với `CGO_ENABLED=0`, rồi dùng base image `gcr.io/distroless/static-debian12:nonroot` và tài khoản không đặc quyền (`USER 65532:65532`). Với dependency thuần Go của lab, cách này không yêu cầu C runtime; không suy rộng thành bảo đảm mọi chương trình đều không có dependency ngoài binary.
 
-Hai là, ranh giới lưu trữ và số lượng Pod trong Kubernetes: Manifest `deploy/k8s/deployment.yaml` thiết lập `replicas: 1` kết hợp PersistentVolumeClaim `opsprobe-data-pvc` (`ReadWriteOnce`). Do SQLite là cơ sở dữ liệu file cục bộ, việc chạy nhiều pod đồng thời trên cùng một file dữ liệu sẽ gây tranh chấp khóa và không nhất quán state. Chiến lược triển khai sử dụng `strategy: Recreate` để bảo đảm pod cũ nhả volume trước khi pod mới được gắn. Khi hệ thống có nhu cầu mở rộng quy mô ngang (`replicas > 1`), tầng `store` phải được chuyển sang hệ quản trị cơ sở dữ liệu máy khách - máy chủ (client-server) như PostgreSQL.
+Hai là, lab dùng một Pod và một file SQLite, với `replicas: 1`, PVC `ReadWriteOnce` và chiến lược `Recreate`. RWO giới hạn ghi theo node, không phải theo Pod; nhiều Pod trên cùng node vẫn có thể mount volume. SQLite có cơ chế khóa cho nhiều connection/process, nên không phải cứ hai process là dữ liệu mất nhất quán. Rủi ro tăng khi chia sẻ file qua filesystem có semantics khóa/sync không phù hợp. `Recreate` hạn chế chồng lấn rollout thông thường, không phải distributed lock hay fencing khi node lỗi. Nếu cần nhiều writer trên các node, ưu tiên database client-server như PostgreSQL, hoặc thiết kế một owner duy nhất cho SQLite cùng contract failover rõ ràng.
 
 Ba là, cấu hình lúc khởi động qua ConfigMap: Concurrency, timeout, backpressure limit và log level được nạp từ `deploy/k8s/configmap.yaml` vào biến môi trường (`OPSPROBE_*`). Sửa ConfigMap không tự cập nhật biến môi trường của process đang chạy; cần tạo lại Pod hoặc thiết kế cơ chế đọc lại riêng.
 
-Bốn là, định danh bất biến trong CI/CD: Trong manifest Kubernetes thực tế, image phải được gán digest bất biến sha256 (`image: ghcr.io/...@sha256:...`) đã được kiểm chứng bởi pipeline CI/CD, loại bỏ hoàn toàn các tag trôi nổi rủi ro như `:latest`.
+Bốn là, ghim nội dung image trong CI/CD: policy của dự án yêu cầu manifest dùng digest (`image: ghcr.io/...@sha256:...`) đã được pipeline kiểm chứng. Cách này không phụ thuộc việc tag như `:latest` có bị trỏ sang image khác hay không; digest tự nó không chứng minh image đáng tin, đúng platform hoặc còn được registry lưu giữ.
 
 ## Lệnh kiểm thử và vận hành hệ thống
 
@@ -295,7 +295,7 @@ curl http://127.0.0.1:8080/metrics
 
 Capstone ghép các proof nhỏ: value và aliasing, đồng bộ goroutine, body lifecycle, transaction và artifact identity. Mỗi proof có phạm vi riêng; transaction không giải quyết mọi external side effect, shutdown có deadline và có thể không hoàn tất mọi request, còn digest không chứng minh nội dung artifact đúng. Khi chuyển sang môi trường thật, giữ những giới hạn ấy trong test và observation.
 
-Đó chính là ranh giới giữa một người biết cú pháp ngôn ngữ và một kỹ sư phần mềm thực thụ: **hiểu rõ cái giá của từng quyết định thiết kế và chịu trách nhiệm đến cùng cho sự vận hành của hệ thống.**
+Khi mở rộng công cụ, hãy giữ các contract này thành tiêu chí review: input nào được tin, tài nguyên nào có owner, side effect nào có thể lặp, và observation nào xác nhận kết quả. Chương 21 dùng chính các câu hỏi ấy cho một controller.
 
 Việc hoàn thành dự án `opsprobe` chốt lại baseline vững chắc của cuốn sách sống (*living textbook*), đồng thời mở ra những bài toán hệ thống ở quy mô hạ tầng cao hơn: khi hệ thống không chỉ thăm dò thụ động mà cần liên tục tự điều hòa, dung hòa sai lệch giữa trạng thái mong muốn và thực tế để tự phục hồi.
 

@@ -6,11 +6,13 @@ Inventory 48 mục phía dưới là hồ sơ nền của lần retrofit, không
 
 Tài liệu này đóng vai trò là bản kiểm kê toàn diện (comprehensive inventory) các chủ đề Go nhập môn, đối chiếu giữa danh mục tham khảo người mới bắt đầu (W3Schools Go Syllabus), tài liệu chuẩn kỹ thuật chính thức (Go Specification, A Tour of Go, Effective Go), và hiện trạng triển khai trong các chương sách.
 
-Mục tiêu tối thượng: **BASIC IS NOT SHALLOW** — Một người hoàn toàn chưa biết Go căn bản có thể bắt đầu từ Chương 00, học từng cú pháp, thành phần ngữ pháp, mô hình tinh thần từ nguyên lý đầu tiên mà không phải mở thêm bất kỳ tài liệu nào khác để học vỡ lòng.
+**BASIC IS NOT SHALLOW** là yêu cầu về cách dạy: người chưa biết Go phải đọc được ví dụ đầu tiên, hiểu tên, kiểu, scope và thay đổi giá trị trước khi học cơ chế sâu hơn. Inventory giúp tìm chỗ thiếu lời giải thích; nó không chứng minh mọi người đọc đều học đủ mà không cần tài liệu khác.
 
 ---
 
-## 1. BẢNG KIỂM KÊ CHI TIẾT 48 CHỦ ĐỀ NỀN TẢNG
+## 1. Inventory retrofit lịch sử — 48 chủ đề
+
+Các trạng thái `REINFORCE` trong bảng sau là quyết định tại lúc lập inventory, không phải công việc còn mở của edition hiện hành. Không suy ra PASS hiện tại từ nhãn cũ; các sửa đổi, phép kiểm chứng và giới hạn của lượt 01-10-2026 được ghi riêng trong hồ sơ QA.
 
 | STT | Chủ đề (Topic) | Beginner Reference Coverage (W3Schools) | Vị trí hiện tại trong sách | Đã dạy đủ từ First Principles chưa? | Tiên quyết (Prerequisite) | Chương cần bổ sung / Tăng cường | Bằng chứng Go chính thức (Go Official Evidence) | Trạng thái (Status) |
 | :---: | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: |

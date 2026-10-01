@@ -147,6 +147,7 @@ def update_standard_puml():
     # 5. go-source-anatomy.puml
     p = DIAGRAMS_DIR / "go-source-anatomy.puml"
     p.write_text("""@startuml
+skinparam dpi 300
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "JetBrains Mono"
@@ -171,8 +172,8 @@ left to right direction
 rectangle "package main\\n\\nimport "fmt"\\n\\nconst service = "checkout"\\n\\nfunc classify(status int) string { ... }\\n\\nfunc main() {\\n    status := 503\\n    label := classify(status)\\n    fmt.Println(service, label)\\n}" as source
 note right of source
   package main: khai báo tên gói (package)
-  import: nạp thư viện từ gói khác
-  const và func: khai báo cấp tệp nguồn
+  import: khai báo phụ thuộc và tên trong tệp
+  const và func: khai báo cấp package
   main: hàm khởi điểm của chương trình thực thi
   status, label: biến cục bộ trong khối lệnh main
 end note
@@ -422,6 +423,7 @@ note bottom of amount : ~*balance += 20\\nbiến đổi amount gốc thành 120
     p.write_text("""@startuml
 skinparam backgroundColor white
 skinparam shadowing false
+skinparam dpi 300
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
@@ -440,8 +442,8 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "billing: Service\\nName: billing\\nPort: 8080\\nHealthy: true\\nRetries: 0" as original
-rectangle "candidate: Service\\nName: billing\\nPort: 8080\\nHealthy: false\\nRetries: 0" as copy
+rectangle "billing: Service\\nName: billing\\nPort: 8080\\nHealthy: true\\nRetries: 1" as original
+rectangle "candidate: Service\\nName: billing\\nPort: 8080\\nHealthy: false\\nRetries: 1" as copy
 original --> copy : candidate := billing\\nsao chép toàn bộ các trường
 note bottom of original : billing.Healthy vẫn giữ true
 note bottom of copy : candidate.Healthy đổi thành false
@@ -588,36 +590,31 @@ end note
     p.write_text("""@startuml
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
+skinparam defaultFontSize 20
+skinparam dpi 300
 skinparam shadowing false
-skinparam activity {
+skinparam rectangle {
   BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
 }
+skinparam note {
+  BackgroundColor #F5F5F5
+  BorderColor #777777
+  FontColor #000000
+}
 skinparam ArrowColor #222222
 
-start
-if (ctx đã bị hủy (cancel)?) then (có)
-  :trả về ctx.Err();
-  note right: chưa chiếm dụng tài nguyên session
-  stop
-else (không)
-  :mở kết nối endpoint;
-  if (kết nối thành công?) then (có)
-    :defer session.Close();
-    :run(ctx, endpoint, session);
-    :Close() luôn chạy trước khi return;
-    if (run() phát sinh lỗi?) then (có)
-      :bảo toàn lỗi chính (primary error);
-    else (không)
-      :trả lỗi đóng kết nối nếu có;
-    endif
-  else (không)
-    :trả lỗi mở kết nối;
-  endif
-endif
-stop
+rectangle "Mở session\\nChỉ sau khi kiểm tra ctx.Err()" as acquire
+rectangle "Nhận session thành công\\nĐăng ký defer session.Close()\\nGọi run(ctx, endpoint, session)" as owned
+rectangle "Trước khi return\\nGọi Close()\\nrun lỗi: giữ lỗi chính\\nrun không lỗi: trả lỗi Close() hoặc nil" as cleanup
+acquire -down-> owned : mở thành công
+owned -down-> cleanup : run trả về
+note right of acquire
+ctx đã hủy hoặc mở lỗi:
+trả lỗi trước khi nhận session,
+không gọi Close().
+end note
 @enduml
 """, encoding="utf-8")
 
@@ -826,6 +823,7 @@ end note
     p.write_text("""@startuml
 top to bottom direction
 skinparam shadowing false
+skinparam dpi 300
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam rectangle {
@@ -841,11 +839,11 @@ skinparam note {
 
 rectangle "trạng thái mong muốn (Spec)\\nmã định danh gói, số bản sao,\\nchính sách" as desired
 rectangle "bộ điều khiển (Controller)\\nquan sát -> phán đoán -> hành động" as controller
-rectangle "trạng thái thực tế (Status)\\nPod, tiến trình, độ sẵn sàng" as current
+rectangle "workload được điều khiển\\nPod, tiến trình, độ sẵn sàng" as current
 
 desired -down-> controller : cấu hình khai báo (Spec)
-current -up-> controller : dữ liệu quan trắc thực tế
-controller -down-> current : tác động điều chỉnh
+current -up-> controller : quan sát\\n(có thể trễ)
+controller -down-> current : điều chỉnh
 
 note right of controller
   Một vòng lặp không cam kết

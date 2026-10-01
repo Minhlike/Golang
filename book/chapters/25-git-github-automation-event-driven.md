@@ -2,11 +2,11 @@
 
 # Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa
 
-Trong kỷ nguyên GitOps và tự động hóa hạ tầng (Infrastructure as Code), Git không chỉ là công cụ lưu trữ lịch sử mã nguồn của lập trình viên, mà đã trở thành **Nguồn chân lý duy nhất (Single Source of Truth)** điều khiển toàn bộ hệ thống sản xuất. 
+Trong workflow GitOps, Git có thể là nguồn khai báo desired state. Nó không chứa toàn bộ state production: database, secret ngoài repo, status của controller và observation vận hành vẫn có owner riêng. Chương này xét cách một bot đọc source revision và metadata GitHub mà không trộn hai loại dữ liệu ấy.
 
 Một commit được merge vào nhánh `main` có thể tự động kích hoạt ArgoCD triển khai ứng dụng lên Kubernetes. Một nhãn (label) được gắn vào Pull Request có thể kích hoạt bot tự động cấp phát môi trường kiểm thử tạm thời (Ephemeral Environment) trên AWS.
 
-Nhưng khi bắt tay viết các công cụ tự động hóa bằng Go, hầu hết kỹ sư đều vấp phải hai sai lầm kiến trúc cơ bản: một là đánh đồng trạng thái Git cục bộ với trạng thái máy chủ GitHub; hai là xử lý sự kiện Webhook như một lời gọi hàm thông thường mà bỏ qua các rủi ro bảo mật và tính lũy đẳng phân tán.
+Chương này xét hai lỗi thiết kế bằng ví dụ: đánh đồng object Git cục bộ với dữ liệu GitHub qua API, và xử lý webhook mà không xét authentication, duplicate delivery hay crash window. Không cần giả định mọi kỹ sư đều mắc chúng để kiểm tra boundary.
 
 Chương này phân tích sâu bản chất kỹ thuật của Git và GitHub dưới góc nhìn của một hệ thống hướng sự kiện (Event-Driven System), từ đó hướng dẫn bạn xây dựng các bot tự động hóa chuẩn mực bằng Go.
 
@@ -35,7 +35,7 @@ Câu hỏi trung tâm của chương này là:
 
 Git cục bộ lưu commit, tree và blob trong đồ thị định danh nội dung. Đọc object đã có có thể không cần mạng, nhưng storage có thể là disk hoặc memory, còn clone/fetch cần transport tới remote. Không có latency microsecond chung cho mọi thao tác go-git; số liệu cần workload và storage cụ thể. GitHub metadata như pull request và review là một boundary khác, không nằm trong tree source của commit.
 
-Ngược lại, trạng thái lưu trữ trên GitHub thông qua thư viện `go-github/v92` do Google duy trì là tầng siêu dữ liệu quản trị tập trung (Hosted Metadata). Các thực thể như Pull Request, nhãn phân loại, đánh giá mã nguồn hay lượt duyệt đều không tồn tại trong cấu trúc cây nhị phân thuần túy của Git. Mọi giao tiếp với tầng này đều thực hiện qua REST hoặc GraphQL API, đòi hỏi kết nối mạng và chịu sự ràng buộc nghiêm ngặt của hạn ngạch tần suất gọi (Rate Limit). Một hệ thống tự động hóa hoàn chỉnh luôn biết kết hợp cả hai mô hình: sử dụng `go-git` để phân tích và chuẩn bị cây commit tốc độ cao trên bộ đệm, đồng thời sử dụng `go-github` để cập nhật trạng thái kiểm thử và phản hồi với lập trình viên.
+Metadata Pull Request, label và review không nằm trong Git tree của commit. Lab dùng `go-github/v92` cho REST API và `go-git/v5` cho object Git cục bộ. Một bot chỉ cần một trong hai cũng hợp lệ; chọn theo dữ liệu và thao tác thực sự cần, không theo một kiến trúc “toàn diện” bắt buộc.
 
 ---
 
@@ -99,7 +99,7 @@ func VerifyHMACSHA256(
 }
 ~~~
 
-Hàm `hmac.Equal` là API chuẩn của Go để so sánh hai mã xác thực thông điệp (MAC) mà không làm lộ thông tin qua thời gian thực thi (constant-time comparison), ngăn ngừa các nguy cơ khai thác kênh phụ (timing side-channel).
+`hmac.Equal` so hai MAC mà không rò rỉ nội dung qua thời gian so sánh theo API contract. Nó không chứng minh toàn bộ endpoint constant-time hay không có side-channel; caller vẫn cần giới hạn payload, xử lý chữ ký và bảo vệ secret.
 
 ---
 
@@ -120,7 +120,7 @@ GitHub / Quản trị viên / API         Máy chủ Webhook (Go)
       │  <── HTTP 200 OK (duplicate) ─────────┴─ BỎ QUA!
 ~~~
 
-Mã định danh `X-GitHub-Delivery` là khóa hữu ích để khử trùng lặp (deduplicate), xử lý redelivery và ngăn ngừa phát lại (replay). Khi một delivery được người vận hành kích hoạt lại (redeliver) qua giao diện quản trị hoặc qua REST API, GitHub giữ nguyên cùng một mã GUID, cho phép ứng dụng nhận diện ID đã qua xử lý để bỏ qua an toàn mà không phát hành release trùng lặp hay kích hoạt triển khai kép.
+Delivery ID giúp nhận diện cùng một delivery khi redeliver. Nó không được HMAC payload ký kèm như một phần header, nên riêng việc lưu ID chưa chống replay từ bên giữ payload/chữ ký hợp lệ rồi đổi ID. Sau xác thực, cần ràng buộc event, repository và operation identity; state xử lý phải bền vững nếu muốn giữ kết quả qua crash.
 
 Delivery ID chỉ khử trùng lặp **một lần chuyển giao**; nó không tự là khóa lũy đẳng của nghiệp vụ như “deploy commit X vào môi trường Y”. Cần có state machine tối thiểu `processing → completed`: redelivery đang xử lý bị giữ lại, attempt lỗi phải được đánh fail để có thể thử lại, còn completed mới bị suppress. Business mutation cần operation key riêng và, ở production, durable/transactional store có TTL. Lab giữ ledger trong RAM nên mọi bảo đảm chỉ tồn tại trong process lifetime.
 
@@ -132,7 +132,7 @@ Hai là, ràng buộc duy nhất trong cơ sở dữ liệu (Database uniqueness
 
 Ba là, mã định danh thao tác (Operation identity): Sinh token lũy đẳng gắn với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện webhook.
 
-Bốn là, bản chất nghiệp vụ tự lũy đẳng (Idempotent domain mutation): Thiết kế các tác vụ thay đổi hạ tầng theo dạng khai báo (declarative desired-state) để việc thực thi lặp lại nhiều lần vẫn tạo ra cùng một kết quả hội tụ duy nhất.
+Bốn là, thiết kế mutation lũy đẳng theo identity và trạng thái đã quan sát. Khai báo desired state giúp xác định đích nhưng không tự làm mọi thao tác create/delete lũy đẳng; precondition, ownership và retry sau partial failure vẫn cần được thiết kế như Ch21–23.
 
 Thiết kế bộ tiếp nhận có kiểm tra trùng lặp trong bộ nhớ:
 
@@ -162,27 +162,27 @@ func (r *WebhookReceiver) Process(
 }
 ~~~
 
-`Complete` chỉ xảy ra sau `handle`. Vì vậy lỗi nghiệp vụ giải phóng reservation để redelivery có thể thử lại; delivery đồng thời hoặc đã hoàn tất không chạy handler lần nữa. Đây vẫn là mô hình trong RAM: production phải thay `DeliveryLedger` bằng reservation có TTL và transaction/lease bền vững cùng domain mutation.
+`Complete` xảy ra sau `handle`; lỗi giải phóng reservation để thử lại. Trong process còn sống, ledger của lab ngăn delivery đồng thời hoặc đã hoàn tất chạy lại handler. Production cần state bền, atomic claim và recovery; TTL/lease đơn lẻ không đóng crash window giữa side effect ngoài database và việc ghi Complete.
 
 ---
 
 ## 4. Quản trị Rate Limit: Primary và Secondary
 
-Khi bot tự động hóa tương tác với GitHub API, rào cản lớn nhất trên môi trường production là chính sách kiểm soát tần suất (**Rate Limiting**).
+Khi bot gọi GitHub API, rate limit là một budget cần quan sát. Nó không phải rủi ro production duy nhất hay luôn là nút thắt lớn nhất:
 
 Tuyệt đối không xem "5.000 requests/giờ" là con số phổ quát cố định. GitHub áp dụng hạn mức phân cấp tùy theo loại định danh và ngữ cảnh ủy quyền:
 
 | Loại định danh (Authentication Context) | Hạn mức Primary Quota | Dấu hiệu nhận diện |
 | :--- | :--- | :--- |
 | **Chưa xác thực (Unauthenticated)** | 60 requests/giờ (tính theo địa chỉ IP) | Dễ bị nghẽn trong môi trường NAT/CI chung |
-| **Personal Access Token (PAT) / OAuth User** | 5.000 requests/giờ cho mỗi người dùng | `X-RateLimit-Limit: 5000` |
-| **GitHub App: User-to-Server** | 5.000 requests/giờ cho mỗi người dùng | Áp dụng khi app hành động thay mặt user |
+| **PAT / OAuth User** | Mức cơ bản 5.000 request/giờ theo user; app Enterprise đủ điều kiện có mức cao hơn. | Đọc X-RateLimit-Limit của response. |
+| **GitHub App user access token** | Chung quota theo user; app thuộc Enterprise Cloud đủ điều kiện có thể là 15.000/giờ. | Không coi mỗi app là một quota user độc lập. |
 | **GitHub App: Installation (Non-Enterprise)** | Base 5.000 req/h; nếu repos > 20: +50/h/repo; nếu org users > 20: +50/h/user; trần tối đa 12.500 req/h | Phù hợp nhất cho bot tự động hóa cấp tổ chức |
 | **GitHub App: Enterprise Cloud Installation** | Trần tối đa 15.000 requests/giờ | Áp dụng cho tổ chức trên GitHub Enterprise Cloud |
 | **GITHUB_TOKEN trong GitHub Actions** | 1.000 requests/giờ cho mỗi repository (hoặc Enterprise rate nếu resource thuộc Enterprise Cloud) | Áp dụng cho runner tiêu chuẩn trong GitHub Actions |
 | **GitHub Enterprise Server (On-Premises)** | Cấu hình độc lập bởi quản trị viên hệ thống | Tùy biến theo chính sách triển khai tự lưu trữ |
 
-Song song với Primary Rate Limit theo giờ, GitHub áp dụng **Secondary Rate Limit** để chống lạm dụng (Abuse Detection) khi bot gửi quá nhiều request đồng thời hoặc tạo tài nguyên quá nhanh (trả về mã HTTP `403` hoặc `429` kèm header `Retry-After`).
+Ngoài primary rate limit, GitHub còn áp dụng secondary rate limit, chẳng hạn cho mức đồng thời hay tốc độ tạo nội dung. Khi vượt mức, response có thể là `403` hoặc `429`. Nếu có `Retry-After`, phải chờ ít nhất khoảng ấy; header này không được bảo đảm luôn có. Khi thiếu nó, đọc thông báo và các rate-limit header khác, rồi áp dụng budget chờ/thử lại theo hướng dẫn API, không loop tức thời.
 
 ### Thuật toán bóc tách Rate Limit trong Go
 
@@ -279,7 +279,7 @@ func (c *GitHubClient) GetRepository(
 
 ### Thao tác Git trên bộ nhớ (In-memory Git) với go-git
 
-Khi viết bot tự động tạo commit hoặc cập nhật file cấu hình (GitOps bot), việc gọi trực tiếp lệnh CLI `git` ra ngoài hệ điều hành đòi hỏi phụ thuộc vào môi trường máy chủ và phát sinh các thư mục tạm dễ xung đột. Thư viện `github.com/go-git/go-git/v5` cho phép khởi tạo một kho lưu trữ Git hoàn toàn trên bộ nhớ RAM (`In-memory Repository`) bằng cách kết hợp `memory.NewStorage()` và `memfs.New()`:
+Gọi Git CLI tạo dependency vào executable và lifecycle subprocess; thư mục làm việc cần ownership riêng nếu chạy đồng thời. `go-git` là lựa chọn khác: ví dụ này dùng `memory.NewStorage()` cho object store và `memfs.New()` cho working tree, không chứng minh mọi dùng CLI đều xung đột:
 
 ~~~go
 func NewInMemGitRepository() (*InMemGitRepository, error) {
@@ -331,13 +331,13 @@ func (r *InMemGitRepository) WriteFileAndCommit(
 }
 ~~~
 
-Toàn bộ quá trình tạo commit, tính hash SHA, và cập nhật HEAD diễn ra ở tốc độ bộ nhớ RAM mà không ghi dù chỉ 1 byte xuống đĩa cứng vật lý.
+Với `memory.NewStorage()` và `memfs` của ví dụ, Git object và working tree không được chủ động ghi ra filesystem. Hashing, allocation và GC vẫn có chi phí; hệ điều hành có thể page/swap memory, nên không suy ra “không một byte xuống đĩa vật lý” hay một mức latency từ cấu hình in-memory.
 
 ---
 
 ## 6. Bằng chứng kiểm thử: Chứng minh 5 quy luật tự động hóa
 
-Bộ kiểm thử tại `labs/part25-github-automation/` vận hành độc lập (phân loại kiểm chứng: `UNIT_TESTED` cho toàn bộ các thành phần webhook receiver, HMAC validation, idempotency filter, rate-limit parser, in-memory Git DAG, và `MOCK_VERIFIED` cho lời gọi `go-github` qua `httptest.Server`), chứng minh tính đúng đắn ở các ranh giới bảo mật và khế ước dữ liệu:
+Test trong `labs/part25-github-automation/` kiểm tra các case HMAC, ledger, rate-limit parser và Git trong memory; HTTP fixture kiểm tra đường dùng `go-github`. Chúng không chứng minh GitHub thật luôn delivery thành công, không có replay đổi header ID, hay mọi lịch crash đều an toàn:
 
 ~~~
 === RUN   TestWebhookHMACVerification
@@ -377,8 +377,8 @@ Kiểm chứng việc khởi tạo client `google/go-github/v92`, định tuyế
 | :--- | :--- | :--- |
 | **So sánh chữ ký bằng ==** thay vì `hmac.Equal`. | Rò rỉ thông tin qua thời gian thực thi, bị kẻ xấu tấn công vét cạn chữ ký số. | Bắt buộc dùng `crypto/hmac.Equal` hoặc `crypto/subtle.ConstantTimeCompare`. |
 | **Bỏ qua X-GitHub-Delivery** và xử lý mù quáng mọi webhook. | Gây trùng lặp hành vi (tạo 2 PR, merge 2 lần) khi có redelivery từ UI hoặc qua REST API. | Lưu `X-GitHub-Delivery` vào bộ đệm và bỏ qua các sự kiện trùng lặp. |
-| **Gọi API ồ ạt trong vòng lặp** mà không kiểm tra Remaining. | Nhanh chóng làm cạn kiệt hạn mức quota (1.000–12.500 req/h), làm tê liệt bot tự động hóa. | Đọc `X-RateLimit-Remaining`. Chủ động ngủ khi quota chạm ngưỡng an toàn (ví dụ còn dưới 50). |
-| **Ghi file tạm ra ổ đĩa** khi thao tác Git trong container. | Gây phân mảnh ổ đĩa, rò rỉ dữ liệu nhạy cảm và xung đột tiến trình đồng thời. | Dùng `go-git` kết hợp `memfs` và `memory.NewStorage()` trên RAM. |
+| **Gọi API dồn mà không quan sát quota.** | Có thể cạn primary hoặc secondary budget theo token/endpoint thực tế. | Đọc rate-limit headers; chọn budget chờ/retry theo workload. Mốc Remaining dưới 50 chỉ là ví dụ policy, không phải ngưỡng an toàn chung. |
+| **Dùng thư mục tạm chung không có ownership/cleanup.** | Có thể xung đột hoặc để lại dữ liệu nhạy cảm. | Dùng thư mục riêng và cleanup rõ, hoặc memory storage khi kích thước và lifecycle phù hợp; RAM không tự là ranh giới bảo mật. |
 
 ---
 
@@ -388,7 +388,7 @@ Kiểm chứng việc khởi tạo client `google/go-github/v92`, định tuyế
 **Yêu cầu:** Một webhook `push` được gửi tới mỗi khi có commit mới. Hãy viết hàm lọc sự kiện chỉ cho phép xử lý nếu sự kiện nhắm vào nhánh `refs/heads/main`. Bỏ qua tất cả các sự kiện của nhánh tính năng (`feature/*`) mà không kích hoạt quy trình triển khai.
 
 ### Thử thách 2: Bộ điều tốc thông minh (Smart Backoff with Jitter)
-**Yêu cầu:** Khi nhận được header `Retry-After: 30`, nếu 100 worker cùng thức dậy sau đúng 30 giây, chúng sẽ tạo ra một cơn bão yêu cầu mới (Thundering Herd) khiến tài khoản bị khóa tiếp. Hãy viết hàm tính toán thời gian ngủ bổ sung một lượng dao động ngẫu nhiên (**Jitter**) từ 10% đến 25% giá trị quy định.
+**Yêu cầu:** Với fixture `Retry-After: 30`, tính thời gian chờ ít nhất 30 giây rồi thêm jitter 10–25%. Nếu nhiều worker cùng chờ, jitter có thể giảm nhịp gửi đồng loạt, không bảo đảm tránh secondary limit. Các tỷ lệ này là cấu hình bài tập, không phải ngưỡng GitHub hay security policy production.
 
 ---
 

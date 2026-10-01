@@ -1,6 +1,12 @@
 # BẢN KIỂM TOÁN TÀI NGUYÊN HÌNH ẢNH TOÀN SÁCH (VISUAL ASSET AUDIT)
 
-Tài liệu này ghi nhận kết quả kiểm toán toàn diện 100% các sơ đồ, hình ảnh kỹ thuật trong toàn bộ cuốn sách Go Living Textbook.
+## Đối chiếu hiện hành — 01-10-2026
+
+Manifest hiện có 33 visual: 32 technical diagram và một ảnh thật grayscale, gồm hình Ch29 và hai hình Ch22 bổ sung sau inventory gốc. Bảng 30 PlantUML phía dưới là hồ sơ lịch sử; `READY` ở bảng đó không xác nhận PDF mới. SHA, provenance và semantic repair ở `assets/visual-manifest.json`; final layout review chỉ có hiệu lực với artifact trong `book/FINAL_PUBLICATION_QA.md`.
+
+Lượt content hiện hành sửa reconciliation-loop để không đồng nhất Status với workload được điều khiển; observation có thể trễ. Source và PNG đã mở trực tiếp; final PDF phải được review sau build. Không mở một visual redesign wave.
+
+## Inventory lịch sử
 
 Nguyên tắc xử lý:
 1. **Source of Truth:** Mọi sơ đồ phải có file source văn bản (`.puml` hoặc code vector). File `.png` chỉ là artifact biên dịch.

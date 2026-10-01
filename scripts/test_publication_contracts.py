@@ -10,13 +10,39 @@ import book_style
 import build_pdf
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
-    KeepTogether, NextPageTemplate, PageBreak, Paragraph,
+    BaseDocTemplate, Frame, KeepTogether, NextPageTemplate, PageBreak, PageTemplate, Paragraph,
     SimpleDocTemplate, Spacer, Table,
 )
 from pypdf import PdfReader
 
 
 class PublicationContracts(unittest.TestCase):
+    def test_current_atlas_intro_fits_one_page_without_losing_last_row(self):
+        build_pdf.register_fonts()
+        story = []
+        build_pdf.add_error_atlas(
+            story, build_pdf.ROOT / 'book/appendices/error-atlas.md',
+            book_style.get_book_styles(), 'BookMono',
+        )
+        intro = []
+        for flowable in story[1:]:
+            if isinstance(flowable, NextPageTemplate):
+                break
+            intro.append(flowable)
+        output = BytesIO()
+        doc = BaseDocTemplate(output, pagesize=book_style.PAGE_SIZE)
+        doc.addPageTemplates(PageTemplate(id='intro', frames=[Frame(
+            book_style.MARGIN_INSIDE, book_style.MARGIN_BOTTOM,
+            book_style.PRINTABLE_WIDTH, book_style.PRINTABLE_HEIGHT,
+            leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+        )]))
+        doc.build(build_pdf.keep_headings_with_content(intro))
+        pages = PdfReader(output).pages
+        self.assertEqual(len(pages), 1, 'Atlas introduction must not orphan a table row')
+        text = pages[0].extract_text()
+        for label in ('A01–A14', 'J01–J11', 'Nhóm E', 'Nhóm J'):
+            self.assertIn(label, text)
+
     def test_atlas_group_moves_with_first_entry(self):
         build_pdf.register_fonts()
         styles = book_style.get_book_styles()

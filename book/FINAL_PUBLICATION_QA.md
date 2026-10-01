@@ -1,4 +1,68 @@
+# Content correctness and publication close-out — 01-10-2026
+
+Biên bản hiện hành chỉ áp dụng cho `Golang_Master.pdf` SHA-256
+`6840c1a3276ab7e5e4f77aa626252c9a4233ecaead83e3782a3055c4ad147d75`,
+470 trang. Các biên bản dưới đây là lịch sử theo SHA riêng, không được dùng thay
+cho kiểm tra bản này.
+
+## Nội dung và phạm vi bằng chứng
+
+Từ HEAD `69506ca1f4c1dfa658f2362978b19a1a4e10ebd9`, lượt này đọc 44 file
+Markdown của sách, toàn bộ 50 mục Library Atlas, Ch00–29, Error Atlas và các
+tài liệu định hướng có liên quan. Inventory ban đầu có 922 ứng viên quét; review
+ngữ cảnh bản thảo cuối ghi 866 ứng viên, không còn ứng viên chưa phân xử trước
+khi viết biên bản. Ứng viên là vị trí cần đọc, không phải số lỗi. Ghi nhận 47
+nhóm nguyên nhân nội dung đã sửa (F01–F47), hai lỗi dàn trang F48–F49 cũng đã
+đóng; phân loại có thể giao nhau: FACT 40, LAYER 30, ABSOLUTE 19, NUMERIC 9,
+VERSION 4, SLOP 5, GAP 7. Bảy gap học tập đã đóng, không thêm chương. Những
+section cũ được thay đổi theo hướng chỉnh đúng claim, ví dụ và ranh giới áp
+dụng; không coi số section chạm vào là số section viết lại toàn bộ.
+
+Go 1.27.1 và tài liệu chính thức, source ghim, compiler probes, benchmark sáu
+mẫu cục bộ được dùng cho claim tương ứng. Ch29 đối chiếu lại sáu nguồn gốc về
+nghiên cứu, khảo sát và dự báo; sample, quần thể, thời điểm, outcome và giới hạn
+được giữ riêng. Phép đo cục bộ không chứng minh performance của mọi service.
+
+## Kiểm tra xuất bản của đúng PDF này
+
+- Render lại 470 trang ở 150 dpi. Mỗi trang của bản cuối đã có quyết định quan
+  sát: 470 `VISUAL_PASS`, 0 issue mở, 0 `NOT_REVIEWED`. Trang 1–456 được mở
+  riêng trên candidate ngay trước bản cuối; ảnh raster của đúng 456 trang này
+  khớp SHA-256 từng ảnh với bản cuối. Thực tế cả 1–460 khớp pixel; 457–470 còn
+  được mở lại trực tiếp trên bản cuối. Hồ sơ nằm trong
+  `.workspace/content-deepening/pdf-qa-final-v7/` cùng biên bản đối chiếu pixel.
+- Kiểm tra độc lập: 470/470 A4, MediaBox = CropBox, rotation 0; 0 lỗi printable
+  frame và 0 pixel lệch grayscale (R≈G≈B, ngưỡng 1); 469/469 folio ngoài gáy;
+  33 mục lục in khớp trang heading; 34 bookmark, không có destination sai; 0
+  cặp near-duplicate perceptual; 0 cross-reference đánh số hoặc Atlas ID không
+  có đích. 33 visual có caption/asset map duy nhất và ảnh raster nhỏ nhất đạt
+  khoảng 227 dpi hiệu dụng; font dùng thực tế đều embedded.
+- F48: hình cleanup ở trang 78 đã được mở trực tiếp ở kích thước gốc, chữ đọc
+  được. F49: bản nháp 471 trang có một hàng bảng đơn độc ở trang 462. Chỉ giảm
+  vertical padding của ô bảng mở đầu Atlas 2.5 xuống 1.5 pt, giữ nguyên cỡ
+  chữ và nội dung; bản cuối đặt toàn bảng trên trang 461, nhóm lỗi bắt đầu
+  trang 462 và J11 kết thúc sách ở trang 470. Có test hồi quy để ngăn hàng
+  bảng lại tràn sang trang riêng.
+- Validator: zero-bullet cho `book/chapters/*.md`, code width 0 dòng tràn ở
+  11.5 pt, Error Atlas 85 entry/89 pattern, diagram encoding/semantics,
+  visual manifest, 50 library locks đều PASS. Go test/vet/race cục bộ PASS
+  trên 38 module (114 gate); publication regression 15/15 PASS.
+
+Giới hạn: build/load eBPF trên Linux không được xác nhận tại máy Windows thiếu
+Clang/bpftool; test cục bộ không thay thế kiểm định live AWS/Kubernetes hay chứng
+minh không còn lỗi chưa phát hiện. Thư viện có 10 mục đã verify source chi tiết,
+40 mục còn fingerprint pending; validator lock không chứng minh implementation
+cho cả 50 mục. Các chữ “placeholder” trong ví dụ về placeholder hoặc phản ví
+dụ `REPLACE_ME` được giữ có chủ ý, không là production note rò rỉ.
+
+CONTENT_STATUS=READY_WITH_STATED_EVIDENCE_BOUNDARIES.
+PUBLICATION_STATUS=READY_FOR_THIS_PDF_SHA.
+
+---
+
 # Final completeness & visual editorial pass — 30-09-2026
+
+> Biên bản lịch sử: các kết quả dưới đây chỉ thuộc SHA đã nêu. Lượt content-deepening hiện hành đang sửa source và chưa build/visual-review candidate mới; không kế thừa trạng thái READY cho source đang thay đổi.
 
 Biên bản này áp dụng duy nhất cho PDF có SHA-256 `82f7aac3a59a3e5adef37d462e335f9dd1d131b3108438f0b60190462d3430fc`. Bản nghiệm thu trước (`ae2bf4a29fc4f63c45fba2e243caaa86ed460f6d90a01895d38ea5e2f95d760d`) là baseline, không phải bằng chứng tự động cho trang đã thay đổi. Không thêm chương, thư viện, ảnh trang trí hay mở một content wave mới.
 

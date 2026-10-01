@@ -22,7 +22,7 @@ PAGE_SIZE = A4
 PAGE_WIDTH = 21.0 * cm   # 595.28 pt
 PAGE_HEIGHT = 29.7 * cm  # 841.89 pt
 
-# Mirrored Margins (Industry standard for ~300 pages book binding):
+# Mirrored margins for this edition; printer must assess stock and binding:
 # Gutter / Inside margin: 2.4 cm (facing the spine)
 # Outside margin: 1.8 cm
 # Top margin: 2.2 cm  (slightly more air at top)
@@ -45,7 +45,7 @@ ATLAS_COL_WIDTH = (PRINTABLE_WIDTH - ATLAS_GUTTER) / 2  # 8.0 cm (226.77 pt)
 # ==============================================================================
 # Primary ink stops — 6-level scale
 COLOR_BLACK          = colors.HexColor("#000000")  # 100% black — headings, ruled lines
-COLOR_TEXT_PRIMARY   = colors.HexColor("#1A1A1A")  # Near-black — body text
+COLOR_TEXT_PRIMARY   = colors.HexColor("#000000")  # Primary prose: black per MASTER PROMPT
 COLOR_TEXT_SECONDARY = colors.HexColor("#3A3A3A")  # Dark gray — captions, secondary
 COLOR_TEXT_MUTED     = colors.HexColor("#606060")  # Medium gray — references, folios
 COLOR_TEXT_LIGHT     = colors.HexColor("#888888")  # Light gray — decorative rules
@@ -130,12 +130,12 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
 
         # ── Body & Lists ─────────────────────────────────────────────────────
         "body": ParagraphStyle(
-            "Body", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=13.5,
+            "Body", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=14.0,
             leading=21.5, alignment=TA_LEFT, textColor=COLOR_TEXT_PRIMARY, spaceAfter=9,
             allowWidows=False, allowOrphans=False,
         ),
         "bullet": ParagraphStyle(
-            "Bullet", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=13.5,
+            "Bullet", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=14.0,
             leading=21.5, textColor=COLOR_TEXT_PRIMARY, leftIndent=16, firstLineIndent=-10,
             spaceAfter=4, bulletFontName=FONT_SERIF,
             allowWidows=False, allowOrphans=False,
@@ -143,7 +143,7 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
 
         # ── Code & Containers ────────────────────────────────────────────────
         "code": ParagraphStyle(
-            "Code", fontName=FONT_MONO, fontSize=11.0, leading=15.0,
+            "Code", fontName=FONT_MONO, fontSize=11.5, leading=15.5,
             textColor=COLOR_TEXT_PRIMARY, spaceBefore=0, spaceAfter=0,
         ),
         "table": ParagraphStyle(

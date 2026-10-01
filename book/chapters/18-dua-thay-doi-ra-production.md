@@ -159,7 +159,7 @@ Terraform thiết lập cầu nối OIDC với hạ tầng đám mây.
 | :--- | :--- | :--- |
 | `Source revision` | Mã băm commit Git của mã nguồn đầu vào (ví dụ: `bcb3fe0`). | Xác định chính xác phiên bản mã nguồn cần đóng gói. |
 | `Local image identity` | Tên/tag cục bộ hoặc Image Config ID (`.Id`) trên máy build. | Tạm thời cục bộ, không dùng để ra quyết định production. |
-| `Manifest digest` | Mã băm nội dung bất biến của OCI Image Manifest (`sha256:...`). | Định danh bất biến duy nhất cho registry và Kubernetes. |
+| `Manifest digest` | Mã băm nội dung OCI Image Manifest (`sha256:...`). | Ghim nội dung manifest thay vì tag có thể đổi. Image nhiều platform còn có index digest; phải biết pipeline đang ghim index hay manifest của một platform. |
 | `Provenance` | Bản chứng thực ghi nhận nguồn gốc commit, builder và công thức. | Cung cấp bằng chứng chuỗi cung ứng cho gate kiểm tra. |
 | `Verified evidence` | Kết quả xác minh chữ ký số của provenance từ công cụ chuyên trách. | Căn cứ kỹ thuật xác thực, loại bỏ cờ boolean giả mạo. |
 | `Promotion decision` | Quyết định phê duyệt hoặc từ chối fail-closed. | Cổng chặn ngăn chặn việc triển khai khi thiếu bằng chứng. |
@@ -194,7 +194,7 @@ Hai là, quyền mặc định chỉ đọc: Khai báo `permissions: { contents:
 
 Ba là, ghim action bằng commit SHA bất biến: Thay vì tag phiên bản có thể bị trôi, workflow ghim mã băm commit 40 ký tự đầy đủ của từng Action.
 
-Bốn là, không đánh đồng Local Image ID với Manifest Digest: Khi build cục bộ mà chưa push registry, Docker daemon chỉ lưu Image Config ID (`.Id`). Chỉ khi Buildx xuất metadata hoặc push lên registry, OCI Image Manifest Digest mới tồn tại để làm định danh bất biến cho promotion.
+Bốn là, không đánh đồng Local Image ID với Manifest Digest: `.Id` mà lệnh inspect của lab lấy là config digest, không phải manifest digest để pull từ registry. OCI manifest và digest của nó cũng có thể được tạo cục bộ trong OCI layout; push không phải điều kiện để digest tồn tại. Pipeline này lấy identity cho promotion từ Buildx metadata/registry và phải phân biệt manifest của một platform với image index nhiều platform.
 
 ~~~yaml
 # Trích đoạn từ workflows/delivery.yaml
@@ -293,7 +293,7 @@ Cần hiểu đúng ranh giới của các cơ chế phân quyền trong cấu h
 
 Thứ nhất, khóa chặt danh tính: trust policy dùng `StringEquals` với subject thực tế của job deploy, truyền qua biến Terraform bắt buộc `github_oidc_subject`. Với subject mặc định dạng `repo:OWNER/REPO:environment:production`, điều kiện `sub` kiểm tra repo và environment; nó **không tự khóa branch**. Lab thêm điều kiện AWS riêng trên claim `ref`, mặc định khớp `refs/heads/main`; workflow cũng chặn job deploy ngoài main. Đây là hai gate khác nhau. GitHub Environment vẫn cần deployment branch/tag rule và approval phù hợp. Nếu backend không hỗ trợ claim `ref` riêng, subject tùy biến có ref là một phương án khác nhưng phải xác minh claim thực tế. Subject của repo dùng định danh bất biến có thêm owner/repo ID; repo cũ có thể chọn dùng định dạng ấy, nên lab không đoán subject từ tên repo.
 
-Thứ hai, hiểu đúng về Wildcard trong AWS IAM: Ký tự đại diện `*` trong `Resource = ["*"]` **chỉ được chấp nhận duy nhất** cho hành động `ecr:GetAuthorizationToken`. Đây là đặc thù bắt buộc của AWS IAM vì service này không hỗ trợ phân quyền ở cấp độ tài nguyên cho token xác thực ban đầu. Ngược lại, mọi permission khác (`ecr:PutImage`, `apprunner:StartDeployment`) đều bắt buộc phải khóa chặt vào Account ID cụ thể lấy từ `data.aws_caller_identity.current.account_id` và tên repository cụ thể.
+Thứ hai, xét resource theo từng action: trong policy của lab, statement `ecr:GetAuthorizationToken` cần `Resource = ["*"]` vì action này không hỗ trợ resource-level ARN. Đó không phải ngoại lệ duy nhất trên toàn AWS IAM. Các action ECR còn lại của policy hỗ trợ repository ARN; các action App Runner được giới hạn bằng service ARN tương ứng. Tra Service Authorization Reference cho từng action trước khi chọn resource và condition; ARN hẹp của một ví dụ không thành luật chung cho mọi permission.
 
 Thứ ba, tên ECR Repository tuân thủ chuẩn: Biến `ecr_repository_name` được tách riêng và áp dụng validation bắt buộc viết thường (`^[a-z0-9][a-z0-9-_/]*$`), tránh xung đột với quy tắc đặt tên viết hoa của GitHub repository.
 
@@ -350,3 +350,5 @@ Từ đây, sách có thể quay vào case study lớn hơn: một service nhậ
 4. Kubernetes Authors. Deployments: rollout status, revision, rollback và giới hạn của revision history. kubernetes.io/docs/concepts/workloads/controllers/deployment/
 5. AWS Documentation. Creating OpenID Connect (OIDC) identity providers và IAM role trust policies. docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
 6. HashiCorp Terraform. AWS Provider: `aws_iam_openid_connect_provider` và `aws_iam_role`. registry.terraform.io/providers/hashicorp/aws/latest/docs
+7. AWS Documentation. Actions, resources, and condition keys for Amazon Elastic Container Registry. docs.aws.amazon.com/service-authorization/latest/reference/list_ecr.html
+8. OCI. Image Format Specification: image manifest, image index và OCI image layout. github.com/opencontainers/image-spec

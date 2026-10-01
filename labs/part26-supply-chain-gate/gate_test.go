@@ -62,6 +62,26 @@ func TestPolicyGateAllowedWithValidSignature(t *testing.T) {
 	}
 }
 
+// This is an evidence-boundary test, not a production authorization guarantee.
+// A model ALLOW cannot establish the signer or builder's authenticated identity.
+func TestModelDoesNotAuthenticateSelfAssertedIdentity(t *testing.T) {
+	issuer := "https://token.actions.githubusercontent.com"
+	builder := "https://github.com/allowed/repo/build"
+	engine := NewPolicyEngine([]string{builder}, []string{issuer})
+	callerKey, callerPublic := generateTestKeyPair(t)
+	digest := ComputeContentDigest([]byte("caller-created-content"))
+	sig := &SignatureVerification{
+		PublicKey: callerPublic,
+		Signature: signDigest(t, callerKey, digest),
+		Issuer:    issuer, // Just a label; no OIDC issuer was contacted.
+	}
+	att := &Attestation{BuilderID: builder, SubjectDigest: digest}
+	result := engine.Evaluate(digest, sig, att, nil)
+	if result.Decision != DecisionAllow {
+		t.Fatalf("model boundary changed: got %s", result.Decision)
+	}
+}
+
 func TestPolicyGateDenyUnsignedImage(t *testing.T) {
 	trustedBuilder := "https://github.com/my-org/repo/.github/workflows/build.yml@refs/heads/main"
 	trustedIssuer := "https://token.actions.githubusercontent.com"

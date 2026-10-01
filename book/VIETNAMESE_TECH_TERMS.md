@@ -72,7 +72,7 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **array** | **mảng cố định** / **mảng** | Dãy phần tử liên tiếp có độ dài cố định là một phần của kiểu |
 | **slice** | **lát cắt** / **slice** | Cấu trúc tham chiếu linh hoạt gồm pointer, len, cap |
 | **backing array** | **mảng nền** / **mảng đỡ phía sau** | Mảng bộ nhớ thực tế nơi slice lưu trữ dữ liệu |
-| **capacity** | **dung lượng** | Số phần tử tối đa mảng nền có thể chứa từ phần tử đầu slice |
+| **capacity** | **dung lượng** | Giới hạn reslice của slice hiện tại; full slice expression có thể hạ cap mà không thu nhỏ mảng nền |
 | **length** | **độ dài** | Số phần tử hiện có trong lát cắt hoặc mảng |
 | **map** | **bảng ánh xạ** / **map** | Cấu trúc dữ liệu liên kết khóa - giá trị (hash table) |
 | **struct** | **cấu trúc** / **kiểu cấu trúc** | Tập hợp các trường dữ liệu có tên gom nhóm lại |
@@ -84,13 +84,13 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **pointer semantics** | **ngữ nghĩa con trỏ** | Chia sẻ địa chỉ bộ nhớ, các bên cùng thao tác trên 1 ô nhớ |
 | **method** | **phương thức** | Hàm được gắn liền với một kiểu dữ liệu thông qua receiver |
 | **receiver** | **biến nhận (receiver)** / **biến nhận** | Biến đại diện cho instance mà method được triệu gọi (tuyệt đối không dùng "bộ tiếp nhận") |
-| **interface** | **giao diện** / **interface** | Tập hợp các chữ ký phương thức mô tả hành vi |
+| **interface** | **interface** | Basic interface mô tả tập method (có thể rỗng); general interface còn có type term và dùng làm constraint. Không coi interface value là layout runtime cố định. |
 | **implicit satisfaction** | **thỏa mãn ngầm định** | Type tự động thỏa mãn interface mà không cần từ khóa `implements` |
 | **composition** | **cấu thành** / **hợp thành** | Xây dựng type phức tạp từ các type đơn giản |
-| **embedding** | **nhúng kiểu** | Đặt struct hoặc interface vô danh vào struct khác |
+| **embedding** | **nhúng kiểu** | Khai báo embedded field trong struct, hoặc nhúng interface trong interface; không phải tạo một kiểu vô danh hay quan hệ kế thừa. |
 | **memory aliasing** | **nhiều tham chiếu cùng truy cập một vùng dữ liệu (memory aliasing)** | Hiện tượng hai hoặc nhiều biến/slice/con trỏ cùng trỏ vào một vùng dữ liệu mảng nền (không dịch là "chồng lấn ô nhớ") |
-| **escape analysis** | **phân tích thoát** | Cơ chế compiler xác định biến nằm trên Stack hay Heap |
-| **stack allocation** | **cấp phát trên stack** | Cấp phát vùng nhớ nhanh, tự thu hồi khi hàm kết thúc |
+| **escape analysis** | **phân tích thoát** | Phân tích data flow của compiler để kiểm tra lifetime và chọn cách lưu trữ; kết quả phụ thuộc toolchain, tối ưu hóa và ngữ cảnh gọi. |
+| **stack allocation** | **cấp phát trên stack** | Lưu trữ gắn với activation của hàm; không suy ra chi phí cố định hay địa chỉ không đổi khi stack tăng. |
 | **heap allocation** | **cấp phát trên heap** | Cấp phát trên vùng nhớ chung, do Garbage Collector thu hồi |
 
 ---
@@ -107,17 +107,17 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **buffered channel** | **kênh có đệm** | Kênh có hàng đợi lưu trữ tạm thời các phần tử |
 | **deadlock** | **bế tắc đồng thời** / **deadlock** | Trạng thái các goroutine cùng chờ nhau vô tận mà không giải phóng |
 | **data race** | **tranh chấp dữ liệu / data race** | Hiện tượng hai goroutine cùng truy cập một ô nhớ mà có ít nhất một bên ghi, không có đồng bộ hóa (phân biệt với race condition: cuộc đua logic giữa các tiến trình) |
-| **race detector** | **bộ phát hiện xung đột (`-race`)** | Công cụ runtime phân tích và cảnh báo xung đột dữ liệu |
+| **race detector** | **bộ phát hiện data race (`-race`)** | Instrumentation phát hiện access chưa đồng bộ trên đường chạy được thực thi; không phát hiện mọi race condition logic. |
 | **starvation** | **đói tài nguyên** | Tiến trình bị các luồng khác chiếm dụng tài nguyên quá lâu |
-| **goroutine leak** | **rò rỉ goroutine** | Goroutine bị treo vô hạn, không bao giờ kết thúc giải phóng |
-| **backpressure** | **áp suất ngược** | Cơ chế điều tiết tốc độ sản sinh việc để không làm sập hạ tầng |
-| **cancellation** | **hủy thực thi** | Tín hiệu dừng công việc qua `context.Context` |
-| **graceful shutdown** | **tắt dịch vụ an toàn** | Đóng tiếp nhận mới, hoàn tất việc đang xử lý trước khi thoát |
+| **goroutine leak** | **rò rỉ goroutine** | Goroutine còn tồn tại ngoài lifecycle công việc mà không có đường thoát phù hợp; có thể block hoặc tiếp tục chạy không cần thiết. |
+| **backpressure** | **áp suất ngược** | Tín hiệu hoặc cơ chế làm phía sản sinh chậm lại khi phía nhận chưa xử lý kịp; không tự bảo đảm hạ tầng không quá tải. |
+| **cancellation** | **hủy theo yêu cầu** | Tín hiệu qua context; bên nhận phải quan sát và thực hiện policy dừng, không cưỡng chế giết goroutine. |
+| **graceful shutdown** | **dừng có kiểm soát** | Ngừng nhận việc mới và cho việc đang chạy cơ hội hoàn tất trong budget; cần policy cho việc chưa xong, không phải bảo đảm không mất request. |
 | **worker pool** | **nhóm tiến trình xử lý** | Tập hợp cố định các goroutine cùng lấy việc từ một hàng đợi |
 | **pipeline** | **đường ống xử lý dữ liệu** | Chuỗi các công đoạn nối tiếp nhau qua channel |
 | **bounded concurrency** | **giới hạn đồng thời** | Khống chế số lượng công việc chạy đồng thời tối đa |
 | **mutex (mutual exclusion)** | **khóa loại trừ tương hỗ** | Công cụ đồng bộ bảo vệ vùng tài nguyên tranh chấp (`sync.Mutex`) |
-| **atomic operation** | **thao tác nguyên tử** | Lệnh can thiệp phần cứng thực hiện trọn vẹn không bị ngắt quãng |
+| **atomic operation** | **thao tác nguyên tử** | Thao tác không lộ trạng thái trung gian cho access tương ứng; contract đồng bộ hóa do API và Memory Model xác định, không phải lời hứa không có interrupt CPU. |
 
 ---
 
@@ -127,12 +127,12 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | :--- | :--- | :--- |
 | **reconciliation** | **điều hòa trạng thái** | Vòng lặp liên tục đưa thực tế về trạng thái mong muốn |
 | **desired state** | **trạng thái mong muốn** | Cấu hình do người dùng khai báo (Spec) |
-| **actual state** | **trạng thái thực tế** | Hiện trạng đo đạc được từ hạ tầng thực tế (Status) |
+| **actual state** | **trạng thái thực tế** | Trạng thái của hệ thống; snapshot và Status là observation có thể cũ, không đồng nhất với toàn bộ hiện trạng. |
 | **rate-limiting** | **giới hạn tốc độ** | Khống chế số lượng yêu cầu trong một đơn vị thời gian |
 | **workqueue** | **hàng đợi công việc** | Hàng đợi chứa các khóa đối tượng cần reconcile |
 | **exponential backoff** | **giãn thời gian thử lại theo hàm mũ (exponential backoff)** / **khoảng chờ thử lại tăng dần** | Thuật toán tăng thời gian chờ sau mỗi lần thử lại thất bại (tuyệt đối không dịch là "lùi bước") |
 | **retry** | **thử lại** | Thực hiện lại tác vụ khi gặp sự cố tạm thời (transient error) |
-| **idempotency** | **tính lũy đẳng (idempotency)** / **tính lũy đẳng** | Đặc tính thực hiện lặp lại nhiều lần vẫn cho cùng một kết quả như một lần (tuyệt đối không dùng "tính lũy thỏa") |
+| **idempotency** | **tính lũy đẳng** | Lặp operation giữ cùng tác động đã quy định như một lần, không nhất thiết cùng response; cần định nghĩa identity, state và crash boundary. Không nhầm với tính tất định. |
 | **artifact** | **tạo tác build / gói phát hành / artifact** | Sản phẩm sinh ra từ quá trình build (binary, image, OCI blob, package) — tuyệt đối không dịch là "hiện vật" |
 | **health check** | **kiểm tra sức khỏe** | Cơ chế kiểm tra liveness và readiness của dịch vụ |
 | **circuit breaker** | **cầu dao ngắt mạch** | Cơ chế tự động ngắt kết nối đến dịch vụ hỏng để bảo vệ hệ thống |

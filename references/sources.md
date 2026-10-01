@@ -35,3 +35,23 @@ tiên nguồn chính thức; URL được giữ thay vì commit bản sao tài l
 Khi cần đưa tài liệu tải về `references/`, chỉ thêm tài liệu được phép phân
 phối và ghi rõ nguồn, phiên bản, license. Không đưa sách thương mại hay secret
 vào repository.
+
+## Đối chiếu content ngày 01-10-2026
+
+| Nguồn chính thức / gốc | Claim được dùng và giới hạn |
+| --- | --- |
+| https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecr.html | Resource scope theo từng action ECR; không suy thành luật wildcard toàn AWS. |
+| https://kubernetes.io/docs/concepts/workloads/pods/probes/ | Failure threshold, readiness và liveness; policy probe không thay outcome người dùng. |
+| https://kubernetes.io/docs/concepts/storage/persistent-volumes/ | RWO giới hạn node, không tự giới hạn một Pod. |
+| https://www.sqlite.org/useovernet.html | Rủi ro filesystem locking khi dùng qua network; nhiều process không tự đồng nghĩa mất nhất quán. |
+| https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api | Rate limit theo identity/endpoint; header thực tế và ngoại lệ. |
+| https://docs.kernel.org/bpf/verifier.html | Kiểm tra chương trình trước khi nạp; không phải kiểm định từng record hay bảo đảm mọi overhead. |
+| https://theupdateframework.github.io/specification/latest/ | Snapshot/timestamp roles, version và expiration; không kiểm kê mọi file hay chứng thực giờ server. |
+| https://arxiv.org/html/2302.06590v1 | Peng et al.: 95 người phân nhóm, 70 completer; task JavaScript năm 2022, không thị trường việc làm. |
+| https://metr.org/Early_2025_AI_Experienced_OS_Devs_Study-paper.pdf | 16 contributor, task-level randomization, 246 task và ước lượng thời gian có điều chỉnh; ingestion cache chỉ hỗ trợ đọc. |
+| https://metr.org/blog/2026-02-24-uplift-update/ | Selection/time measurement làm kết quả mới khó diễn giải; xác nhận interval 2025, không quy thành luật Agent 2026. |
+| https://go.dev/blog/survey2025 | 5.379 phản hồi sau làm sạch, thời gian/method/geography/use case; survey tự báo cáo, không RCT hay thống kê tuyển dụng. |
+| https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm | Dự báo nhóm nghề tại Mỹ 2025–2035; không Go/SRE/Việt Nam. |
+| https://dora.dev/research/2025/dora-report/ | Framing trên trang công bố, affiliation Google Cloud/industry; không đưa số survey từ báo cáo chưa đọc. |
+
+Source ghim của Go 1.27.1 và thư viện được dùng khi diễn giải implementation, không dùng source map sinh sẵn làm bằng chứng API. Log compiler, benchmark và local gates nằm trong workspace QA; chúng có phạm vi tái lập riêng, không là chứng minh production.

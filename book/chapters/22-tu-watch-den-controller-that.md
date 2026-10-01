@@ -2,11 +2,11 @@
 
 # Chương 22 — Từ watch đến một controller Kubernetes thật
 
-Trong Chương 21, chúng ta đã tự tay dựng một vòng lặp điều hòa tối giản bằng Mutex, Channel và slice trong bộ nhớ. Mô hình đó giúp ta nắm vững tinh thần cốt lõi: *quan sát thực tế, đo lường sai lệch và hội tụ về trạng thái mong muốn*. Nhưng khi bước ra hạ tầng phân tán thật — nơi hàng chục nghìn Pod, Node và Service biến đổi liên tục qua mạng — việc dùng một channel thô để lắng nghe sự kiện sẽ nhanh chóng dẫn đến thảm họa.
+Chương 21 dùng một queue tối giản để thấy sự khác nhau giữa action result và observed state. Khi nối tới Kubernetes API, ta phải thêm recovery của stream, cache sync, đồng bộ theo key và xử lý conflict. Một channel có thể là thành phần của thiết kế, nhưng riêng nó không cung cấp các contract ấy.
 
-Khi kết nối mạng chập chờn, khi API Server chịu tải cao, hay khi 500 sự kiện cập nhật cùng ùa về trong một giây, một chương trình ngây thơ sẽ rơi vào tình trạng làm tràn bộ đệm kênh hoặc bỏ sót sự kiện, xử lý các bản tin cũ rích đè lên trạng thái mới nhất, hoặc tạo ra bão thử lại (retry storm) vắt kiệt CPU của cụm máy chủ.
+Chẳng hạn, trong scenario 500 cập nhật đến trong một giây, giữ toàn bộ payload cũ để xử lý có thể khiến worker hành động theo observation đã lỗi thời. Tải và hậu quả phải đo trong môi trường cụ thể; con số này chỉ đặt bài toán gộp key và đọc lại trạng thái.
 
-Chương này đưa bạn từ tư duy "lắng nghe sự kiện ngây thơ" bước sang kiến trúc chuẩn mực của một **Production Kubernetes Controller** được xây dựng trên thư viện chính thức `k8s.io/client-go`.
+Chương này dùng `client-go` v0.37.0 để dựng một controller nhỏ và kiểm tra các boundary đó. Lab không thay thế thiết kế RBAC, recovery hay kiểm chứng trên cluster production.
 
 ---
 
@@ -15,7 +15,7 @@ Chương này đưa bạn từ tư duy "lắng nghe sự kiện ngây thơ" bư�
 Câu hỏi trung tâm của chương này là:
 > *Khi nhận được một sự kiện từ Kubernetes API Server, ta có nên tin vào dữ liệu đính kèm bên trong sự kiện đó để ra quyết định điều hòa hay không?*
 
-Câu trả lời dứt khoát là: **Không**.
+Với policy của controller trong chương, event là tín hiệu để xếp key, không phải snapshot được giữ tới lúc quyết định. Handler vẫn có thể dùng payload cho lọc hoặc lấy metadata; worker đọc lại observation trước khi điều hòa.
 
 Trong các hệ thống phân tán quy mô lớn, **Sự kiện thông báo (Notification Hint)** chỉ là một lời nhắc nhở: *"Tài nguyên X tại namespace Y dường như vừa có biến đổi, hãy kiểm tra lại đi!"*. Bản thân sự kiện không phải là **Trạng thái thẩm quyền (Authoritative State)**. 
 
@@ -25,7 +25,7 @@ API Server là boundary thẩm quyền cho Kubernetes object; informer cache là
 
 Hãy tưởng tượng kịch bản sau: lúc `t₀`, Pod `web-app` có trạng thái `Pending` và API Server phát sự kiện `E₁(Pending)`. Đến lúc `t₁`, Kubelet khởi động xong container khiến Pod chuyển sang `Running`, và API Server phát sự kiện `E₂(Running)`. Do độ trễ mạng hoặc hàng đợi bận rộn, worker trong controller nhận `E₁` chậm mất 3 giây. Nếu worker dùng ngay dữ liệu bên trong `E₁`, nó sẽ tưởng Pod vẫn đang `Pending` và ra lệnh hủy Pod để tạo lại. Hành động này phá hủy trực tiếp Pod vừa khởi động lành lặn lúc `t₁`.
 
-Quy tắc bất biến của Kubernetes Controller:
+Policy được dùng trong lab:
 > **Policy hàng đợi:** Đẩy key `namespace/name`, rồi đọc observation hiện hành trong Informer cache khi xử lý. Cache là observation local và có thể chậm hơn API server; không gọi nó là trạng thái mới nhất tuyệt đối của cluster.
 
 ---
@@ -50,16 +50,16 @@ Luồng chính đi từ API Server qua `Reflector` và `DeltaFIFO` tới `Shared
 
 ## 3. Giao thức List/Watch và vai trò của resourceVersion
 
-Vì sao Kubernetes không dùng truy vấn định kỳ (Polling) và cũng không dùng WebSocket đơn thuần? Câu trả lời nằm ở sự kết hợp hoàn hảo giữa **List** và **Watch** thông qua biến định danh **resourceVersion**.
+List cung cấp snapshot và resourceVersion; Watch tiếp nhận các thay đổi theo mốc được API hỗ trợ. Đây là contract Kubernetes API, không phải quy tắc rằng hệ thống không được polling hay sử dụng transport khác.
 
 ![Trình tự Reflector List rồi Watch với API Server và xử lý khi lịch sử Watch hết hạn](../../assets/diagrams/client-go-list-watch.png)
 @figure List tạo mốc quan sát cho Watch; khi nối lại không thể tiếp tục vì lịch sử đã hết, Reflector phải List lại.
 
 ### Cơ chế hoạt động
 
-Thứ nhất là Pha List (Khởi tạo nền tảng): Khi controller vừa bật, Reflector gọi API `List` để lấy toàn bộ các đối tượng hiện hữu. API Server trả về danh sách đối tượng kèm một `resourceVersion` **opaque** biểu thị phiên bản mà API server công bố (ví dụ: `1040`); controller không được diễn giải nó như offset hay commit log trực tiếp của etcd. Reflector lưu dữ liệu vào `Indexer`.
+Thứ nhất là đường List truyền thống: Reflector lấy danh sách cùng `resourceVersion` opaque. Nó đưa snapshot vào store là `DeltaFIFO`; vòng xử lý của Informer cập nhật Indexer, không phải Reflector ghi thẳng vào Indexer. Hình đang minh họa đường này. Trong client-go đã ghim còn có watch-list khi server và cấu hình hỗ trợ; không suy ra mọi lần khởi tạo đều gọi List riêng.
 
-Thứ hai là Pha Watch (Đón nhận gia số): Ngay sau khi List thành công, Reflector mở một kết nối HTTP dạng chunked stream với tham số `?watch=true&resourceVersion=1040`. API Server chỉ truyền về những thay đổi diễn ra sau mốc `1040`.
+Thứ hai là Watch từ mốc đã nhận, chẳng hạn `?watch=true&resourceVersion=1040`. API gửi stream thay đổi sau mốc ấy khi lịch sử còn phục vụ được. HTTP/1.1 có thể dùng chunked transfer; HTTP/2 không dùng kiểu đóng khung đó. ResourceVersion không phải offset etcd mà client được phép diễn giải.
 
 Thứ ba là tự phục hồi sau sự cố mạng: Nếu đường truyền bị đứt ở sự kiện `1042`, Reflector thử kết nối lại từ phiên bản đã biết. Đây là cơ chế bắt kịp thay đổi khi lịch sử còn giữ được, không phải lời hứa rằng mọi lần nối lại đều không cần List.
 
@@ -71,7 +71,7 @@ Thứ tư là xử lý lỗi HTTP 410 Gone: Nếu kết nối bị gián đoạn
 
 Trong vòng đời của một tài nguyên, sự kiện xóa (`OnDelete`) ẩn chứa một cạm bẫy kỹ thuật kinh điển mà hầu hết kỹ sư mới tiếp cận `client-go` đều vấp phải: **Tombstone** (Bia mộ dữ liệu).
 
-Thông thường, khi một đối tượng bị xóa, hàm `DeleteFunc` nhận được chính struct của đối tượng đó. Nhưng nếu kết nối mạng bị rớt đúng lúc đối tượng bị xóa trên API Server, đến khi Informer kết nối lại và phát hiện đối tượng đã biến mất, nó không còn giữ struct nguyên vẹn nữa. Thay vào đó, Informer bọc đối tượng vào cấu trúc `cache.DeletedFinalStateUnknown`.
+Khi không nhận được delete event nhưng một lần List lại cho thấy key đã mất, DeltaFIFO có thể tạo `DeletedFinalStateUnknown`. Trường Obj là observation cuối cùng còn biết, có thể cũ, không phải snapshot tại lúc xóa. Handler cần chấp nhận cả object thông thường lẫn tombstone và không suy ra identity mới từ tên cũ.
 
 Nếu bạn ép kiểu trực tiếp:
 ~~~go
@@ -103,7 +103,7 @@ Key chỉ mang `namespace/name`, nên không phân biệt được một đối 
 
 ## 5. Hàng đợi WorkQueue: Ba tập hợp và Kiểm soát tốc độ
 
-Trong Go chuẩn, `chan` chỉ là một hàng đợi FIFO đơn thuần. `client-go` trang bị cấu trúc `workqueue.TypedRateLimitingInterface[T]` với thuật toán phối hợp ba tập hợp dữ liệu:
+Channel cung cấp gửi/nhận và thứ tự theo contract ngôn ngữ; nó không tự có dirty set, processing set hay policy retry. Trong implementation client-go v0.37.0, `workqueue.Typed[T]` phối hợp Queue có thể thay thế cùng hai tập key sau:
 
 | Tập hợp | Ý nghĩa kỹ thuật | Trách nhiệm |
 | :--- | :--- | :--- |
@@ -129,7 +129,7 @@ Thứ hai, nếu gặp thất bại tạm thời: Không gọi `Forget`, mà g�
 
 ## 6. Hiện thực Controller hoàn chỉnh trong Go
 
-Dưới đây là phần hiện thực cốt lõi của controller từ dự án mẫu `labs/part22-client-go-controller/controller.go`. Mã nguồn tuân thủ chặt chẽ API Generic mới nhất của `client-go v0.37.0`:
+Đoạn dưới trích phần lõi của `labs/part22-client-go-controller/controller.go`, dùng API generic ở client-go v0.37.0. Version được ghim để có thể đối chiếu, không phải yêu cầu luôn dùng dependency mới nhất.
 
 ~~~go
 type Reconciler interface {
@@ -294,7 +294,7 @@ Trong lab, `WaitForNamedCacheSyncWithContext` trả false thì controller từ c
 
 Khi controller quyết định cập nhật trạng thái Pod lên API Server, nó gửi một lệnh HTTP `PUT` hoặc `PATCH`. Trong môi trường phân tán, một controller khác hoặc người dùng thông qua `kubectl` có thể đã sửa đổi Pod đó trước bạn một phần nghìn giây.
 
-Kubernetes sử dụng cơ chế **Optimistic Concurrency Control (OCC)** dựa trên trường `metadata.resourceVersion`. Nếu `resourceVersion` trong yêu cầu gửi lên không trùng khớp với bản ghi hiện thời trong etcd, API Server sẽ lập tức từ chối với mã lỗi HTTP `409 Conflict`:
+Với `Update` dưới đây, resourceVersion là precondition: version cũ khiến API server trả `409 Conflict`. Không phải mọi PATCH đều có cùng điều kiện; patch có thể bỏ resourceVersion hoặc dùng cơ chế conflict/field ownership khác. Hãy đọc contract của loại write đang dùng, không suy ra OCC chỉ từ phương thức HTTP.
 
 ~~~
 Operation cannot be fulfilled on pods "payment-api":
@@ -348,10 +348,10 @@ Mẫu hình này tự động thử lại với backoff ngắn, đọc lại sna
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Đọc trực tiếp API Server** thay vì dùng Informer Cache. | Gây bão yêu cầu (Thundering Herd) làm sập API Server khi có hàng ngàn Pod biến động. | Đọc dữ liệu từ `c.indexer.GetByKey(key)`. Chỉ gọi API Server khi thực hiện lệnh ghi. |
-| **Quên gọi Done(key)** khi kết thúc hàm xử lý. | Key bị kẹt vĩnh viễn trong tập `processing`. Mọi sự kiện tiếp theo của Pod này bị bỏ qua hoàn toàn. | Luôn đặt `defer c.queue.Done(key)` ngay sau khi `queue.Get()`. |
+| **Đọc API trực tiếp ở mọi lượt mà không có budget.** | Tăng tải và độ trễ tùy workload. | Dùng cache khi freshness cho phép; dùng API reader có chủ đích cho precondition hay read-after-write. |
+| **Quên Done(key).** | Key còn trong processing; Add mới có thể đánh dirty nhưng không được xếp lại cho tới Done. | Đặt defer Done sau Get thành công. |
 | **Gọi Forget(key)** khi Reconcile gặp lỗi. | Làm mất lịch sử thử lại của key. Backoff bị xóa bỏ, dẫn đến bão thử lại liên tục. | Chỉ gọi `Forget(key)` khi điều hòa thành công hoặc khi quyết định từ bỏ sau nhiều lần thử. |
-| **Chạy worker pool** trước khi đồng bộ xong cache. | Worker nhìn thấy cache rỗng và tưởng tài nguyên đã bị xóa, kích hoạt hành động phá hủy dữ liệu. | Bắt buộc phải chặn ở hàm `cache.WaitForNamedCacheSyncWithContext` trước khi kích hoạt worker. |
+| **Chạy worker pool** trước khi đồng bộ xong cache. | Nếu diễn giải object chưa có trong cache thành đã bị xóa, worker có thể cleanup nhầm. | Gate worker bằng cache sync; ngay cả sau sync, cleanup vẫn cần bằng chứng identity/ownership riêng. |
 
 ---
 
@@ -363,7 +363,7 @@ Mẫu hình này tự động thử lại với backoff ngắn, đọc lại sna
 *Gợi ý:* Đặt điểm đo `time.Now()` trước khi gọi `c.reconciler.Reconcile` và cập nhật metric trong lệnh `defer`.
 
 ### Thử thách 2: Xử lý Pod bị cô lập (Orphaned Pod Cleanup)
-**Yêu cầu:** Một dịch vụ bên ngoài tạo ra tài nguyên tạm (ví dụ file log trên ổ đĩa mạng chia sẻ). Khi Pod tương ứng bị xóa khỏi Kubernetes, controller phải dọn dẹp file log này. Hãy viết hàm `Reconcile` xử lý trường hợp `!exists` (đối tượng không còn trong Cache) nhưng vẫn trích xuất được `namespace` và `name` từ `key` để thực hiện dọn dẹp an toàn.
+**Yêu cầu:** Khi cache không còn object, key chỉ chứa namespace/name. Viết nhánh từ chối xóa file ngoài cụm nếu không có record durable ràng buộc UID và file. Chứng minh trường hợp object mới cùng tên không bị cleanup nhầm. Đây là bài tập nhận diện thiếu bằng chứng, không phải yêu cầu xóa cho bằng được.
 
 ---
 
@@ -456,4 +456,4 @@ Vì thế, đừng đặt external cleanup nguy hiểm sau nhánh `!exists` ch�
 
 ---
 
-Kiến trúc **List/Watch + Informer Cache + Rate-Limited WorkQueue** được phân tích trong chương này chính là nền móng của toàn bộ hệ sinh thái Kubernetes. Trong Chương 23, chúng ta sẽ đưa mẫu hình này lên một tầm cao mới: xây dựng một **Kubernetes Operator** thực thụ với Custom Resource Definition (CRD), bộ điều khiển `controller-runtime`, quản lý vòng đời tài nguyên và cơ chế bảo vệ xóa bằng **Finalizer**.
+List/Watch, cache và workqueue cung cấp các contract khác nhau cho controller. Chương 23 thêm API riêng, ownership và finalizer để quyết định khi nào tài nguyên ngoài cụm được phép dọn dẹp.

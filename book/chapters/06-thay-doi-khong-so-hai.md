@@ -8,7 +8,7 @@
 
 ## Một smoke test không biết điều ta cần biết
 
-`main` hiện làm bốn việc cùng lúc: lấy environment thật, gọi config, gọi probe, quyết định exit code và in terminal. Một test gọi nó chỉ cho biết process không chết ở đường happy path. Nó không thể đưa một environment giả vào an toàn, không thể quan sát endpoint runner nhận được, và không thể tách config error khỏi probe error mà không đụng side effect của process.
+`main` hiện ghép nhiều trách nhiệm: lấy environment thật, gọi config, gọi probe, quyết định exit code và in terminal. Một test gọi nó chỉ quan sát đường chạy được thử. Với thiết kế hiện tại, test khó đưa environment giả vào an toàn, quan sát endpoint runner nhận được hoặc tách config error khỏi probe error mà không đụng side effect của process.
 
 Vấn đề không phải `main` là xấu. `os.LookupEnv`, stdout, stderr và `os.Exit` đều có chỗ đúng: chúng là ranh giới nơi chương trình gặp process. Vấn đề là logic cần quyết định trước khi chạm ranh giới ấy chưa có một đơn vị để test gọi.
 
@@ -417,75 +417,12 @@ Contract test này không thay thế một end-to-end test khởi động binary
 
 Đây là điểm dừng của mốc hiện tại: testability không đồng nghĩa phủ một lớp mock lên mọi package. Nó là khả năng đặt từng policy vào một boundary đủ nhỏ để ta tạo input, quan sát kết quả và biết chính xác thay đổi nào đang được bảo vệ.
 
-## Giới hạn của Kiểm thử: Bằng chứng Thực nghiệm và Ranh giới Công cụ
+## Kết quả xanh chưa trả lời câu hỏi nào?
 
-Khi xây dựng hệ thống kiểm thử, kỹ sư trưởng thành không bao giờ coi test là một sự bảo đảm tuyệt đối về mặt toán học. Nhà khoa học máy tính Edsger W. Dijkstra từng đúc kết một nguyên lý kinh điển: kiểm thử phần mềm chỉ có thể chứng minh sự hiện diện của lỗi, chứ không bao giờ có thể chứng minh sự vắng mặt của chúng. Một bộ test xanh một trăm phần trăm chỉ xác nhận rằng chương trình chạy đúng trên đúng tập hợp dữ liệu đầu vào và chuỗi kịch bản mà lập trình viên đã nghĩ tới.
+Với các lab vừa chạy, kết quả xanh nghĩa là những assertion đã được thỏa trên các input và lịch chạy được thực thi. Assertion thiếu vẫn có thể bỏ lọt lỗi trên chính input ấy. Fuzzing mở rộng tập input theo ngân sách và feedback coverage; số lượt chạy không cố định, và fuzzer không tự đặt thêm một property mà tác giả chưa viết. Khi có crasher, giữ corpus cùng regression test có tên để người sửa sau biết contract đã từng bị phá ở đâu.
 
-Để mở rộng biên độ kiểm chứng vượt khỏi thiên kiến chủ quan của con người (confirmation bias), kỹ sư kết hợp ba công cụ cốt lõi trong bộ công cụ Go: kiểm thử đột biến (fuzzing), đo lường chuẩn mực (benchmark), và dò tìm xung đột bộ nhớ (race detection).
+Benchmark lại trả lời câu hỏi khác. `B.Loop` có từ Go 1.24; trong Go 1.27.1, lần gọi đầu reset timer và lần trả false dừng timer. Với đúng dạng `for b.Loop() { ... }`, compiler giữ sống các argument, kết quả lời gọi và biến được gán trong thân vòng theo cơ chế mô tả ở `testing/benchmark.go`. Không suy rộng cơ chế ấy sang một wrapper tùy ý hoặc xem nó là bảo đảm workload đại diện cho production. Mẫu `b.N` vẫn hợp lệ; nếu dùng nó, loại setup khỏi timer khi cần và bảo đảm phép tính cần đo không bị bỏ vì kết quả không được dùng. Không trộn cả hai kiểu vòng lặp trong một benchmark.
 
-### Kiểm thử Đột biến với `testing.F`
+Race detector cũng có chi phí riêng. Tài liệu chính thức nêu mức thường gặp khoảng 5–10 lần bộ nhớ và 2–20 lần thời gian chạy, tùy chương trình; đây không phải số đo của các lab trong sách. Detector quan sát access thực sự chạy, nên một đường chưa thực thi không thể tạo report cho đường ấy. Độ trễ mạng có thể làm lộ lịch chạy mới, nhưng không có nghĩa detector không dùng được với workload mạng. Muốn tăng khả năng phát hiện, chọn scenario có ý nghĩa và chạy đủ đường liên quan, không chỉ lặp một happy path.
 
-Coverage-guided fuzzing của Go đột biến input và dùng feedback coverage để khám phá thêm đường chạy. Số case thực thi phụ thuộc thời gian, target và môi trường; không có một quota hàng triệu input được bảo đảm. Property và failure được chọn vẫn quyết định loại lỗi fuzzer có thể quan sát.
-
-~~~go
-func FuzzParseEndpoint(f *testing.F) {
-	f.Add("localhost:8080")
-	f.Add("10.0.0.1:9000")
-	f.Fuzz(func(t *testing.T, orig string) {
-		ep, err := config.ParseEndpoint(orig)
-		if err != nil {
-			return
-		}
-		if ep.Port < 1 || ep.Port > 65535 {
-			t.Fatalf("Port vuot nguong: %d", ep.Port)
-		}
-	})
-}
-~~~
-
-Khi tìm thấy failure, Go fuzzing có thể thu nhỏ input và lưu crasher vào `testdata/fuzz` để chạy lại như regression case. Lưu và commit corpus phù hợp giúp giữ bằng chứng; nó không tự chứng minh bug không thể tái diễn qua input khác.
-
-### Tính Xác thực của Đo lường Hiệu năng với `testing.B`
-
-Viết benchmark đòi hỏi kỷ luật nghiêm ngặt để tránh thu thập số liệu sai lệch. Trong các phiên bản Go hiện đại, cấu trúc benchmark được khuyến nghị ưu tiên sử dụng vòng lặp `for b.Loop() { ... }`. Phương thức `b.Loop()` tự động đặt lại đồng hồ đo (reset timer) ở lần lặp đầu tiên và dừng đồng hồ khi kết thúc quá trình chạy. Bên cạnh đó, trình biên dịch và runtime còn chủ động giữ sống các biến đối số và kết quả phù hợp trong thân vòng lặp, giúp giảm thiểu nguy cơ toàn bộ thân benchmark bị tối ưu hóa biến mất mà không nhất thiết phải dựa hoàn toàn vào biến toàn cục.
-
-~~~go
-func BenchmarkAppRunLoop(b *testing.B) {
-	b.ReportAllocs()
-	for b.Loop() {
-		res, _ := Run(
-			context.Background(), mockLookup, mockRunner,
-		)
-		if len(res) > 0 && res[0].Service == "" {
-			b.Fatal("unexpected empty outcome")
-		}
-	}
-}
-~~~
-
-Trước khi `b.Loop()` xuất hiện, các bài kiểm tra hiệu năng thường dùng mẫu lặp truyền thống theo biến đếm `b.N`. Với phong cách `for i := 0; i < b.N; i++` kinh điển này, lời gọi `b.ResetTimer()` chỉ thực sự cần thiết nếu có các thao tác khởi tạo môi trường tốn kém nằm ngay trước vòng lặp nhằm tránh tính thời gian chuẩn bị vào phép đo. Đồng thời, nếu biểu thức tính toán trong vòng lặp `b.N` không sinh hiệu ứng phụ và kết quả không được sử dụng ở đâu, bộ tối ưu hóa loại bỏ mã chết của compiler có thể xóa luôn phép tính, dẫn đến kết quả phi lý chỉ vài phần mười nano giây; khi đó việc gán kết quả vào một biến toàn cục ở cấp gói (sink variable) là kỹ thuật kinh nghiệm để buộc compiler bảo toàn chỉ thị cần đo.
-
-~~~go
-var sinkResult []Outcome
-
-func BenchmarkAppRunLegacy(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		res, _ := Run(
-			context.Background(), mockLookup, mockRunner,
-		)
-		if len(res) > 0 {
-			sinkResult = res
-		}
-	}
-}
-~~~
-
-### Ranh giới của Bộ Dò Race Detector và Độ bao phủ Mã nguồn
-
-Bộ phát hiện tranh chấp dữ liệu của Go (`go test -race`) dựa trên ThreadSanitizer. Công cụ này ánh xạ bộ nhớ sang vùng shadow memory để theo dõi các truy cập đồng thời. Theo tài liệu chính thức của Go, mức tiêu tốn tài nguyên thông thường làm tăng dung lượng bộ nhớ khoảng 5 đến 10 lần và kéo dài thời gian thực thi khoảng 2 đến 20 lần tùy thuộc vào đặc tính chương trình và khối lượng tải thực tế, không phải là một con số bảo đảm cố định.
-
-Một điều tối quan trọng cần ghi nhớ: Race Detector chỉ có thể phát hiện xung đột dữ liệu trên đúng những nhánh mã nguồn thực sự được thực thi trong quá trình test chạy. Nó hoàn toàn bất lực trước những race condition ẩn nấp trong các nhánh rẽ điều kiện không được kích hoạt, hoặc các kịch bản chạy đua phụ thuộc vào độ trễ mạng ngẫu nhiên trên máy chủ production.
-
-Tương tự, chỉ số độ bao phủ dòng lệnh (statement coverage) đạt một trăm phần trăm không bảo đảm một chương trình không có lỗi. Nó chỉ chứng minh mọi dòng mã đã được luồng điều khiển đi qua ít nhất một lần, nhưng hoàn toàn bỏ qua độ bao phủ nhánh rẽ (branch coverage), các tổ hợp điều kiện boolean phức tạp, và sự tương tác giữa các luồng đồng thời. Kiểm thử vì thế là một công cụ thu thập bằng chứng thực nghiệm có định hướng, không phải là sự chứng minh toán học hoàn hảo cho một hệ thống vận hành.
+`go test -cover` báo statement coverage theo instrumentation của Go, không phải tỷ lệ mọi dòng source và cũng không phải branch hay path coverage. Dù đạt 100%, nó chưa chứng minh mọi tổ hợp điều kiện, input hay tương tác đồng thời đều đúng. Ví dụ một `if` đã được đi qua với điều kiện true vẫn có thể chưa thử nhánh false. Khi đọc report, hãy hỏi assertion nào bảo vệ policy, đường nào chưa chạy và công cụ nào có thể quan sát loại lỗi đó. Đó là giới hạn bằng chứng cụ thể, không phải lý do bỏ kiểm thử.

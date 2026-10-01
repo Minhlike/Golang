@@ -4,7 +4,7 @@
 
 Trong Chương 20, dự án `opsprobe` đã trang bị cho ta một hệ thống thăm dò trạng thái hoàn chỉnh: kiểm tra định kỳ, phân loại kết quả rành mạch (`OutcomeSuccess`, `OutcomeFailure`, `OutcomeTimeout`), bảo toàn dữ liệu bằng giao dịch nguyên tử SQLite, và đo lường độ trễ qua Prometheus. Nhưng khi một dịch vụ phụ thuộc sập nguồn khiến dashboard chuyển màu đỏ rực, câu hỏi tiếp theo của một kỹ sư vận hành không còn là "làm sao để phát hiện?", mà là: "làm sao để hệ thống tự khôi phục trạng thái lành lặn mà không cần con người thức dậy lúc nửa đêm bấm nút restart?".
 
-Đây là bước chuyển từ **Quan sát thụ động (Passive Observation)** sang **Tự điều hòa chủ động (Active Self-Healing)**. Trái tim của mọi nền tảng hạ tầng đám mây hiện đại — từ Kubernetes Controller, Nomad, Terraform đến ArgoCD — đều vận hành dựa trên một mẫu kiến trúc cốt lõi: **Vòng lặp điều hòa (Reconciliation Loop)** được điều phối bởi **Controller Pattern**.
+Chương này chuyển từ quan sát sang điều hòa: controller đọc trạng thái, tính sai lệch, thực hiện một thao tác rồi quan sát lại. Kubernetes dùng mẫu này cho nhiều controller; các công cụ khác có lịch chạy và mô hình quản lý state riêng, không nên gộp tất cả thành cùng một vòng lặp liên tục.
 
 ## Kích hoạt theo mức và Kích hoạt theo cạnh
 
@@ -17,13 +17,13 @@ Level: "Actual != Desired" -> Can thiệp -> Hội tụ về chuẩn
 
 Trong mô hình edge-triggered, consumer phản ứng với chuyển trạng thái. Nếu mất event mà không có replay, resync hoặc quan sát bổ sung, consumer có thể không biết state đã đổi và giữ kết luận cũ. Đây là lý do một controller cần recovery từ observation hiện tại, không chỉ một chuỗi event được giả định không bao giờ mất.
 
-Ngược lại, mô hình **Level-Triggered** không quan tâm quá khứ đã xảy ra bao nhiêu lần chuyển trạng thái hay bao nhiêu thông điệp bị thất lạc. Ở mỗi chu kỳ, Controller chỉ quan sát **Trạng thái thực tế (Actual State)** hiện hành và so sánh với **Trạng thái mong muốn (Desired State)**. Khi trạng thái mong muốn đòi hỏi 3 bản sao `payment-service` khỏe mạnh nhưng trạng thái thực tế chỉ có 1 bản sao phản hồi thành công, Controller nhận diện mức sai lệch là thiếu 2 bản sao và lập tức kích hoạt hành động khởi chạy bổ sung.
+Trong mô hình hướng trạng thái của lab, controller so observation hiện tại với desired state thay vì thực thi từng event như một command. Desired 3/current 1 dẫn tới đề xuất tạo thêm 2. Observation có thể cũ hoặc thiếu, nên chưa đủ để kết luận có thể tạo ngay: actuator vẫn cần identity, precondition và quyền phù hợp.
 
 Ngay cả khi controller bị tắt đột ngột lúc đang khởi động bản sao thứ hai, ở lần thức dậy kế tiếp, nó lại tiếp tục so sánh và nhận ra sai lệch còn tồn tại. Nó có thể yêu cầu hành động tiếp, nhưng chỉ một quan sát mới mới xác nhận được sự hội tụ. Đặc tính hướng về trạng thái mong muốn này gọi là **sự hội tụ trạng thái (State Convergence)**.
 
 ## Bốn pha của Vòng lặp điều hòa
 
-Một chu trình điều hòa chuẩn mực luôn diễn ra theo 4 bước khép kín và lặp lại liên tục:
+Ta dùng bốn pha dưới đây làm mô hình đọc control loop của chương, không phải quy trình bắt buộc cho mọi controller:
 
 | Bước | Tên gọi | Nhiệm vụ kỹ thuật trong Go |
 | :--- | :--- | :--- |
@@ -53,9 +53,9 @@ Quy ước này thể hiện rõ ranh giới trách nhiệm: `Reconciler` chỉ 
 
 Một sai lầm thường gặp của lập trình viên Go là sử dụng ngay một unbuffered channel (`chan string`) để làm hàng đợi cho controller. Trên môi trường production, channel thô nhanh chóng bộc lộ ba lỗ hổng nghiêm trọng:
 
-Một là, thiếu khả năng gộp trùng (Deduplication): Khi một dịch vụ chập chờn, 50 sự kiện báo lỗi liên tiếp có thể dồn về trong một giây. Nếu đẩy cả 50 item vào channel, worker sẽ chạy 50 lần reconcile hoàn toàn trùng lặp, gây lãng phí tài nguyên vô ích.
+Một là, thiếu gộp key trùng: trong scenario một consumer nhận và xử lý đủ 50 item cùng key từ channel mà không gộp, nó gọi reconcile 50 lần. Đây là cách viết queue ngây thơ, không phải lời hứa về mọi lịch chạy của channel; các lượt cũng có thể đọc observation khác nhau. Queue có dirty/processing giúp gộp lịch xử lý, không gộp mọi side effect thành exactly-once.
 
-Hai là, xung đột điều hòa song song (Parallel Race): Nếu hai worker trong pool cùng lấy một `key` ra xử lý song song, chúng có thể cùng nhìn thấy trạng thái thiếu hụt và cùng kích hoạt hành động tạo mới, dẫn đến tình trạng nhân đôi bản sao ngoài ý muốn (split-brain).
+Hai là, xử lý cùng key song song: hai worker có thể cùng đọc observation thiếu replica rồi đều yêu cầu tạo thêm. Tuần tự hóa theo key trong một process giảm cạnh tranh đó, nhưng không phối hợp các process hay ngăn observation cũ; cần ownership và precondition ở actuator. Không gọi mọi thao tác trùng là split-brain, vốn liên quan các bên cùng cho rằng mình giữ quyền điều phối.
 
 Ba là, retry storm: nếu dependency liên tục lỗi mà key bị đưa lại ngay không có budget/backoff, worker có thể tạo một vòng retry dày, tiêu CPU và tăng tải lên dependency. Đây là busy retry, không phải spin-lock — một cơ chế chờ lock khác. Chính sách retry cần giới hạn tốc độ và hỗ trợ cancellation.
 
@@ -177,7 +177,7 @@ func (r *SelfHealingReconciler) Reconcile(
 	isDegraded := !state.Healthy ||
 		state.Replicas < r.desiredReplicas
 
-	// 2. Tính lũy thừa: Nếu đã chuẩn, kết thúc (No-op)
+	// 2. Đã đạt trạng thái mong muốn thì không đổi thêm
 	if !isDegraded {
 		return Result{}, nil
 	}

@@ -1,5 +1,5 @@
 # BACK MATTER — ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD
-## Mổ xẻ kiến trúc từ mã nguồn sản xuất theo Zero-Guess Protocol
+## Điểm neo để đọc API và implementation đã ghim
 
 Phụ bản này đứng sau Chương 29 và ngay trước Atlas Lỗi Go. Các nhận xét về implementation chỉ áp dụng cho version và commit ghi ở mỗi mục, không phải cam kết API cho mọi version. Khóa source chứng minh identity của checkout, không tự chứng minh mọi giải thích cơ chế; khi dùng một chi tiết để quyết định production, đọc code và test tại commit đó.
 
@@ -79,9 +79,9 @@ type CacheOptions struct {
 }
 ```
 
-Khi bạn gọi `r.Get(ctx, req.NamespacedName, &myPod)` hoặc `r.List(ctx, &podList)`, mặc định request đọc từ bộ nhớ RAM của local Informer Cache — không gửi HTTP tới API Server. Điều này bảo vệ API Server khỏi áp lực đọc khổng lồ. Lưu ý: controller-runtime hỗ trợ cấu hình uncached/direct reader cho các object type cụ thể; dữ liệu đọc từ cache có thể stale so với API server. Ngược lại, khi bạn gọi `r.Create()`, `r.Update()`, `r.Patch()` hoặc `r.Delete()`, client gửi HTTP request thẳng lên API Server. Từ góc độ client, một request write thành công có nghĩa là API Server đã chấp nhận; việc lưu trữ vào etcd, kiểm tra admission webhook và lan truyền watch event sang các Informer khác là các boundary riêng biệt.
+Client của manager thường dùng cache cho `Get`/`List` của type được cache. Nhưng `client.New` không có `Options.Cache.Reader` thì đọc API server; `DisableFor` và cấu hình unstructured còn có thể chọn đường trực tiếp. Lazy discovery/informer initialization cũng có thể phát sinh HTTP. Không suy ra một `Get` bất kỳ là “zero HTTP”. Write đi tới API server; response thành công còn phải diễn giải theo operation/options, chẳng hạn dry-run không lưu thay đổi. Watch propagation và trạng thái workload thực tế là các boundary riêng, không được xác nhận chỉ bằng một write response.
 
-Một quyết định thiết kế then chốt mà mọi kỹ sư cần khắc sâu: Giao diện `Reconciler` cố tình chỉ nhận vào `reconcile.Request{NamespacedName}` thay vì nhận đối tượng Kubernetes hoàn chỉnh. Tại sao? Bởi vì giữa thời điểm sự kiện xảy ra trên cluster và thời điểm worker thức dậy để xử lý, trạng thái của Pod có thể đã thay đổi thêm nhiều lần. Việc chỉ cung cấp tên và namespace buộc lập trình viên phải đọc lại đối tượng từ cache tại thời điểm thực thi:
+`reconcile.Request` mang key thay vì snapshot object tại lúc phát event. Khi worker xử lý, object có thể đã đổi. Reconciler chọn reader phù hợp và đọc lại theo key; request không bắt buộc dùng cache và cũng không cung cấp freshness guarantee. Ví dụ dưới đây chọn `r.Get` qua client của reconciler:
 
 ```go
 var pod corev1.Pod
@@ -90,7 +90,7 @@ if err := r.Get(ctx, req.NamespacedName, &pod); err != nil {
 }
 ```
 
-Nếu đối tượng đã bị xóa, `client.IgnoreNotFound(err)` trả về `nil` để kết thúc vòng điều hòa êm đẹp. Mô hình này biến toàn bộ logic điều hòa thành một hàm hướng trạng thái mong muốn (level-triggered) và có tính lũy thừa (idempotent), giảm thiểu rủi ro từ việc xử lý sự kiện cũ. Tuy nhiên cache Informer có thể stale trong khoảng thời gian ngắn sau khi tài nguyên thay đổi trên cluster, nên Reconciler vẫn cần xử lý trường hợp đối tượng đọc từ cache chưa phản ánh trạng thái mới nhất của etcd.
+`client.IgnoreNotFound(err)` chỉ chuyển lỗi not-found thành `nil`; nó không làm các side effect trở nên lũy đẳng. Request theo key giúp reconciler đọc trạng thái khi xử lý, nhưng cache có thể stale. Muốn hội tụ an toàn cần thiết kế từng thao tác: kiểm tra ownership, dùng precondition khi ghi và quan sát lại sau lỗi hoặc retry. Khi cần độ mới của API server, chọn client đọc trực tiếp thay vì suy ra từ cache.
 
 ---
 
@@ -107,12 +107,12 @@ SDK dùng `middleware.Stack` của module `github.com/aws/smithy-go`, không ph�
 ```
 
 1. **Initialize:** Kiểm tra hợp lệ các tham số đầu vào và nạp giá trị mặc định vào ngữ cảnh.
-2. **Serialize:** Chuyển đổi struct Go thành `smithy.Request` (URL, HTTP method, headers và body stream).
+2. **Serialize:** Đưa input operation vào request của transport; đường HTTP dùng `transport/http.Request` của smithy-go cho URL, method, headers và body.
 3. **Build:** Chuẩn bị request, chẳng hạn content length và metadata phù hợp operation.
 4. **Finalize:** Đường ký và retry được đặt ở đây trước transport; thứ tự middleware cụ thể phải đọc theo operation và cấu hình.
 5. **Deserialize:** Đọc mã phản hồi HTTP, giải mã XML/JSON body thành struct kết quả, hoặc ánh xạ mã lỗi AWS (như `NoSuchKey`, `AccessDenied`) thành các struct lỗi cụ thể trong Go.
 
-Điểm sáng kỹ thuật nằm ở chiến lược chống thảm họa phân tán tại `aws/retry/standard.go` (`type Standard`). Khi một vùng của AWS gặp sự cố gián đoạn mạng, hàng nghìn container của bạn sẽ đồng loạt thử lại (retry). Nếu dùng thuật toán cấp số nhân đơn thuần (`2^t`), tất cả các client sẽ thức dậy và gửi request tại cùng một tích tắc, tạo ra cơn bão lưu lượng (thundering herd) đánh sập hoàn toàn khả năng hồi phục của hạ tầng. AWS SDK v2 triển khai thuật toán **Full Jitter**: khoảng thời gian ngủ giữa các lần thử lại là một giá trị ngẫu nhiên đồng đều trong đoạn `[0, backoff]`.
+Xét scenario nhiều client gặp lỗi gần cùng lúc: backoff cố định theo cấp số nhân có thể làm các lần retry tiếp tục dồn thành đợt. `aws/retry/standard.go` ở version ghim dùng Full Jitter để phân tán thời điểm retry trong khoảng backoff. Jitter giảm đồng bộ thời gian, không tạo thêm capacity hay bảo đảm hạ tầng hồi phục; vẫn cần attempt budget, deadline và policy cho side effect.
 
 Ở phiên bản được ghim `github.com/aws/aws-sdk-go-v2` v1.47.0, `retry.Standard` mặc định dùng rate limiter dạng quota với capacity 500 token. Khi `AWS_NEW_RETRIES_2026` không bằng `true`, cấu hình cũ tính `RetryCost` là 5 token cho retry thông thường và `RetryTimeoutCost` là 10 cho retry do timeout. Khi `AWS_NEW_RETRIES_2026=true`, `RetryCost` mặc định là 14 cho lỗi nhất thời, `ThrottlingRetryCost` là 5 cho lỗi throttling, còn `RetryTimeoutCost` không được dùng. Mỗi attempt thành công cộng `NoRetryIncrement` 1 token; retry thành công còn hoàn lại token đã lấy theo đường retry. Đây là hai bộ mặc định của cùng Standard retryer, không phải hai retry mode của SDK. Các cost, capacity và rate limiter đều có thể được cấu hình lại; khi quota không đủ, retry bị chặn. Vì thế không thể gán một chi phí token cố định cho mọi lỗi mạng hoặc mọi cấu hình AWS.
 
@@ -120,9 +120,9 @@ SDK dùng `middleware.Stack` của module `github.com/aws/smithy-go`, không ph�
 
 ### 04. `github.com/prometheus/client_golang` (v1.24.1 — `d6087ee4`)
 
-Khi nhiều goroutine đồng thời cập nhật một bộ đếm chia sẻ bảo vệ bởi `sync.Mutex`, chi phí tranh chấp khóa tăng theo số core đang cạnh tranh do hiện tượng dội dòng bộ đệm (cache line bouncing). Ở tải cao và nhiều core, điều này có thể trở thành điểm nghẽn đo được.
+Nhiều goroutine cập nhật cùng counter có thể tranh chấp lock và cache line chứa state chia sẻ. Chi phí phụ thuộc workload, số writer, kiến trúc và đường đồng bộ; không hứa nó tăng theo một quy luật chung khi thêm core. Cần profile/benchmark trước khi chọn một primitive khác.
 
-`prometheus/client_golang` giảm chi phí này ở tầng vi kiến trúc trong `prometheus/counter.go` (`type counter`). Rất nhiều tài liệu mô tả sai rằng Prometheus luôn dùng vòng lặp CAS (Compare-And-Swap) cho Counter. Thực tế mã nguồn phiên bản khóa cho thấy một thiết kế tinh vi hơn:
+Trong `prometheus/counter.go` của version ghim, `type counter` giữ hai phần state và có hai đường cập nhật, không chỉ một vòng CAS cho mọi thao tác:
 
 ```go
 type counter struct {
@@ -139,7 +139,7 @@ Bộ đếm tách giá trị ra làm hai thành phần: số nguyên (`valInt`) 
 atomic.AddUint64(&c.valInt, 1)
 ```
 
-`atomic.AddUint64` trên nhiều kiến trúc (như x86_64 với `LOCK XADD`) tránh được một mutex trong thao tác cập nhật counter, nhưng chi phí thực tế vẫn phụ thuộc vào kiến trúc phần cứng, mức độ tranh chấp, trạng thái cache coherence, compiler và runtime. Không nên gán một con số nanosecond cố định cho mọi môi trường. Chỉ khi bạn gọi `Add(val)` với một số thực có phần lẻ (ví dụ `c.Add(0.15)`), hàm mới chuyển sang đường dẫn chậm (slow path): đọc `valBits`, chuyển đổi sang số thực bằng `math.Float64frombits`, thực hiện phép cộng số thực, và dùng `atomic.CompareAndSwapUint64` trong một vòng lặp CAS để cập nhật lại bit representation.
+`Inc` dùng `atomic.AddUint64`. Trong `Add`, nhánh integer kiểm tra `float64(uint64(v)) == v`; nếu không thỏa, chẳng hạn `0.15`, code cập nhật `valBits` bằng vòng CAS cho phép cộng float. Không gọi mọi giá trị nguyên là nhánh integer: khả năng biểu diễn còn quan trọng. Chi phí atomic vẫn phụ thuộc target, contention và cache coherence; không có số nanosecond cố định hay ranking “nhanh/chậm” cho mọi môi trường từ hai nhánh này.
 
 Độ phức tạp tiếp theo nằm ở metric có nhãn động: `MetricVec` (`prometheus/vec.go`) dùng cơ chế tra cứu theo bộ giá trị nhãn và tái dùng metric đã tạo. Điều này không chứng minh mỗi lần tra cứu đều không cấp phát; chi phí thực tế cần đo với tập nhãn và đường gọi cụ thể.
 
@@ -151,7 +151,7 @@ atomic.AddUint64(&c.valInt, 1)
 
 Telemetry có overhead và cần budget. Export đồng bộ thêm thời gian chờ vào request path; queue không giới hạn có thể giữ quá nhiều memory khi backend lỗi. Không có tỷ lệ latency tăng gấp đôi phổ quát. Batch processor chọn queue, timeout, drop/block policy và shutdown behavior; đo overhead và loss theo workload thay vì coi instrumentation là miễn phí.
 
-Để giải quyết mâu thuẫn này, OpenTelemetry Go triển khai `batchSpanProcessor` (`sdk/trace/batch_span_processor.go`). Cần đính chính một quan niệm sai lệch khá phổ biến: `batchSpanProcessor` trong bản Go **không sử dụng cấu trúc circular ring-buffer phức tạp**, mà sử dụng chính cấu trúc nguyên bản mạnh mẽ nhất của Go: một **buffered channel** có kích thước cố định:
+Ở version ghim, `batchSpanProcessor` trong `sdk/trace/batch_span_processor.go` dùng buffered channel có dung lượng giới hạn để chuyển span sang đường export. Đây là chi tiết implementation hữu ích để hiểu đầy queue và mất span, không phải lợi thế mặc định của channel so với mọi ring buffer:
 
 ```go
 type batchSpanProcessor struct {
@@ -179,11 +179,11 @@ func (bsp *batchSpanProcessor) enqueueDrop(
 }
 ```
 
-Đoạn mã trên là bài học mẫu mực về lập trình Go hệ thống. Bằng cách sử dụng câu lệnh `select` có nhánh `default`, thao tác đẩy vào channel không chờ đợi dung lượng queue — nếu đầy, nhánh `default` được kích hoạt ngay. Nếu hàng đợi `queue` còn chỗ, span được xếp hàng an toàn. Nhưng nếu downstream backend phản hồi chậm khiến hàng đợi bị đầy (`maxQueueSize`), processor rơi vào nhánh `default`, tăng biến đếm nguyên tử `bsp.dropped`, và bỏ qua span này. Luồng gọi không bị chặn chờ queue; sự hy sinh dữ liệu giám sát là cái giá được chủ động chấp nhận để giới hạn ảnh hưởng đến luồng nghiệp vụ.
+Trong đường không bật blocking, `select` có nhánh `default` làm enqueue không chờ khi queue đầy. Span có thể bị bỏ và bộ đếm `bsp.dropped` tăng. Nhánh này chỉ giới hạn việc chờ dung lượng queue, không chứng minh cả lời gọi không có chi phí hoặc không tranh chấp. Bật blocking đổi trade-off; shutdown, exporter và timeout còn có contract riêng.
 
 Ở đầu ra, một goroutine chạy nền (`bsp.processQueue`) lắng nghe hai tín hiệu: một timer chu kỳ (`batchTimeout`, mặc định 5 giây) hoặc kích thước lô gom tụ (`maxExportBatchSize`, mặc định 512 spans). Khi một trong hai điều kiện thỏa mãn, lô spans được rút ra và chuyển cho `Exporter.ExportSpans(ctx, batch)`.
 
-Xuyên suốt chu kỳ này, tính liên tục của vết phân tán được bảo toàn nhờ `TraceContext` (`propagation/trace_context.go`). Nó giải mã header HTTP `traceparent` theo định dạng W3C (`00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01`) và nhúng `SpanContext` vào `context.Context` của Go. Nhờ đó, TraceID và SpanID có thể xuyên qua các tầng controller, service, repository và client HTTP mà không làm biến dạng chữ ký hàm của ứng dụng.
+`TraceContext` (`propagation/trace_context.go`) extract/inject context theo W3C, trong đó có header `traceparent`. Consumer phải cấu hình và dùng propagator ở boundary thích hợp; đây không phải bảo đảm trace hoàn chỉnh. Khi tạo child span, TraceID nối cùng trace còn SpanID mới phân biệt span với parent. Truyền `context.Context` giúp mang quan hệ ấy qua các hàm, nhưng không tự tạo span, sample hoặc export dữ liệu.
 
 ---
 
@@ -283,10 +283,10 @@ type StringValue struct {
 
 `types/basetypes/string_value.go` dùng `state` để phân biệt ba trạng thái:
 - **Known (Đã biết):** Giá trị đã được xác định cụ thể (ví dụ `"us-east-1"`).
-- **Null (Rỗng):** Người dùng chủ động không cấu hình thuộc tính này trong file HCL.
-- **Unknown (Chưa xác định):** Giá trị chưa thể biết được tại giai đoạn `Plan`, nó sẽ chỉ được sinh ra bởi hạ tầng điện toán đám mây sau khi tài nguyên phụ thuộc được tạo tại giai đoạn `Apply`.
+- **Null:** Giá trị vắng mặt theo type model; có thể đến từ cấu hình bỏ trống, biểu thức trả null hoặc logic provider. Không suy ra ý định người dùng chỉ từ `IsNull()`.
+- **Unknown:** Giá trị chưa biết trong phase đang xét, chẳng hạn thuộc tính computed ở plan. Nó không chỉ áp dụng cho tài nguyên cloud hay luôn được giải quyết bởi một tài nguyên phụ thuộc.
 
-Mã nguồn trong `internal/fwserver/server.go` tiếp nhận các cuộc gọi gRPC từ Terraform Core (tuân thủ Terraform Provider Protocol v6), giải mã dữ liệu msgpack thành các struct của framework. Khi một kỹ sư viết Resource logic, các phương thức như `plan.VpcId.IsUnknown()` và `plan.VpcId.IsNull()` buộc người viết provider phải chủ động xử lý tính bất định của hạ tầng. Đây là một minh chứng xuất sắc cho việc thiết kế hệ thống kiểu dữ liệu trong Go: Hệ thống kiểu không chỉ để thỏa mãn trình biên dịch, mà phải phản ánh chính xác bản chất vật lý của miền bài toán nghiệp vụ.
+`internal/fwserver/server.go` tổ chức các operation của framework; tầng server adapter cung cấp provider protocol tương ứng. Khi đọc `IsUnknown()` và `IsNull()`, câu hỏi cần trả lời là provider sẽ trì hoãn, giữ null hay tính một giá trị nào ở phase này. Gộp hai trạng thái thành chuỗi rỗng sẽ làm mất thông tin mà Terraform cần khi plan và apply.
 
 ---
 
@@ -294,9 +294,9 @@ Mã nguồn trong `internal/fwserver/server.go` tiếp nhận các cuộc gọi 
 
 Một thay đổi kiến trúc của Helm 3 là bỏ daemon Tiller của Helm 2. Quyền Kubernetes của Tiller phụ thuộc ServiceAccount và RBAC được cấu hình; cấu hình quá rộng tạo rủi ro leo quyền cho người gửi lệnh tới Tiller.
 
-Helm 3 giải quyết tận gốc bài toán này bằng cách chuyển đổi toàn bộ kiến trúc thành một công cụ máy khách thuần túy (Client-Only Architecture) tại `pkg/action/action.go` (`type Configuration`). Mọi thao tác cài đặt, nâng cấp, kiểm tra trạng thái đều sử dụng trực tiếp danh tính và quyền hạn RBAC trong file `kubeconfig` của chính người dùng đang gõ lệnh.
+Helm 3 bỏ Tiller và thực hiện action từ client. Quyền Kubernetes phụ thuộc cấu hình REST client và credential thực tế, có thể từ kubeconfig hoặc môi trường chạy service. Đây là thay đổi trust boundary, không phải lời hứa giải quyết mọi rủi ro quyền hạn; chart, hook và quyền client vẫn phải được review.
 
-Nhưng câu hỏi hóc búa đặt ra là: Nếu không có server daemon, Helm lưu trữ lịch sử các bản phát hành (release history), các lần nâng cấp và bản lưu rollback ở đâu?
+Không có Tiller thì release history được lưu ở đâu? Đây là đường cần lần theo khi điều tra rollback:
 
 Một storage driver của Helm nằm ở `pkg/storage/driver/secrets.go` (`type Secrets`): khi chọn driver Secrets, release history được lưu trong Kubernetes Secret ở namespace triển khai, với nhãn nhận diện. Đây là đường mặc định phổ biến, không phải storage backend duy nhất Helm hỗ trợ:
 
@@ -319,11 +319,11 @@ Khi rollback, Helm đọc release history từ storage đã cấu hình và dùn
 
 Một image `scratch` không tự mang shell, git hay C runtime; các biến thể distroless có thành phần khác nhau và có thể mang library native. Nếu image không có executable git, gọi `exec.Command` không thể dùng nó. go-git là một lựa chọn library in-process; lựa chọn khác là đóng gói git phù hợp. Phải kiểm tra đúng image digest và dependency cần dùng, không suy ra từ nhãn “tối giản”.
 
-`go-git` làm được điều kỳ diệu đó nhờ việc tái hiện trung thực kiến trúc hai tầng của Linus Torvalds: **Tầng Đáy (Plumbing)** và **Tầng Mặt (Porcelain)**.
+`go-git` tách các thao tác object/packfile ở tầng plumbing khỏi các thao tác repository ở tầng porcelain. Phân tầng này giúp đọc đường đi của dữ liệu mà không cần gọi Git CLI:
 
 Tầng plumbing (`plumbing/format/packfile/parser.go`, `packfile.go`) đọc packfile chứa các Git object, trong đó object delta tham chiếu một base object bằng offset hoặc object ID. Base không nhất thiết là “file của commit cũ”; đối tượng có thể là blob, tree, commit hoặc tag. Đường giải mã cần tìm base và áp dụng chuỗi delta để tái tạo object. Không suy ra toàn bộ object graph luôn được giữ trong RAM.
 
-Tầng lưu trữ được trừu tượng hóa qua interface `plumbing/storer/storer.go` (`interface EncodedObjectStorer`). Nhờ thiết kế tách rời tuyệt đối giữa logic xử lý đối tượng và tầng lưu trữ vật lý, `go-git` cung cấp hai triển khai lưu trữ hoàn toàn khác biệt:
+`plumbing/storer/storer.go` khai báo `EncodedObjectStorer`, tách thao tác với Git object khỏi backend lưu trữ. Hai lựa chọn cho ví dụ là:
 - `storage/filesystem`: Ghi các object và reflog xuống thư mục `.git` trên ổ đĩa vật lý như Git truyền thống.
 - `storage/memory`: Lưu trữ toàn bộ các object Git bên trong một mảng băm trên RAM (`storage/memory.Storage`).
 
@@ -345,7 +345,7 @@ Làm thế nào SSH có thể điều phối nhiều luồng dữ liệu khác n
 
 Mã nguồn tại `ssh/mux.go` (`type mux`) và `ssh/channel.go` (`type channel`) chứa đựng câu trả lời. Giao thức SSHv2 phân chia kết nối TCP duy nhất thành nhiều **kênh logic (logical channels)**. Mỗi khi bạn gọi `client.NewSession()`, một gói tin `msgChannelOpen` được gửi qua mạng để đàm phán một kênh logic mới với ID riêng biệt. Bộ phân kênh `mux` lắng nghe luồng socket vật lý, đọc header của từng gói tin SSH và định tuyến các payload dữ liệu vào channel tương ứng.
 
-Tuy nhiên, thách thức sống còn của kỹ thuật multiplexing là kiểm soát lưu lượng (Flow Control). Hãy tưởng tượng kênh số 1 đang chạy lệnh `cat /dev/urandom` in ra màn hình với tốc độ hàng trăm Megabyte/giây. Nếu ứng dụng terminal của bạn đọc không kịp, luồng dữ liệu này sẽ làm tràn ngập buffer TCP của hệ điều hành, khiến gói tin truy vấn SQL của kênh port-forwarding bên cạnh bị chặn đứng hoàn toàn!
+Xét scenario một channel liên tục xuất dữ liệu trong khi consumer đọc chậm, còn channel khác dùng port forwarding. Cần phân biệt cửa sổ nhận riêng của channel với tài nguyên TCP dùng chung; không thể suy ra thông lượng hay thời gian chặn từ tên thao tác `cat /dev/urandom`.
 
 SSH có flow control theo channel để receiver giới hạn lượng dữ liệu sender được gửi cho channel đó. Nó không loại bỏ contention của connection chung, TCP head-of-line blocking hay giới hạn memory của application; vẫn cần budget và xử lý consumer chậm.
 - Mỗi kênh logic sở hữu một biến kích thước cửa sổ nhận dữ liệu độc lập (`myWindow uint32`).
@@ -446,9 +446,9 @@ Runtime protobuf có các đường coder và metadata cho generated message, tr
 
 ### 17. `github.com/google/go-containerregistry` (v0.22.1 — `8a72a424`)
 
-Hãy tưởng tượng bạn đang viết một công cụ bảo mật quét mã độc trong container image. Bạn cần kiểm tra xem trong image `my-huge-app:latest` nặng 20GB có chứa một file khóa SSH nhạy cảm `/root/.ssh/id_rsa` hay không. Nếu sử dụng công cụ Docker CLI truyền thống, lệnh `docker pull` sẽ buộc máy chủ của bạn phải tải trọn vẹn 20GB dữ liệu nén qua đường truyền internet, giải nén ra hàng chục Gigabyte ổ đĩa cứng, rồi bạn mới có thể đọc file. Đây là một sự lãng phí băng thông và tài nguyên khổng lồ.
+Xét scenario chỉ cần đọc metadata hoặc tìm một file trong image lớn. `docker pull` tải những layer cần mà local store chưa có; kích thước image đã giải nén không phải số byte phải truyền. Nếu công việc chưa cần layer content, một client đọc manifest/config riêng có thể tránh tải dư. Tìm file còn cần xét layer, whiteout và filesystem view, không chỉ thấy một path trong một tar bất kỳ.
 
-`go-containerregistry` giải quyết bài toán này nhờ một thiết kế hướng giao diện lười (Lazy Evaluation Interface) mẫu mực tại `pkg/v1/image.go` (`type Image`):
+`pkg/v1/image.go` định nghĩa interface `Image`; implementation `remote.Image` có thể trì hoãn việc đọc layer. Interface tự nó không bảo đảm mọi backend đều lazy:
 
 ```go
 type Image interface {
@@ -469,7 +469,7 @@ Layer cung cấp reader cho nội dung compressed hoặc uncompressed. Muốn d�
 
 ### 18. `oras.land/oras-go/v2` (v2.6.2 — `105715ee`)
 
-Trong nhiều năm, các kỹ sư phần mềm mặc định coi Docker Registry hay OCI Registry chỉ là nơi lưu trữ các container images. Nhưng khi xem xét kỹ lưỡng đặc tả OCI Distribution Spec, bạn sẽ nhận ra một OCI Registry thực chất là một **Kho Lưu Trữ Có Thể Định Địa Chỉ Bằng Nội Dung (Content Addressable Storage - CAS)** phân tán, có sẵn cơ chế xác thực, phân quyền, sao lưu và mạng lưới phân phối toàn cầu.
+OCI Distribution quy định API trao đổi manifest và blob, trong đó digest hỗ trợ định danh nội dung. Authentication, authorization, backup và phân phối nhiều vùng là khả năng hay policy của registry cụ thể, không phải tất cả đều có sẵn vì nó tuân theo OCI.
 
 Tại sao chúng ta phải xây dựng các hệ thống lưu trữ riêng biệt cho Helm charts, tệp nhị phân WebAssembly (Wasm), tệp cấu hình Terraform, file chữ ký điện tử hay tài liệu thành phần phần mềm (SBOM - Software Bill of Materials), trong khi có thể lưu trữ toàn bộ chúng trực tiếp trên OCI Registry có sẵn của doanh nghiệp?
 
@@ -482,7 +482,7 @@ type Target interface {
 }
 ```
 
-Khác biệt cốt tử giữa ORAS và một client Docker thông thường là ORAS cho phép lập trình viên định nghĩa **bất kỳ kiểu MIME (mediaType) tùy biến nào** cho các blob dữ liệu và manifest descriptor. Bạn có thể đóng gói một file Wasm với mediaType `application/vnd.wasm.content.layer.v1+wasm`, đẩy lên registry, và liên kết nó với một file SBOM mang mediaType `application/spdx+json` thông qua trường `subject` của OCI Manifest.
+ORAS hỗ trợ đóng gói artifact với mediaType mô tả nội dung và liên kết qua `subject`. Ví dụ Wasm hay SBOM cần được thử với registry đích: hỗ trợ mediaType, manifest, referrers và policy có thể khác nhau. API cho phép diễn đạt một artifact không bảo đảm mọi registry chấp nhận nó.
 
 `subject` và referrers hỗ trợ liên kết artifact. Lifecycle xóa/garbage collection phụ thuộc registry và policy; ORAS không tự bảo đảm xóa một image sẽ đồng bộ xóa mọi signature/SBOM liên quan.
 
@@ -494,7 +494,7 @@ Trong đường CNI thông thường của Pod không dùng hostNetwork, runtime
 
 Kubelet gắn Pod vào mạng lưới cluster bằng cách nào?
 
-Mã nguồn tại `pkg/skel/skel.go` (`func PluginMainWithError()`) chứa đựng câu trả lời. Đặc tả CNI (Container Network Interface) không phải là một giao thức mạng gRPC hay socket phức tạp, mà là một hợp đồng thực thi tiến trình (Process Execution Contract) cực kỳ tối giản và dứt khoát.
+Đọc `pkg/skel/skel.go` với `PluginMainWithError`: CNI mô tả contract thực thi plugin process, không phải RPC qua gRPC. Cần phân biệt input điều khiển, cấu hình stdin và output/error mà runtime nhận.
 
 Khi cần cấp phát mạng, container runtime gọi trực tiếp file thực thi của plugin CNI (ví dụ `/opt/cni/bin/bridge` hoặc `calico`) thông qua `pkg/invoke/raw_exec.go`. Mọi tham số điều khiển được truyền qua đúng hai kênh:
 1. Các biến môi trường:
@@ -510,7 +510,7 @@ Với bridge plugin, một đường triển khai có thể tạo veth pair, n�
 
 ### 20. `github.com/cilium/ebpf` (v0.22.0 — `e55144e1`)
 
-Trước khi eBPF xuất hiện, nếu bạn muốn can thiệp vào cách Linux kernel xử lý từng gói tin mạng đi qua card mạng hoặc muốn chặn bắt mọi lệnh gọi hệ thống `execve` để phát hiện hacker đào trộm tiền ảo, bạn chỉ có hai lựa chọn tồi tệ: hoặc là viết một Linux Kernel Module bằng C (rất dễ làm sập toàn bộ máy chủ nếu có lỗi con trỏ), hoặc là đẩy toàn bộ gói tin lên User Space thông qua iptables/pcap để kiểm tra (làm giảm thông lượng mạng nghiêm trọng do chi phí context switch).
+Để quan sát syscall hay xử lý packet trong Linux, đã có nhiều cơ chế như audit, ptrace, ftrace, packet capture và kernel module, với điểm quan sát và chi phí khác nhau. eBPF bổ sung cách nạp chương trình vào hook được kernel hỗ trợ. Chọn nó theo dữ liệu cần thu, quyền, kernel và workload, không từ một so sánh chỉ có hai lựa chọn cực đoan.
 
 Với object eBPF đã được biên dịch trước, `cilium/ebpf` cho phép Go loader nạp và gắn chương trình mà không cần cgo hoặc Clang trên máy đích. Máy đích vẫn cần Linux kernel, feature, quyền và resource limit tương thích; đường build object cần toolchain riêng.
 
@@ -524,7 +524,7 @@ Với object eBPF đã được biên dịch trước, `cilium/ebpf` cho phép G
 
 Gọi ip bằng subprocess là một dependency vào executable, quoting/arguments và lifecycle process. Một CNI plugin có thể dùng library netlink để bỏ các lượt spawn đó. Chi phí phải đo theo số operation và workload; không tự suy ra bảng process bị quá tải chỉ vì code dùng CLI.
 
-`netlink` loại bỏ hoàn toàn các tiến trình trung gian đó bằng cách nói chuyện trực tiếp với Linux Kernel qua giao thức **Netlink IPC** tại `netlink_linux.go` và `link_linux.go`.
+Với các thao tác link của ví dụ, `netlink` gửi message tới kernel Linux qua Netlink thay vì khởi chạy executable `ip`. Đọc `netlink_linux.go` và `link_linux.go`; không suy ra cả ứng dụng không còn subprocess hay mọi thao tác mạng đều là Netlink.
 
 Ở tầng transport Netlink bên dưới, việc mở socket có dạng khái niệm:
 
@@ -566,13 +566,13 @@ type TypedExternalClient[T resource.Managed] interface {
 }
 ```
 
-Kiến trúc điều hòa của Crossplane tuân thủ một chu trình 4 bước chuẩn mực:
+Đọc bốn trách nhiệm sau trong reconciler cùng management policy; không coi đây là bốn lời gọi luôn chạy tuần tự ở mọi reconcile:
 1. **Observe (Quan sát):** Reconciler định kỳ gọi `Observe()` để thăm dò trạng thái thực tế của tài nguyên trên cloud provider.
-2. **Late-Initialization (Khởi tạo trễ):** Nếu cloud provider tự động sinh ra các giá trị mặc định (như KMS Key ARN hay Storage Type), Crossplane cập nhật ngược các giá trị này vào spec của CRD mà không làm thay đổi ý định ban đầu của người dùng.
+2. **Late initialization:** Provider có thể đưa giá trị quan sát vào field spec chưa được đặt, theo logic resource và management policy. Phải kiểm tra field nào thuộc quyền provider; không tự suy rằng mọi default luôn giữ nguyên ý định người dùng.
 3. **Reconcile State (Điều hòa sai lệch):** Nếu tài nguyên chưa tồn tại, nó gọi `Create()`. Nếu tài nguyên đã tồn tại nhưng cấu hình bị sai lệch (drift) so với file YAML khai báo, nó gọi `Update()` để kéo trạng thái cloud về đúng mong muốn.
 4. **Delete & Finalizer:** Khi managed resource được yêu cầu xóa, policy và finalizer điều phối cleanup tài nguyên ngoài cụm. Xóa file YAML local không tự là API delete, và managed object không phải CRD definition. Management policy có thể chọn orphan thay vì xóa; đọc đường `ShouldDelete` cùng observe/delete để hiểu lúc finalizer được gỡ.
 
-Mô hình này biến Kubernetes thành một Control Plane thống nhất cho toàn bộ hạ tầng đa đám mây (Multi-Cloud Platform Engineering).
+Crossplane có thể dùng Kubernetes làm control plane cho các tài nguyên mà provider và policy hỗ trợ. Không phải mọi dịch vụ cloud hay mọi field đều được quản lý theo cùng semantics; ownership, late initialization và deletion policy cần đọc theo managed resource.
 
 ---
 
@@ -580,7 +580,7 @@ Mô hình này biến Kubernetes thành một Control Plane thống nhất cho t
 
 Khi một hệ thống GitOps tự động hóa triển khai phần mềm cho hàng trăm microservices, tình huống sự cố tồi tệ nhất là: Một commit cấu hình bị sai cú pháp, việc đồng bộ thất bại, nhưng người vận hành không hề hay biết và phải bỏ ra hàng giờ đồng hồ đào bới qua hàng chục nghìn dòng log của pod controller để tìm nguyên nhân.
 
-Flux CD chuẩn hóa trải nghiệm vận hành GitOps bằng cách biến mọi tài nguyên thành một **Máy Trạng Thái Có Thể Quan Sát Được (Observable State Machine)** tại `runtime/conditions/setter.go`.
+Helpers trong `runtime/conditions/setter.go` giúp controller cập nhật condition theo cách nhất quán. Condition là thông tin controller báo về quá trình xử lý, không biến mọi tài nguyên thành một state machine có quan sát đầy đủ. Vẫn cần định nghĩa trạng thái nào có ý nghĩa và ai chịu trách nhiệm ghi status.
 
 Helper condition của Flux dùng các kiểu condition cho những resource triển khai contract tương ứng; nó không áp đặt `.status.conditions` lên mọi Custom Resource trong Kubernetes. Ví dụ:
 
@@ -612,7 +612,7 @@ Helper cập nhật condition trên object trong memory. Controller còn phải 
 
 Khi viết một con bot tự động hóa GitHub Actions hoặc công cụ dọn dẹp các pull request cũ trong một tổ chức doanh nghiệp có hàng nghìn repositories, bạn sẽ phải đối mặt với bài toán phân trang (pagination) và giới hạn tần suất gọi API (Rate Limiting).
 
-GitHub REST API không trả về số trang tiếp theo bên trong nội dung JSON body, mà truyền thông tin này qua header HTTP tiêu chuẩn: `Link: <https://api.github.com/...page=2>; rel="next"`.
+Với REST endpoint phân trang theo page trong ví dụ, GitHub chỉ đường tiếp theo bằng HTTP header `Link`, chẳng hạn `<https://api.github.com/...page=2>; rel="next"`. Không lấy loop theo page này áp cho mọi endpoint hay cursor API.
 
 `go-github` có đường offset pagination trong `github/github.go`. Nhiều hàm list nhận `ListOptions` và trả `*github.Response`; một số API dùng cursor hoặc dạng phân trang khác, nên ví dụ sau chỉ dành cho endpoint dùng page number:
 
@@ -635,7 +635,7 @@ for {
 }
 ```
 
-Mã nguồn trong `github.go` phân tích cú pháp header HTTP `Link`, bóc tách số trang của mối quan hệ `rel="next"`, và lưu trực tiếp vào trường `resp.NextPage`. Khi không còn trang tiếp theo, `NextPage` tự động mang giá trị `0`. Lập trình viên không cần viết regex phân tích URL phức tạp, biến vòng lặp duyệt qua hàng chục nghìn thực thể từ xa thành một cấu trúc điều khiển tự nhiên của Go.
+Trong `github.go`, `Response.populatePageValues` đọc quan hệ của header `Link`. Loop theo page dưới đây dùng `resp.NextPage`, dừng khi không có page-number tiếp theo (`0`). Response còn có thông tin cursor cho các kiểu pagination khác. SDK parse header không thay việc kiểm tra error, quota, deadline hoặc sự thay đổi dữ liệu giữa các trang.
 
 Đồng thời, struct `github.Response` công khai các trường `Rate: Rate{Limit, Remaining, Reset}`, cho phép các worker tự động điều chỉnh tốc độ gọi hoặc chủ động ngủ đông (`time.Sleep`) cho đến thời điểm `Reset` khi nhận thấy hạn ngạch gọi API của GitHub sắp cạn kiệt.
 
@@ -645,18 +645,20 @@ Mã nguồn trong `github.go` phân tích cú pháp header HTTP `Link`, bóc tá
 
 Một số CLI Go như `kubectl`, `helm`, `gh` và `hugo` dùng Cobra để tổ chức lệnh phân cấp, flags và help. Chúng có các quy ước tương tự, không phải mọi CLI Go đều dùng cùng framework hay có hành vi giống nhau:
 
-Nền móng đứng sau toàn bộ trải nghiệm người dùng xuất sắc đó là `cobra` (`command.go` — `type Command`).
+`cobra` trong `command.go` tổ chức command, flag và các điểm hook. Hãy đọc đường Execute thay vì suy từ trải nghiệm CLI rằng mọi lỗi đã được framework xử lý.
 
 Cobra tổ chức toàn bộ ứng dụng CLI dưới dạng một **Cây Lệnh Phân Cấp (Hierarchical Command Tree)**. Mỗi lệnh là một nút trên cây sở hữu con trỏ tới lệnh cha (`parent *Command`) và danh sách các lệnh con (`commands []*Command`).
 
-Chu kỳ thực thi của một lệnh khi người dùng gõ phím được kiểm soát chặt chẽ qua 5 giai đoạn nối tiếp:
+Trong đường command execution của version ghim, các hook được chọn có thứ tự sau; hook có thể vắng, bản `E` có thể trả lỗi làm dừng đường chạy:
 
 ```
-[PersistentPreRun] ──► [PreRun] ──► [Run / RunE]
-  └──► [PostRun] ──► [PersistentPostRun]
+PersistentPreRun/E -> PreRun/E -> Run/E
+                                |
+                                v
+                       PostRun/E -> PersistentPostRun/E
 ```
 
-Điểm sáng kiến trúc của Cobra là sự phân biệt giữa cờ cục bộ (`Flags()`) và cờ kế thừa xuyên suốt (`PersistentFlags()`). Khi bạn khai báo cờ `--kubeconfig` hoặc `--verbose` trên lệnh gốc (Root Command) bằng `PersistentFlags()`, cờ đó tự động được truyền xuống và có hiệu lực trên toàn bộ hàng trăm lệnh con cháu bên dưới cây lệnh.
+Cobra phân biệt `Flags()` của lệnh với `PersistentFlags()` có thể kế thừa xuống cây lệnh. Lệnh con có thể khai báo flag trùng tên hoặc đổi behavior; đọc resolution thực tế thay vì mặc định một flag luôn có cùng nghĩa ở mọi cấp.
 
 `PersistentPreRun` có thể đặt tác vụ khởi tạo chung ở lệnh cha. Cần kiểm tra cách Cobra chọn hook theo cây lệnh ở version đang dùng: hook của cha không phải cam kết sẽ luôn chạy nếu lệnh con khai báo hook tương ứng.
 
@@ -664,10 +666,10 @@ Chu kỳ thực thi của một lệnh khi người dùng gõ phím được ki�
 
 ### 26. `github.com/spf13/viper` (v1.21.0 — `394040ca`)
 
-Nguyên tắc cấu hình thứ 3 trong tuyên ngôn 12-Factor App quy định: Cấu hình của ứng dụng phải được tách biệt hoàn toàn khỏi mã nguồn và có thể dễ dàng thay đổi theo từng môi trường triển khai mà không cần biên dịch lại code. Trong thực tế production, bạn muốn:
+12-Factor App khuyến nghị tách cấu hình thay đổi theo deployment khỏi code; đó là hướng dẫn thiết kế, không phải guarantee của Viper. Trong ví dụ, các nguồn cấu hình có thứ tự ưu tiên cần được kiểm tra:
 - Khi chạy trên máy tính cá nhân (local dev): Đọc cấu hình từ file `config.yaml`.
 - Khi đóng gói vào Kubernetes: Nhận cấu hình ghi đè từ các biến môi trường (Environment Variables) hoặc cờ dòng lệnh CLI.
-- Khi một giá trị không được cấu hình ở bất kỳ đâu: Tự động rơi về một giá trị mặc định an toàn.
+- Khi không có cấu hình ưu tiên cao hơn, Viper có thể dùng giá trị từ `SetDefault`. Giá trị mặc định vẫn cần validation theo contract ứng dụng; framework không làm nó tự trở nên an toàn.
 
 Làm thế nào để kết hợp tất cả các nguồn cấu hình này mà không biến mã nguồn thành một mớ hỗn độn các câu lệnh `if-else`?
 
@@ -753,7 +755,7 @@ Khi bạn ghi log: `logger.Info("transfer", zap.Int64("from", fromID), zap.Float
 
 `automaxprocs` quan trọng nhất trong bối cảnh lịch sử của các binary Go cũ chạy trong container có CPU limit thấp. Trước Go 1.25, mặc định `GOMAXPROCS` không xét cgroup CPU bandwidth limit, nên một process có thể chọn số lượng song song gần số CPU host thay vì giới hạn CPU của container.
 
-Edition và lab dùng toolchain Go 1.27.1 với khai báo `go 1.27`, nên mental model hiện hành áp dụng ở đây. Với Go từ 1.25 trên Linux, khi `GOMAXPROCS` không bị đặt thủ công, runtime chọn mặc định từ số CPU logic, CPU affinity và giới hạn throughput trung bình của cgroup; nó còn kiểm tra thay đổi định kỳ. Nhưng binary biên dịch bằng Go 1.27 vẫn có thể giữ mặc định tương thích cũ nếu main module hoặc workspace khai báo ngôn ngữ Go 1.24 trở xuống. `GODEBUG=containermaxprocs=0` tắt xét quota, `updatemaxprocs=0` tắt cập nhật định kỳ; biến môi trường `GOMAXPROCS` hoặc lời gọi `runtime.GOMAXPROCS` đặt giá trị thủ công cũng vô hiệu cập nhật tự động. CPU limit là quota throughput mà runtime có thể xét, còn CPU request là thông tin lập lịch của Kubernetes. `GOMAXPROCS` giới hạn mức song song chạy Go code, không thay thế quota CPU của cgroup.
+Edition dùng toolchain Go 1.27.1; các module lab có directive riêng cần kiểm tra khi build. Với Go từ 1.25 trên Linux, mặc định `GOMAXPROCS` có thể xét CPU logic, affinity và throughput limit của cgroup, rồi cập nhật định kỳ. Main module hoặc workspace khai báo Go 1.24 trở xuống có thể giữ mặc định tương thích cũ. `GODEBUG=containermaxprocs=0` tắt xét quota; `updatemaxprocs=0` tắt cập nhật. Đặt `GOMAXPROCS` thủ công bằng biến môi trường hoặc API cũng vô hiệu cập nhật tự động. CPU request của Kubernetes không phải quota này; `GOMAXPROCS` không thay việc kernel áp quota.
 
 Vì vậy không thể kết luận rằng đặt `GOMAXPROCS` bằng quota sẽ loại bỏ throttling. Nó có thể giảm các đỉnh song song bất lợi cho một workload, nhưng GC, syscall, loại workload, quota phân số và chính sách scheduler đều còn ảnh hưởng đến độ trễ. Runtime Go 1.27 cũng có các quy tắc làm tròn và không hạ mặc định xuống dưới hai chỉ vì cgroup quota.
 
@@ -773,7 +775,7 @@ Biểu thức này mô tả quota throughput của cgroup v1, không phải CPU 
 
 ### 30. `github.com/hashicorp/go-retryablehttp` (v0.7.8 — `e1f5485f`)
 
-Một sự cố rò rỉ socket nghiêm trọng mà các kỹ sư DevOps thường gặp phải: Một microservice thực hiện gọi API ra bên ngoài, cấu hình tự động thử lại 3 lần khi gặp mã lỗi 503 hoặc 500. Sau vài giờ chạy dưới tải cao, hệ thống bỗng nhiên lăn đùng ra chết với lỗi: `dial tcp: lookup ...: socket: too many open files`.
+Xét scenario một client retry sau response 503 rồi dần gặp lỗi thiếu file descriptor. Retry count không đủ để kết luận nguyên nhân; kiểm tra body có được đóng, số connection, goroutine và descriptor đang giữ. Đây là tình huống để luyện điều tra, không phải kết quả đo hay tần suất sự cố của thư viện.
 
 Một nguyên nhân cần điều tra là vòng đời `response.Body` trong `net/http.Transport`. Caller phải luôn đóng `response.Body`; việc đọc đến EOF có thể là điều kiện hữu ích cho một số đường tái sử dụng kết nối, nhưng không phải bảo đảm tái sử dụng. Transport, giao thức, kích thước body, server và kết nối hiện có đều ảnh hưởng kết quả.
 
@@ -797,7 +799,9 @@ Kết nối có thể không đủ điều kiện để tái sử dụng khi bod
 ```go
 func (c *Client) drainBody(body io.ReadCloser) {
     defer body.Close()
-    _, _ = io.Copy(io.Discard, io.LimitReader(body, respReadLimit))
+    _, _ = io.Copy(
+        io.Discard, io.LimitReader(body, respReadLimit),
+    )
 }
 ```
 
@@ -809,9 +813,9 @@ Trước mỗi lần thử lại, thư viện có thể dùng `io.LimitReader` �
 
 ### 31. `golang.org/x/sync` (v0.23.0 — `f75267d8`)
 
-Khi một khóa cache quan trọng (ví dụ thông tin sản phẩm hot trên trang thương mại điện tử) bất ngờ hết hạn (cache expired), hàng chục nghìn request đồng thời ập đến và nhận thấy cache bị rỗng (cache miss). Tất cả hàng chục nghìn goroutines này lập tức đồng loạt gửi câu truy vấn SQL xuống cơ sở dữ liệu. Hiện tượng này được gọi là **Cơn Bão Truy Vấn (Cache Stampede / Thundering Herd)**, có thể đánh sập database chỉ trong vài giây.
+Xét scenario nhiều request cùng thấy cache miss cho một key rồi cùng truy vấn database. Các lời gọi chồng thời gian có thể tạo tải dư thừa. Số request, capacity và ảnh hưởng cần đo trên workload thật; tên cache stampede không cho một ngưỡng gây sập chung.
 
-`singleflight.Group` tại `singleflight/singleflight.go` (`func Do()`) là liều thuốc giải tối thượng cho căn bệnh này:
+`singleflight.Group` trong `singleflight/singleflight.go` cho phép gộp các lời gọi cùng key đang diễn ra:
 
 ```go
 var g singleflight.Group
@@ -828,9 +832,9 @@ v, err, shared := g.Do("product_123", func() (any, error) {
 
 ### 32. `golang.org/x/time` (v0.16.0 — `fb013b3d`)
 
-Cách tiếp cận ngây thơ nhất khi xây dựng bộ giới hạn tốc độ (Rate Limiter) theo thuật toán Token Bucket là: Khởi tạo một goroutine chạy nền với một `time.Ticker`, mỗi 100 mili-giây lại bắn một token vào một buffered channel. Khi có request đến, worker chỉ cần đọc từ channel; nếu channel rỗng nghĩa là hết token.
+Một implementation token bucket minh họa có thể dùng goroutine với ticker để nạp token vào channel. Khoảng tick là lựa chọn của ví dụ, không phải thành phần bắt buộc của thuật toán.
 
-Nhược điểm chí mạng của cách làm này là: Nếu ứng dụng của bạn quản lý hàng trăm nghìn người dùng (mỗi người dùng có một rate limiter riêng theo IP), bạn sẽ phải duy trì hàng trăm nghìn goroutines và hàng trăm nghìn bộ đếm thời gian (timers) chạy ngầm, ngốn sạch tài nguyên của Go runtime scheduler.
+Nếu tạo một goroutine và timer cho mỗi limiter, tài nguyên nền tăng theo số limiter ngay cả khi nhiều limiter không có request. Cần đo chi phí ấy thay vì gắn một số người dùng với kết luận hết tài nguyên. `rate.Limiter` chọn cách tính lượng token theo thời gian đã trôi qua khi có thao tác.
 
 Mã nguồn của `rate.Limiter` tại `rate/rate.go` (`type Limiter`) triển khai **Thuật Toán Token Bucket Không Cần Goroutine Chạy Nền**.
 
@@ -842,7 +846,7 @@ Khi một request gọi vào hàm `AllowN(now, n)`:
 3. Nó tính lượng token khả dụng từ elapsed time và rate, có giới hạn burst.
 4. Đường reserve quyết định có chấp nhận không; không phải mọi lần `AllowN` thất bại đều ghi lại `last` và trừ token. `Wait`/reservation còn có semantics và timer riêng, khác đường `Allow` không chờ.
 
-Bằng cách chuyển đổi một tiến trình thời gian thực thành một bài toán toán học tính toán theo nhu cầu (on-demand delta calculation), mỗi `Limiter` không tiêu tốn goroutine hay timer nền, cho phép duy trì số lượng lớn instances đồng thời mà không tạo thêm gánh nặng cho Go scheduler. Chi phí thực tế của từng thao tác phụ thuộc vào mức độ tranh chấp mutex và workload cụ thể.
+Implementation tính token theo khoảng thời gian khi gọi thao tác, không có goroutine/timer nền riêng cho từng `Limiter`. Nhưng `Wait` có thể tạo timer cho caller cần chờ; operation vẫn tốn CPU, lock và state. Số instance phù hợp phải theo workload và ngân sách, không suy ra khả năng scale không có chi phí.
 
 ---
 
@@ -850,14 +854,14 @@ Bằng cách chuyển đổi một tiến trình thời gian thực thành một
 
 Package `plugin` có giới hạn tương thích và platform được tài liệu hóa. Host và plugin cần toolchain/build configuration cùng các dependency chung tương thích; khác biệt có thể gây lỗi nạp hoặc runtime failure. Không phải cứ lệch một flag là chắc chắn panic ngay. Out-of-process plugin đổi boundary tương thích sang protocol và lifecycle IPC, với chi phí và failure mode riêng.
 
-HashiCorp (tác giả của Terraform, Vault, Packer) giải quyết bài toán plugin mở rộng cho hàng nghìn bên thứ ba bằng một kiến trúc hoàn toàn khác biệt tại `client.go` và `server.go`: **Kiến Trúc Plugin Tách Tiến Trình Qua IPC (Out-of-Process IPC Plugins)**.
+`go-plugin` tổ chức host và plugin thành các process giao tiếp qua IPC. Cần phân biệt handshake nhận diện executable/protocol với authentication; cookie không bảo vệ trước một plugin độc hại.
 
 Với đường plugin dùng `go-plugin`, host giao tiếp với **tiến trình plugin riêng** qua RPC. Không suy rộng cơ chế này thành mọi loại plugin và extension của Terraform.
 
 Quá trình bắt tay diễn ra như sau:
-1. Ứng dụng chính (tiến trình mẹ) fork và exec tiến trình plugin con, truyền một biến môi trường bí mật chứa mã cookie bắt tay (`HandshakeConfig`).
+1. Host khởi chạy process plugin bằng API tạo process của OS, với environment có magic cookie và cấu hình handshake. Không mô tả đường Windows là fork.
 2. Tiến trình plugin khởi động, mở một điểm lắng nghe cục bộ (Unix Domain Socket hoặc port TCP ngẫu nhiên tùy cấu hình), và in ra stdout dòng thông báo sẵn sàng kèm theo địa chỉ kết nối.
-3. Tiến trình mẹ đọc stdout, xác nhận đúng mã cookie, thiết lập kết nối RPC qua điểm lắng nghe đó. go-plugin hỗ trợ cả `net/rpc` lẫn gRPC tùy `PluginSet` cấu hình; TLS là tùy chọn và được bật riêng.
+3. Plugin kiểm tra magic cookie để tránh chạy nhầm ngoài host; host parse dòng địa chỉ và protocol trên stdout để kết nối. Cookie không xác thực peer. Transport `net/rpc` hay gRPC và cấu hình TLS có trust boundary riêng.
 
 Lợi ích của thiết kế này bao gồm: Plugin có thể được viết bằng ngôn ngữ khác nhau và biên dịch độc lập, miễn là phù hợp với transport và protocol được cấu hình (gRPC path hỗ trợ cross-language tốt hơn net/rpc path). Về **cách ly sự cố (Fault Isolation)**: panic xảy ra trong tiến trình con plugin không trực tiếp panic tiến trình mẹ — đây là lợi ích thực sự của kiến trúc out-of-process. Tuy nhiên plugin vẫn có thể làm host treo (hung RPC), tiêu hao CPU/RAM/I/O của máy chủ, hoặc làm hỏng tài nguyên chia sẻ bên ngoài; không nên hiểu là cách ly hoàn toàn.
 
@@ -867,7 +871,7 @@ Lợi ích của thiết kế này bao gồm: Plugin có thể được viết b
 
 Tại sao HashiCorp không dùng YAML hay JSON để viết cấu hình cho Terraform mà lại kỳ công sáng tạo ra một ngôn ngữ riêng mang tên HCL (HashiCorp Configuration Language)?
 
-Bởi vì JSON không hỗ trợ comment và quá cứng nhắc, trong khi YAML thụt lề dễ gây lỗi tai hại và không có khả năng mô hình hóa các biểu thức logic phức tạp (biểu thức điều kiện, vòng lặp `for`, tính toán hàm toán học).
+HCL native syntax hỗ trợ block, attribute và expression; HCL còn có JSON syntax. Việc dùng HCL cho Terraform cho phép tách parse cấu trúc khỏi evaluate biểu thức theo context. YAML hay JSON là format dữ liệu khác; khả năng biểu thức còn phụ thuộc application dùng chúng, không phải một tuyên bố rằng YAML không thể mô hình hóa cấu hình phức tạp.
 
 Mã nguồn của `hcl/v2` được cấu trúc thành hai tầng tách bạch rõ rệt: Tầng Cú Pháp Cấu Trúc (`hclsyntax/parser.go`) và Tầng Đánh Giá Ngữ Cảnh (`eval_context.go`).
 
@@ -909,17 +913,17 @@ Tránh cgo có thể đơn giản hóa build trên target mà driver hỗ trợ.
 
 ### 38. `go.opentelemetry.io/contrib` (v1.46.0 — `c4c6248e`)
 
-Chuẩn OpenTelemetry cốt lõi (thư viện số 05) chỉ cung cấp API và SDK nền tảng. Để tích hợp khả năng đo lường vào các thư viện tiêu chuẩn của Go — như máy chủ HTTP, client gRPC hay driver cơ sở dữ liệu — cộng đồng phát triển gói mở rộng `opentelemetry-go-contrib`.
+OpenTelemetry Go cốt lõi (mục 05) cung cấp API/SDK. Các module contrib cung cấp integration cho thư viện chuẩn như `net/http` và cho thư viện khác như client gRPC. Cần chọn module và version tương thích với SDK; đây không phải một bộ wrapper tự bao phủ mọi dependency của ứng dụng.
 
-Viên ngọc sáng nhất trong gói này là middleware `otelhttp` tại `instrumentation/net/http/otelhttp/handler.go`.
+`otelhttp` cung cấp wrapper cho `http.Handler` trong `instrumentation/net/http/otelhttp/handler.go`.
 
 Khi bọc một `http.Handler` tiêu chuẩn bằng `otelhttp.NewHandler(handler, "my-operation")`, middleware thực hiện một chu trình hoàn chỉnh:
-1. Trích xuất metadata ngữ cảnh vết từ HTTP header `traceparent` thông qua propagator.
+1. Trích xuất context từ request header theo propagator đã cấu hình. Đọc `traceparent` cần propagator hỗ trợ W3C Trace Context; không tự suy ra chỉ từ wrapper.
 2. Khởi tạo một Server Span mới và nhúng vào `r.Context()`.
 3. Dùng `request.NewRespWriterWrapper` cùng `httpsnoop.Wrap` để ghi nhận status code và số byte phản hồi, đồng thời giữ các interface tùy chọn của writer gốc. `http.ResponseWriter` chuẩn không có hàm đọc lại status code sau khi ghi.
 4. Khi handler kết thúc, middleware đặt span status theo semantic convention, ghi response attributes và kết thúc span. Cách diễn giải mã 5xx thuộc semantic convention được dùng, không phải một lệnh `RecordError` vô điều kiện trong handler.
 
-Một dòng code bọc duy nhất nâng cấp toàn bộ máy chủ web của bạn thành một nút quan sát được chuẩn mực trong đồ thị phân tán.
+Wrapper tạo điểm instrumentation cho đường request đã bọc. Trace propagation, sampling, exporter và middleware khác vẫn quyết định dữ liệu cuối; một dòng bọc handler không chứng minh trace xuyên service đã đầy đủ.
 
 ---
 
@@ -941,12 +945,12 @@ Kết quả phụ thuộc analyzer và dữ liệu package có trong artifact; k
 
 Trong một quy trình CI/CD hiện đại, mã nguồn trải qua nhiều bước: Lập trình viên commit -> CI checkout -> Biên dịch nhị phân -> Chạy unit test -> Đóng gói container image. Kẻ tấn công có thể không tấn công được vào Git, nhưng có thể can thiệp vào máy chủ build để hoán đổi file nhị phân ngay sau khi biên dịch xong và trước khi đóng gói.
 
-`in-toto` cung cấp một khung làm việc cryptographic để bảo vệ toàn bộ chuỗi cung ứng phần mềm thông qua mã nguồn tại `in_toto/model.go` (`type Link`).
+`in-toto` cung cấp model metadata và verifier để kiểm tra các bước mà layout yêu cầu; đọc `in_toto/model.go` (`type Link`) để biết dữ liệu nào thực sự được ghi.
 
 Mỗi bước trong pipeline CI/CD được ghi nhận lại bằng một tài liệu bằng chứng gọi là **Link Metadata**:
-- **Materials:** Mã băm SHA-256 của toàn bộ các file đầu vào của bước đó (ví dụ mã nguồn `.go`).
-- **Products:** Mã băm SHA-256 của toàn bộ các sản phẩm đầu ra được sinh ra (ví dụ file nhị phân `app.bin`).
-- Toàn bộ tài liệu Link này được ký bằng khóa riêng (private key) của chính bước thực thi đó.
+- **Materials:** Tên và digest của những đầu vào được recorder thu thập theo cấu hình; SHA-256 là một thuật toán thường dùng, không phải mọi file đều mặc nhiên được ghi.
+- **Products:** Tên và digest của đầu ra được thu thập. Artifact ngoài tập này không được bảo vệ chỉ vì bước có một Link.
+- Metadata có thể được ký bởi recorder với key được layout tin. Chữ ký chỉ ràng buộc dữ liệu đã ghi với key, không chứng minh recorder không bị can thiệp.
 
 Verifier đối chiếu signatures và rules của layout với materials/products đã được ghi. Coverage phụ thuộc những file và bước được policy yêu cầu, cùng trust của key và recorder; không hứa phát hiện mọi tráo đổi nếu một artifact hoặc boundary chưa được ghi nhận.
 
@@ -956,11 +960,11 @@ Verifier đối chiếu signatures và rules của layout với materials/produc
 
 Khi máy chủ tự động tải các bản cập nhật phần mềm hoặc chữ ký container từ xa, nó phải đối mặt với nhiều hình thức tấn công tinh vi: Kẻ tấn công có thể giả mạo máy chủ cập nhật, hoặc nguy hiểm hơn, thực hiện cuộc tấn công đóng băng thời gian (Freeze/Replay Attack): liên tục gửi lại một bản cập nhật cũ đã có lỗ hổng bảo mật nhưng chữ ký vẫn còn hợp lệ.
 
-The Update Framework (TUF) giải quyết tận gốc vấn đề này tại `metadata/trustedmetadata/trustedmetadata.go` bằng cơ chế **Phân Tách 4 Vai Trò Khóa Độc Lập**:
+TUF tách trách nhiệm metadata giữa các role để giới hạn trust và kiểm tra update theo version, expiration và signature:
 1. **Root Role:** Xác định các key và threshold được tin cậy cho metadata. Giữ root key offline là khuyến nghị bảo vệ quan trọng; không phải bằng chứng rằng mọi deployment thực tế đều làm vậy.
 2. **Targets Role:** Ký xác nhận danh sách các tệp tin cập nhật cùng mã hash và dung lượng chính xác.
-3. **Snapshot Role:** Ký xác nhận ảnh chụp toàn bộ trạng thái của tất cả các metadata, bảo đảm không có file nào bị thêm bớt.
-4. **Timestamp Role:** Có thời hạn sống cực ngắn (vài giờ hoặc vài ngày), liên tục ký xác nhận thời điểm hiện tại của hệ thống.
+3. **Snapshot Role:** Ghi version và có thể ghi hash/length của metadata targets và delegated roles cần dùng, nhằm kiểm tra một tập metadata nhất quán. Nó không kiểm kê mọi file của hệ thống.
+4. **Timestamp Role:** Tham chiếu snapshot metadata và có expiration để giúp client phát hiện freeze. Thời hạn là policy triển khai; timestamp không phải chứng thực liên tục giờ hệ thống của server.
 
 TUF client kiểm tra metadata version, expiration, role signatures và các quan hệ theo policy/spec; expiration hỗ trợ chống freeze, không thay mọi cơ chế chống rollback. Không suy ra mọi hệ ký artifact như Sigstore đều dùng cùng update protocol TUF ở từng operation.
 
@@ -987,7 +991,7 @@ Một pipeline của Azure là một chuỗi các `Policy` được thực thi t
 - **Telemetry Policy:** Gắn metadata nhận diện SDK/request theo cấu hình; không khẳng định Azure portal trực tiếp dùng trường đó cho mọi request.
 - **Retry Policy:** Áp dụng retry theo policy cho response/error phù hợp, có xét thông tin server như `Retry-After` khi đường thực thi hỗ trợ.
 
-Thiết kế mô-đun này cho phép các kỹ sư DevOps dễ dàng chèn thêm các policy tùy biến (như ghi log kiểm toán nội bộ hoặc chèn header giám sát phân tán) vào toàn bộ các dịch vụ của Azure chỉ bằng một dòng cấu hình duy nhất ở cấp client.
+Client có thể thêm policy theo các điểm mở rộng mà SDK hỗ trợ. Thứ tự, per-call/per-retry scope và dịch vụ dùng client ấy phải được kiểm tra; không suy ra một cấu hình client thay đổi mọi dịch vụ Azure trong process.
 
 ---
 
@@ -995,11 +999,11 @@ Thiết kế mô-đun này cho phép các kỹ sư DevOps dễ dàng chèn thêm
 
 ### 44. `github.com/modelcontextprotocol/go-sdk` (v1.8.0 — `3f3b699b`)
 
-Sự bùng nổ của các mô hình ngôn ngữ lớn (LLMs) dẫn đến một nhu cầu cấp bách: Làm thế nào để một AI Model có thể đọc file cục bộ, truy vấn database nội bộ, hoặc thực thi lệnh Git mà không bắt mỗi nhà phát triển phải viết một chuẩn API riêng biệt?
+MCP định nghĩa cách client và server trao đổi tool/resource qua protocol; ứng dụng vẫn phải xác định server nào được tin, dữ liệu nào được phép đọc và hành động nào caller được phép yêu cầu.
 
 Go SDK tổ chức server trong `mcp/server.go` và transports trong package `mcp`. Giao thức dùng JSON-RPC với stdio hoặc HTTP transport phù hợp version; Streamable HTTP không đồng nghĩa transport SSE cũ. SDK không tự biến một tool thành hành động được phép.
 
-Cần đính chính một hiểu lầm an ninh phổ biến: Một số tài liệu quảng bá rằng "JSON Schema trong MCP giúp ngăn chặn tấn công Prompt Injection". Đây là một tuyên bố hoàn toàn sai về mặt bản chất kỹ thuật!
+JSON Schema là kiểm tra cấu trúc, không phải bộ phát hiện prompt injection. Một argument có thể đúng schema nhưng chứa yêu cầu không được phép; chính sách handler phải kiểm tra nghĩa và quyền.
 
 JSON Schema kiểm tra cấu trúc và constraint đã khai báo, không phân biệt mọi nội dung chuỗi an toàn với instruction độc hại. Handler vẫn cần semantic validation, authenticated identity, authorization và giới hạn egress/side effect. Process sandbox là một lớp có trade-off riêng; CNI chỉ thiết lập network, không tự là security sandbox cho Agent.
 
@@ -1007,7 +1011,7 @@ JSON Schema kiểm tra cấu trúc và constraint đã khai báo, không phân b
 
 ### 45. `github.com/google/adk-go` (HEAD-main — `f9ce16ef`)
 
-Google Agent Development Kit (ADK) trên Go đại diện cho xu hướng chuyển dịch từ các kịch bản gọi LLM đơn lẻ sang các **Tác Nhân Tự Trị Đa Bước (Autonomous Multi-Step Agents)**.
+ADK tổ chức model call, tool và session thành một vòng thực thi nhiều bước. Đọc đường runner ở commit ghim để biết state nào được giữ và lúc nào một tool được gọi; không suy ra quyền tự trị từ tên framework.
 
 Ở ADK, đọc package `agent` và `tool/functiontool`. Wrapper function tool dùng config name/description và input/output types hoặc schema được cung cấp; không giả định nó tự parse mọi docstring Go thành quyền hay tool semantics.
 
@@ -1017,7 +1021,7 @@ Session, runner và tool call tạo các boundary lifecycle khác nhau. Khi tri�
 
 ### 46. `github.com/microsoft/agent-framework-go` (HEAD-main — `5fea5266`)
 
-Khung phát triển Agent của Microsoft hướng tới các kịch bản cấp doanh nghiệp đòi hỏi sự phối hợp giữa nhiều mô hình ngôn ngữ lớn và các hệ thống nghiệp vụ phức tạp.
+Ở commit đã ghim, hãy đọc feature và giới hạn của Go implementation trước khi chọn nó cho ứng dụng; nhãn enterprise không thay thế test compatibility và failure recovery.
 
 README của commit đã pin mô tả các package `agent`, `provider`, `tool` và `workflow`. Đây là Go implementation đang public preview, không có feature parity mặc định với .NET/Python. Middleware, workflow và checkpoint là các abstraction để đọc tiếp; không quy một `runtime.go` tưởng tượng thành bảo đảm tự planning, authorization hay Redis/CosmosDB session isolation.
 
@@ -1059,7 +1063,7 @@ Trong scenario này, sandbox chỉ được cấp quyền đọc cần thiết v
 
 ### 50. `github.com/agentscope-ai/agentscope-go` (HEAD-main — `8f82bd22`)
 
-Khi xây dựng các hệ thống mô phỏng xã hội hoặc giải quyết các bài toán phức tạp đòi hỏi sự tranh luận giữa hàng chục Agent (ví dụ: một Agent đóng vai Developer, một Agent đóng vai Tester, một Agent đóng vai Security Auditor), việc để các Agent cùng truy cập và chỉnh sửa một vùng nhớ trạng thái chung (shared memory) sẽ dẫn đến các lỗi tranh chấp dữ liệu (race conditions) và deadlock cực kỳ phức tạp.
+Khi nhiều Agent cùng sửa state có pointer dùng chung, chương trình vẫn cần synchronization và ownership như các chương concurrency đã dạy. Race hoặc deadlock không tất yếu chỉ vì có nhiều Agent; chúng phụ thuộc access và giao thức phối hợp.
 
 `agentscope-go` là một lựa chọn tổ chức Agent, message và lifecycle. Khi đọc source đã pin, phải phân biệt abstraction Actor với những mechanism implementation thực sự có; tên framework không chứng minh isolation hoặc mọi failure đã được giải quyết.
 

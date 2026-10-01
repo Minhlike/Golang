@@ -1,75 +1,42 @@
-# DANH MỤC ĐƯỜNG DẪN MÃ NGUỒN GO TOOLCHAIN PHỤC VỤ FOUNDATION REWRITE
+# Đường dẫn nghiên cứu Go toolchain
 
-**Toolchain Bản Địa:** Go 1.27.1 (`windows/amd64`)  
-**GOROOT Định Vị:** `D:\Golang\.tools\go1.27.1\src`  
-**Nguyên Tắc Bất Biến:** Tuyệt đối không sao chép (duplicate) mã nguồn từ GOROOT vào kho lưu trữ sách. Bản kê này đóng vai trò chỉ dẫn định vị (Source Navigator) để Agent ở lượt Foundation Deep-Rewrite tra cứu trực tiếp từ first principles.
+Bản kê này là công cụ định vị implementation của Go 1.27.1, không phải evidence cho mọi claim cạnh đường dẫn. GOROOT local là `D:\Golang\.tools\go1.27.1`; các path trong bảng tương đối với `src/`. Target của các thí nghiệm Windows hiện hành là `windows/amd64`. Không sao chép cả GOROOT vào repository.
 
----
+Đọc specification và API contract trước khi lần source. Chỉ mở một implementation khi cần giải thích một quan sát hoặc kiểm tra quyết định đã pin; người mới không cần thuộc struct runtime để hiểu value semantics. Mỗi kết luận từ source phải ghi symbol, version và phạm vi target nếu có.
 
-## 1. Trình Biên Dịch (Compiler Frontend & Type Checking)
+## Compiler và artifact
 
-Toàn bộ mã nguồn nằm tại `D:\Golang\.tools\go1.27.1\src\cmd\compile\internal/`:
+| Path | Câu hỏi nó giúp điều tra | Ranh giới |
+| --- | --- | --- |
+| `cmd/compile/internal/syntax/` | Token, parser và cây cú pháp frontend được dựng thế nào? | Không coi cây này là bản giữ nguyên mọi token của source hay toàn bộ pipeline compile. |
+| `cmd/compile/internal/types2/` | Tên, kiểu, assignability và generic inference được kiểm tra ở đâu? | Spec mới định nghĩa ngữ nghĩa; diagnostic cụ thể có thể đổi. |
+| `cmd/compile/internal/noder/`, `ir/` | Source đã kiểm tra được đưa vào IR của compiler thế nào? | IR nội bộ không phải API của sách. |
+| `cmd/compile/internal/types/` | Size, alignment và layout cho target được tính thế nào? | Kết quả theo target không thành layout phổ quát. |
+| `cmd/compile/internal/escape/`, `inline/` | Data flow và inlining ảnh hưởng quyết định lưu trữ thế nào? | Không suy syntax pointer/interface thành heap allocation. |
+| `cmd/compile/internal/deadlocals/` | Biến local không cần thiết được loại ở bước nào? | Dead-code elimination còn có các pass SSA; không quy mọi loại bỏ nhánh cho thư mục này. |
+| `cmd/compile/internal/ssa/`, `ssa/_gen/` | SSA, prove, rewrite rules và lowering theo kiến trúc. | `_gen` là đường nguồn rules của version này, không phải `ssa/gen`. |
+| `cmd/compile/internal/ssagen/`, `amd64/` | SSA thành danh sách instruction target thế nào? | Listing `-S` khác objdump của binary đã link. |
+| `cmd/internal/obj/`, `cmd/asm/internal/asm/` | Symbol, relocation và instruction encoding được xử lý ở đâu? | Compiler không cần chạy CLI assembler riêng cho mọi tệp Go. |
+| `cmd/link/internal/ld/`, `cmd/internal/goobj/` | Object, metadata và executable được liên kết thế nào? | So các đầu ra phải dùng cùng source, cờ và artifact; không quy đổi nhánh cho linker chỉ từ hai snapshot khác nhau. |
 
-| Phân Vùng Kiến Trúc | Đường Dẫn Thực Tế | Chức Năng Cốt Lõi Cần Nghiên Cứu |
-| :--- | :--- | :--- |
-| **Lexer & Parser** | `cmd/compile/internal/syntax/` | Phân tích từ vựng và cú pháp Go, xây dựng cây cú pháp nguồn (Concrete Syntax Tree). |
-| **Type Checking** | `cmd/compile/internal/types2/` | Kiểm tra hệ thống kiểu tĩnh, suy diễn kiểu (type inference), kiểm tra giao diện và generic instantiation. |
-| **AST to IR Bridge** | `cmd/compile/internal/noder/` | Chuyển đổi cú pháp CST sang cấu trúc biểu diễn trung gian thống nhất (AST to IR). |
-| **Intermediate Repr**| `cmd/compile/internal/ir/` | Cấu trúc dữ liệu Node, Type, Symbol của toàn bộ chương trình trong quá trình biên dịch. |
-| **Type Layout** | `cmd/compile/internal/types/` | Cấu trúc kích thước kiểu, căn chỉnh bộ nhớ (memory alignment, padding) của struct, array, slice. |
+## Runtime và bộ nhớ
 
----
+| Path | Nội dung cần tìm | Ranh giới |
+| --- | --- | --- |
+| `runtime/proc.go`, `runtime/runtime2.go` | G/M/P, hàng đợi chạy và các cấu trúc runtime. | P là tài nguyên điều phối, không phải core vật lý. |
+| `runtime/malloc.go`, `mcache.go`, `mcentral.go`, `mheap.go` | Các đường allocation, size class và span. | Allocation observation cần compiler/benchmark; đọc source không cho một chi phí cố định. |
+| `runtime/mpagealloc.go` | Bitmap và cấp các runtime heap page trong address space. | Không quản lý trực tiếp từng trang RAM vật lý của OS; virtual, resident và cgroup memory là các đại lượng khác nhau. |
+| `runtime/mgc.go`, `mgcpacer.go` | Pha mark/sweep, STW, assist và pacing. | Không có latency hay tỷ lệ CPU bảo đảm cho service từ một constant của pacer. |
+| `runtime/mgcmark.go`, `mgcmark_greenteagc.go`, `mgcsweep.go` | Đường mark và sweep của build tương ứng, gồm Green Tea. | Build selection và version quyết định implementation; “đồng thời” không có nghĩa không có pause. |
+| `runtime/mgcscavenge.go` | Trả phần memory không cần giữ cho OS. | Heap metric giảm không tự chứng minh RSS giảm bằng lượng đó. |
+| `runtime/stack.go` | Stack growth/copy, `stackMin` và phần theo OS. | `stackMin = 2048` byte không phải tổng allocation hay tổng chi phí của mọi goroutine. |
+| `runtime/chan.go`, `select.go` | `hchan`, hàng đợi chờ và chọn case của implementation. | Ownership và happens-before dựa trên spec/Memory Model; không có ranking tốc độ primitive chung. |
+| `internal/runtime/maps/`, `runtime/map.go` | Swiss-table map và cầu nối runtime của Go 1.27.1. | Không tái dùng mô hình `hmap/bmap` kiểu cũ như default của edition này; map semantics vẫn do spec quy định. |
+| `runtime/slice.go`, `runtime/string.go` | Descriptor và các helper growth/conversion/concatenation. | Không suy physical copy hoặc allocation chỉ từ assignment/conversion syntax. |
+| `runtime/iface.go`, `runtime/runtime2.go` | Conversion helpers và biểu diễn `iface/eface`. | Typed nil giải thích được bằng dynamic type/value; representation không phải contract của ngôn ngữ. |
+| `runtime/panic.go`, `cmd/compile/internal/ssagen/` | Panic, recover, deferred calls và đường compiler tạo defer. | Không giả định mọi defer đều là một node linked list: có đường open-coded defer. |
+| `runtime/trace.go`, `internal/trace/` | Ghi và đọc các sự kiện execution trace. | Không hứa độ chính xác microsecond chung hay trace chứa mọi chuyển động của source. |
 
-## 2. Tối Ưu Hóa & Sinh Mã (Compiler Optimization & SSA Backend)
+## Hợp đồng tái lập
 
-| Phân Vùng Kiến Trúc | Đường Dẫn Thực Tế | Chức Năng Cốt Lõi Cần Nghiên Cứu |
-| :--- | :--- | :--- |
-| **Escape Analysis** | `cmd/compile/internal/escape/` | Thuật toán phân tích thoát (escape analysis) quyết định phân bổ biến trên Stack hay Heap. |
-| **Inlining Engine** | `cmd/compile/internal/inline/` | Thuật toán thẩm định chi phí hàm (inlining budget/heuristics) để gộp thân hàm trực tiếp. |
-| **Dead Code & Locals**| `cmd/compile/internal/deadlocals/` | Loại bỏ các biến cục bộ và nhánh lệnh không bao giờ được thực thi. |
-| **SSA Construction** | `cmd/compile/internal/ssa/` | Biểu diễn Static Single Assignment: tối ưu hóa biểu thức con chung, lan truyền hằng số, loop invariant. |
-| **SSA Rules Generator**| `cmd/compile/internal/ssa/gen/` | Quy tắc biến đổi SSA và hạ cấp lệnh (lowering rules) theo từng kiến trúc CPU. |
-| **Arch SSA Gen** | `cmd/compile/internal/ssagen/` | Chuyển đổi đồ thị SSA thành danh sách lệnh hợp ngữ máy trừu tượng của Go. |
-| **AMD64 Codegen** | `cmd/compile/internal/amd64/` | Sinh mã máy chuyên biệt cho tập chỉ lệnh x86-64 (thanh ghi, quy ước gọi ABI nội bộ). |
-
----
-
-## 3. Trình Hợp Ngữ & Liên Kết (Assembler & Linker)
-
-| Phân Vùng Kiến Trúc | Đường Dẫn Thực Tế | Chức Năng Cốt Lõi Cần Nghiên Cứu |
-| :--- | :--- | :--- |
-| **Go Assembler** | `cmd/asm/internal/asm/` | Trình biên dịch mã hợp ngữ Go (Go Assembly syntax) sang tệp mã đối tượng (Object Code). |
-| **Instruction Architecture** | `cmd/internal/obj/` | Định nghĩa kiến trúc chỉ lệnh máy trừu tượng (Prog, Addr, Reg). |
-| **Go Linker** | `cmd/link/internal/ld/` | Trình liên kết các package đối tượng, gắn metadata DWARF, định vị bảng hàm và sinh executable nhị phân cuối. |
-| **Object File Format** | `cmd/internal/goobj/` | Cấu trúc nhị phân nội bộ của tệp `.a` và object stream trước khi link. |
-
----
-
-## 4. Hệ Thống Thực Thi (Go Runtime Core & Memory)
-
-Toàn bộ mã nguồn nằm tại `D:\Golang\.tools\go1.27.1\src\runtime/`:
-
-| Phân Vùng Kiến Trúc | Tệp Nguồn / Thư Mục | Chức Năng Cốt Lõi Cần Nghiên Cứu |
-| :--- | :--- | :--- |
-| **Goroutine Scheduler** | `runtime/proc.go` | Mô hình GMP: cấu trúc Goroutine (`g`), Thread hệ điều hành (`m`), Bộ vi xử lý logic (`p`), work-stealing, sysmon. |
-| **Memory Allocator** | `runtime/malloc.go` | Bộ cấp phát bộ nhớ TCMalloc-derived: `mcache` (per-P), `mcentral` (per-size-class), `mheap` (trang bộ nhớ/spans). |
-| **Page Allocator** | `runtime/mpagealloc.go` | Cấp phát và quản lý bitmap các trang bộ nhớ vật lý trong heap. |
-| **Garbage Collector** | `runtime/mgc.go` | Chu trình gom rác phân tán: Concurrent Tricolor Mark-Sweep, thế hệ STW tối thiểu, write barrier. |
-| **GC Pacer** | `runtime/mgcpacer.go` | Thuật toán điều tốc GC động dựa trên GOGC và tỷ lệ gia tăng bộ nhớ heap mục tiêu. |
-| **GC Mark & Sweep** | `runtime/mgcmark.go`, `runtime/mgcsweep.go` | Giai đoạn đánh dấu đối tượng sống (grey/black work queues) và dọn dẹp span rác. |
-| **Stack Management** | `runtime/stack.go` | Cấp phát và mở rộng ngăn xếp liên tục (contiguous stack copy/growth) khởi đầu từ 2KB. |
-| **Channels** | `runtime/chan.go` | Cấu trúc nội bộ của channel: `hchan`, bộ đệm vòng `buf`, hàng đợi khóa `waitq`, phân mảnh `sudog`. |
-| **Select Multiplexer** | `runtime/select.go` | Thuật toán xáo trộn ngẫu nhiên và khóa các kênh trong cấu trúc lệnh `select`. |
-| **Hash Maps** | `runtime/map.go`, `runtime/map_fast64.go` | Cấu trúc bảng băm: `hmap`, mảng các bucket `bmap`, phân mảnh tophash, di dời dữ liệu lũy tiến (evacuation). |
-| **Slices & Strings** | `runtime/slice.go`, `runtime/string.go` | Cấu trúc header của Slice/String, cơ chế `growslice` tính toán cấp số nhân và làm tròn lớp kích thước. |
-| **Interfaces** | `runtime/iface.go`, `runtime/runtime2.go` | Cấu trúc giao diện rỗng `eface` (`_type`, `data`) và giao diện có phương thức `iface` (`itab`, `data`). |
-| **Panics & Defers** | `runtime/panic.go` | Chuỗi danh sách liên kết `_defer`, cơ chế thu hồi lỗi `recover`, mở cuộn ngăn xếp khi panic. |
-| **Execution Tracer** | `runtime/trace.go` | Bộ ghi dấu sự kiện runtime chuẩn xác micro-giây phục vụ công cụ `go tool trace`. |
-
----
-
-## 5. Quy Chuẩn Sử Dụng Cho Lượt Foundation Rewrite
-
-1. **Luôn Bắt Đầu Từ First Principles:** Khi giải thích cách vận hành của Channel, Map, Slice, Interface, hoặc Goroutine, Agent phải đối chiếu trực tiếp với các cấu trúc dữ liệu tương ứng trong `runtime/` nêu trên.
-2. **Không Đoán Định Ngầm:** Mọi phát biểu về chi phí bộ nhớ, thuật toán phân bổ hoặc hành vi runtime phải có bằng chứng từ mã nguồn thực tế của phiên bản `go1.27.1`.
-3. **Phân Biệt Rạch Ròi Cấp Độ Trừu Tượng:** Không nhầm lẫn giữa cú pháp ngôn ngữ (syntax), mô hình trung gian của trình biên dịch (AST/IR/SSA), và cấu trúc vận hành thực tế ở thời điểm chạy (runtime data structures).
+Khi ghi một thí nghiệm, lưu source identity, `go version`, target, cờ build, command và artifact thực sự được đọc. Path là điểm bắt đầu tìm symbol, không phải nhãn VERIFIED. Với API chung có backend theo OS, tách contract byte/error/deadline khỏi readiness của Linux và completion của Windows. Một phiên bản mới cần kiểm tra lại path và behavior liên quan thay vì kế thừa kết luận từ bảng này.

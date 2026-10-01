@@ -78,7 +78,7 @@ Mở `exercise/pool_test.go` trước. Test không cho sẵn hiện thực; nó 
 | :--- | :--- | :--- |
 | Bảo toàn kết quả đơn trị | Mỗi job hoàn tất bình thường sinh ra đúng một `Result`. | Mất mát dữ liệu hoặc lặp kết quả xử lý. |
 | Giới hạn tài nguyên song song | Số lượng lời gọi hàm `Work` thực thi đồng thời không bao giờ vượt quá ngưỡng `workers`. | Tràn bộ đệm, quá tải kết nối cơ sở dữ liệu hoặc cạn kiệt CPU. |
-| Cơ chế giải phóng khi hủy bỏ | Khi context bị hủy mà output không được đọc, kênh output vẫn đóng và worker không bị treo ở lệnh gửi. | Rò rỉ goroutine vĩnh viễn (goroutine leak) làm cạn RAM máy chủ. |
+| Cơ chế giải phóng khi hủy bỏ | Với `Work` của fixture có thể return, context bị hủy cho worker thoát lệnh gửi dù output không được đọc; coordinator đóng output sau khi worker return. | Worker giữ một lần bàn giao không còn người nhận. Nếu `Work` không return, pool không có quyền cưỡng bức nó dừng. |
 | Chu kỳ đóng kênh duy nhất | Khi dispatcher hết job và toàn bộ worker đã thoát, kênh output đóng đúng một lần. | Panic do đóng kênh nhiều lần hoặc deadlock vòng lặp `for range`. |
 
 Có một biên nhỏ nhưng đáng giữ ngay từ đầu: nếu `ctx` đã bị hủy trước khi dispatcher kịp bàn giao job, `Work` không được bắt đầu chỉ vì một worker vừa được tạo. Cancellation là policy dừng nhận việc mới; đưa một `Job` vào `Work` với context đã hết hạn chỉ tạo thêm một kết quả không còn người sở hữu.
@@ -132,11 +132,11 @@ Khi đọc code channel, đừng bắt đầu bằng câu “channel này buffer
 
 ## Mô hình Điều phối G/M/P và Giới hạn Thực tế của Concurrency
 
-Để vận hành worker pool ở quy mô lớn, kỹ sư phải hiểu rõ mô hình điều phối của Go Runtime thay vì xem goroutine là những chiếc luồng ma thuật miễn phí. 
+Khi trace cho thấy worker chờ chạy hoặc memory tăng theo số goroutine, mô hình điều phối runtime giúp đặt câu hỏi. Nó bổ sung cho contract worker pool, không phải điều kiện để người mới viết đúng channel.
 
-Trong runtime của Go 1.27.1, mã nguồn `src/runtime/proc.go` mô tả điều phối M:N bằng ba thực thể thường gọi là `G`, `M` và `P`: `G` là goroutine, `M` là luồng hệ điều hành, còn `P` là tài nguyên điều phối gắn với giới hạn `GOMAXPROCS` và có hàng đợi chạy cục bộ. Đây là một mô hình hữu ích để đọc trace hoặc source runtime, nhưng không phải cam kết của đặc tả ngôn ngữ. Ngay cả kích thước stack đầu cũng là chi tiết triển khai: bản runtime này có mức tối thiểu 2 KiB và có thể điều chỉnh cách khởi tạo.
+Trong runtime Go 1.27.1, `src/runtime/proc.go` mô tả điều phối M:N bằng `G`, `M` và `P`: goroutine, luồng OS và tài nguyên điều phối gắn với `GOMAXPROCS`. P có hàng đợi chạy cục bộ; nó không phải một core vật lý được dành riêng. Đây là mô hình đọc trace/source, không phải contract của ngôn ngữ. `runtime/stack.go` đặt `stackMin = 2048` byte cho phần Go, nhưng kích thước cấp phát còn cộng phần theo OS rồi làm tròn; không suy ra goroutine trên Windows trong lab chỉ tốn 2 KiB tổng bộ nhớ hay luôn bắt đầu với allocation ấy.
 
-Goroutine thường rẻ hơn luồng hệ điều hành, nhưng tuyệt đối **không miễn phí**. Số lượng rất lớn vẫn có stack, metadata, object bị giữ sống, chi phí lập lịch và có thể làm tăng lượng root GC phải quét. Vì vậy, giới hạn concurrency phải xuất phát từ tài nguyên hữu hạn của workload — connection, file descriptor, RAM, CPU hoặc downstream — chứ không từ một con số stack hay số goroutine được truyền miệng.
+Goroutine chia sẻ tài nguyên điều phối nhưng vẫn giữ stack, metadata và có thể giữ object sống; thêm goroutine còn thêm công việc lập lịch và root GC. Giới hạn concurrency phải xuất phát từ tài nguyên của workload — connection, file descriptor, RAM, CPU hoặc downstream — không từ một con số stack hay số goroutine truyền miệng.
 
 Bản runtime này hiện thực channel bằng `hchan`, có khóa và hàng đợi chờ nội bộ; đó cũng không phải một API hay lời hứa về chi phí của ngôn ngữ. Dưới contention, với capacity khác nhau, hoặc khi goroutine phải ngủ rồi thức dậy, chi phí channel có thể đáng kể. Nhưng không có quy tắc phổ quát rằng `Mutex`, `atomic` hay channel luôn nhanh hơn: chúng mô tả những contract đồng bộ khác nhau. Hãy dùng channel khi cần bàn giao work hoặc phối hợp vòng đời; nếu một hot path trở thành vấn đề, hãy benchmark đúng workload và kiểm tra race trước khi đổi primitive.
 

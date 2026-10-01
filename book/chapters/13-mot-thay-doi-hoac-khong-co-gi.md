@@ -139,7 +139,7 @@ Cancellation cũng dừng ở boundary driver. `QueryContext` và `BeginTx` nh�
 
 ## Đọc cũng mượn tài nguyên
 
-`QueryRowContext` phù hợp khi contract chỉ có tối đa một row; error của nó xuất hiện khi `Scan`. Với nhiều row, `QueryContext` trả về `*Rows`. `Rows` không chỉ là slice lười biếng: nó còn đại diện cho result stream và tài nguyên của driver. Đóng nó ở mọi đường return, đọc đến hết, rồi kiểm tra lỗi iteration.
+`QueryRowContext` phù hợp khi query được kỳ vọng trả tối đa một row; error xuất hiện khi `Scan`. Nó không kiểm tra uniqueness: nếu query trả nhiều row, `Scan` lấy row đầu và bỏ phần còn lại; nếu không có row, nó trả `sql.ErrNoRows`. Invariant “chỉ có một record” phải được query/schema giữ, không được suy từ tên API. Với nhiều row, `QueryContext` trả `*Rows`, đại diện cho result stream và tài nguyên driver. Đóng nó ở mọi đường return, đọc đến hết rồi kiểm tra lỗi iteration.
 
 ~~~go
 rows, err := db.QueryContext(ctx,

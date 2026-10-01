@@ -79,7 +79,7 @@ slowest := Max(Milliseconds(120), Milliseconds(80))
 
 Union `|` nói rằng một type argument thuộc một trong các term. Dấu `~` mở term ra cho mọi defined type có **underlying type** tương ứng. Không có `~int64`, `Milliseconds` không thỏa constraint dù `left > right` có nghĩa hoàn toàn rõ. Ngược lại, `~` không “chuyển đổi ngầm” giữa hai value đã có type: `int` và `int64` vẫn khác nhau, nên `Max(int(1), int64(2))` không có một `T` duy nhất để infer. Riêng hằng số chưa định kiểu như `1` có thể nhận type từ đối số còn lại.
 
-Constraint có type term như `~int | ~int64` là general interface: nó dùng để giới hạn type parameter, không phải một interface value để truyền quanh chương trình. Một interface nhận value cần mô tả behavior bằng method; một constraint có thể mô tả tập type và các operation compiler cho phép. Đặt cả hai dưới cùng từ “interface” dễ làm mờ hai nhiệm vụ này.
+Constraint có type term như `~int | ~int64` là general interface: nó dùng để giới hạn type parameter, không phải một interface value để truyền quanh chương trình. Basic interface có thể dùng làm kiểu của value: nó chỉ khai báo hoặc nhúng các method, cũng có thể rỗng như `any`. Constraint còn có thể dùng type term để giới hạn tập type và các operation compiler cho phép. Đặt cả hai dưới cùng từ “interface” dễ làm mờ hai nhiệm vụ này.
 
 > **Dừng để dự đoán:** `Max(Milliseconds(120), Milliseconds(80))` trả về type nào? Không phải `int64`. Sau substitution, `T` là `Milliseconds`, nên result giữ named type ấy. Đây là lợi ích của việc không ép value đi qua `any` rồi type assertion lại.
 
@@ -200,7 +200,7 @@ func checkTarget(ok bool) error {
 }
 ~~~
 
-Hãy return `nil` rõ ràng ở nhánh thành công, hoặc chỉ tạo concrete error ở nhánh failure. Đừng “sửa” bằng reflection để kiểm tra nil của mọi error; caller thường chỉ cần contract `err == nil`, còn API của concrete error phải quyết định separately liệu receiver nil có hợp lệ không. `labs/part19-type-information/typednil` giữ chính bug này để anh sửa bằng một thay đổi nhỏ và test chứng minh caller nhìn đúng contract.
+Hãy return `nil` ở nhánh thành công, hoặc chỉ tạo concrete error khi có failure. Không cần dùng reflection để đoán nil của mọi error: caller cần contract `err == nil`, còn method của concrete error phải xác định riêng receiver nil có hợp lệ không. Lab `labs/part19-type-information/typednil` giữ bug này để người học sửa và kiểm tra bằng test.
 
 ## Lab: ba boundary, ba cách tự kiểm tra
 

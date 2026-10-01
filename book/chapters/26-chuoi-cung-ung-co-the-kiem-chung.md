@@ -9,7 +9,7 @@ Một scenario chuỗi cung ứng có thể gồm source nghiệp vụ, nhiều 
 Các sự cố an ninh nghiêm trọng trên thế giới — từ SolarWinds, Codecov cho đến các cuộc tấn công Dependency Confusion và Typosquatting — đã chỉ ra một sự thật cay đắng:
 > *Một kho mã nguồn sạch, được review kỹ lưỡng và vượt qua mọi bài kiểm thử unit test, vẫn có thể cho ra lò một container image độc hại nếu quy trình build, dependency hoặc kho lưu trữ artifact bị xâm phạm.*
 
-Làm thế nào để đảm bảo rằng container image đang chuẩn bị chạy trên cụm Kubernetes của bạn được biên dịch chính xác từ commit đã được phê duyệt trong Git, không bị tráo đổi nội dung sau khi xuất xưởng khỏi quy trình CI, không chứa các lỗ hổng bảo mật nghiêm trọng có thể kích hoạt từ xa, và được bảo chứng bằng chữ ký mật mã không thể chối bỏ?
+Ta cần kiểm tra image nào đã được xét, bằng chứng nào gắn nó với builder/source được phép, và finding nào phải chặn theo policy. Chữ ký và scan không chứng minh artifact không có lỗ hổng hay mã độc; từng verifier chỉ đưa ra kết luận trong phạm vi dữ liệu và trust root của nó.
 
 Chương này hướng dẫn bạn tư duy và xây dựng một **Cổng kiểm soát chuỗi cung ứng phần mềm (Supply Chain Verification Gate)** bằng Go theo nguyên tắc đóng kín (fail-closed), tích hợp kiểm chứng digest OCI, chữ ký số mật mã ECDSA, chứng thực nguồn gốc SLSA và phân tích khả năng vươn tới của lỗ hổng (`govulncheck`).
 
@@ -17,7 +17,7 @@ Chương này hướng dẫn bạn tư duy và xây dựng một **Cổng kiểm
 
 ## 1. Mental Model: Chuỗi bảo chứng từ Mã nguồn đến Triển khai
 
-Mô hình tư duy cốt lõi của một chuỗi cung ứng có thể kiểm chứng được mô tả qua quy trình 6 bước không thể phá vỡ:
+Mô hình dưới đây nối sáu chặng của một policy delivery. Mỗi mũi tên đòi bằng chứng riêng; đây không phải chuỗi tự bảo chứng:
 
 ~~~
 [Mã nguồn Git] (Commit SHA bất biến)
@@ -77,10 +77,10 @@ Với module thuộc phạm vi kiểm tra checksum database và cấu hình mặ
 
 Trong các pipeline CI/CD truyền thống, các công cụ quét container (như Trivy, Grype, Snyk) thường đối chiếu danh sách gói phần mềm với cơ sở dữ liệu CVE. Cách tiếp cận này tạo ra một vấn nạn nghiêm trọng trong vận hành: **Hội chứng mệt mỏi vì cảnh báo (Alert Fatigue)**.
 
-Một dự án Go có thể sử dụng thư viện `golang.org/x/crypto`. Giả sử thư viện này có một lỗ hổng nghiêm trọng trong hàm xử lý khóa SSH: `ssh.ParsePrivateKey`. Máy quét tĩnh truyền thống chỉ nhìn vào sự xuất hiện của `golang.org/x/crypto` trong `go.mod` và lập tức kích hoạt cảnh báo chặn đứng pipeline phát hành, dù trên thực tế ứng dụng của bạn chỉ gọi hàm `bcrypt.GenerateFromPassword` để băm mật khẩu và hoàn toàn không bao giờ chạm tới module SSH.
+Xét một scenario: project dùng `golang.org/x/crypto`, và version đang dùng có finding ở `ssh.ParsePrivateKey`, nhưng code ứng dụng chỉ gọi `bcrypt.GenerateFromPassword`. Một scanner chỉ xét inventory module có thể báo finding dù symbol không nằm trong đường gọi đã phân tích. Báo finding và chặn phát hành là hai quyết định khác nhau; policy của pipeline mới chọn điều kiện chặn. Đây không phải một CVE thật được gán cho version tùy ý.
 
 ### Cơ chế phân tích đồ thị cuộc gọi của `govulncheck`
-Công cụ chính thức của Go team — `govulncheck` — hoạt động theo một nguyên lý hoàn toàn khác biệt: **Phân tích khả năng vươn tới của ký hiệu (Symbol Reachability Analysis)**.
+Ở chế độ source, `govulncheck` còn phân tích khả năng vươn tới của ký hiệu, thay vì chỉ báo module có finding. Phải đọc chế độ scan và coverage của kết quả đang dùng.
 
 ~~~
 [Ứng dụng: main.go]
@@ -90,7 +90,7 @@ Công cụ chính thức của Go team — `govulncheck` — hoạt động theo
       └──X (Bỏ qua) ssh.ParsePrivateKey [CRITICAL]
 ~~~
 
-Bản chất dữ liệu đầu ra của `govulncheck`: đầu ra JSON có cấu trúc chứa các bản ghi `OSV` (thông tin lỗ hổng định dạng Open Source Vulnerability), `Modules` (danh sách module liên quan), và `Traces` (đồ thị dấu vết cuộc gọi từ `main` tới ký hiệu bị tổn thương). Cần lưu ý rằng `govulncheck` không tự sinh ra trường nguyên thủy `Severity: "CRITICAL"` trong output thô; mức độ nghiêm trọng được làm giàu từ cơ sở dữ liệu OSV hoặc CVSS bên ngoài. Thuộc tính `Reachable: true` trong mô hình chính sách là kết quả tổng hợp sau khi duyệt qua mảng `Traces`: nếu tồn tại ít nhất một đường dẫn hợp lệ từ `main` tới hàm chứa lỗi, lỗ hổng được xác định là thực sự có thể kích hoạt (`Reachable`).
+JSON của govulncheck là stream message theo schema của version dùng, có OSV và finding với trace; không phải một object cố định chứa `Modules` và `Traces` viết hoa. Trong lab, `Severity` và `Reachable` là input fixture đã chuẩn hóa, không được parse từ output scanner. Finding có trace tới symbol chỉ là kết quả phân tích tĩnh về đường gọi có thể tới, không chứng minh đường ấy chạy hoặc khai thác được. Adapter thật phải ghi version/schema, chế độ source hay binary, scanner coverage và cách suy ra policy từ finding.
 
 ### Giới hạn phân tích cần lưu ý
 
@@ -117,9 +117,9 @@ Digest: sha256:7f83b1657ff1... (Mã băm bất biến)
         (Định danh duy nhất theo nội dung)
 ~~~
 
-Nếu bạn cấu hình Kubernetes Deployment dùng `image: my-app:v1.2.0`, kẻ tấn công có quyền ghi vào registry có thể đẩy một image độc hại đè lên tag này. Khi Pod khởi động lại hoặc mở rộng quy mô trên máy chủ mới, kubelet sẽ tự động tải image độc hại về thực thi mà hệ thống kiểm soát không nhận diện được bất kỳ sự thay đổi cấu hình nào.
+Nếu tag được trỏ sang image khác, một lần pull tiếp theo có thể nhận nội dung khác dù Pod template vẫn cùng chuỗi tag. Kết quả còn phụ thuộc imagePullPolicy, cache node và policy registry. Ghim digest giúp ràng buộc nội dung đã xét, không tự xác thực builder hay chứng minh artifact vô hại.
 
-Vì vậy, Cổng kiểm soát chuỗi cung ứng chuẩn mực luôn thực thi quy tắc đầu tiên:
+Policy của lab chọn quy tắc đầu tiên:
 **Từ chối mọi image không được định danh tường minh bằng mã băm SHA-256 dạng `sha256:<64_hex_chars>`.**
 
 ---
@@ -128,11 +128,11 @@ Vì vậy, Cổng kiểm soát chuỗi cung ứng chuẩn mực luôn thực thi
 
 Làm sao chúng ta biết một container image có mã băm `sha256:abc...` thực sự được tạo ra bởi quy trình CI chính thức của tổ chức chứ không phải do hacker tự biên dịch rồi đẩy lên?
 
-Giải pháp hiện đại nhất là hệ sinh thái **Sigstore / Cosign**:
+Sigstore/Cosign là một lựa chọn cho việc ký và xác minh artifact:
 
 Một là, Ký không cần khóa (Keyless Signing): Không còn nỗi lo lưu trữ private key dài hạn trên máy chủ CI (vốn rất dễ bị rò rỉ). CI Runner sử dụng OpenID Connect (OIDC) token do GitHub Actions cấp phát để chứng minh danh tính với nhà cấp phát chứng chỉ Sigstore (Fulcio).
 
-Hai là, Chứng chỉ ngắn hạn: Fulcio cấp chứng chỉ X.509 có hiệu lực trong vài phút, gắn liền với danh tính workflow (`https://token.actions.githubusercontent.com`).
+Hai là, chứng chỉ ngắn hạn: Fulcio ràng buộc public key với identity OIDC theo policy của CA. `https://token.actions.githubusercontent.com` là issuer, không phải danh tính riêng của workflow. Verifier phải xét cả certificate identity được phép và issuer, validity cùng evidence của đường verify đang dùng.
 
 Ba là, Ký và xác minh claim digest: Cosign ký payload có claim về digest image; verifier mặc định kiểm tra claim đó cùng danh tính/certificate theo policy. Đây không tương đương với việc gọi `ecdsa.VerifyASN1` trên chuỗi digest trong lab.
 
@@ -255,6 +255,8 @@ func VerifyDigest(digest string) error {
 
 ### Xác thực chữ ký mật mã ECDSA và OIDC Issuer
 
+Đọc đoạn sau như một model dùng input fixture đã tin cậy, không phải verifier identity. Public key do caller cung cấp; `Issuer` chỉ là chuỗi caller khai báo, không được ràng buộc với key bằng certificate. `Attestation` cũng là struct chưa xác thực. Một người tự tạo key, ký digest rồi chép issuer/builder được allowlist vẫn được model chấp nhận. `TestModelDoesNotAuthenticateSelfAssertedIdentity` giữ phản ví dụ này để ngăn test ALLOW bị đọc thành bằng chứng GitHub OIDC hay SLSA. Khi dùng gate thật, phải thay các verifier bằng đường xác minh trust root, identity và provenance phù hợp; thêm một phép so chuỗi không đóng được gap này.
+
 ~~~go
 func (e *PolicyEngine) VerifySignature(
 	digest string,
@@ -325,7 +327,7 @@ func (e *PolicyEngine) evaluateIntegrity(
 }
 ~~~
 
-Tiếp theo là chốt chặn kiểm chứng xuất xứ bản build (SLSA Provenance) để bảo đảm artifact không bị đánh tráo từ một pipeline lạ:
+Tiếp theo, mô hình policy kiểm tra các field provenance đã được cung cấp. Trong hệ thật, verifier phải xác thực bằng chứng trước khi truyền chúng vào gate:
 
 ~~~go
 func (e *PolicyEngine) evaluateProvenance(
@@ -457,12 +459,12 @@ ok      part26-supply-chain-gate   2.128s
 
 ### Phân tích các kịch bản kiểm thử
 
-| Kịch bản kiểm thử | Đặc điểm kiểm tra | Quyết định tuyển sinh (`Decision`) |
+| Kịch bản fixture | Điều kiểm tra trong model | Quyết định (`Decision`) |
 | :--- | :--- | :--- |
-| Artifact hợp lệ toàn diện | Có chữ ký ECDSA hợp lệ, ký bởi GitHub Actions OIDC, provenance khớp digest và không có CVE | **`ALLOW`** |
+| Input được model chấp nhận | ECDSA tự tạo trong test; chuỗi issuer/builder khớp; không truyền finding. Không gọi GitHub OIDC hay scanner. | **ALLOW** theo policy model |
 | Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
 | Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
-| Lỗ hổng trong dependency nhưng không được gọi (`Reachable = false`) | Ký hiệu `http2.Server.ServeConn` không nằm trong luồng thực thi | **`ALLOW`** (kèm cảnh báo kiểm toán trong `Warnings`) |
+| Finding không được fixture đánh dấu reachable (`Reachable = false`) | `http2.Server.ServeConn` là tên symbol minh họa, không phải bằng chứng quan sát mọi đường chạy | **`ALLOW`** (kèm cảnh báo trong `Warnings`, theo policy lab) |
 | Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 → **`DENY`** |
 
 ---
@@ -472,9 +474,9 @@ ok      part26-supply-chain-gate   2.128s
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
 | **Triển khai bằng Docker tag** (`:latest` hoặc `:v1.0.0`) thay vì sha256 digest. | Bị tấn công tráo đổi container image khi registry bị thỏa hiệp; pod scale up chạy phiên bản khác nhau. | Bắt buộc ghim (pin) mã băm bất biến `sha256:<hex>` trong Kubernetes Pod Spec. |
-| **Chỉ kiểm tra chữ ký hợp lệ** mà không kiểm tra danh tính người ký (OIDC Issuer). | Kẻ tấn công tự tạo cặp khóa ECDSA riêng rồi tự ký image của chúng, cổng vẫn cho qua. | Luôn đối chiếu `sig.Issuer` và `att.BuilderID` với danh sách trắng (Trusted Anchors). |
+| **Nhận public key và issuer do caller tự khai mà coi là identity đã xác thực.** | Caller tự ký rồi khai issuer được phép; model vẫn có thể chấp nhận. | Dùng verifier thật kiểm tra trust roots, certificate identity/issuer và claim digest; so chuỗi không đủ. |
 | **Thiết kế Cổng dạng Fail-Open:** Bỏ qua kiểm tra khi mạng tới OIDC/Registry bị timeout. | Khi mạng gặp sự cố, hệ thống tự động cho phép mọi image chưa được kiểm chứng đi thẳng vào production. | Luôn áp dụng nguyên tắc Fail-Closed: Bất kỳ lỗi mạng hay timeout nào cũng phải quy về `DENY`. |
-| **Đưa `go.sum` vào `.gitignore`** vì cho rằng tệp này tự sinh và gây phiền phức khi merge code. | Mất đi chốt chặn xác minh tính toàn vẹn của thư viện bên thứ ba; dễ bị tấn công MITM. | Luôn commit `go.sum` vào Git; chạy `go mod verify` trong mọi pipeline CI. |
+| **Bỏ go.sum vì xem nó là file rác.** | Mất checksum đã ghi nhận trong project; không tự đồng nghĩa checksum database bị tắt. | Commit checksum khi có dependency; hiểu GOSUMDB/GOPRIVATE/replace. go mod verify kiểm tra cache, không quét mã độc. |
 
 ---
 

@@ -20,7 +20,7 @@ type ReconcileResult struct {
 	Attempt         int
 }
 
-// Controller implements an idiomatic, production-grade Kubernetes controller using client-go.
+// Controller is a teaching controller for keyed queue and cache contracts.
 type Controller struct {
 	indexer    cache.Indexer
 	queue      workqueue.TypedRateLimitingInterface[string]
@@ -128,7 +128,7 @@ func (c *Controller) processNextItem(ctx context.Context) bool {
 	return true
 }
 
-// reconcile reads the CURRENT authoritative state from local cache, not from stale event data.
+// reconcile reads the local cache at processing time; that snapshot may be stale.
 func (c *Controller) reconcile(ctx context.Context, key string) error {
 	c.reconcileCount.Add(1)
 	if c.reconcileFn != nil {

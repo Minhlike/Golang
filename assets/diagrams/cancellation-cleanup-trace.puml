@@ -1,39 +1,29 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
+skinparam defaultFontSize 20
+skinparam dpi 300
 skinparam shadowing false
 skinparam note {
   BackgroundColor #F5F5F5
   BorderColor #777777
   FontColor #000000
 }
-skinparam activity {
+skinparam rectangle {
   BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
 }
 skinparam ArrowColor #222222
 
-start
-if (ctx đã bị hủy (cancel)?) then (có)
-  :trả về ctx.Err();
-  note right: chưa chiếm dụng tài nguyên session
-  stop
-else (không)
-  :mở kết nối endpoint;
-  if (kết nối thành công?) then (có)
-    :defer session.Close();
-    :run(ctx, endpoint, session);
-    :Close() luôn chạy trước khi return;
-    if (run() phát sinh lỗi?) then (có)
-      :bảo toàn lỗi chính (primary error);
-    else (không)
-      :trả lỗi đóng kết nối nếu có;
-    endif
-  else (không)
-    :trả lỗi mở kết nối;
-  endif
-endif
-stop
+rectangle "Mở session\nChỉ sau khi kiểm tra ctx.Err()" as acquire
+rectangle "Nhận session thành công\nĐăng ký defer session.Close()\nGọi run(ctx, endpoint, session)" as owned
+rectangle "Trước khi return\nGọi Close()\nrun lỗi: giữ lỗi chính\nrun không lỗi: trả lỗi Close() hoặc nil" as cleanup
+acquire -down-> owned : mở thành công
+owned -down-> cleanup : run trả về
+note right of acquire
+ctx đã hủy hoặc mở lỗi:
+trả lỗi trước khi nhận session,
+không gọi Close().
+end note
 @enduml

@@ -56,7 +56,7 @@ Chương 6 đã dùng race detector để tìm một lần truy cập thực s�
 | :--- | :--- | :--- |
 | **Sequenced-before** | Trật tự thực thi tuần tự của các câu lệnh bên trong cùng một goroutine đơn lẻ. | Thao tác `append` vào slice bắt buộc phải hoàn tất trước khi gọi `wg.Done()`. |
 | **Synchronized-before** | Cạnh đồng bộ hóa liên goroutine do ngôn ngữ hoặc thư viện runtime công bố. | Lệnh `mu.Unlock()` được đồng bộ hóa trước lệnh `mu.Lock()` diễn ra kế tiếp trên cùng một Mutex; hoặc `wg.Done()` trước lệnh `wg.Wait()` mở khóa. |
-| **Happens-before** | Quan hệ bao đóng bắc cầu giữa sequenced-before và synchronized-before. | Nếu thao tác ghi dữ liệu có đường dẫn happens-before tới thao tác đọc, bên đọc được ngôn ngữ bảo đảm nhìn thấy giá trị ghi mới nhất. |
+| **Happens-before** | Quan hệ bao đóng bắc cầu giữa sequenced-before và synchronized-before. | Khi các access được sắp thứ tự và không có race trên vị trí ấy, một read quan sát write gần nhất đứng trước nó trong thứ tự này; cần xét cả những write khác, không chỉ vẽ một cạnh từ write mong muốn. |
 
 Cần phân biệt rạch ròi hai cặp khái niệm thường bị nhầm lẫn trong môi trường đồng thời:
 
@@ -128,7 +128,7 @@ mu.Unlock()
 
 Vòng `for` không nói rằng Go cho phép Wait tự tỉnh vô cớ: tài liệu yêu cầu Signal hoặc Broadcast để Wait return. Nó cần thiết vì khi goroutine lấy lại lock, goroutine khác có thể đã làm predicate không còn đúng. Producer sửa predicate với cùng lock, rồi thông báo theo policy. Nếu producer đã làm `ready=true` trước khi consumer tới, consumer đọc predicate và không cần một notification lịch sử. Đây là nền để đọc queue ở Chương 21, không phải một lý do dùng Cond thay channel cho mọi công việc.
 
-Atomic publication phù hợp khi reader lấy một snapshot đã hoàn tất, còn writer thay toàn bộ snapshot thay vì sửa object được công bố. Một `atomic.Pointer[Config]` có thể Store pointer mới và Load pointer hiện hành; operation atomic có thứ tự sequentially consistent theo API `sync/atomic`. Nhưng lock-free access vào pointer không tự làm các field sau pointer an toàn. Nếu Store xong rồi sửa map, slice hay field của cùng object trong khi reader đọc, race vẫn có thể tồn tại.
+Atomic publication phù hợp khi reader lấy một snapshot đã hoàn tất, còn writer thay toàn bộ snapshot thay vì sửa object được công bố. Một `atomic.Pointer[Config]` có thể Store pointer mới và Load pointer hiện hành; operation atomic có thứ tự sequentially consistent theo API `sync/atomic`. Nhưng truy cập atomic vào pointer không tự làm các field sau pointer an toàn. Nếu Store xong rồi sửa map, slice hay field của cùng object trong khi reader đọc, race vẫn có thể tồn tại.
 
 Trong `TestCondPredicateAndAtomicPublication`, mỗi Config được dựng xong trước Store và không bị sửa về sau. Test kiểm tra giá trị quan sát trên các đường chạy đã chọn, race detector kiểm tra access trên lần chạy đó; chứng minh thiết kế vẫn là policy snapshot bất biến sau publication. Atomic không thay một transaction nhiều field, không giải quyết ownership của object lồng nhau và không có lời hứa luôn nhanh hơn mutex. Hãy dùng cơ chế có proof nhỏ nhất cho bất biến, rồi mới đo khi workload thực sự đòi tối ưu.
 

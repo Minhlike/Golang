@@ -8,11 +8,11 @@ Chương 28 đã dạy cách trao một công cụ có giới hạn. Chương n�
 
 ## Đọc số liệu theo câu hỏi nó thực sự trả lời
 
-Ngày chốt kiểm chứng của chương là 29-09-2026. “AI giúp lập trình nhanh hơn” thiếu ít nhất ba đối tượng: ai làm, làm việc gì, và nhanh hơn theo phép đo nào. Dữ liệu sau không dùng chung mẫu hay cùng loại outcome, nên không được lấy trung bình các phần trăm để tạo một con số về “năng suất AI”.
+Ngày đối chiếu lại nguồn của chương là 01-10-2026. “AI giúp lập trình nhanh hơn” thiếu ít nhất ba đối tượng: ai làm, làm việc gì, và nhanh hơn theo phép đo nào. Dữ liệu sau không dùng chung mẫu hay cùng loại outcome, nên không được lấy trung bình các phần trăm để tạo một con số về “năng suất AI”.
 
-Nghiên cứu của Peng và cộng sự, công bố tháng 2-2023 trên arXiv, là một thí nghiệm có phân nhóm ngẫu nhiên với 95 lập trình viên được tuyển qua Upwork, diễn ra 15-05 đến 20-06-2022. Công việc là viết HTTP server JavaScript. Nhóm có GitHub Copilot giảm 55,8% thời gian hoàn thành trong phân tích những người hoàn thành; khoảng tin cậy 95% là 21–89%. Mẫu phần lớn từ Ấn Độ và Pakistan. Đây là bằng chứng cho một nhiệm vụ chuẩn hóa với công cụ năm 2022, không cho toàn bộ vòng đời service, Go hay incident production. Nhóm tác giả có liên hệ Microsoft/GitHub; nghiên cứu không đo đầy đủ chất lượng bảo trì dài hạn.
+Nghiên cứu của Peng và cộng sự, công bố tháng 2-2023 trên arXiv, phân nhóm ngẫu nhiên 95 lập trình viên tuyển qua Upwork trong 15-05 đến 20-06-2022. Công việc là viết HTTP server JavaScript. Có 70 người hoàn thành task và survey, 35 ở mỗi nhóm; phân tích thời gian trên nhóm hoàn thành cho mức giảm 55,8% khi được dùng GitHub Copilot, khoảng tin cậy 95% 21–89%. Mẫu phần lớn từ Ấn Độ và Pakistan. Kết quả thuộc nhiệm vụ chuẩn hóa và công cụ năm 2022, không đại diện toàn vòng đời service hay incident production. Tác giả có liên hệ Microsoft/GitHub; nghiên cứu không đo đầy đủ chất lượng bảo trì dài hạn.
 
-METR công bố ngày 10-07-2025 một RCT với 16 contributor có kinh nghiệm, làm 246 task trên repository mã nguồn mở quen thuộc, dùng công cụ thuộc giai đoạn tháng 2–6-2025. Cho phép AI làm thời gian hoàn thành tăng 19%, khoảng tin cậy 95% 2–39%. Đối tượng đo là nhóm contributor và task được tuyển, không phải mẫu đại diện lao động của một quốc gia. Kết quả trái trực giác này không chứng minh AI vô dụng; nó cho thấy một benchmark nhỏ và một thay đổi trong codebase có context lâu năm có thể cho kết quả khác nhau.
+METR công bố ngày 10-07-2025 một RCT với 16 contributor có kinh nghiệm, hoàn thành 246 task trên repository mã nguồn mở quen thuộc. Mỗi task được phân ngẫu nhiên vào điều kiện cho phép hoặc không cho phép AI; công cụ thuộc giai đoạn tháng 2–6-2025, chủ yếu Cursor Pro với Claude 3.5/3.7 Sonnet. Ước lượng có điều chỉnh của nghiên cứu là thời gian tăng 19%, khoảng tin cậy 95% 2–39%; không phải chỉ lấy tỷ số hai thời gian trung bình thô. Đối tượng đo là contributor và task được tuyển, không đại diện lao động quốc gia. Kết quả không chứng minh AI vô dụng ở mọi bối cảnh.
 
 Bản cập nhật METR ngày 24-02-2026 nêu vấn đề chọn người, chọn task và đo thời gian khi người tham gia dùng công cụ mới hoặc làm nhiều việc song song. Tác giả coi các ước lượng mới là không đáng tin để định lượng hiệu ứng hiện tại. Vì vậy cũng không được dùng con số chậm 19% của năm 2025 như định luật cho Agent năm 2026. “Chưa đo chắc” là một kết luận có ích: nó ngăn cả quảng cáo lẫn phản đối AI dựa trên một thí nghiệm đã đổi bối cảnh.
 
@@ -39,6 +39,16 @@ Các chương trước đã cho ví dụ kiểm chứng được: CLI gom dữ l
 Đây là lựa chọn theo workload. Một CLI thuần Go có thể giảm phụ thuộc runtime khi phân phối, nhưng cgo, chứng chỉ, timezone, file config và quyền OS vẫn có thể tạo dependency ngoài binary. Service có GC cần budget memory và latency. Interface nhỏ giúp thay implementation, nhưng không diễn đạt tự động ownership, deadline hoặc retry semantics. Simplicity làm một số bước review dễ hơn; nó cũng để lại công việc thiết kế bằng convention và test thay vì một hệ kiểu kiểm tra mọi invariant.
 
 Nếu task chủ yếu là khám phá dữ liệu và notebook với library ML sẵn có, Python có thể hợp lý hơn. Nếu cần một subsystem có yêu cầu ownership hoặc kiểm soát memory rất chặt, Rust hay C/C++ có thể đáng cân nhắc tùy hệ thống và năng lực team. Browser UI có ecosystem khác. Một hệ thống có thể dùng Go ở control plane và ngôn ngữ khác ở data plane; boundary protocol và lifecycle quan trọng hơn tranh luận một ngôn ngữ phải làm tất cả. Chương 14 đã cho một ví dụ nhỏ về chi phí interop, không một bảng xếp hạng ngôn ngữ.
+
+## Khi nút thắt chuyển từ viết sang kiểm chứng
+
+Phần này là suy luận thiết kế của tác giả, không phải một kết quả đo thêm từ các nghiên cứu trên. Xét scenario Agent tạo nhiều patch hơn trong cùng một buổi nhưng người review vẫn phải kiểm tra contract, dependency, test thiếu, quyền deploy và tác động tới người dùng. Nếu hàng chờ review tăng, thời gian gõ giảm chưa chắc làm thời gian từ yêu cầu đến thay đổi được chấp nhận giảm. Đếm patch hoặc dòng code ở đầu vào sẽ bỏ sót nút thắt ấy.
+
+Muốn kiểm chứng lợi ích, hãy định nghĩa điểm kết thúc trước: thay đổi đã qua review của đúng artifact, chạy trong target được phép và đạt hậu điều kiện. Đo riêng thời gian chờ review, thời gian kiểm tra, rework sau reject, chi phí tool và sự cố phát sinh; so task có độ khó và yêu cầu chất lượng tương đương. Không dùng cờ “tests passed” do cùng bên sinh patch tự khai làm phép đo độc lập. Một đề xuất sai bị bác bỏ sớm có thể là kết quả có ích, không phải lỗi năng suất cần giấu.
+
+Deployment xanh cũng chưa phải outcome người dùng. Ví dụ rollout không crash nhưng làm request chậm hơn hoặc đổi kết quả nghiệp vụ sai: hậu điều kiện phải nhìn cả điều mà người dùng cần, không chỉ process có sống. Ch16 đã phân biệt các phép chiếu observability; Ch18 ràng buộc artifact với promotion. Ở đây ta thêm câu hỏi về chi phí và điểm kết thúc của công việc, không lặp lại một checklist phát hành.
+
+**Bài review ngắn.** Một team báo “Agent tăng gấp đôi số PR mỗi tuần” nhưng không có số PR được chấp nhận, thời gian review hay lỗi sau rollout. Hãy viết ba dữ liệu cần thu trước khi kết luận năng suất tăng. Không cần phủ nhận con số PR; cần chỉ ra nó đo đầu vào nào và chưa đo outcome nào.
 
 ## Một cuộc điều tra trước khi cho phép restart
 

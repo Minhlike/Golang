@@ -63,7 +63,7 @@
 
 ## Back Matter & Phụ lục (Luôn nằm ở cuối sách)
 
-- **Back Matter — Atlas Mã Nguồn 50 Thư Viện Go DevOps & Cloud.** Mổ xẻ trực tiếp kiến trúc mã nguồn của 50 thư viện Go tiêu biểu trong hệ sinh thái Cloud Native/DevOps tại các commit đã khóa hash bất biến (Zero-Guess Protocol). Luôn nằm ngay sau chương kỹ thuật cuối cùng và trước Error Atlas.
+- **Back Matter — Atlas Mã Nguồn 50 Thư Viện Go DevOps & Cloud.** Khóa identity và hướng dẫn đọc contract/cơ chế có mục tiêu của 50 thư viện. Không phải full-tree review 50 implementation; source map và nhãn QA lịch sử không thay file/symbol thực ở commit ghim. Luôn ngay sau chương cuối và trước Error Atlas.
 - **Phụ lục A — Atlas Lỗi Go: Đọc lỗi từ triệu chứng đến nguyên nhân.** Bản đồ phản xạ 10 nhóm (A–J) từ Compiler & Type System, Runtime & Panic, Error Values & I/O, Context & Cancellation, Filesystem & Process, Network / HTTP / TLS, Database, Concurrency, Modules & Toolchain, đến Container, Kubernetes & CI/CD. Bố cục 2 cột cô đọng, tối ưu in laser và tra cứu tức thì. Quy ước bất biến: Phụ lục A luôn là tài liệu CUỐI CÙNG của cuốn sách bất kể có thêm bao nhiêu chương mới.
 
 ## Cách dùng bản hiện tại

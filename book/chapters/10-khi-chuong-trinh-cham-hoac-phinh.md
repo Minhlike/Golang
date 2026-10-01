@@ -10,27 +10,13 @@ Giả sử một tiến trình kiểm tra dịch vụ định kỳ (`opsprobe`) 
 
 ## Bản chất Chuỗi Tối ưu hóa: Từ Source đến Mã máy
 
-Hiệu năng của một chương trình Go là kết quả của sự tương tác chặt chẽ giữa các pass tối ưu hóa của trình biên dịch và các hệ thống con bên trong Go runtime:
+Để đặt câu hỏi về hiệu năng, tách quyết định lúc compile khỏi công việc lúc chạy:
 
-```
-[Mã nguồn Go]
-       │
-       ▼
-[Inlining và các heuristic]
-       │ Có thể bỏ lời gọi, mở rộng ngữ cảnh
-       ▼
-[Escape analysis]
-       │ Chọn representation và nơi lưu trữ khi cần
-       ▼
-[Pass SSA & Bounds Elimination]
-       │ Chứng minh biến quy nạp, loại bỏ kiểm tra biên
-       ▼
-[Phát sinh Mã máy Target]
-       │ Thanh ghi vi kiến trúc, tập lệnh CPU
-       ▼
-[Go Runtime Subsystems]
-         Bộ cấp phát, GC và scheduler
-```
+| Tầng | Cơ chế cần điều tra | Bằng chứng phù hợp |
+| --- | --- | --- |
+| Compiler của toolchain đã pin | Inlining, escape analysis, SSA và loại bỏ kiểm tra biên có thể đổi cách thực hiện cùng semantics. | Diagnostic compiler; assembly của cùng source và cờ build. |
+| Mã máy của artifact | Instruction, thanh ghi và lời gọi còn lại sau build. | Objdump của đúng binary, không trộn với listing từ build khác. |
+| Runtime khi workload chạy | Allocation, GC, lập lịch và I/O tiêu tốn tài nguyên theo đường thực thi. | Benchmark, profile và trace, kèm môi trường và giới hạn phép đo. |
 
 Các bước này là mô hình để đặt câu hỏi, không phải pipeline hay ngưỡng ổn định của ngôn ngữ. Inlining có thể làm thay đổi thông tin mà escape analysis nhìn thấy; compiler cũng có thể đặt một value vào thanh ghi, stack, heap hoặc bỏ hẳn nó. Chỉ khi chi phí đã được đo, output của compiler và profiler mới cho biết điều gì xảy ra với phiên bản, kiến trúc và workload đang xét.
 
@@ -40,7 +26,7 @@ Trình biên dịch Go dùng escape analysis để suy luận liệu một value
 
 Một value không escape có thể ở stack, thanh ghi hoặc bị tối ưu hóa mất; nó không mặc nhiên có một allocation đo được. Ngược lại, trả con trỏ, lưu vào global hoặc đóng gói vào interface là tín hiệu để compiler phân tích lifetime, không phải luật “chắc chắn heap”. Kết quả còn phụ thuộc thân hàm, inlining, kiến trúc và version. Vì vậy, `-gcflags=all=-m=2` là bằng chứng cho một lần biên dịch cụ thể; benchmark `allocs/op` mới cho biết contract đo có allocation quan sát được hay không.
 
-Thí nghiệm kiểm chứng trên Go 1.27.1 với cờ phân tích chuyên sâu `-gcflags=all=-m=2` đối với hàm kết xuất báo cáo cho thấy chi tiết dòng dữ liệu (data flow) dẫn đến quyết định thoát:
+Chạy `go build -gcflags=all=-m=2 ./fixed` từ `labs/part10-measure-first` với Go 1.27.1. Trích đoạn dưới rút gọn prefix đường dẫn `fixed/`, lược dòng không liên quan và ngắt dòng cho vừa khung; không phải toàn bộ diagnostic:
 
 ~~~text
 ./render.go:13:6: cannot inline Render:
@@ -51,7 +37,7 @@ Thí nghiệm kiểm chứng trên Go 1.27.1 với cờ phân tích chuyên sâu
 ./render.go:13:13: readings does not escape
 ./render.go:16:18: append(strings.b.buf, strings.s...)
     escapes to heap in Render:
-  flow: {heap} <- &{storage for append(...)}:
+  flow: {heap} ← &{storage for append(...)}:
     from append(strings.b.buf, strings.s...) (spill)
     from strings.b.buf = append(...) (assign)
 ~~~
@@ -66,7 +52,7 @@ Thứ hai, storage tạo bởi `append` trong `strings.Builder` được báo es
 
 Một tối ưu hóa quan trọng của backend SSA là loại bỏ kiểm tra biên khi compiler chứng minh được chỉ số hợp lệ. Ở ngữ nghĩa Go, truy cập ngoài biên phải panic; instruction cụ thể dùng để bảo vệ điều đó phụ thuộc compiler và kiến trúc. Output `ssa/prove` dưới đây là quan sát của thí nghiệm Go 1.27.1, không phải hình dạng mã máy mà mọi bản build phải có.
 
-Bằng cách kích hoạt cờ gỡ lỗi SSA `-gcflags=all=-d=ssa/prove/debug=1`, ta có thể quan sát cách compiler suy luận toán học để triệt tiêu các lệnh kiểm tra thừa:
+Chạy cùng lệnh build với `-gcflags=all=-d=ssa/prove/debug=1`. Cờ `all` còn phát diagnostic cho thư viện chuẩn; prefix GOROOT được rút gọn ở trích đoạn dưới, không biến các dòng `strings.go` thành output của thân `Render`:
 
 ~~~text
 ./render.go:15:20: Induction variable: limits [0,?), increment 1
@@ -76,15 +62,15 @@ strings/strings.go:987:27: Proved IsInBounds
 strings/strings.go:988:38: Proved IsSliceInBounds
 ~~~
 
-Với vòng lặp của artifact này, output cho thấy compiler nhận diện biến quy nạp và chứng minh một số điều kiện `IsInBounds`. Khi điều kiện tương tự được chứng minh trong một build, compiler có thể bỏ kiểm tra biên tương ứng. Đừng viết vòng lặp vòng vèo chỉ để ép tối ưu hóa: giữ invariant dễ đọc, benchmark khi cần, và xác nhận bằng diagnostic hoặc assembly của đúng target nếu việc bỏ kiểm tra thực sự quan trọng.
+Các dòng `render.go` cho thấy nhận diện biến quy nạp và đảo chiều vòng lặp; các dòng `strings.go` báo điều kiện đã được chứng minh trong thư viện chuẩn của lượt build ấy. Muốn kết luận một bounds check cụ thể của `Render` đã bị bỏ, phải tìm đúng source vị trí và đối chiếu diagnostic/assembly tương ứng. Giữ invariant dễ đọc rồi đo, không viết code vòng vèo chỉ để ép một hình dạng tối ưu hóa.
 
 ## Cơ chế Thu gom Rác và Đánh đổi Không gian - Thời gian
 
-Bộ thu gom rác (Garbage Collector) của Go là một hệ thống thu gom rác dấu vết đồng thời (Concurrent Tri-color Mark-Sweep Tracer). Trái ngược với quan niệm phổ biến rằng GC hoạt động hoàn toàn miễn phí hoặc ngược lại là luôn gây tắc nghẽn, tài liệu chính thức Go GC Guide khẳng định bản chất của GC là một sự **đánh đổi giữa tài nguyên bộ nhớ (space) và thời gian xử lý CPU (time)**.
+GC trong runtime chuẩn Go 1.27.1 dùng tracing mark-sweep đồng thời, với write barrier và các pha dừng thế giới mô tả ở `runtime/mgc.go`. Nó không phải lựa chọn thuật toán mà specification bắt mọi implementation phải dùng. GC Guide cung cấp mô hình đánh đổi CPU và bộ nhớ; để giải thích chi tiết của edition này, cần đối chiếu thêm source và release notes, không dùng guide như một benchmark dịch vụ.
 
-Khi chu kỳ GC kích hoạt, công việc background marking được bộ điều tốc (GC pacer) điều phối với một mục tiêu CPU xấp xỉ (khoảng 25% tổng năng lực CPU trong điều kiện bình thường, tương đương 1 trong mỗi 4 logical processor `P`) để phục vụ các goroutine đánh dấu đối tượng sống. 
+Trong `runtime/mgcpacer.go` của Go 1.27.1, `gcBackgroundUtilization = 0.25` đặt mục tiêu background marking theo một phần của `GOMAXPROCS` trong pha mark. Không có nghĩa GC luôn chiếm 25% CPU toàn process hay giữ riêng một P trong bốn P: dedicated, fractional và idle workers cùng tham gia, còn assist có chi phí riêng. Muốn biết workload thực sự trả bao nhiêu CPU cho GC, đọc metric/profile của lượt chạy đó.
 
-Hai điểm dừng ngắn của toàn bộ thế giới (Stop-the-World - STW) xuất hiện ở pha chuẩn bị quét (Sweep Termination) và pha kết thúc đánh dấu (Mark Termination). Mặc dù kiến trúc Go hướng tới việc tối thiểu hóa thời gian STW đến mức rất ngắn, độ trễ STW thực tế không phải là một cam kết cố định mà phụ thuộc lớn vào tải của chương trình, kích thước heap, cấu hình máy chủ và phiên bản Go; kỹ sư luôn cần đo lường qua công cụ execution trace, gói `runtime/metrics` hoặc cờ `gctrace`. Đồng thời, nếu tốc độ cấp phát bộ nhớ của ứng dụng (allocation rate) vượt quá tốc độ đánh dấu của GC, runtime sẽ điều động các goroutine của người dùng tham gia hỗ trợ đánh dấu (GC Mark Assist), khiến chính goroutine xử lý nghiệp vụ bị trễ và đẩy tail latency lên cao.
+Runtime có điểm dừng ở sweep termination và mark termination; thời gian dừng cần đọc từ lượt chạy thật, không lấy mục tiêu thiết kế làm latency guarantee. Trong pha mark, allocation có thể tạo khoản nợ công việc đánh dấu theo tỷ lệ mà pacer tính. Khi goroutine còn nợ, đường mark assist có thể bắt nó làm thêm công việc hoặc chờ credit. Đó là một hướng điều tra khi allocation và latency tăng cùng nhau, không phải phép so sánh đơn giản “tốc độ allocation lớn hơn tốc độ mark” hay bằng chứng tail latency chắc chắn tăng. Đối chiếu trace, `runtime/metrics` và đường assist trong source đã pin.
 
 ### Green Tea GC là bối cảnh triển khai, không phải contract
 
@@ -94,13 +80,13 @@ Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi k
 
 Tham số `GOGC`: Chọn một điểm trên trade-off CPU/bộ nhớ. Với Go hiện đại, target heap còn tính cả GC roots: gần đúng là `live heap + (live heap + roots) * GOGC / 100`. `GOGC=100` không luôn có nghĩa tổng heap bằng đúng hai lần live heap. Tăng nó thường giảm tần suất GC và tăng memory overhead; đó là xu hướng phải xác minh bằng workload thật.
 
-Tham số `GOMEMLIMIT`: Được đưa vào từ Go 1.19, thiết lập ngưỡng giới hạn bộ nhớ mềm (soft memory limit) của Go runtime. Runtime cố gắng duy trì mức sử dụng bộ nhớ do Go quản lý quanh ngưỡng này bằng cách kích hoạt GC chủ động hơn khi heap chạm giới hạn, nhưng vẫn cho phép vượt ngưỡng trong trường hợp cần thiết để ngăn chặn thảm họa nghẽn GC liên tục (GC thrashing). Không nên nhầm lẫn `GOMEMLIMIT` với giới hạn cứng cgroup hoặc giới hạn Resident Set Size (RSS) của hệ điều hành. Trong môi trường container (như Kubernetes pod), kỹ sư luôn phải dự phòng khoảng đệm an toàn (headroom) giữa `GOMEMLIMIT` và memory limit của container nhằm chừa chỗ cho bộ nhớ ngoài Go heap, binary code và kernel metadata, thay vì coi đây là một bảo đảm tuyệt đối tránh khỏi OOM-Killer.
+`GOMEMLIMIT`, từ Go 1.19, là soft limit cho đại lượng bộ nhớ runtime quản lý, không chỉ live heap. GC có thể làm việc thường xuyên hơn khi tới limit, nhưng runtime cho phép vượt nó để tránh thrashing. Limit này không phải trần RSS hay trần cgroup. Khi đặt trong container, cần đo cả phần charge ngoài đại lượng runtime tính và chừa headroom tương ứng, không chọn một tỷ lệ “an toàn” chung. Nó không bảo đảm tránh OOM; một workload giữ live data lớn hơn ngân sách vẫn cần thay contract hoặc capacity.
 
 ## Đo lường Hiệu năng: Benchmark là Hợp đồng Thực nghiệm
 
-Một bài kiểm thử hiệu năng (benchmark) chỉ có giá trị khi nó cô lập được đúng thao tác nghiệp vụ cần đo lường, loại bỏ toàn bộ các công việc chuẩn bị dữ liệu khỏi vòng lặp tính giờ.
+Contract benchmark quyết định việc nào phải tính giờ. Nếu đang đo riêng `Render`, dựng readings trước vòng lặp; nếu đang đo cả pipeline nhận và xử lý input, chi phí chuẩn bị tương ứng có thể chính là phần cần đo. Không loại setup theo nghi thức rồi vô tình làm mất workload mà người dùng phải chịu.
 
-Từ phiên bản Go 1.24, cú pháp chuẩn mực cho benchmark sử dụng phương thức `b.Loop()`. Cơ chế này tự động kích hoạt bộ đếm thời gian sau khi giai đoạn khởi tạo hoàn tất và tự ngắt bộ đếm khi hoàn thành số vòng lặp mục tiêu:
+`B.Loop` có từ Go 1.24 và là cách viết phù hợp cho benchmark mới ở edition này; vòng `b.N` vẫn được hỗ trợ. Lần gọi đầu reset timer, lần trả false dừng timer, nên setup đặt trước vòng không được tính vào kết quả:
 
 ~~~go
 func BenchmarkRender(b *testing.B) {
@@ -124,9 +110,9 @@ Chỉ số `ns/op` là thời gian bình quân theo contract benchmark. `B/op` v
 | :--- | :--- | :--- |
 | Kiểm thử đơn vị (Unit test) | Đầu ra và mã lỗi có bảo toàn đúng cam kết logic? | Không chứng minh được mã chạy nhanh hơn hay tốn ít RAM hơn. |
 | Đo lường chuẩn (Benchmark) | Thao tác này tiêu tốn thời gian và phân bổ bộ nhớ ra sao dưới input chuẩn? | Không phản ánh trực tiếp độ trễ mạng hay tải tương tranh thực tế. |
-| Phân tích CPU (CPU profile) | Khi chiếm dụng CPU, hàm nào tích lũy chu kỳ xử lý lớn nhất? | Bỏ qua hoàn toàn thời gian goroutine bị chặn do I/O hoặc khóa Mutex. |
+| Phân tích CPU (CPU profile) | Sample CPU tập trung ở stack/hàm nào? | Không đo trực tiếp thời gian chờ khi goroutine đã block; CPU dùng cho syscall, spin hay đường khóa vẫn có thể xuất hiện. |
 | Phân tích Bộ nhớ (Heap profile) | Đường dẫn mã nguồn nào chịu trách nhiệm cho các khối cấp phát trên heap? | Dữ liệu mang tính lấy mẫu thống kê, không ghi nhận từng biến riêng lẻ. |
-| Dấu vết thực thi (Execution trace) | Tương tác giữa goroutine, luồng hệ điều hành và scheduler diễn ra theo mốc thời gian nào? | Dung lượng tệp trace rất lớn, gây suy giảm hiệu năng nếu ghi log dài hạn. |
+| Dấu vết thực thi (Execution trace) | Sự kiện runtime và chuyển trạng thái goroutine nào xảy ra trong khoảng đã ghi? | Kích thước và overhead tùy workload, thời gian ghi và version; cần ngân sách, không coi trace là diễn giải mọi semantics của source. |
 
 ## Phân tích CPU và Bộ nhớ (pprof)
 
@@ -140,6 +126,8 @@ go tool pprof -top cpu.out
 
 Chỉ số `flat` ghi nhận chi phí tiêu tốn trực tiếp bên trong thân hàm, trong khi chỉ số `cum` (cumulative) ghi nhận tổng chi phí tích lũy của hàm đó cùng toàn bộ các hàm con mà nó triệu gọi. Một hàm có `flat` nhỏ nhưng `cum` lớn là dấu hiệu cho thấy nó đang dẫn lối vào một chuỗi thao tác tiêu tốn nhiều tài nguyên.
 
+Nếu nghi goroutine bị giữ lại, Go 1.27 có profile `goroutineleak` ở `runtime/pprof` và endpoint tương ứng của `net/http/pprof`, không còn cần experiment từ Go 1.26. Nó tìm một lớp chờ mà runtime xác định không thể được đánh thức, không tìm mọi leak và không tự thu hồi goroutine. Profile không có hit vẫn cần đối chiếu goroutine dump, ownership của channel và cancellation path như Chương 9. Khi mở trace UI, `go tool trace -http=:6060` từ Go 1.27 chỉ nghe localhost; muốn nghe địa chỉ khác phải chỉ định rõ. Đừng đưa profile/trace có dữ liệu nhạy cảm lên một listener công khai chỉ để tiện xem.
+
 ![Đường đi của bằng chứng hiệu năng](../../assets/diagrams/performance-evidence-path.png)
 
 @figure Chu trình điều tra hiệu năng hoàn chỉnh. Dữ liệu bắt đầu từ một bài toán đo lường có khối lượng công việc đại diện, kiểm chứng qua profiler, sau đó đối chiếu mã nguồn và tối ưu hóa có đo đạc đối chứng.
@@ -148,16 +136,16 @@ Chỉ số `flat` ghi nhận chi phí tiêu tốn trực tiếp bên trong thân
 
 Thư mục `labs/part10-measure-first` duy trì hai cách hiện thực cho cùng một yêu cầu định dạng văn bản: phương án cơ sở (`baseline`) nối chuỗi bằng toán tử `+=` lặp lại; phương án tối ưu (`fixed`) sử dụng `strings.Builder` và `strconv.FormatInt`.
 
-Khối lượng công việc đại diện gồm đúng 1.000 đối tượng `Reading`, từ `endpoint-0000` đến `endpoint-0999`, được khởi tạo sẵn ngoài vòng lặp đo. Kết quả thực nghiệm đo đạc bằng Go 1.27.1 trên kiến trúc `windows/amd64` (bộ xử lý 12th Gen Intel Core i5-12500H) ghi nhận sự khác biệt căn bản:
+Workload gồm 1.000 `Reading`, từ `endpoint-0000` đến `endpoint-0999`, dựng ngoài vòng đo. Lượt kiểm chứng local ngày 01-10-2026 dùng Go 1.27.1, `windows/amd64`, CPU 12th Gen Intel Core i5-12500H, benchmark mặc định báo suffix `-16`, chạy sáu lần trên cùng máy/môi trường, Go version, workload và benchmark contract. Khoảng dưới đây là min–max của sáu kết quả `ns/op`, không phải confidence interval. Độ dao động lớn cho thấy cần cẩn trọng khi suy tỷ lệ speedup; đây không phải phép đo latency của service:
 
-| Phương án hiện thực | Thời gian xử lý trung bình | Chi phí phân bổ vùng nhớ động (Heap) |
+| Phương án hiện thực | Khoảng thời gian mỗi operation | Allocation runner báo |
 | :--- | :--- | :--- |
-| `baseline` (Toán tử `+=`) | 1.38 – 3.78 ms/op | ~10.44 MB/op trên 1.900 lần cấp phát (`allocs/op`) |
-| `fixed` (`strings.Builder`) | 26.1 – 86.1 µs/op | ~87.6 KB/op trên 917 lần cấp phát (`allocs/op`) |
+| `baseline` (Toán tử `+=`) | 1.306–3.394 ms/op | 10,443,876–10,443,996 B/op; 1,900–1,901 allocs/op |
+| `fixed` (`strings.Builder`) | 26.442–89.994 µs/op | 87,600–87,608 B/op; 917 allocs/op |
 
-Bản ghi CPU profile của phương án `baseline` cho thấy hàm runtime `runtime.concatstrings` chiếm tới 25.9% thời gian xử lý lũy kế, và hàm sao chép bộ nhớ `runtime.memmove` chiếm 16.1% thời gian thực thi phẳng. Phép cộng chuỗi bất biến trong vòng lặp buộc runtime phải liên tục cấp phát các mảng byte mới và sao chép toàn bộ nội dung chuỗi cũ sang ô nhớ mới, dẫn đến sự suy giảm thông lượng hơn 40 lần.
+Trong source `baseline`, mỗi lần nối thêm giữ lại kết quả string dài hơn cho lượt kế tiếp. Source runtime Go 1.27.1 ở `runtime/string.go`, cùng allocation benchmark, giúp điều tra chi phí dựng lại dữ liệu chuỗi; `fixed` gom output trong Builder. Không suy từ đó rằng mọi phép `+` đều allocate hay gán một tỷ lệ throughput cố định. Khi lấy CPU profile bằng lệnh ở trên, đối chiếu các sample của chính lượt chạy với đường nối/copy, không tái dùng phần trăm từ một profile không còn artifact để kiểm tra.
 
-Bằng chứng thực nghiệm này chỉ ra chính xác nguyên nhân gốc rễ, cho phép kỹ sư thay đổi sang `strings.Builder` dựa trên số liệu định lượng vững chắc.
+Test output và benchmark hỗ trợ lựa chọn Builder cho workload này: format được giữ và allocation quan sát giảm. Nó chưa xác nhận service production nhanh hơn, vì chưa đo phần network, tải đồng thời hay trải nghiệm người dùng.
 
 ## Tối ưu hóa Dựa trên Hồ sơ Vận hành (PGO)
 
@@ -173,7 +161,7 @@ Tuy nhiên, PGO chỉ đáng tin khi profile đại diện cho workload muốn t
 
 ## Kỷ luật Tối ưu hóa Kỹ thuật
 
-Nâng cao hiệu năng không phải là trò chơi đoán mò cú pháp. Trước khi đưa ra bất kỳ đề xuất thay đổi nào, người kỹ sư luôn tuân thủ quy trình bốn bước:
+Với một đề xuất tối ưu hóa, bốn bước sau giữ câu hỏi và bằng chứng đi cùng nhau:
 
 Một là, xác định khối lượng công việc đại diện phản ánh đúng bài toán thực tế.
 

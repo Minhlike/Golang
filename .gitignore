@@ -9,5 +9,8 @@ library_sources/repos/
 *.prof
 *.pprof
 *.out
+labs/part27-ebpf-observer/bpf/vmlinux.h
+labs/part27-ebpf-observer/bpf_bpfel.go
+labs/part27-ebpf-observer/bpf_bpfel.o
 runtime/document-cache/
 tools/document_ingestion/.venv/

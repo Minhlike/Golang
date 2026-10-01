@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
+skinparam dpi 300
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
@@ -19,8 +20,8 @@ skinparam note {
   FontSize 15
 }
 left to right direction
-rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 0" as original
-rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 0" as copy
+rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 1" as original
+rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 1" as copy
 original --> copy : candidate := billing\nsao chép toàn bộ các trường
 note bottom of original : billing.Healthy vẫn giữ true
 note bottom of copy : candidate.Healthy đổi thành false

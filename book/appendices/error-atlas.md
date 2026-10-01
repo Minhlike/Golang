@@ -5,6 +5,8 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 
 ### Bảng phân nhóm Taxonomy
 
+`EXACT` là diagnostic hoặc phần diagnostic thực có, có thể thay tên và số bằng placeholder; không bao gồm prefix đường dẫn/vị trí do tool thêm. Các heading lược thuật ngữ, ghép nhiều chuỗi hay ghi tên tool để định vị được phân loại `FAMILY`, không giả làm byte output để copy so khớp. Wording còn phụ thuộc toolchain, OS, driver và version; kiểm tra output thật trước khi kết luận nguyên nhân.
+
 | Nhóm | Tên nhóm | Phạm vi chẩn đoán | Mã lỗi |
 | :--- | :--- | :--- | :--- |
 | **A** | Compiler & Type System | Lỗi biên dịch, hệ thống kiểu, interface, scope và syntax | A01–A14 |
@@ -40,8 +42,8 @@ Không tìm thấy identifier trong scope hiện tại hoặc identifier chưa �
 Tất cả các biến ở vế trái toán tử `:=` đều đã được khai báo trước đó trong cùng một scope.
 → Đổi toán tử sang phép gán thường `=`, hoặc bổ sung ít nhất một biến mới vào vế trái. [Ch1,2]
 
-### A03 `imported and not used: "pkg"`
-Package được import vào file nguồn nhưng không có identifier nào trong file tham chiếu đến nó.
+### A03 `"fmt" imported and not used`
+Diagnostic này được compiler Go 1.27.1 phát cho import `fmt` không được dùng; tên package khác làm chuỗi thay đổi. Dot import cũng cần dùng identifier của package, còn blank import khai báo chủ đích chỉ chạy initialization.
 → Xóa dòng import thừa, dùng blank identifier `_ "pkg"` nếu cần chạy hàm `init()`, hoặc chạy `goimports`. [Ch1,5]
 
 ### A04 `declared and not used: x`
@@ -67,7 +69,7 @@ Sử dụng toán tử so sánh (`==`, `!=`) trên struct chứa ít nhất mộ
 → So sánh từng field có thể so sánh, hoặc tự viết hàm helper so sánh nghiệp vụ chuyên biệt. [Ch2,3]
 
 ### A09 `cannot assign to struct field in map`
-Không thể gán trực tiếp field của struct nằm trong map (ví dụ `m["k"].Field = v`) vì map value không có địa chỉ cố định.
+Không thể gán trực tiếp `m["k"].Field` vì map index expression không addressable theo Go spec; đừng suy ra quy tắc này từ một địa chỉ vật lý của implementation.
 → Lấy struct ra biến tạm, cập nhật field rồi gán ngược lại vào map, hoặc dùng map chứa pointer `map[K]*V`. [Ch2,3]
 
 ### A10 `cannot take the address of x`
@@ -96,7 +98,7 @@ Type cụ thể không thỏa mãn interface vì thiếu method hoặc sai khác
 ## B — Runtime & Panic
 
 ### B01 `panic: runtime error: invalid memory address or nil pointer dereference`
-Truy cập field hoặc gọi method trên một con trỏ hoặc interface có giá trị `nil`.
+Dereference con trỏ nil hoặc gọi method qua nil interface có thể gây panic. Method có pointer receiver vẫn có thể nhận nil và xử lý nó; chỉ lời gọi trên receiver nil chưa đủ kết luận.
 ! Nil dereference có thể làm process crash; đừng dùng recover để che lỗi mà không xác định contract và recovery boundary.
 → Thêm kiểm tra `if ptr == nil` trước khi truy cập, hoặc rà soát constructor/hàm khởi tạo chưa gán con trỏ. [Ch2,3,12]
 
@@ -105,11 +107,11 @@ Truy cập phần tử của slice hoặc mảng tại chỉ số âm hoặc l�
 → Kiểm tra `len(s)` trước khi truy cập trực tiếp qua index, hoặc ưu tiên duyệt bằng vòng lặp `for range`. [Ch2,7]
 
 ### B03 `panic: runtime error: slice bounds out of range [:x] with capacity y`
-Biểu thức cắt slice `s[low:high]` có cận trên `high` vượt quá sức chứa `cap(s)` hoặc cận dưới lớn hơn cận trên.
-→ Kiểm tra sức chứa `cap(s)` trước khi reslice, hoặc bảo đảm `low <= high <= cap`. [Ch2,7]
+Biểu thức cắt slice `s[low:high]` có cận âm, cận trên vượt `cap(s)` hoặc cận dưới lớn hơn cận trên.
+→ Với slice hai cận, kiểm tra `0 <= low <= high <= cap(s)`; string dùng `len` làm cận trên, không có `cap`. [Ch2,7]
 
 ### B04 `panic: runtime error: makeslice: len out of range`
-Hàm `make([]T, len, cap)` nhận tham số `len` hoặc `cap` là số âm, hoặc `len > cap`, hoặc vượt trần bộ nhớ hệ thống.
+Diagnostic này chỉ đường cấp phát slice có length không hợp lệ hoặc vượt giới hạn implementation. Capacity không hợp lệ và `len > cap` có thể phát `makeslice: cap out of range`; allocation thất bại vì OOM có đường lỗi khác.
 → Kiểm tra kích thước buffer không âm và nằm trong ngân sách; buffer độ dài 0 có thể hợp lệ theo contract. [Ch2,7]
 
 ### B05 `panic: assignment to entry in nil map`
@@ -127,7 +129,7 @@ Gọi lệnh `close()` lần thứ hai trên cùng một channel đã được �
 
 ### B08 `panic: interface conversion: interface {} is T1, not T2`
 Ép kiểu dạng assertion `v := x.(T2)` thất bại trong runtime khi giá trị thực tế bên trong là `T1` hoặc `nil`.
-→ Luôn luôn sử dụng cú pháp comma-ok an toàn: `v, ok := x.(T2)` và kiểm tra biến cờ `ok` trước khi sử dụng. [Ch3,14,19]
+→ Dùng `v, ok := x.(T2)` khi type động chưa được bảo đảm bởi contract. Nếu dùng assertion một giá trị, cần invariant rõ và hiểu rằng vi phạm sẽ panic. [Ch3,14,19]
 
 ### B09 `fatal error: concurrent map read and map write`
 Nhiều goroutine cùng truy cập đọc và ghi đồng thời vào một biến kiểu `map` chuẩn mà không có cơ chế khóa đồng bộ.
@@ -149,7 +151,7 @@ Go 1.27.1 phát lỗi fatal khi gọi `Unlock()` trên `sync.Mutex` hiện khôn
 ### C01 `io.EOF`
 Tín hiệu hoàn tất stream đọc dữ liệu (đã đọc hết toàn bộ byte sẵn có, không còn byte nào phía sau).
 ! `io.EOF` thường đánh dấu hết stream; EOF xuất hiện sớm vẫn có thể vi phạm contract của format hoặc operation.
-→ Xử lý `io.EOF` như một điều kiện kết thúc vòng lặp đọc dữ liệu hợp lệ thay vì return failure lên tầng trên. [Ch7,11,20]
+→ Xử lý phần `n > 0` trước khi xét error; chỉ coi EOF là kết thúc thành công nếu operation đã nhận đủ dữ liệu theo contract. [Ch7,11,20]
 
 ### C02 `io.ErrUnexpectedEOF`
 Stream dữ liệu bị ngắt đột ngột trước khi đọc đủ số byte dự kiến (ví dụ trong `io.ReadFull` hoặc fixed-size header).
@@ -157,7 +159,7 @@ Stream dữ liệu bị ngắt đột ngột trước khi đọc đủ số byte
 
 ### C03 `io.ErrShortWrite`
 Hàm `Write()` ghi được ít byte hơn buffer cung cấp nhưng không trả về lỗi cụ thể từ hệ thống bên dưới.
-→ Rà soát bộ đệm đích hoặc cơ chế ghi phân đoạn; bảo đảm vòng lặp ghi tiếp tục cho đến khi cạn buffer. [Ch7]
+→ Kiểm tra `n` và `err`; không retry vô hạn khi writer không tiến triển. Nếu policy cho phép ghi tiếp, cần budget và bảo toàn phần chưa ghi. [Ch7]
 
 ### C04 `target document exceeds byte limit`
 Dữ liệu stream đi vào vượt quá ngưỡng kích thước tối đa cho phép theo chính sách an toàn (giá trị sentinel `ErrDocumentTooLarge`).
@@ -187,7 +189,7 @@ Gọi lệnh `Commit()` hoặc `Rollback()` trên một transaction cơ sở d�
 ### D01 `context canceled`
 Context bị hủy bởi `cancel()`, context cha bị hủy hoặc lifecycle của operation kết thúc.
 ! `http.Server.Shutdown` không tự hủy context của active request. Muốn signal dừng process hủy handler phải truyền application context có chủ đích; policy ấy có thể làm gián đoạn graceful drain.
-→ Dừng vòng lặp xử lý của goroutine, dọn dẹp tài nguyên và trả về trạng thái canceled (áp dụng quy ước mã phi chuẩn HTTP 499 Client Closed Request phổ biến trong microservices / OutcomeCancel). [Ch4,11,12,20]
+→ Cho operation quan sát cancellation, dọn tài nguyên rồi trả kết quả theo contract caller. `OutcomeCancel` là phân loại của opsprobe; HTTP 499 là quy ước phi chuẩn của một số hệ thống, không phải status bắt buộc của Go server. [Ch4,11,12,20]
 
 ### D02 `context deadline exceeded`
 Tác vụ không hoàn thành trong khoảng thời gian timeout hoặc trước mốc thời gian deadline đã ấn định (`context.DeadlineExceeded`).
@@ -247,7 +249,7 @@ Hệ thống DNS resolver không thể phân giải tên miền mục tiêu thà
 → Kiểm tra cấu hình DNS cục bộ (`/etc/resolv.conf`), service discovery của cụm Kubernetes (CoreDNS), hoặc lỗi chính tả host. [Ch11,16,20]
 
 ### F02 `dial tcp: connect: connection refused`
-Địa chỉ IP máy chủ hoạt động nhưng tại cổng đích không có bất kỳ process nào đang lắng nghe (nhận gói tin TCP RST).
+Connect bị từ chối; thường do không có listener ở đích, nhưng firewall hay thiết bị trung gian cũng có thể chủ động reject. Lỗi này không chứng minh host đích đang hoạt động bình thường.
 → Xác nhận service mục tiêu đã khởi chạy, bind đúng địa chỉ (`0.0.0.0` thay vì `127.0.0.1`), và port đích chính xác. [Ch4,11,16,20]
 
 ### F03 `i/o timeout / dial tcp: i/o timeout`
@@ -255,17 +257,17 @@ Dial không hoàn tất trong ngân sách kết nối, hoặc đọc/ghi vượt
 → Kiểm tra tường lửa/security group có đang chặn gói tin SYN không, routing mạng, hoặc server mục tiêu bị treo cứng. [Ch11,16,20]
 
 ### F04 `read: connection reset by peer`
-Phía đối tác (peer) của kết nối TCP đã gửi gói tin RST để ngắt kết nối cưỡng bức ngay lập tức.
-! Thường xảy ra khi process phía bên kia bị crash đột ngột, khởi động lại, hoặc tràn socket buffer.
+TCP stack báo connection reset. RST có thể đến từ peer hoặc thiết bị trung gian; riêng error string không xác định nguồn gây reset.
+! Process restart, policy timeout hoặc middlebox là các hướng điều tra, không phải nguyên nhân đã được chứng minh. Crash cũng không luôn tạo RST.
 → Kiểm tra log của server phía đối tác xem có sự cố panic, OOM, hay timeout của load balancer trung gian không. [Ch11,12,20]
 
 ### F05 `write: broken pipe`
-Client cố gắng ghi dữ liệu vào socket TCP trong khi phía nhận đã đóng chiều đọc và gửi tín hiệu FIN/RST trước đó.
+Lời gọi ghi bị báo EPIPE ở đường socket đang xét. TCP cho phép half-close; nhận FIN chỉ báo đóng chiều gửi của peer, không tự chứng minh mọi lần ghi tiếp phải lỗi.
 → Bắt lỗi ghi socket, ngừng gửi dữ liệu lên kết nối đã chết và dọn dẹp các tài nguyên liên đới của handler. [Ch11,12,20]
 
 ### F06 `http: server closed idle connection`
-Connection pool HTTP/1.1 cố gắng tái sử dụng kết nối nhưng server phía đối diện đã đóng socket do hết hạn idle timeout.
-→ Bật cơ chế retry an toàn cho các request có tính idempotent, hoặc cấu hình `IdleConnTimeout` của client nhỏ hơn server. [Ch11,20]
+Transport phát hiện server đóng một HTTP/1.x connection mà nó đang coi là idle. Idle timeout là một khả năng, không phải nguyên nhân duy nhất.
+→ Kiểm tra policy server/proxy và thời điểm reuse. Retry chỉ khi request body và side effect cho phép; đặt `IdleConnTimeout` thấp hơn server có thể giảm một race, không loại bỏ mọi close. [Ch11,20]
 
 ### F07 `x509: certificate signed by unknown authority`
 Bắt tay TLS thất bại vì chứng chỉ số của máy chủ không được ký bởi Certificate Authority (CA) có trong trust store của client.
@@ -297,17 +299,17 @@ Diagnostic này có thể gặp từ Amazon S3 khi thời gian request lệch ng
 
 ### G01 `sql: database is closed`
 Thực hiện thao tác trên `*sql.DB` đã đóng. Đây không phải `sql.ErrConnDone`: sentinel ấy dành cho `*sql.Conn` đã trả lại pool hoặc đóng.
-→ Rà soát lifecycle của `*sql.DB`: chỉ khởi tạo duy nhất một lần lúc ứng dụng startup và chỉ đóng khi toàn bộ process tắt. [Ch13,20]
+→ Xác định owner của pool và ai gọi Close quá sớm. Tái dùng pool lâu dài khi phù hợp; một process có thể có nhiều DB hoặc thay pool có phối hợp, không cần quy tắc duy nhất một lần suốt đời process. [Ch13,20]
 
 ### G02 `driver: bad connection`
 Driver báo connection không dùng được (`driver.ErrBadConn`); `database/sql` có thể retry theo contract. Đây khác với chờ pool đạt `SetMaxOpenConns`.
 ! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên "connection pool exhausted".
-→ Kiểm tra health check kết nối, tăng `SetMaxOpenConns` nếu tải hợp lệ, hoặc đặt timeout cho context truy vấn để tránh goroutine bị treo vô hạn. [Ch13,20]
+→ Điều tra connection lỗi và thống kê pool riêng. Chỉ đổi `SetMaxOpenConns` sau khi xét capacity database; context budget giới hạn chờ khi driver hỗ trợ, không sửa connection hỏng. [Ch13,20]
 
 ### G03 Unclosed sql.Rows (Connection Pool Starvation)
 Không đóng `Rows` khi dừng duyệt sớm có thể giữ connection ngoài pool. Đọc tới EOF có thể tự đóng Rows theo contract, nhưng caller vẫn nên đóng tường minh và kiểm tra `rows.Err()`.
-! `database/sql` không phát ra chuỗi lỗi báo quên close; triệu chứng thực tế là pool cạn kiệt âm thầm và các truy vấn kế tiếp bị treo đến khi context timeout.
-→ Luôn đặt `defer rows.Close()` ngay sau dòng kiểm tra `if err != nil` của lệnh `db.QueryContext`. [Ch13,20]
+! Không có diagnostic chuẩn mang nghĩa “quên close”. Connection bị giữ có thể làm các query sau chờ pool; xem `DB.Stats`, cancellation và lifecycle thực tế, không suy ra mọi truy vấn đều treo tới timeout.
+→ Sau khi `QueryContext` thành công, đặt `defer rows.Close()` gần acquisition khi cùng hàm sở hữu Rows. Nếu trả Rows cho caller, phải chuyển rõ quyền đóng. [Ch13,20]
 
 ### G04 `sqlite: database is locked / busy`
 SQLite gặp xung đột ghi đồng thời từ nhiều transaction hoặc goroutine trên cùng một tập tin cơ sở dữ liệu (`busy / locked`).
@@ -315,7 +317,7 @@ SQLite gặp xung đột ghi đồng thời từ nhiều transaction hoặc goro
 
 ### G05 `UNIQUE constraint failed`
 Cố gắng chèn hoặc cập nhật bản ghi có giá trị trùng lặp trên cột được đánh chỉ mục duy nhất (PRIMARY KEY hoặc UNIQUE).
-→ Bắt lỗi conflict, áp dụng chính sách `ON CONFLICT DO UPDATE` (upsert) hoặc kiểm tra sự tồn tại trước khi ghi. [Ch13,20]
+→ Giữ UNIQUE constraint làm rào chắn nguyên tử và xử lý conflict theo nghiệp vụ, có thể dùng upsert phù hợp. Check tồn tại rồi ghi vẫn có race; không thay constraint bằng check-then-act. [Ch13,20]
 
 ### G06 `FOREIGN KEY constraint failed`
 Thao tác insert hoặc delete vi phạm tính toàn vẹn quan hệ khóa ngoại giữa bảng cha và bảng con.
@@ -337,7 +339,7 @@ Go race detector (`go test -race` / `go run -race`) phát hiện các truy cập
 
 ### H03 Goroutine Leak
 Goroutine không kết thúc vì không còn đường thoát khỏi chờ channel, lock hoặc I/O. Context chỉ hữu ích nếu operation thực sự quan sát cancellation.
-! Go runtime không tự động garbage collect goroutine bị block; một goroutine bị leak sẽ giữ toàn bộ stack frame và bộ nhớ tham chiếu liên quan.
+! Runtime không tự thu hồi một goroutine chỉ vì nó bị block; những reference còn sống có thể giữ dữ liệu. Go 1.27 có profile `goroutineleak` cho một lớp chờ không thể được đánh thức, không phải bộ phát hiện mọi leak hay cơ chế GC goroutine.
 → Xác định owner và đường thoát; truyền context/deadline tới API có hỗ trợ. Buffer chỉ đổi thời điểm block, không tự sửa leak. [Ch8,9,12,20]
 
 ### H04 `panic: sync: negative WaitGroup counter`
@@ -391,17 +393,17 @@ GitHub REST API có thể trả HTTP 403 hoặc 429 khi vượt primary hay seco
 ## J — Container / Kubernetes / CI-CD
 
 ### J01 CrashLoopBackOff
-Trạng thái chờ (`Waiting Reason`) của Kubernetes Pod khi container liên tục khởi động, gặp lỗi panic hoặc exit code > 0 rồi tắt, khiến kubelet áp dụng giãn cách khởi động lại.
-! Đây là trạng thái điều phối của Pod (Waiting Reason) trong Kubernetes, không phải chuỗi lỗi do Go runtime sinh ra.
+Container liên tục kết thúc rồi được restart theo policy, và kubelet đang áp backoff. Exit 0 dưới `restartPolicy: Always`, failure hay liveness kill đều có thể dẫn tới vòng restart; không chỉ panic hoặc exit code dương.
+! Đây là waiting reason của container được phản ánh trong trạng thái Pod, không phải chuỗi lỗi của Go runtime hay một Pod phase riêng.
 → Kiểm tra log của container trước khi crash bằng lệnh `kubectl logs <pod> --previous`, rà soát biến môi trường và config bị thiếu. [Ch17,18,21]
 
 ### J02 OOMKilled (Exit Code 137)
-Trạng thái kết thúc (`Terminated Reason`) của container trong Kubernetes khi tổng bộ nhớ RAM của process vượt hạn mức `resources.limits.memory` và bị Linux cgroup OOM Killer gửi SIGKILL.
-! OOMKilled là trạng thái báo cáo bởi kubelet/container runtime; bên trong process Go chỉ nhận tín hiệu SIGKILL cưỡng bức mà không kịp chạy defer.
+Container runtime/kubelet báo container bị OOM kill. Có thể liên quan cgroup memory limit hoặc áp lực OOM của host; cần đọc reason và sự kiện, không suy từ RSS của một process đơn lẻ.
+! Exit code 137 thường biểu thị SIGKILL và không riêng OOM. SIGKILL không thể bị handler chặn, nên process không chạy defer để dọn tài nguyên.
 → Kiểm tra rò rỉ bộ nhớ qua heap profile (`pprof`), điều chỉnh thuật toán caching hoặc nâng hạn mức `limits.memory` cho pod. [Ch10,17,21]
 
 ### J03 ImagePullBackOff / ErrImagePull
-Trạng thái chờ (`Waiting Reason`) của Pod khi Kubernetes không thể tải container image từ registry (sai image tag, thiếu secret xác thực, hoặc nghẽn mạng).
+Waiting reason của container, được phản ánh trong Pod status, khi kéo image lỗi hoặc đang backoff. Sai tag, thiếu credential và lỗi mạng là các hướng điều tra, không phải nguyên nhân đã được xác nhận chỉ từ reason.
 ! Kubelet trên node phối hợp với container runtime để kéo image; trạng thái được báo về API. Lỗi này xảy ra trước khi container Go khởi chạy.
 → Kiểm tra tên image và tag, cấu hình `imagePullSecrets` cho service account, hoặc kiểm tra kết nối mạng egress của cụm. [Ch17,18]
 
@@ -412,14 +414,14 @@ Trạng thái lỗi cấu hình (`Waiting Reason`) khi Kubernetes không tìm th
 
 ### J05 Readiness probe failed
 * `HTTP probe failed with statuscode: 503`
-Sự kiện chẩn đoán (`Kubelet Event`) phát ra khi endpoint kiểm tra mức độ sẵn sàng (`/readyz`) trả về mã lỗi hoặc timeout, khiến pod bị rút khỏi danh sách nhận traffic của Service.
-! Đây là sự kiện chẩn đoán (Kubelet Event); container Go vẫn đang chạy bình thường nhưng chưa sẵn sàng phục vụ lưu lượng.
+Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod Ready có thể thành false. EndpointSlice có thể vẫn giữ endpoint với `ready=false`; behavior Service còn phụ thuộc `publishNotReadyAddresses`.
+! Readiness failure không tự restart container và cũng không chứng minh process đang chạy bình thường; nó chỉ phản ánh kết quả của probe đã chọn.
 → Kiểm tra tình trạng kết nối đến các dependency hạ tầng (database, cache) và rà soát logic kiểm tra sẵn sàng của handler. [Ch12,17,20,21]
 
 ### J06 Liveness probe failed
-Sự kiện chẩn đoán (`Kubelet Event`) phát ra khi endpoint kiểm tra sự sống (`/livez`) không phản hồi hoặc trả về mã lỗi, khiến Kubernetes ra lệnh tiêu diệt và khởi động lại container.
+Liveness probe thất bại; đạt failure threshold dẫn tới xử lý restart container theo lifecycle và restart policy. Một lần probe lỗi chưa đủ suy ra container bị restart ngay.
 ! Tránh dùng lỗi database xa làm liveness failure nếu restart không chữa được nó; policy sai có thể gây cascading restart.
-→ Liveness probe chỉ được kiểm tra nội tại process (deadlock, event loop); không kiểm tra dependency bên ngoài. [Ch12,17,21]
+→ Chọn probe mà restart có khả năng chữa failure. Thường tránh đưa dependency xa vào liveness nếu nó gây restart dây chuyền; đây là khuyến nghị thiết kế, không phải giới hạn API chỉ cho kiểm tra nội tại. [Ch12,17,21]
 
 ### J07 Admission Gate Rejected
 * `unsigned artifact or digest mismatch`
@@ -429,7 +431,7 @@ Trạng thái từ chối (`Admission / Policy Status`) từ Kubernetes Validati
 
 ### J08 `Operation cannot be fulfilled: the object has been modified`
 * `Operation cannot be fulfilled on <resource>: the object has been modified; please apply your changes to the latest version and try again`
-Lỗi từ chối (`API Server HTTP 409 Conflict`) khi một client cố gắng cập nhật đối tượng nhưng `metadata.resourceVersion` gửi lên đã lỗi thời so với bản ghi hiện hành trong etcd.
+API server trả HTTP 409 Conflict khi update gửi `metadata.resourceVersion` không còn khớp version hiện hành. Đối chiếu API semantics; không cần giả định client thấy hay thao tác trực tiếp với bản ghi etcd.
 ! Đây là cơ chế kiểm soát đồng thời lạc quan (Optimistic Concurrency Control) của Kubernetes nhằm ngăn chặn ghi đè mất dữ liệu giữa các client cạnh tranh.
 → Sử dụng `k8s.io/client-go/util/retry.RetryOnConflict` để đọc lại snapshot mới nhất từ API Server và áp dụng thay đổi trước khi thử lại. [Ch22]
 

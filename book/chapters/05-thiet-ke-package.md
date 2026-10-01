@@ -124,7 +124,7 @@ Test cuối không phải để khẳng định “mọi slice đều dangerous�
 
 ### Khởi tạo Gói và Ràng buộc Đồ thị Phụ thuộc (Initialization DAG)
 
-Khi phân tách mã nguồn thành nhiều package, Go runtime thực thi một quy trình khởi tạo cực kỳ nghiêm ngặt dựa trên đồ thị có hướng không chu trình (Directed Acyclic Graph - DAG). Trình biên dịch Go từ chối hoàn toàn các phụ thuộc vòng (`import cycle not allowed`) ngay tại thời điểm build.
+Go specification không cho phép package import chính nó, trực tiếp hay gián tiếp. Vì vậy đồ thị import không có chu trình; build có import cycle bị từ chối với diagnostic `import cycle not allowed`. Quy tắc này giúp xác định thứ tự khởi tạo package, không chứng minh các dependency ngoài process đã sẵn sàng.
 
 Nếu package `A` import `B`, thì `B` phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng package, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc tĩnh, tiếp theo là các hàm `init()` chạy tuần tự trong goroutine khởi tạo trước khi `main` chạy. Tuy nhiên `init` có thể tạo goroutine khác; import graph không chứng minh các goroutine ấy đã hoàn tất hoặc config ngoài đã sẵn sàng. Công việc có thể lỗi, cần deadline hoặc cần dependency ngoài nên được gọi tường minh từ điểm khởi tạo ứng dụng, nơi caller quan sát được error.
 
@@ -206,6 +206,8 @@ Remove-Item Env:GOWORK
 ~~~
 
 Nếu đã có `GOWORK` trong môi trường, hãy lưu và khôi phục giá trị thay vì xóa nó; đoạn trên minh họa phiên shell chưa đặt biến ấy. Bài thực hành không cần dependency thật: tạo hai module local, cho module A import B, dùng workspace để test, rồi tắt workspace. Giải thích vì sao kết quả đổi, và điều gì phải xuất hiện trong `go.mod` hoặc version đã phát hành để consumer độc lập build được. Đừng chữa lỗi bằng một replace trỏ vào đường dẫn laptop rồi gọi artifact đó là tái tạo được.
+
+Toolchain đang chạy và phiên bản ngôn ngữ của module là hai điều khác nhau. Trong Go 1.27, `go test` mặc định chạy vet check `stdversion`, phát hiện symbol thư viện chuẩn quá mới so với version có hiệu lực cho file, xét cả `go.mod` và build tags. Cài toolchain mới không tự hợp thức hóa việc dùng API mới trong module tuyên bố hỗ trợ bản cũ. `go mod tidy` của module `go 1.27` còn gộp các require block trùng thành nhóm trực tiếp/gián tiếp; diff đó là thay đổi biểu diễn dependency, không phải bằng chứng đã nâng hay triển khai dependency thành công.
 
 ## Build là phép chọn tệp trước khi compile
 
