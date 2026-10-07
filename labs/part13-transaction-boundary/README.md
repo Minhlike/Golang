@@ -59,9 +59,9 @@ key) và schema phải giữ identity đó bằng một quy tắc như unique co
 - **Quan sát connection pool (`TestConnectionPoolStatsObservation`):**
   Sử dụng `db.Stats()` để theo dõi `MaxOpenConnections`, `InUse`, `Idle` và
   hiểu cơ chế cấp phát tài nguyên của pool manager.
-- **Thứ tự migration (`TestSchemaMigrationOrderingAndRollback`):**
-  Lưu trữ schema version trong bảng quản lý, áp dụng thay đổi tuần tự và bảo vệ
-  DDL trong transaction SQLite.
+- **Thứ tự migration và rollback DDL (`TestSchemaMigrationOrderingAndRollback`):**
+  Lưu trữ schema version trong bảng quản lý, áp dụng thay đổi tuần tự và kiểm chứng
+  khả năng rollback DDL khi gặp lỗi (xác nhận cột hủy không tồn tại và version giữ nguyên).
 - **Bất đồng nhất cache (`TestCacheAsideStaleReadOnInvalidationFailure`):**
   Chứng minh ranh giới tách biệt giữa cache và database: DB commit thành công
   nhưng cache invalidation thất bại sẽ dẫn đến đọc dữ liệu cũ (stale read). DB

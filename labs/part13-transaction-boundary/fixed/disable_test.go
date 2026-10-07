@@ -164,7 +164,10 @@ func TestConnectionPoolStatsObservation(t *testing.T) {
 }
 
 func TestSchemaMigrationOrderingAndRollback(t *testing.T) {
-	dsn := fmt.Sprintf("file:%s_migration?mode=memory&cache=shared", strings.ReplaceAll(t.Name(), "/", "_"))
+	dsn := fmt.Sprintf(
+		"file:%s_migration?mode=memory&cache=shared",
+		strings.ReplaceAll(t.Name(), "/", "_"),
+	)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
@@ -174,7 +177,7 @@ func TestSchemaMigrationOrderingAndRollback(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 1. Tạo bảng quản lý schema version
+	// 1. Tạo bảng quản lý schema version 1
 	initSQL := `
 	CREATE TABLE schema_migrations (
 		version INTEGER PRIMARY KEY,
@@ -190,31 +193,96 @@ func TestSchemaMigrationOrderingAndRollback(t *testing.T) {
 		t.Fatalf("init schema v1: %v", err)
 	}
 
-	// 2. Migration v2: thêm cột nullable và ghi nhận version trong cùng một transaction
-	tx, err := db.BeginTx(ctx, nil)
+	// 2. Thử nghiệm migration lỗi: DDL thay đổi schema nhưng rollback
+	txRollback, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin failing migration: %v", err)
+	}
+	defer txRollback.Rollback()
+
+	alterFail := "ALTER TABLE endpoints ADD COLUMN failed_col TEXT"
+	if _, err := txRollback.ExecContext(ctx, alterFail); err != nil {
+		t.Fatalf("alter table in failing tx: %v", err)
+	}
+	// Giả lập lỗi trước khi hoàn tất ghi version -> chủ động rollback
+	if err := txRollback.Rollback(); err != nil {
+		t.Fatalf("rollback failing migration: %v", err)
+	}
+
+	// Xác minh bằng chứng rollback: cột failed_col không tồn tại
+	if hasColumn(t, db, "endpoints", "failed_col") {
+		t.Fatalf("expected failed_col to be rolled back")
+	}
+	var verAfterRollback int
+	err = db.QueryRowContext(
+		ctx,
+		"SELECT MAX(version) FROM schema_migrations",
+	).Scan(&verAfterRollback)
+	if err != nil {
+		t.Fatalf("get version after rollback: %v", err)
+	}
+	if verAfterRollback != 1 {
+		t.Fatalf("expected version 1 after rollback, got %d", verAfterRollback)
+	}
+
+	// 3. Migration v2 hợp lệ: thêm cột description và commit thành công
+	txCommit, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatalf("begin migration v2: %v", err)
 	}
-	defer tx.Rollback()
+	defer txCommit.Rollback()
 
-	if _, err := tx.ExecContext(ctx, "ALTER TABLE endpoints ADD COLUMN description TEXT"); err != nil {
+	alterOK := "ALTER TABLE endpoints ADD COLUMN description TEXT"
+	if _, err := txCommit.ExecContext(ctx, alterOK); err != nil {
 		t.Fatalf("alter table: %v", err)
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO schema_migrations (version) VALUES (2)"); err != nil {
+	recVer := "INSERT INTO schema_migrations (version) VALUES (2)"
+	if _, err := txCommit.ExecContext(ctx, recVer); err != nil {
 		t.Fatalf("record version 2: %v", err)
 	}
-	if err := tx.Commit(); err != nil {
+	if err := txCommit.Commit(); err != nil {
 		t.Fatalf("commit migration v2: %v", err)
 	}
 
-	// 3. Xác minh version hiện tại là 2
+	// 4. Xác minh version hiện tại là 2 và cột description tồn tại
 	var currentVersion int
-	if err := db.QueryRowContext(ctx, "SELECT MAX(version) FROM schema_migrations").Scan(&currentVersion); err != nil {
+	err = db.QueryRowContext(
+		ctx,
+		"SELECT MAX(version) FROM schema_migrations",
+	).Scan(&currentVersion)
+	if err != nil {
 		t.Fatalf("get current version: %v", err)
 	}
 	if currentVersion != 2 {
 		t.Fatalf("expected current version = 2, got %d", currentVersion)
 	}
+	if !hasColumn(t, db, "endpoints", "description") {
+		t.Fatalf("expected description column to exist in endpoints")
+	}
+}
+
+func hasColumn(t *testing.T, db *sql.DB, table, col string) bool {
+	t.Helper()
+	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		t.Fatalf("pragma table_info: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dflt sql.NullString
+		err := rows.Scan(&cid, &name, &colType, &notNull, &dflt, &pk)
+		if err != nil {
+			t.Fatalf("scan pragma: %v", err)
+		}
+		if name == col {
+			return true
+		}
+	}
+	return false
 }
 
 func TestCacheAsideStaleReadOnInvalidationFailure(t *testing.T) {

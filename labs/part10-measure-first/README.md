@@ -26,9 +26,13 @@ go test -run TestRenderConcurrentBatchWorkload -trace trace.out ./fixed
 go tool trace trace.out
 ```
 
-Để trích xuất hồ sơ chờ đợi đồng bộ (synchronization delay) dưới dạng pprof:
+Để trích xuất các hồ sơ chờ đợi chuyên biệt dưới dạng pprof:
 
 ```powershell
+# Hồ sơ chờ đợi đồng bộ (synchronization delay)
 go tool trace -pprof=sync trace.out > sync.pprof
-go tool pprof -top sync.pprof
+# Hồ sơ độ trễ điều phối (scheduler latency)
+go tool trace -pprof=sched trace.out > sched.pprof
+# Hồ sơ chờ đợi lời gọi hệ thống (syscall delay)
+go tool trace -pprof=syscall trace.out > syscall.pprof
 ```

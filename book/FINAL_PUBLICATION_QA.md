@@ -1,3 +1,55 @@
+# Middle-book correctness repair close-out — 07-10-2026
+
+Biên bản sửa tính đúng và thu hẹp ranh giới chứng cứ này áp dụng cho `Golang_Master.pdf` SHA-256
+`e3cb715a986dc1f2ee42f06d929c8ac5ab633749c55b836ac35b0f5fc2550b17`,
+490 trang, xuất phát từ baseline HEAD `c4c25c93b6ac89a9b0d7b1c6de2445b2f12ccc73`.
+
+## Phạm vi sửa và bằng chứng kỹ thuật
+
+Lượt sửa hẹp này tập trung vào tính đúng kỹ thuật và ranh giới chứng cứ của Chương 10 và Chương 13 sau lượt chỉnh lý middle-book:
+
+1. Chương 10 (Execution Trace và pprof):
+   - Đưa trace model về đúng tập trạng thái `internal/trace.GoState` trong runtime Go 1.27.1 (`GoUndetermined`, `GoNotExist`, `GoRunnable`, `GoRunning`, `GoWaiting`, `GoSyscall`), tách bạch `GoSyscall` khỏi `GoWaiting` (chặn nhầm lẫn giữa non-blocking runtime handoff và parking).
+   - Mô tả execution trace là cơ chế ghi nhận tập sự kiện mở rộng của runtime trong khoảng thời gian kích hoạt, không phải dòng thời gian toàn tri (omniscient) hay profile liên tục mọi thời điểm.
+   - Bỏ khẳng định "Runnable trực tiếp chứng minh nghẽn scheduler"; bổ sung 4 pprof profiles phục vụ khoanh vùng tương tranh/hệ thống (`sync`, `sched`, `syscall`, `net`).
+   - Loại bỏ suy đoán nội bộ runtime scheduler (ngữ cảnh chuyển đổi user-space, tính bắt buộc của handoffp, GC mark assist tuyệt đối).
+   - Lab Part 10 giữ nguyên workload Option A và đối chiếu các độ trễ quan sát thực nghiệm từ profile trích xuất (`sync.pprof`, `sched.pprof`, `syscall.pprof`): `sync.(*WaitGroup).Wait`, `runtime.chanrecv1`, `runtime.(*traceAdvancerState).start`, `sync.(*WaitGroup).Add`, `syscall.syscalln`.
+
+2. Chương 13 (Persistence, Transaction boundary, DDL và Cache-aside):
+   - Chuẩn hóa chính sách connection pool: `SetConnMaxLifetime` đóng lười (lazy close) kết nối hết hạn khi hoàn trả thay vì ép hủy giữa chừng khi kết nối đang bận; `SetMaxIdleConns` mặc định 2 được ghim theo tài liệu Go hiện hành cùng lưu ý về khả năng thay đổi trong tương lai.
+   - `DB.Stats()` được xác định là dữ liệu quan sát chẩn đoán phục vụ định hướng, không phải bằng chứng nguyên nhân gốc rễ.
+   - Ranh giới Prepared Statement: phân biệt rõ ràng vòng đời của `DB.PrepareContext` (gắn với pool) và `Tx.PrepareContext` (gắn với transaction, tự động đóng/vô hiệu khi commit hoặc rollback). Bỏ tuyên bố suy đoán chưa kiểm chứng về tăng gấp đôi gói tin mạng.
+   - SQL Injection: phân định ranh giới binding tham số giá trị (`?`, `$1`) chỉ bảo vệ dữ liệu, không tham số hóa được tên bảng/cột/mệnh đề động; các thành phần động bắt buộc phải kiểm tra qua allowlist chặt chẽ theo hướng dẫn `go.dev/doc/database/sql-injection`.
+   - Ngữ nghĩa DDL: phân định rõ DDL theo từng hệ CSDL (PostgreSQL hỗ trợ DDL giao dịch có ngoại lệ/lock; SQLite fixture kiểm chứng rollback thành công; MySQL thực thi atomic DDL theo câu lệnh nhưng kích hoạt implicit commit kết thúc giao dịch bao quanh).
+   - Lab Part 13: bổ sung test case rollback migration thực sự trong `TestSchemaMigrationOrderingAndRollback`, kiểm tra thất bại migration, rollback, dùng `PRAGMA table_info` và bảng schema version xác nhận cột chưa hề được thêm và version không tăng, trước khi áp dụng v2 thành công.
+   - Thu hẹp ranh giới: Expand-Migrate-Contract và forward-fix là chiến lược giảm thiểu rủi ro, không phải giáo điều tuyệt đối; cache-aside coi DB là source of truth trong phạm vi chương này, TTL giới hạn cửa sổ dữ liệu cũ chứ không chứng minh tính nhất quán thời gian thực.
+   - Tương thích serialization: chuẩn hóa theo ranh giới hợp đồng giữa bên ghi và bên đọc của Chương 7; `omitempty`/`omitzero` là tùy chọn serialization, không thay thế việc kiểm soát hợp đồng trường dữ liệu.
+   - Bổ sung 7 tài liệu tham khảo chính thức từ Go spec, standard library (`database/sql`, `database/sql/driver`), `internal/trace`, và tài liệu bảo mật Go.
+
+## Kiểm tra xuất bản và trạng thái nghiệm thu
+
+- Mã nguồn và validator:
+  - ZERO_BULLET (`validate_main_manuscript_no_bullets.py`): PASS.
+  - CODE_WIDTH (`validate_code_width.py`): PASS (0 dòng tràn ở 11.5 pt).
+  - ERROR_ATLAS: PASS (85 entries).
+  - DIAGRAM_ENCODING: MOJIBAKE_HITS=0.
+  - DIAGRAM_SEMANTICS: PASS (0 character-art diagrams).
+  - VISUAL_MANIFEST: PASS.
+  - PUBLICATION_CONTRACTS (`test_publication_contracts.py`): 16/16 PASS.
+  - Go lab tests: `labs/part13-transaction-boundary` PASS (`go test -v ./fixed`, `go test -race ./fixed`).
+  - Git diff check (`git diff --check`): PASS (0 lỗi khoảng trắng).
+
+- PDF Preflight (`validate_publication_pdf.py`):
+  - Kích thước: 490 trang (tăng 2 trang do chuẩn hóa phân tích trace Ch10 và ngữ nghĩa DDL Ch13).
+  - Kiểm tra tự động: PASS (0 broken glyphs, 0 clipping, 0 blank pages, 34 bookmarks hợp lệ).
+
+- Trạng thái kiểm định trực quan (Visual QA Scope):
+  - Do lượt này là sửa chữa tính đúng cục bộ (scoped correctness repair) tập trung vào Ch10 và Ch13 cùng lab tương ứng, review trực quan chỉ giới hạn ở các trang và nội dung chịu tác động trực tiếp của Ch10, Ch13 và các kiểm định preflight tự động toàn sách.
+  - Các trang khác không nằm trong phạm vi rà soát trực quan lại từng trang trong pass này.
+  - Trạng thái: `SCOPED_MIDDLE_BOOK_REPAIR_QA_PASS`. Không tuyên bố `PUBLICATION_READY` toàn diện khi chưa thực hiện visual ledger 490 trang đầy đủ.
+
+---
+
 # Diagram repair close-out — 02-10-2026
 
 Biên bản sửa sơ đồ này áp dụng cho `Golang_Master.pdf` SHA-256
