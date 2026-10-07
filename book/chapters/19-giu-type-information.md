@@ -202,7 +202,7 @@ func checkTarget(ok bool) error {
 
 Hãy return `nil` ở nhánh thành công, hoặc chỉ tạo concrete error khi có failure. Không cần dùng reflection để đoán nil của mọi error: caller cần contract `err == nil`, còn method của concrete error phải xác định riêng receiver nil có hợp lệ không. Lab `labs/part19-type-information/typednil` giữ bug này để người học sửa và kiểm tra bằng test.
 
-## Lab: ba boundary, ba cách tự kiểm tra
+## Thực hành: ba ranh giới, ba cách tự kiểm tra
 
 Lab `labs/part19-type-information` bắt đầu ở test/tag exercise và contract, không ở implementation có sẵn.
 

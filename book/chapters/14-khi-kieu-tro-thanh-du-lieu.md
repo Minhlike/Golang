@@ -154,7 +154,7 @@ func ApplyEnv(dst any, values map[string]string) error {
 
 > **Dừng để dự đoán:** Nếu caller gọi `ApplyEnv(Config{}, values)`, vì sao function không nên chấp nhận rồi return `nil`? Vì không có đường nào để thay variable của caller. Một `nil` ở đây là lời nói dối: input đã không thỏa quyền mutation mà API cần.
 
-## Lab: viết guard trước setter
+## Thực hành: viết kiểm tra bảo vệ trước khi gán giá trị (setter)
 
 `labs/part14-reflection-boundary` bắt đầu bằng test đỏ. Mở `exercise/apply_test.go`, chỉ đọc type `Config` và assertion trước. Tự quyết định thứ tự guard, nhưng đừng dùng `unsafe`, đừng parse tag bằng cắt string thủ công, và đừng panic cho input không đúng shape.
 

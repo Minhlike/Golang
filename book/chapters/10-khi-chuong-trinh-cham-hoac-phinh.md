@@ -128,11 +128,48 @@ Chỉ số `flat` ghi nhận chi phí tiêu tốn trực tiếp bên trong thân
 
 Nếu nghi goroutine bị giữ lại, Go 1.27 có profile `goroutineleak` ở `runtime/pprof` và endpoint tương ứng của `net/http/pprof`, không còn cần experiment từ Go 1.26. Nó tìm một lớp chờ mà runtime xác định không thể được đánh thức, không tìm mọi leak và không tự thu hồi goroutine. Profile không có hit vẫn cần đối chiếu goroutine dump, ownership của channel và cancellation path như Chương 9. Khi mở trace UI, `go tool trace -http=:6060` từ Go 1.27 chỉ nghe localhost; muốn nghe địa chỉ khác phải chỉ định rõ. Đừng đưa profile/trace có dữ liệu nhạy cảm lên một listener công khai chỉ để tiện xem.
 
+## Đối chiếu G/M/P với Execution Trace: Nhìn vào nhịp đập của Runtime
+
+Ở Chương 09, ta đã xây dựng mô hình tư duy về bộ điều phối của Go runtime qua ba thực thể: Goroutine (G), Thread hệ điều hành (M), và Logical Processor (P). Ta đã biết P sở hữu hàng đợi cục bộ (`runq`), M gắn với P để thực thi mã máy của G, và runtime sử dụng các cơ chế trộm việc (`work-stealing`), cướp quyền (`preemption`) và tách P khi gọi syscall (`entersyscall`).
+
+Tuy nhiên, CPU profile thông qua `pprof` chỉ là một bản chụp lấy mẫu thống kê thời gian thực thi mã máy. Khi một dịch vụ phản hồi chậm chạp nhưng mức sử dụng CPU lại rất thấp, `pprof` trở nên bất lực: các goroutine không hề tiêu tốn CPU mà đang phải chờ đợi. Đây chính là ranh giới mà Dấu vết thực thi (Execution Trace) trở thành công cụ chẩn đoán quyết định.
+
+Bản chất của Execution Trace là ghi lại toàn bộ dòng thời gian thực tế của các sự kiện runtime: thời điểm goroutine được sinh ra, chuyển đổi trạng thái, thời điểm P được cấp phát hay thu hồi từ M, sự kiện quét rác GC và các điểm dừng đồng bộ. Trên dòng thời gian của trace, mỗi goroutine luôn nằm ở một trong ba trạng thái cốt lõi:
+
+Một là, `Running`: Goroutine đang trực tiếp chiếm giữ một Thread M trên một Processor P để tính toán mã máy.
+
+Hai là, `Runnable`: Goroutine đã sẵn sàng chạy (vừa được tạo ra, vừa nhận được dữ liệu từ channel, hoặc vừa được đánh thức) nhưng đang phải nằm chờ trong hàng đợi cục bộ của P hoặc hàng đợi toàn cục. Nếu trace ghi nhận tỷ lệ thời gian `Runnable` cao bất thường, đó là bằng chứng trực tiếp cho thấy hệ thống đang bị nghẽn ở tầng lập lịch (scheduler latency) do số lượng công việc sẵn sàng vượt quá số lượng Logical Processor (`GOMAXPROCS`) hiện có.
+
+Ba là, `Waiting`: Goroutine bị đình chỉ thực thi và đưa vào hàng đợi chờ vì một rào cản tài nguyên: chờ dữ liệu trên channel, chờ khóa `sync.Mutex`, chờ `sync.WaitGroup`, chờ I/O mạng trên network poller, hoặc chờ một lời gọi hệ thống (blocking syscall).
+
+Sự khác biệt giữa các điểm chờ thể hiện rất rõ cơ chế của runtime: khi chờ channel hay mutex, runtime chuyển trạng thái Goroutine sang `_Gwaiting` hoàn toàn trong user-space, lập tức nhường P cho một Goroutine khác trong `runq` mà không tốn chi phí chuyển ngữ cảnh của luồng hệ điều hành. Ngược lại, khi gặp blocking syscall, Thread M tách khỏi P (`handoffp`), P được nhường cho một M khác tiếp tục phục vụ các goroutine đang chờ, trong khi M cũ chờ nhân hệ điều hành hoàn tất thao tác I/O. Trong pha GC, nếu goroutine cấp phát bộ nhớ quá nhanh khiến pacer đánh giá là nợ công việc đánh dấu, trace sẽ hiển thị rõ sự kiện `GCMarkAssist`: chính goroutine nghiệp vụ bị runtime bắt dừng lại để phụ giúp dọn rác.
+
+Trong `labs/part10-measure-first`, ta có thể thu thập trace thực tế khi chạy kiểm thử xử lý theo lô đồng thời (`TestRenderConcurrentBatchWorkload`):
+
+~~~powershell
+go test -run TestRenderConcurrentBatchWorkload `
+  -trace trace.out ./fixed
+go tool trace trace.out
+~~~
+
+Giao diện đồ họa trên trình duyệt (mở qua lệnh `go tool trace trace.out`, mặc định chỉ lắng nghe trên localhost) hiển thị trực quan các dòng thời gian của từng Processor P, cho thấy chính xác thời điểm các worker goroutine chạy song song, thời điểm chúng chuyển sang `Waiting` khi chờ `sync.WaitGroup` hoặc nhận channel, và các khoảng trống nhàn rỗi.
+
+Đặc biệt, công cụ `go tool trace` hỗ trợ trích xuất hồ sơ chờ đợi đồng bộ (synchronization delay profile) dưới dạng pprof để phân tích định lượng:
+
+~~~powershell
+go tool trace -pprof=sync trace.out > sync.pprof
+go tool pprof -top sync.pprof
+~~~
+
+Báo cáo từ lệnh trên chỉ ra chính xác số lượng micro-giây mà các goroutine bị giữ lại tại `runtime.chanrecv1` và `sync.(*WaitGroup).Wait`, thu hẹp hoàn toàn không gian suy đoán cảm tính.
+
+Dấu vết thực thi không phải là bằng chứng xác nhận ngữ nghĩa đúng đắn của logic nguồn hay cam kết về độ trễ trên môi trường sản xuất. Trace là công cụ phân loại triệu chứng: khi gặp vấn đề về hiệu năng, trace giúp kỹ sư trả lời câu hỏi cốt lõi: chương trình đang bị nghẽn do tính toán CPU quá nặng (Running cao), do cạnh tranh tài nguyên Processor (Runnable cao), do chờ khóa và đồng bộ hóa (Waiting cao), hay do bị đình trệ bởi các pha GC Mark Assist? Dữ liệu này định hướng chính xác bước can thiệp tiếp theo: tối ưu hóa thuật toán, cấu trúc lại kích thước hàng đợi, hay phân bổ lại mức độ đồng thời.
+
 ![Đường đi của bằng chứng hiệu năng](../../assets/diagrams/performance-evidence-path.png)
 
 @figure Chu trình điều tra hiệu năng hoàn chỉnh. Dữ liệu bắt đầu từ một bài toán đo lường có khối lượng công việc đại diện, kiểm chứng qua profiler, sau đó đối chiếu mã nguồn và tối ưu hóa có đo đạc đối chứng.
 
-## Nghiên cứu Điển cứu Thực tế: Phân tích Bài toán Nối Chuỗi
+## Điển cứu thực tế: Phân tích bài toán nối chuỗi
 
 Thư mục `labs/part10-measure-first` duy trì hai cách hiện thực cho cùng một yêu cầu định dạng văn bản: phương án cơ sở (`baseline`) nối chuỗi bằng toán tử `+=` lặp lại; phương án tối ưu (`fixed`) sử dụng `strings.Builder` và `strconv.FormatInt`.
 

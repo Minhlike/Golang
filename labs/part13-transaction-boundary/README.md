@@ -49,3 +49,20 @@ chốt hai audit event. Đây không phải lỗi của transaction: mỗi lư�
 Nó là chứng cứ rằng API của lab chưa hứa retry-safe. Nếu product cần “cùng một
 operation chỉ ghi một lần”, API phải nhận operation identity (ví dụ idempotency
 key) và schema phải giữ identity đó bằng một quy tắc như unique constraint.
+
+## Các ranh giới mở rộng trong kiểm thử
+
+- **Prepared statement trong transaction (`TestPreparedStatementInTransaction`):**
+  Minh họa `tx.PrepareContext(ctx, query)` và trách nhiệm gọi `stmt.Close()`.
+  Prepared statement gắn chặt với vòng đời transaction và tối ưu khi lặp lại câu
+  lệnh nhiều lần.
+- **Quan sát connection pool (`TestConnectionPoolStatsObservation`):**
+  Sử dụng `db.Stats()` để theo dõi `MaxOpenConnections`, `InUse`, `Idle` và
+  hiểu cơ chế cấp phát tài nguyên của pool manager.
+- **Thứ tự migration (`TestSchemaMigrationOrderingAndRollback`):**
+  Lưu trữ schema version trong bảng quản lý, áp dụng thay đổi tuần tự và bảo vệ
+  DDL trong transaction SQLite.
+- **Bất đồng nhất cache (`TestCacheAsideStaleReadOnInvalidationFailure`):**
+  Chứng minh ranh giới tách biệt giữa cache và database: DB commit thành công
+  nhưng cache invalidation thất bại sẽ dẫn đến đọc dữ liệu cũ (stale read). DB
+  transaction không thể tự động bảo đảm tính nguyên tử cho hệ thống cache bên ngoài.

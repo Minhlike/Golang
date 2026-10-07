@@ -39,7 +39,7 @@ projects/opsprobe/
 
 ## Năm trụ cột kỹ thuật của một hệ thống đáng tin
 
-### 1. Phân loại kết quả (Outcome Classification) và Context Deadline
+### 1. Phân loại kết quả và thời hạn ngữ cảnh
 
 Trong vận hành, biết một thao tác thất bại là chưa đủ; ta cần biết nó thất bại vì lý do gì. Trả về một giá trị boolean `false` hay một chuỗi lỗi mơ hồ sẽ xóa sạch thông tin quý giá. Trong `internal/probe/probe.go`, mỗi lần probe được phân loại rành mạch thành một trong bốn `Outcome`:
 
@@ -72,7 +72,7 @@ Phân biệt `OutcomeTimeout` với `OutcomeCancel` giúp caller giữ nguyên n
 
 Mỗi kết quả probe ghi nhận thời lượng bằng mili-giây (`DurationMs`) phục vụ dashboard và nano-giây (`DurationNs`) để tránh mất thông tin do làm tròn; đơn vị nano-giây không chứng minh đồng hồ đo chính xác đến nano-giây. Thời điểm ghi nhận run trong database phân biệt `StartedAt` (bắt đầu thực thi) và `CompletedAt` (kết thúc toàn bộ worker), tránh nhầm độ trễ một request với thời gian hoàn tất cả lô công việc.
 
-### 2. Đồng thời có kiểm soát (Bounded Concurrency) và Áp suất ngược
+### 2. Giới hạn đồng thời và áp suất ngược
 
 Khi danh sách target tăng từ 10 lên 10.000, chạy `go p.ProbeSingle(...)` cho từng target có thể tạo áp lực lên bộ nhớ, socket và dịch vụ đích. Mức ảnh hưởng phụ thuộc workload và giới hạn môi trường; không suy ra hệ điều hành chắc chắn sẽ sập từ riêng số goroutine.
 
@@ -163,7 +163,7 @@ return tx.Commit()
 
 Để kiểm chứng tính toàn vẹn của transaction một cách tất định (deterministic) mà không dựa vào thời điểm ngẫu nhiên, schema cơ sở dữ liệu được trang bị ràng buộc `CHECK (status_code >= 0)`. Trong kiểm thử tự động, ta cố tình truyền một kết quả có `status_code = -1` ở bản ghi thứ hai sau khi bản ghi cha đã được chèn. Database lập tức từ chối, transaction rollback toàn bộ, và lệnh đếm số dòng xác nhận cả hai bảng đều không lưu lại bất kỳ dữ liệu rác nào.
 
-### 4. Vòng đời tài nguyên mạng: Bounded Drain và Điều kiện Tái sử dụng
+### 4. Vòng đời tài nguyên mạng: Thu hồi có giới hạn và điều kiện tái sử dụng
 
 Caller phải luôn đóng `resp.Body`. Đọc đến EOF có thể giúp một số đường tái sử dụng kết nối, nhưng `Close` hay drain không bảo đảm reuse: Transport, protocol, server và trạng thái kết nối đều tham gia quyết định. Ngược lại, drain không giới hạn cần được cân nhắc khi target có thể trả body rất lớn hoặc không kết thúc.
 
@@ -197,7 +197,7 @@ Bốn là, đánh đổi có chủ đích: Nếu body vượt quá 16 KiB, `lr.N
 
 Năm là, thời lượng probe phản ánh toàn bộ lifecycle: Đồng hồ đo thời lượng probe bắt đầu từ trước khi phát request tới sau khi quy trình cleanup/drain kết thúc. Nếu target trả về header 200 nhưng luồng body bị nghẽn (stall) vượt quá deadline, probe sẽ kết luận đúng là `OutcomeTimeout` thay vì báo nhầm `OutcomeSuccess`.
 
-### 5. Ranh giới Bảo mật, Hợp đồng JSON và Distributed Tracing
+### 5. Ranh giới bảo mật, hợp đồng JSON và truy vết phân tán
 
 Một công cụ vận hành chỉ an toàn khi các ranh giới ngoại vi được xác định rành mạch:
 
@@ -211,7 +211,7 @@ Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request chèn he
 
 Thư mục `projects/opsprobe/incident/` mô phỏng một sự cố kinh điển trong môi trường microservices.
 
-### Kịch bản mô phỏng sư phạm (Scenario Narrative)
+### Kịch bản mô phỏng sự cố
 
 > **Ghi chú phương pháp luận:** Đây là kịch bản giả định mô phỏng tình huống sự cố thực tế để đặt ra bài toán chẩn đoán cho kỹ sư.
 
@@ -238,7 +238,7 @@ return resp.StatusCode, false, nil
 
 Trong kịch bản HTTP/1.x của lab, hàm trả về mà không đọc hết hoặc đóng body. Kết nối đang giữ body chưa hoàn tất không được tái sử dụng cho request khác; tải tiếp tục có thể làm tăng số kết nối. Không áp kết luận này nguyên xi cho cơ chế multiplexing của HTTP/2.
 
-### Bằng chứng đo đạc thực nghiệm (Empirical Measurements)
+### Bằng chứng đo đạc thực nghiệm
 
 Trong fixture 20 request tuần tự tới server kiểm thử ở `incident/incident_test.go`, `httptrace` ghi nhận các số đếm sau. Chúng mô tả đúng fixture này, không dự đoán tỷ lệ tái sử dụng kết nối của mọi server hay workload:
 
@@ -250,11 +250,11 @@ Trong fixture 20 request tuần tự tới server kiểm thử ở `incident/inc
 
 Kiểm thử `TestIncident_BoundedDrainOversizedBody` xác nhận rằng với body 32 KiB (vượt giới hạn 16 KiB), lab trả `reusedEligible == false` và đóng body. Bounded drain giới hạn lượng dữ liệu mà client chủ động đọc bỏ; nó không phải cơ chế chống tràn bộ đệm hay bảo đảm một kết nối được tái sử dụng.
 
-## Đóng gói, Điều phối và Delivery có trách nhiệm
+## Đóng gói, điều phối và chuyển giao có trách nhiệm
 
 Để đưa `opsprobe` ra môi trường production, ta áp dụng toàn bộ các nguyên tắc đã học ở Chương 17 và 18:
 
-Một là, Multi-Stage Dockerfile: lab xây binary với `CGO_ENABLED=0`, rồi dùng base image `gcr.io/distroless/static-debian12:nonroot` và tài khoản không đặc quyền (`USER 65532:65532`). Với dependency thuần Go của lab, cách này không yêu cầu C runtime; không suy rộng thành bảo đảm mọi chương trình đều không có dependency ngoài binary.
+Một là, Dockerfile nhiều giai đoạn (multi-stage): lab xây binary với `CGO_ENABLED=0`, rồi dùng base image `gcr.io/distroless/static-debian12:nonroot` và tài khoản không đặc quyền (`USER 65532:65532`). Với dependency thuần Go của lab, cách này không yêu cầu C runtime; không suy rộng thành bảo đảm mọi chương trình đều không có dependency ngoài binary.
 
 Hai là, lab dùng một Pod và một file SQLite, với `replicas: 1`, PVC `ReadWriteOnce` và chiến lược `Recreate`. RWO giới hạn ghi theo node, không phải theo Pod; nhiều Pod trên cùng node vẫn có thể mount volume. SQLite có cơ chế khóa cho nhiều connection/process, nên không phải cứ hai process là dữ liệu mất nhất quán. Rủi ro tăng khi chia sẻ file qua filesystem có semantics khóa/sync không phù hợp. `Recreate` hạn chế chồng lấn rollout thông thường, không phải distributed lock hay fencing khi node lỗi. Nếu cần nhiều writer trên các node, ưu tiên database client-server như PostgreSQL, hoặc thiết kế một owner duy nhất cho SQLite cùng contract failover rõ ràng.
 
@@ -291,7 +291,7 @@ curl -X POST http://127.0.0.1:8080/runs `
 curl http://127.0.0.1:8080/metrics
 ~~~
 
-## Cột mốc hoàn thành Capstone: Chốt baseline hệ thống
+## Cột mốc hoàn thành dự án tổng kết: Chốt mốc chuẩn hệ thống
 
 Capstone ghép các proof nhỏ: value và aliasing, đồng bộ goroutine, body lifecycle, transaction và artifact identity. Mỗi proof có phạm vi riêng; transaction không giải quyết mọi external side effect, shutdown có deadline và có thể không hoàn tất mọi request, còn digest không chứng minh nội dung artifact đúng. Khi chuyển sang môi trường thật, giữ những giới hạn ấy trong test và observation.
 

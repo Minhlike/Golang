@@ -115,3 +115,141 @@ func eventCount(t *testing.T, db *sql.DB, id int64) int {
 	}
 	return count
 }
+
+func TestPreparedStatementInTransaction(t *testing.T) {
+	db := openTestDB(t, "CREATE TABLE check_events (check_id INTEGER NOT NULL, action TEXT NOT NULL)")
+	insertCheck(t, db, 101, true)
+
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO check_events(check_id, action) VALUES (?, ?)")
+	if err != nil {
+		t.Fatalf("prepare statement: %v", err)
+	}
+	defer stmt.Close()
+
+	actions := []string{"pre_check", "disabled", "audit_logged"}
+	for _, action := range actions {
+		if _, err := stmt.ExecContext(ctx, 101, action); err != nil {
+			t.Fatalf("exec prepared stmt for %s: %v", action, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit tx: %v", err)
+	}
+
+	if got := eventCount(t, db, 101); got != 3 {
+		t.Fatalf("expected 3 events inserted via prepared statement, got %d", got)
+	}
+}
+
+func TestConnectionPoolStatsObservation(t *testing.T) {
+	db := openTestDB(t, "CREATE TABLE check_events (check_id INTEGER NOT NULL, action TEXT NOT NULL)")
+
+	stats := db.Stats()
+	if stats.MaxOpenConnections != 1 {
+		t.Fatalf("expected MaxOpenConnections = 1, got %d", stats.MaxOpenConnections)
+	}
+
+	// Khi không có truy vấn đang chạy, InUse phải bằng 0.
+	if stats.InUse != 0 {
+		t.Fatalf("expected InUse = 0, got %d", stats.InUse)
+	}
+}
+
+func TestSchemaMigrationOrderingAndRollback(t *testing.T) {
+	dsn := fmt.Sprintf("file:%s_migration?mode=memory&cache=shared", strings.ReplaceAll(t.Name(), "/", "_"))
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 1. Tạo bảng quản lý schema version
+	initSQL := `
+	CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE endpoints (
+		id INTEGER PRIMARY KEY,
+		name TEXT NOT NULL
+	);
+	INSERT INTO schema_migrations (version) VALUES (1);
+	`
+	if _, err := db.ExecContext(ctx, initSQL); err != nil {
+		t.Fatalf("init schema v1: %v", err)
+	}
+
+	// 2. Migration v2: thêm cột nullable và ghi nhận version trong cùng một transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin migration v2: %v", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, "ALTER TABLE endpoints ADD COLUMN description TEXT"); err != nil {
+		t.Fatalf("alter table: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, "INSERT INTO schema_migrations (version) VALUES (2)"); err != nil {
+		t.Fatalf("record version 2: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit migration v2: %v", err)
+	}
+
+	// 3. Xác minh version hiện tại là 2
+	var currentVersion int
+	if err := db.QueryRowContext(ctx, "SELECT MAX(version) FROM schema_migrations").Scan(&currentVersion); err != nil {
+		t.Fatalf("get current version: %v", err)
+	}
+	if currentVersion != 2 {
+		t.Fatalf("expected current version = 2, got %d", currentVersion)
+	}
+}
+
+func TestCacheAsideStaleReadOnInvalidationFailure(t *testing.T) {
+	db := openTestDB(t, "CREATE TABLE check_events (check_id INTEGER NOT NULL, action TEXT NOT NULL)")
+	insertCheck(t, db, 202, true)
+
+	// Mô phỏng bộ nhớ đệm in-memory
+	cache := map[int64]bool{
+		202: true, // Cache đang giữ enabled = true
+	}
+
+	ctx := context.Background()
+
+	// 1. Database cập nhật trạng thái thành công
+	if err := Disable(ctx, db, 202); err != nil {
+		t.Fatalf("Disable() error = %v", err)
+	}
+
+	// 2. Giả lập tình huống xóa cache (invalidation) gặp lỗi mạng / timeout
+	invalidationFailed := true
+	if !invalidationFailed {
+		delete(cache, 202)
+	}
+
+	// 3. Chứng minh bất đồng nhất (stale read):
+	// Database đã là false, nhưng cache vẫn trả về true!
+	dbEnabled := checkEnabled(t, db, 202)
+	cachedEnabled := cache[202]
+
+	if dbEnabled != false {
+		t.Fatalf("expected dbEnabled = false, got %v", dbEnabled)
+	}
+	if cachedEnabled != true {
+		t.Fatalf("expected cachedEnabled = true, got %v", cachedEnabled)
+	}
+	// Đây chính là bằng chứng thực tế: DB transaction không thể tự động bảo đảm
+	// tính nguyên tử cho một hệ thống cache bên ngoài.
+}

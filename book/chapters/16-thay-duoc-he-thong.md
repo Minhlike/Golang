@@ -111,7 +111,7 @@ Một SLO đặt expectation có thể đo; alert là policy buộc con người
 
 Một alert tốt dẫn tới thao tác tiếp theo. Nó nên chỉ ra service/target, SLI bị ảnh hưởng, time window, owner và nơi xem detail an toàn. Metric đưa người điều tra tới cohort đang xấu; log hay trace giúp trả lời “cái gì khác thường trong cohort đó?”. Đó là một vòng điều tra, không phải bốn sản phẩm quan sát được đặt cạnh nhau.
 
-## Lab: giữ denominator và boundary của label
+## Thực hành: giữ mẫu số và ranh giới nhãn quan sát
 
 Mở `labs/part16-observability-evidence/exercise/recorder_test.go` trước. Bài không yêu cầu cài Prometheus, OpenTelemetry hay dashboard. Test bắt contract nhỏ nhưng hay bị làm sai: no data không được giả là 100%; unknown outcome không được làm state thay đổi; và nhiều goroutine ghi outcome không làm vỡ tổng số. Đây là nơi race detector từ Chương 8 trở thành một phần của observability correctness, không phải chỉ là một lệnh “chạy cho yên tâm”.
 
@@ -128,7 +128,7 @@ Contract cố ý không nhận `target string`, URL hay error text. Những dữ
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Khai báo `Outcome` là closed set rồi `switch` trước khi tăng `Completed`. Đặt lock bao quanh cả validation và mutation để invalid outcome không thể race với snapshot hay tạo half-update. `SuccessRatio` trả `(float64, bool)`; boolean false là semantic cho no data, không phải error transport. Bản fixed ưu tiên một invariant dễ kiểm chứng hơn một API nhìn “linh hoạt”.
 
-## Stage hai: ba signal đi qua một service thật
+## Giai đoạn hai: ba tín hiệu đi qua một service thật
 
 Recorder vừa rồi cố ý không biết Prometheus hay OpenTelemetry. Bây giờ, khi
 câu hỏi đã rõ, ta nối nó với tool thật mà không xây một platform quan sát khổng

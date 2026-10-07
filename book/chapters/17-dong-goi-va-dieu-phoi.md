@@ -156,7 +156,7 @@ Trong controller thật, desired state có thể đổi, cache có thể cũ, c�
 | Desired 3, current 5 | Dừng/bỏ 2 instance. | Instance nào nên bị chọn, connection có cần drain không. |
 | Desired 3, current 3 | Không đổi replica count. | Image revision, traffic, latency, SLO và resource health. |
 
-## Lab: tự hoàn thành vòng lặp một bước
+## Thực hành: tự hoàn thành vòng lặp điều hòa một bước
 
 Mở `labs/part17-reconciliation-contract/exercise/reconcile_test.go` trước. Bài không cần Docker daemon, cluster, credential hay network. Test đưa desired/current count vào và đòi action bounded, tất định, không biến input âm thành một action “lạ”. Test không thực thi side effect, nên không chứng minh idempotency của một API tạo instance. Đây là cách tách phép tính chênh lệch khỏi hệ thống điều phối thật.
 
@@ -172,7 +172,7 @@ Hãy viết `NextAction` từ contract, không mở `fixed/` trước. Câu hỏ
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Validate cả hai count trước, vì `desired - current` với số âm có thể biến một configuration lỗi thành action hợp lệ giả. Sau đó trả `create` hay `delete` với `Count` đúng bằng độ chênh; equal trả `ActionNone` với `Count` zero. Không mutate input, không loop, không sleep và không cố “chờ ready”: mỗi thứ đó thuộc boundary khác.
 
-## Stage hai: đưa service thật vào container và cluster
+## Giai đoạn hai: đưa service thật vào container và cụm máy chủ
 
 Vòng lặp `NextAction` ở trên giúp ta hiểu bản chất của reconciliation mà chưa
 cần tới cluster thật. Nhưng khi đưa một service Go vào vận hành, code không còn
@@ -198,10 +198,10 @@ cd labs/part17-container-kubernetes
 
 ### Image là contract của process
 
-Dockerfile của lab áp dụng mô hình multi-stage build để tách biệt môi trường
-biên dịch với môi trường thực thi. Stage đầu tiên dùng image Go chính thức để tải
+Dockerfile của lab áp dụng mô hình build nhiều giai đoạn (multi-stage) để tách biệt môi trường
+biên dịch với môi trường thực thi. Giai đoạn đầu tiên dùng image Go chính thức để tải
 module và biên dịch binary với `CGO_ENABLED=0` và cờ `-trimpath` nhằm loại bỏ
-đường dẫn file hệ thống cục bộ khỏi binary. Stage cuối cùng chỉ sao chép duy nhất
+đường dẫn file hệ thống cục bộ khỏi binary. Giai đoạn cuối cùng chỉ sao chép duy nhất
 file binary sang base image tối giản `distroless/static-debian12:nonroot`.
 
 ~~~dockerfile

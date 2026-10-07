@@ -113,7 +113,7 @@ rollback request
 
 Đừng tự động rollback chỉ vì một metric chớp đỏ nếu policy chưa định nghĩa window, ownership và false-positive cost. Nhưng cũng đừng để “manual rollback” nghĩa là một người gõ tag tùy ý lúc incident. Cùng identity, gate và permission boundary của forward delivery phải được giữ khi quay lại.
 
-## Case study: rollout xanh, user vẫn fail
+## Điển cứu: triển khai báo xanh nhưng người dùng vẫn lỗi
 
 Một release `sha256:abc...` pass unit và integration test, provenance đã verify, rồi được deploy bằng digest. Deployment báo complete: Pod mới available. Vài phút sau, availability SLI tụt vì config ở production trỏ tới endpoint dependency đã retire. Không evidence nào ở đây mâu thuẫn nhau:
 
@@ -125,7 +125,7 @@ Ba là, SLI/log/trace của Chương 16 nói user path đang fail và giúp tìm
 
 Action đúng không phải kết luận “CI vô dụng” hay “Kubernetes đánh lừa mình”. Team kiểm tra blast radius, candidate config và data contract; nếu rollback digest cũ khôi phục khả năng phục vụ mà không phá migration, họ promote digest cũ theo runbook. Sau incident, gate cần được sửa ở boundary đã thiếu: configuration validation hoặc integration environment gần production hơn, không nhất thiết là thêm một security scan vô liên quan.
 
-## Lab: tự viết admission decision fail-closed
+## Thực hành: tự viết quyết định tiếp nhận đóng khi lỗi (fail-closed)
 
 Mở `labs/part18-promotion-evidence/exercise/admission_test.go` trước. Test không dùng network, registry, secret hay crypto library. Nó yêu cầu anh tự định nghĩa đúng sự khác nhau giữa candidate malformed và candidate hợp lệ nhưng chưa đủ evidence. Exercise đỏ vì `Evaluate` chưa được viết; fixed giữ implementation nhỏ để test các invariant trước khi bất kỳ CI vendor nào xuất hiện.
 
@@ -143,7 +143,7 @@ Sau khi làm xong, thử viết một test mới: nếu `TestsPassed` là false 
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** Validate digest rồi revision trước vì chúng là input contract. Sau đó kiểm tra từng gate và return decision từ chối không error; `error` dành cho candidate malformed. Chỉ decision allowed mới mang digest. `validDigest` chấp nhận đúng prefix `sha256:` và 64 chữ số hexadecimal thường; nó là validation định dạng, không phải xác thực content tồn tại hay chữ ký.
 
-## Stage hai: chuỗi delivery từ commit đến promotion gate
+## Giai đoạn hai: chuỗi chuyển giao từ commit đến cổng phê duyệt
 
 Logic xét duyệt `Evaluate` ở trên cho ta thấy một quyết định promotion cần những
 bằng chứng gì. Nhưng trong thực tế, các bằng chứng ấy không xuất hiện cùng lúc
@@ -211,7 +211,7 @@ jobs:
           go test -race ./...
 ~~~
 
-### Thực thi Promotion Gate bằng Go và nguyên tắc Fail-Closed
+### Thực thi cổng phê duyệt bằng Go và nguyên tắc đóng khi lỗi
 
 Để biến policy admission thành một chốt chặn tự động trong pipeline, thư mục
 `labs/part18-workflow-delivery/cmd/promote-gate` cung cấp một công cụ dòng lệnh
@@ -315,7 +315,7 @@ blocker này rõ ràng, không tự cài và không tạo tài nguyên cloud th�
 | Local Image ID | Config JSON hash (`.Id`). | Docker daemon cục bộ. | Không dùng làm định danh kéo ảnh từ xa. |
 | Manifest Digest | OCI Manifest Hash (`sha256:`). | Buildx metadata / Registry. | Chưa chứng minh container chạy đúng logic. |
 | Provenance | Build attestation metadata. | Verifier chuyên trách (Cosign/GH). | Thiếu verifier thì không được coi là verified. |
-| Promotion Gate | CLI Go kiểm tra fail-closed. | Admission policy. | Không thay thế được môi trường production thật. |
+| Cổng phê duyệt | CLI Go kiểm tra fail-closed. | Admission policy. | Không thay thế được môi trường production thật. |
 | Deployment | Cập nhật desired state cụm. | Orchestrator controller. | Replica Available không bảo đảm business SLO. |
 
 **Dừng để dự đoán.** Nếu một pipeline CI tự động gán cờ `--provenance-verified=true`

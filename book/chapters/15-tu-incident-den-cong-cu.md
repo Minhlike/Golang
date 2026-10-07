@@ -147,7 +147,7 @@ logger.Info(
 
 > **Dừng để dự đoán:** Nếu `Run` chỉ trả `error`, incident report nào sẽ mất khi một probe exit status 2 nhưng đã in lời giải thích hữu ích vào `stderr`? Nếu `Run` chỉ trả `Result` và không trả `error`, caller có còn phân biệt được run thành công với run bị deadline không?
 
-## Lab: chứng minh exit status và deadline
+## Thực hành: chứng minh trạng thái thoát và thời hạn
 
 Mở `labs/part15-incident-command/exercise/run_test.go` trước. Test không gọi `ping`, `curl` hay binary có sẵn của máy. Nó dùng test binary hiện tại làm helper process, nên case success, exit khác 0 và sleep đều chạy như nhau trên Windows, Linux và macOS. Đó là một cách thiết kế test quan trọng: thay vì phụ thuộc vào công cụ có sẵn của máy, ta kiểm soát process đang được quan sát.
 

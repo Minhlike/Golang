@@ -19,7 +19,7 @@
 
 8. **Một race bắt đầu từ đâu.** Các access chung không có thứ tự an toàn, bốn tầng bằng chứng, và cách đọc race report trước khi nói về API đồng thời.
 9. **Dòng công việc có áp suất.** Channel, select, ownership, cancellation, backpressure, worker pool và leak.
-10. **Khi chương trình chậm hoặc phình.** Benchmark, pprof, trace, allocation, escape, GC, G/M/P, syscall và cách đo trước khi tối ưu.
+10. **Khi chương trình chậm hoặc phình.** Benchmark, pprof, trace, allocation, escape, GC, đối chiếu mental model G/M/P từ Chương 09 với execution trace, syscall và cách đo trước khi tối ưu.
 
 ## Phần IV — Giao tiếp, dữ liệu và dịch vụ
 
