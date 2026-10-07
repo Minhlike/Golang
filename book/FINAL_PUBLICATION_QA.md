@@ -1,3 +1,59 @@
+# Content correctness audit and targeted repair close-out (Ch21–Ch24) — 07-10-2026
+
+Biên bản kiểm định tính đúng nội dung và sửa chữa có trọng tâm này áp dụng cho `Golang_Master.pdf` SHA-256
+`95e761b8f09f0ca8190ebb593ff1612a9ca270c56a6c90c9c817fb3931abc51b`,
+492 trang, xuất phát từ baseline HEAD `6e778159944c1661c1c41bf40588ce9908f4e649`.
+
+## Phạm vi sửa và kết quả kiểm định kỹ thuật
+
+Lượt kiểm định tập trung vào tính đúng kỹ thuật, ranh giới chứng cứ và mạch sư phạm liên chương của Chương 21 đến Chương 24:
+
+1. Chương 21 (Vòng lặp điều hòa và Controller Pattern):
+   - Kết luận: PASS — không có thay đổi mã nguồn/nội dung (no material change). Mô hình điều hòa (Observe -> Diff -> Act -> Observe again), tính lũy đẳng nghiệp vụ, ranh giới thất bại, context cancellation và WorkQueue đã được thiết kế chính xác và đối chiếu đầy đủ với bộ kiểm thử trong `labs/part21-reconciliation-controller`.
+
+2. Chương 22 (Từ watch đến controller Kubernetes thật):
+   - Chuẩn hóa ngôn ngữ quan sát cache: sửa chú thích mã nguồn và văn xuôi (dòng 225, 318, 343) để không gọi cache là "snapshot mới nhất" mà xác định đúng là "snapshot quan sát hiện có từ local indexer"; trong thao tác cập nhật khi gặp xung đột (`retry.RetryOnConflict`), xác định rõ việc đọc lại snapshot hiện tại trực tiếp từ API Server.
+
+3. Chương 23 (Từ controller đến operator: API riêng và vòng đời tài nguyên):
+   - Ranh giới OwnerReferences: bổ sung quy tắc giới hạn namespace trong Kubernetes — `OwnerReference` không hoạt động xuyên namespace (cross-namespace); Garbage Collector sẽ bỏ qua hoặc từ chối các tham chiếu cross-namespace.
+   - Ngữ nghĩa trả về của Result và Error trong controller-runtime: bổ sung tiểu mục giải thích tường minh hợp đồng xử lý bốn nhánh của `reconcileHandler` trong `sigs.k8s.io/controller-runtime` v0.25.1 (`err != nil` kích hoạt rate-limited requeue; `RequeueAfter` lên lịch lại sau khoảng trễ; `Requeue: true` kích hoạt rate-limited requeue; và `ctrl.Result{}, nil` hoàn tất điều hòa).
+
+4. Chương 24 (Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn):
+   - Kết nối mạch liên chương: liên kết tư duy điều hòa và tính lũy đẳng từ Chương 21–23 sang việc tự động hóa AWS API.
+   - Chuỗi phân giải Region: bổ sung tiểu mục về phân giải Region qua `config.LoadDefaultConfig` (tùy chọn tường minh, biến môi trường, file config, IMDS) và ranh giới hoạt động giữa dịch vụ toàn cầu và dịch vụ vùng (đặc biệt là tính chất vùng của Amazon S3 bucket).
+   - Thử lại transport so với tính lũy đẳng nghiệp vụ: phân định rõ việc `aws.Retryer` tự động thử lại ở tầng transport không bảo đảm tính lũy đẳng nghiệp vụ nếu thao tác ghi bị ngắt quãng sau khi server đã tiếp nhận; nhấn mạnh vai trò của `ClientToken` và ghi đè theo key.
+   - Bóc tách lỗi có cấu trúc: cập nhật hàm `ClassifyError` để kiểm tra các kiểu lỗi nghiệp vụ mô hình hóa cụ thể (`*types.NoSuchKey`, `*types.NoSuchBucket`) bằng `errors.As` trước khi kiểm tra interface `smithy.APIError`, đồng bộ chính xác với `labs/part24-aws-sdk-go-v2/storage.go`.
+
+## Kiểm tra xuất bản và trạng thái nghiệm thu
+
+- Mã nguồn và validator:
+  - ZERO_BULLET (`validate_main_manuscript_no_bullets.py`): PASS.
+  - PROSE_LANGUAGE (`audit_prose_language.py`): PASS (76.93% overall; Ch21: 79.7%, Ch22: 81.3%, Ch23: 73.6%, Ch24: 76.5%).
+  - CODE_WIDTH (`validate_code_width.py`): PASS (0 dòng tràn ở 11.5 pt / 448.22 pt).
+  - PUBLICATION_CONTRACTS (`test_publication_contracts.py`): 16/16 PASS.
+  - DIAGRAM_ENCODING: MOJIBAKE_HITS=0.
+  - DIAGRAM_SEMANTICS: PASS (0 character-art diagrams).
+  - VISUAL_MANIFEST: PASS (58 assets).
+  - ERROR_ATLAS: PASS (85 entries, 89 patterns).
+  - LIBRARY_SOURCES: PASS (50 locked catalog libraries).
+  - Go lab tests:
+    - `labs/part21-reconciliation-controller`: PASS (`test`, `vet`, `race`).
+    - `labs/part22-client-go-controller`: PASS (`test`, `vet`, `race`).
+    - `labs/part23-controller-runtime-operator`: PASS (`test`, `vet`, `race`).
+    - `labs/part24-aws-sdk-go-v2`: PASS (`test`, `vet`, `race`).
+  - Git diff check (`git diff --check`): PASS (0 lỗi khoảng trắng).
+
+- PDF Preflight (`validate_publication_pdf.py`):
+  - Kích thước: 492 trang.
+  - Kiểm tra tự động: PASS (0 broken glyphs, 0 clipping, 0 blank pages, 34 bookmarks hợp lệ, 0 duplicate pages).
+
+- Trạng thái kiểm định trực quan (Visual QA Scope):
+  - Kiểm tra trực quan được giới hạn ở các trang thuộc phạm vi Chương 21–24 (trang 277 đến 337) và các trang chịu tác động reflow trực tiếp.
+  - Các trang khác toàn sách không nằm trong phạm vi rà soát trực quan lại trong pass này.
+  - Trạng thái: `SCOPED_CH21_CH24_CONTENT_QA_PASS`. Không tuyên bố `PUBLICATION_READY` khi chưa có visual ledger toàn sách độc lập.
+
+---
+
 # Middle-book correctness repair close-out — 07-10-2026
 
 Biên bản sửa tính đúng và thu hẹp ranh giới chứng cứ này áp dụng cho `Golang_Master.pdf` SHA-256

@@ -222,7 +222,7 @@ func (c *Controller) processNextItem(ctx context.Context) bool {
 func (c *Controller) reconcileHandler(
 	ctx context.Context, key string,
 ) error {
-	// 1. Luôn truy vấn snapshot mới nhất từ local indexer
+	// 1. Truy vấn snapshot quan sát hiện có từ local indexer
 	obj, exists, err := c.indexer.GetByKey(key)
 	if err != nil {
 		return fmt.Errorf("lỗi đọc cache key %s: %w", key, err)
@@ -315,7 +315,7 @@ func updatePodAnnotation(
 	return retry.RetryOnConflict(
 		retry.DefaultRetry,
 		func() error {
-			// 1. Phải Get lại bản ghi mới nhất
+			// 1. Đọc lại bản ghi hiện tại từ API Server
 			latest, err := client.CoreV1().Pods(namespace).Get(
 				ctx, name, metav1.GetOptions{},
 			)
@@ -340,7 +340,7 @@ func updatePodAnnotation(
 }
 ~~~
 
-Mẫu hình này tự động thử lại với backoff ngắn, đọc lại snapshot mới nhất của đối tượng, áp dụng thay đổi và lưu lại.
+Mẫu hình này tự động thử lại với backoff ngắn, đọc lại snapshot hiện tại của đối tượng từ API Server, áp dụng thay đổi và lưu lại.
 
 ---
 
