@@ -18,38 +18,55 @@ import (
 	"github.com/aws/smithy-go/middleware"
 )
 
-// TestTemporaryCredentialRefresh verifies automatic rotation of short-lived credentials.
-func TestTemporaryCredentialRefresh(t *testing.T) {
-	provider := NewDynamicCredentialProvider("arn:aws:iam::123456789012:role/AppRole", 50*time.Millisecond)
+// TestCredentialsCacheReuseAndExpiredRefresh verifies that aws.CredentialsCache
+// reuses valid unexpired credentials and refreshes only after expiration.
+func TestCredentialsCacheReuseAndExpiredRefresh(t *testing.T) {
+	provider := NewDynamicCredentialProvider("arn:aws:iam::123456789012:role/AppRole", 100*time.Millisecond)
+	cache := aws.NewCredentialsCache(provider)
 
 	ctx := context.Background()
-	cred1, err := provider.Retrieve(ctx)
+
+	// Initial retrieve: populates cache from provider
+	cred1, err := cache.Retrieve(ctx)
 	if err != nil {
 		t.Fatalf("first retrieve failed: %v", err)
 	}
-	if provider.RetrieveCount() != 1 {
-		t.Fatalf("expected 1 retrieve, got %d", provider.RetrieveCount())
+	if got := provider.RetrieveCount(); got != 1 {
+		t.Fatalf("expected 1 provider retrieve, got %d", got)
 	}
 	if !cred1.CanExpire {
 		t.Errorf("expected CanExpire=true")
 	}
 
-	// Wait for credentials to expire
-	time.Sleep(60 * time.Millisecond)
-
-	if time.Now().Before(cred1.Expires) {
-		t.Fatalf("expected credentials to be expired")
-	}
-
-	// Retrieve refreshed credentials
-	cred2, err := provider.Retrieve(ctx)
+	// Immediate second retrieve: must return cached credentials without calling provider
+	cred2, err := cache.Retrieve(ctx)
 	if err != nil {
 		t.Fatalf("second retrieve failed: %v", err)
 	}
-	if provider.RetrieveCount() != 2 {
-		t.Fatalf("expected 2 retrieves, got %d", provider.RetrieveCount())
+	if got := provider.RetrieveCount(); got != 1 {
+		t.Fatalf("expected provider retrieve count to remain 1, got %d", got)
 	}
-	if cred1.AccessKeyID == cred2.AccessKeyID {
+	if cred1.AccessKeyID != cred2.AccessKeyID {
+		t.Errorf("expected cached credentials, got %s vs %s", cred1.AccessKeyID, cred2.AccessKeyID)
+	}
+
+	// Wait for credentials to expire
+	if remaining := time.Until(cred1.Expires); remaining > 0 {
+		time.Sleep(remaining + 10*time.Millisecond)
+	}
+	for !time.Now().After(cred1.Expires) {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// Third retrieve after expiration: cache must call provider again
+	cred3, err := cache.Retrieve(ctx)
+	if err != nil {
+		t.Fatalf("third retrieve failed: %v", err)
+	}
+	if got := provider.RetrieveCount(); got != 2 {
+		t.Fatalf("expected 2 provider retrieves after expiration, got %d", got)
+	}
+	if cred1.AccessKeyID == cred3.AccessKeyID {
 		t.Errorf("expected refreshed access key, got identical: %s", cred1.AccessKeyID)
 	}
 }

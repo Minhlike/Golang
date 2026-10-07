@@ -1,3 +1,48 @@
+# Scoped Ch24 credential cache evidence pass close-out (Ch24) — 08-10-2026
+
+Biên bản sửa vi chỉnh ranh giới chứng cứ `aws.CredentialsCache` này áp dụng cho `Golang_Master.pdf` SHA-256
+`db679f0f90616eb0249369072b2be70dcebd1307693e9574543a730ad23baf50`,
+493 trang, xuất phát từ baseline HEAD `26c900f7dac3ef61f51a27c7277e3d2597a1b01b`.
+
+## Phạm vi sửa và kết quả kiểm định kỹ thuật
+
+Lượt sửa vi chỉnh này giải quyết dứt điểm khoảng cách chứng cứ cuối cùng trong Chương 24 về cơ chế bộ đệm xác thực của AWS SDK for Go v2:
+
+1. Lab Part 24 (`labs/part24-aws-sdk-go-v2/storage_test.go`):
+   - Đổi tên và nâng cấp test thành `TestCredentialsCacheReuseAndExpiredRefresh`, bọc provider giả lập vào `cache := aws.NewCredentialsCache(provider)` với tùy chọn mặc định thay vì gọi trực tiếp provider.
+   - Kiểm chứng tất định cả hai hợp đồng của `aws.CredentialsCache`:
+     * Hợp đồng A (Tái sử dụng khi còn hạn): Lần gọi 1 lấy từ provider (`provider.RetrieveCount() == 1`); lần gọi 2 ngay sau đó khi khóa còn hạn trả về cùng credential từ cache mà không gọi lại provider (`provider.RetrieveCount() == 1`).
+     * Hợp đồng B (Làm mới sau khi hết hạn): Chờ credential hết hạn và kiểm tra đồng hồ tường tất định; lần gọi 3 kích hoạt cache gọi lại provider (`provider.RetrieveCount() == 2`) và trả về credential mới khác credential cũ.
+   - Test chạy ổn định, triệt tiêu nguy cơ flakiness do GC/thread pause bằng ngưỡng thời gian và vòng lặp đồng hồ an toàn; vượt qua `go test -run TestCredentialsCache -count=20` (và 50 lần liên tiếp) với 100% PASS.
+
+2. Chương 24 (`book/chapters/24-tu-dong-hoa-aws-bang-go.md`):
+   - Cập nhật mục `### 1. Tự động làm mới khóa hết hạn (TestCredentialsCacheReuseAndExpiredRefresh)` và block kết quả chạy kiểm thử tương ứng.
+   - Miêu tả chính xác hành vi test bọc provider trong `aws.CredentialsCache` với cấu hình mặc định (không suy đoán vượt bằng chứng về `ExpiryWindow`).
+   - Giữ nghiêm ngặt ranh giới bằng chứng: khẳng định đây là unit test với fake provider cục bộ nhằm kiểm chứng logic cache nội tại của SDK, không gọi AWS STS thật và không chứng minh credential được làm mới thành công khi hạ tầng mạng hoặc IAM gặp lỗi.
+
+## Kiểm tra xuất bản và trạng thái nghiệm thu
+
+- Mã nguồn và validator:
+  - ZERO_BULLET (`validate_main_manuscript_no_bullets.py`): PASS.
+  - PROSE_LANGUAGE (`audit_prose_language.py`): PASS (76.96% overall; Ch24: 77.6%).
+  - CODE_WIDTH (`validate_code_width.py`): PASS (0 dòng tràn ở giới hạn monospace printable width).
+  - PUBLICATION_CONTRACTS (`test_publication_contracts.py`): 16/16 PASS.
+  - Go lab tests:
+    - `labs/part24-aws-sdk-go-v2`: PASS (`test`, `vet`, `race`, `count=20`).
+  - Git diff check (`git diff --check`): PASS (0 lỗi khoảng trắng).
+
+- PDF Preflight (`validate_publication_pdf.py`):
+  - Kích thước: 493 trang.
+  - Kiểm tra tự động: PASS (0 broken glyphs, 0 clipping, 0 blank pages, 34 bookmarks hợp lệ, 0 duplicate pages).
+
+- Trạng thái kiểm định trực quan (Visual QA Scope):
+  - Kiểm tra trực quan được giới hạn ở các trang thuộc phạm vi Chương 24 (các trang 321–337).
+  - Trạng thái: `SCOPED_CH24_CREDENTIAL_CACHE_EVIDENCE_PASS`.
+  - Kết luận nội dung Ch21–24: `CH21_CH24_CONTENT_STATUS=FROZEN`.
+  - Lưu ý xuất bản: Chưa tuyên bố `BOOK_STATUS=READY` / `PUBLICATION_READY` toàn diện theo đúng nguyên tắc giữ ranh giới xuất bản toàn sách.
+
+---
+
 # Final micro-correctness repair close-out (Ch23–Ch24) — 08-10-2026
 
 Biên bản sửa vi chỉnh tính đúng kỹ thuật và ranh giới chứng cứ cuối cùng này áp dụng cho `Golang_Master.pdf` SHA-256

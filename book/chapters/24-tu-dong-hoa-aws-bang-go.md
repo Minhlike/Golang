@@ -228,8 +228,8 @@ s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 Toàn bộ bộ kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` vận hành độc lập bằng `httptest.Server` (phân loại mức kiểm chứng: `MOCK_VERIFIED` đối với tầng HTTP transport và `UNIT_TESTED` đối với logic provider/paginator/middleware), mô phỏng cấu trúc phản hồi XML của S3 và kiểm chứng 5 hành vi kiến trúc then chốt mà không cần tài nguyên AWS thực tế:
 
 ~~~
-=== RUN   TestTemporaryCredentialRefresh
---- PASS: TestTemporaryCredentialRefresh (0.06s)
+=== RUN   TestCredentialsCacheReuseAndExpiredRefresh
+--- PASS: TestCredentialsCacheReuseAndExpiredRefresh (0.11s)
 === RUN   TestCustomSmithyMiddlewareAuditHeader
 --- PASS: TestCustomSmithyMiddlewareAuditHeader (0.01s)
 === RUN   TestS3OperationsPutAndGet
@@ -239,11 +239,11 @@ Toàn bộ bộ kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` v
 === RUN   TestErrorClassification
 --- PASS: TestErrorClassification (0.00s)
 PASS
-ok      part24-aws-sdk-go-v2   3.665s
+ok      part24-aws-sdk-go-v2   2.054s
 ~~~
 
-### 1. Tự động làm mới khóa hết hạn (TestTemporaryCredentialRefresh)
-Test dùng provider giả có TTL 50 ms, chờ 60 ms rồi retrieve lại. Nó xác nhận cache gọi provider sau expiration trong lịch thử này; không gọi STS và không chứng minh role credential thật được refresh thành công khi mạng hay IAM lỗi.
+### 1. Tự động làm mới khóa hết hạn (TestCredentialsCacheReuseAndExpiredRefresh)
+Test bọc provider giả lập có TTL 100 ms trong `aws.NewCredentialsCache` với cấu hình mặc định. Ở lần gọi thứ hai khi credential còn hạn, cache trả về ngay kết quả đã lưu mà không gọi lại provider. Chỉ sau khi credential hết hạn, lần gọi tiếp theo mới kích hoạt cache gọi lại provider để cấp phát credential mới. Đây là unit test cục bộ với fake provider nhằm kiểm chứng cơ chế bộ đệm của SDK; test không gửi request tới AWS STS thật và không chứng minh credential được refresh thành công khi mạng hay dịch vụ IAM từ xa gặp sự cố.
 
 ### 2. Tiêm Header qua Smithy Middleware (TestCustomSmithyMiddlewareAuditHeader)
 Máy chủ HTTP cục bộ bắt gói tin `PutObject` và kiểm tra header `X-Audit-Origin`. Giá trị nhận được chính xác là `"automated-backup-worker"`, chứng minh middleware đã can thiệp thành công vào luồng gửi tin của SDK.
