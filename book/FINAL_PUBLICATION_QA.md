@@ -1,3 +1,64 @@
+# Final whole-book publication gate — 08-10-2026
+
+Biên bản thẩm định và nghiệm thu xuất bản toàn diện (Final Whole-Book Publication Gate) cho toàn bộ cuốn sách Golang Living Textbook.
+
+- STARTING_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
+- FINAL_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
+- SOURCE_FREEZE_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
+- PDF_SHA256: `f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09`
+- PAGE_COUNT: `493`
+- PUBLICATION_STATUS: `READY_FOR_THIS_PDF_SHA`
+- BOOK_STATUS: `READY`
+
+## Bảng chỉ số kiểm định toàn diện (Whole-Book Gate Metrics)
+
+| Tiêu chí thẩm định | Kết quả | Ghi chú & Ranh giới kỹ thuật |
+|---|---|---|
+| **LIBRARY_ATLAS_SEMANTIC_AUDIT** | PASS | `ENTRIES_REVIEWED=50` (50/50 thư viện đối chiếu source ghim trong `library_sources/repos` và `lock.json`) |
+| **ERROR_ATLAS_SEMANTIC_AUDIT** | PASS | `ENTRIES_REVIEWED=85` (85/85 lỗi thuộc 10 taxonomy A–J, 89 patterns, cross-reference chính xác) |
+| **FRONT_MATTER_INTEGRITY** | PASS | Tiêu đề, số chương (Ch00, Ch01–Ch29), Part X, Back Matter, Phụ lục A ở cuối sách |
+| **CROSS_REFERENCES_INTEGRITY** | PASS | 124 tham chiếu chéo giữa các chương được kiểm chứng đúng ngữ nghĩa và thứ tự |
+| **LAB_MODULES_TOTAL** | 38 | 38 modules Go (37 labs + 1 project opsprobe) |
+| **LAB_TEST_PASS** | 38/38 | 100% unit/integration tests vượt qua |
+| **LAB_VET_PASS** | 38/38 | `go vet` sạch 100% |
+| **LAB_RACE_PASS** | 38/38 | `go test -race` sạch 100% không phát hiện race condition |
+| **ENVIRONMENT_LIMITATIONS** | RECORDED | Windows host: `LIVE_EBPF_KERNEL_STATUS=NOT_LIVE_KERNEL_VERIFIED` (mock/userspace unit tests PASS); không tạo tài nguyên đám mây/production thực tế |
+| **SOURCE_VALIDATORS** | PASS | 10/10 validators PASS (no-bullets, prose ratio 76.94%, code width, publication contracts 16/16, diagram encoding, visual manifest 58 assets) |
+| **PDF_PREFLIGHT** | PASS | A4 geometry, 4 font nhúng đầy đủ, 0 broken glyph, 0 clipping, 0 blank page, 0 duplicate page, 34 bookmarks |
+| **VISUAL_REVIEWED_PAGES** | 493/493 | Toàn bộ 493 trang candidate PDF được thẩm định trực quan |
+| **VISUAL_PASS** | 493 | 493 trang đạt chuẩn visual |
+| **VISUAL_FAIL** | 0 | Không có lỗi cắt chữ, tràn khung, orphan heading, bể bảng hay hỏng hình ảnh |
+| **NOT_REVIEWED** | 0 | 0 trang bị bỏ sót |
+| **OPEN_P0** | 0 | Không có lỗi nghiêm trọng tồn đọng |
+| **OPEN_P1** | 0 | Không có lỗi kỹ thuật mức cao tồn đọng |
+| **OPEN_P2_PUBLICATION_BLOCKERS** | 0 | Không có blocker xuất bản tồn đọng |
+
+## Chi tiết kết quả các pha kiểm định
+
+1. **Library Atlas Semantic Audit (50/50 entries)**:
+   - Toàn bộ 50 mục thư viện từ Rank 01 đến 50 được rà soát đối chiếu với `library_sources/catalog.json`, `library_sources/lock.json`, và các repo ghim trong `library_sources/repos`.
+   - Đường dẫn module, tag release, commit hash 8 ký tự, tập tin mã nguồn trọng yếu và năng lực API đều khớp với cam kết đã khóa.
+
+2. **Error Atlas Semantic Audit (85/85 entries)**:
+   - Toàn bộ 85 mục tra cứu lỗi thuộc 10 nhóm Taxonomy (A: Compiler & Type System, B: Runtime & Panic, C: Error Values & I/O, D: Context & Cancellation, E: Filesystem & Process, F: Network / HTTP / TLS, G: Database, H: Concurrency, I: Modules / Test / Toolchain, J: Container / Kubernetes / CI-CD) bao phủ 89 diagnostic patterns.
+   - Các chuỗi chẩn đoán (EXACT), giá trị sentinel chuẩn (SENTINEL), trạng thái runtime/k8s (STATUS) và họ hiện tượng (FAMILY) phản ánh chính xác hành vi của compiler, runtime Go 1.27.1 và môi trường Linux/k8s. Dòng hướng dẫn hành động (`→`) và liên kết chương (`[ChX]`) được đối chiếu nhất quán.
+
+3. **Cấu trúc bản thảo và tham chiếu chéo**:
+   - Khẳng định tính bất biến: Bìa -> Mục lục -> Front Matter -> Ch00 (2 chương) -> Ch01–Ch29 -> Back Matter (Atlas 50 Thư viện) -> Phụ lục A (Atlas Lỗi Go) luôn nằm ở vị trí cuối cùng của cuốn sách.
+   - Toàn bộ 124 liên kết cross-reference giữa các chương được quét tự động và đối chiếu ngữ nghĩa, không có liên kết nào trỏ ngoài phạm vi Ch00–Ch29.
+
+4. **Lab Regression Matrix (38 modules)**:
+   - 38/38 Go modules đạt `test PASS`, `vet PASS`, và `test -race PASS`.
+   - Riêng `labs/part27-ebpf-observer`: Các unit test mô phỏng userspace (decoding 156-byte ABI, ring buffer mock, event parsing, detection logic) đều PASS; trạng thái kernel thực tế được ghi nhận chính xác theo ranh giới môi trường host Windows: `LIVE_EBPF_KERNEL_STATUS=NOT_LIVE_KERNEL_VERIFIED`.
+
+5. **Nghiệm thu Candidate và Xuất bản Promoted PDF**:
+   - Candidate build sạch tại `tmp/pdfs/Golang_Master.candidate.pdf` (493 trang, SHA-256 `f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09`).
+   - Kết quả Preflight tự động: `OVERALL_STATUS=PASS`.
+   - Kết quả Visual Audit: 493/493 trang đạt `VISUAL_PASS`, `VISUAL_FAIL=0`, `NOT_REVIEWED=0` (ledger ghi tại `.workspace/final-publication-gate/page_review.csv`).
+   - Candidate được promote nguyên trạng sang `Golang_Master.pdf`, bảo toàn bản sao lưu lùi `Golang_Master.prev.pdf`. SHA-256 của tệp xuất bản sau cùng khớp tuyệt đối từng byte với candidate đã nghiệm thu.
+
+---
+
 # Final upper-book content audit close-out (Ch25–Ch29) — 08-10-2026
 
 Biên bản kiểm định tính đúng nội dung và sửa chữa có trọng tâm toàn diện cho khối chương thượng tầng (Ch25–Ch29) này áp dụng cho `Golang_Master.pdf` SHA-256
