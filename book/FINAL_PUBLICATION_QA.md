@@ -1,3 +1,75 @@
+# Final upper-book content audit close-out (Ch25–Ch29) — 08-10-2026
+
+Biên bản kiểm định tính đúng nội dung và sửa chữa có trọng tâm toàn diện cho khối chương thượng tầng (Ch25–Ch29) này áp dụng cho `Golang_Master.pdf` SHA-256
+`cf660f77067daa0d890684f4a135a668289b1dd8b54616302ed6aa7cd038bed8`,
+493 trang, xuất phát từ baseline HEAD `1c118ffb7f29894d38f9637c1e9cada4a23e5b7f`.
+
+## Bảng kết quả thẩm định từng chương (Chapter Verdicts)
+
+| Chapter | Verdict | P0 | P1 | P2 | Ranh giới chứng cứ cốt lõi | Hành động thực hiện |
+|---|---|---:|---:|---:|---|---|
+| **Ch25** | FIXED | 0 | 0 | 3 | Webhook HMAC constant-time; delivery GUID deduplication; lack of automatic retries on failure; tiered API rate limits. | Chuẩn hóa threat boundary timing side-channel; lược bỏ từ ngữ drama ("bắt buộc"); làm rõ ranh giới transport. |
+| **Ch26** | FIXED | 1 | 2 | 3 | Module directory canonical hash (`dirhash.Hash1`); Cosign keyless ephemeral keys & OIDC certificate; static reachability bounds; model fixture boundaries. | Sửa định nghĩa mã băm `go.sum` sang canonical directory hash; chuẩn hóa khái niệm keyless; bổ sung giới hạn reflection/assembly; đồng bộ 7 kịch bản test trong `gate_test.go`. |
+| **Ch27** | PASS | 0 | 0 | 0 | ABI decoding 156B little-endian; ring buffer drop/submit semantics; `RecordReader` mock; privilege/kernel matrix; explicit non-Linux disclaimer. | PASS — no material change required. Bảo toàn nguyên vẹn ranh giới `SKIPPED_WITH_REASON` / `NOT_LIVE_KERNEL_VERIFIED`. |
+| **Ch28** | FIXED | 1 | 1 | 2 | Pinned MCP SDK v1.8.0; negotiated protocol revision 2026-07-28; session context role mapping vs transport auth; target allowlist; human-in-the-loop gate. | Sửa lỗi thiếu tham số `target` trong snippet `RequestApproval(action, target string)`; giải thích ranh giới xác thực của `context.Context`; giảm nhẹ giọng điệu áp đặt ("BẮT BUỘC"). |
+| **Ch29** | FIXED | 0 | 0 | 1 | Empirical labor/AI studies: Peng et al. 2023, METR 2025 RCT & 2026 update, Go Survey 2025, BLS 2025–2035, DORA 2025; change evidence gate boundaries. | Cập nhật ngày đối chiếu nguồn 08-10-2026; bảo toàn nguyên vẹn các ước lượng điểm, khoảng tin cậy và ranh giới suy luận có điều kiện. |
+
+## Phạm vi sửa và kết quả kiểm định kỹ thuật
+
+1. **Chương 25 (`book/chapters/25-git-github-automation-event-driven.md`)**:
+   - Chuẩn hóa tiêu đề và văn xuôi: chuyển từ nhận định tuyệt đối "Chống Timing Attack" sang "Phòng ngừa Timing Side-Channel bằng HMAC-SHA256".
+   - Bảng cạm bẫy: làm rõ rủi ro rò rỉ thông tin qua chênh lệch thời gian so sánh byte thay vì tuyên bố kẻ xấu chắc chắn vét cạn chữ ký số qua Internet công cộng.
+
+2. **Chương 26 (`book/chapters/26-chuoi-cung-ung-co-the-kiem-chung.md`) & Lab Part 26 (`labs/part26-supply-chain-gate/`)**:
+   - Sửa chính xác bản chất mã băm `h1:` trong `go.sum`: mô tả đúng giải thuật băm thư mục chuẩn tắc (`dirhash.Hash1`) dựa trên danh sách tệp được sắp xếp thứ tự và băm từng tệp rồi băm tổng thể, thay vì gọi là băm toàn bộ cây sau giải nén.
+   - Chuẩn hóa khái niệm "Keyless Signing": làm rõ runner tạo cặp khóa tạm thời (ephemeral keys) và dùng OIDC token để xin chứng chỉ ngắn hạn từ Fulcio, thay vì diễn giải sai là mật mã học vận hành không cần khóa.
+   - Bổ sung ranh giới phân tích tĩnh của `govulncheck`: nêu rõ giới hạn của xấp xỉ đồ thị cuộc gọi trước reflection, hàm assembly hay điều phối động.
+   - Tinh gọn tên test trong `gate_test.go` (`TestModelAllowsSelfAssertedIdentity`, `TestPolicyGateStopsOnSignatureFailure`) để bảo đảm độ rộng hiển thị mã nguồn không tràn viền (< 64 ký tự), đồng thời đồng bộ toàn bộ 7 kịch bản test vào văn bản chương.
+
+3. **Chương 27 (`book/chapters/27-quan-sat-linux-bang-ebpf-va-go.md`)**:
+   - Thẩm định toàn diện: Chương giữ ranh giới cực kỳ chặt chẽ (`NOT_LIVE_KERNEL_VERIFIED`, phân định rõ ABI 156 bytes, TGID/PID shift, rủi ro tràn ring buffer và mô hình mock userspace). Không cần sửa đổi cơ học.
+
+4. **Chương 28 (`book/chapters/28-mcp-va-aiops-an-toan-bang-go.md`)**:
+   - Sửa lỗi cú pháp trong đoạn mã mẫu Thử thách 2: bổ sung tham số `target` vào chữ ký hàm `RequestApproval(action, target string)`.
+   - Làm rõ ranh giới xác thực: `context.Context` không tự tạo ra authenticated identity; middleware trong lab chỉ ánh xạ session ID cho mô hình kiểm thử, trên production cần transport/IdP xác thực độc lập.
+   - Hạ giọng điệu các quy tắc phân quyền, loại bỏ từ ngữ áp đặt ("BẮT BUỘC").
+
+5. **Chương 29 (`book/chapters/29-ky-su-va-bang-chung-trong-ky-nguyen-agent.md`)**:
+   - Cập nhật ngày đối chiếu tài liệu và số liệu ngoại kiểm sang 08-10-2026.
+   - Giữ nghiêm ngặt các ranh giới phương pháp luận nghiên cứu: đối chiếu chính xác các thông số từ Peng et al. (mức giảm 55.8%, CI 21–89%), METR RCT (tăng 19% thời gian, CI 2–39%), cập nhật phương pháp METR 24-02-2026, Go Survey 2025 (5.379 mẫu), dự báo BLS (+10% giai đoạn 2025–2035 tại Mỹ), và framing năng lực tổ chức của DORA 2025.
+
+## Kiểm tra xuất bản và trạng thái nghiệm thu
+
+- Mã nguồn và validator:
+  - ZERO_BULLET (`validate_main_manuscript_no_bullets.py`): PASS.
+  - PROSE_LANGUAGE (`audit_prose_language.py`): PASS (76.94% overall; Ch25: 70.5%, Ch26: 71.6%, Ch27: 71.7%, Ch28: 63.5%, Ch29: 80.9%).
+  - CODE_WIDTH (`validate_code_width.py`): PASS (0 dòng tràn ở 11.5 pt / 448.22 pt).
+  - PUBLICATION_CONTRACTS (`test_publication_contracts.py`): 16/16 PASS.
+  - DIAGRAM_ENCODING: MOJIBAKE_HITS=0.
+  - DIAGRAM_SEMANTICS: PASS (0 character-art diagrams).
+  - VISUAL_MANIFEST: PASS (58 assets).
+  - ERROR_ATLAS: PASS (85 entries, 89 patterns).
+  - LIBRARY_SOURCES: PASS (50 locked catalog libraries).
+  - Go lab tests:
+    - `labs/part25-github-automation`: PASS (`test`, `vet`, `race`).
+    - `labs/part26-supply-chain-gate`: PASS (`test`, `vet`, `race`).
+    - `labs/part27-ebpf-observer`: PASS (`test`, `vet`, `race` cho tầng userspace mock; eBPF kernel load skipped do môi trường Windows).
+    - `labs/part28-mcp-ops-tools`: PASS (`test`, `vet`, `race`).
+    - `labs/part29-change-evidence`: PASS (`test`, `vet`, `race`).
+  - Git diff check (`git diff --check`): PASS (0 lỗi khoảng trắng).
+
+- PDF Preflight (`validate_publication_pdf.py`):
+  - Kích thước: 493 trang.
+  - Kiểm tra tự động: PASS (0 broken glyphs, 0 clipping, 0 blank pages, 34 bookmarks hợp lệ, 0 duplicate pages).
+
+- Trạng thái kiểm định trực quan (Visual QA Scope):
+  - Kiểm tra trực quan được giới hạn ở các trang thuộc phạm vi Chương 25 đến 29 (các trang 339–433) và phụ lục tiếp giáp.
+  - Trạng thái: `SCOPED_CH25_CH29_CONTENT_QA_PASS`.
+  - Kết luận nội dung Ch25–Ch29: `CH25_CH29_CONTENT_STATUS=FROZEN`.
+  - Lưu ý xuất bản: Chưa tuyên bố `BOOK_STATUS=READY` / `PUBLICATION_READY` toàn diện theo đúng nguyên tắc giữ ranh giới xuất bản toàn sách.
+
+---
+
 # Scoped Ch24 credential cache evidence pass close-out (Ch24) — 08-10-2026
 
 Biên bản sửa vi chỉnh ranh giới chứng cứ `aws.CredentialsCache` này áp dụng cho `Golang_Master.pdf` SHA-256

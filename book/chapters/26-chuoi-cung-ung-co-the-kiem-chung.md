@@ -4,9 +4,9 @@
 
 Một scenario chuỗi cung ứng có thể gồm source nghiệp vụ, nhiều module gián tiếp và base image có package OS. Số thành phần phụ thuộc cách build: image `scratch` và một base image tổng quát không có cùng tập package. Vì vậy inventory phải được lấy từ artifact thực tế, không ước lượng từ số dòng Go của application.
 
-Điều đó tạo nên một bề mặt tấn công khổng lồ mang tên: **Chuỗi cung ứng phần mềm (Software Supply Chain)**.
+Điều đó mở rộng bề mặt rủi ro của **Chuỗi cung ứng phần mềm (Software Supply Chain)**.
 
-Các sự cố an ninh nghiêm trọng trên thế giới — từ SolarWinds, Codecov cho đến các cuộc tấn công Dependency Confusion và Typosquatting — đã chỉ ra một sự thật cay đắng:
+Các sự cố an ninh trên thực tế — từ SolarWinds, Codecov cho đến các cuộc tấn công Dependency Confusion và Typosquatting — cho thấy một ranh giới bảo mật quan trọng:
 > *Một kho mã nguồn sạch, được review kỹ lưỡng và vượt qua mọi bài kiểm thử unit test, vẫn có thể cho ra lò một container image độc hại nếu quy trình build, dependency hoặc kho lưu trữ artifact bị xâm phạm.*
 
 Ta cần kiểm tra image nào đã được xét, bằng chứng nào gắn nó với builder/source được phép, và finding nào phải chặn theo policy. Chữ ký và scan không chứng minh artifact không có lỗ hổng hay mã độc; từng verifier chỉ đưa ra kết luận trong phạm vi dữ liệu và trust root của nó.
@@ -41,7 +41,7 @@ github.com/gin-gonic/gin v1.9.1 h1:4A06lVSJ...
 github.com/gin-gonic/gin v1.9.1/go.mod h1:h1hp...
 ~~~
 
-Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm SHA-256 được tính toán trên toàn bộ cây thư mục mã nguồn sau khi giải nén. Dòng có hậu tố `/go.mod` lưu trữ mã băm chỉ tính riêng trên nội dung tệp khai báo phụ thuộc của module đó, cho phép công cụ Go kiểm tra cây phụ thuộc một cách nhanh chóng mà không bắt buộc phải tải toàn bộ mã nguồn của các module gián tiếp về máy.
+Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm chuẩn tắc của cây thư mục module (theo giải thuật `dirhash.Hash1`): danh sách đường dẫn tệp được sắp xếp thứ tự, băm SHA-256 từng tệp, ghép thành danh sách định dạng chuẩn tắc rồi băm SHA-256 tổng thể và mã hóa base64. Dòng có hậu tố `/go.mod` lưu trữ mã băm chỉ tính riêng trên nội dung tệp khai báo phụ thuộc của module đó, cho phép công cụ Go kiểm tra cây phụ thuộc một cách nhanh chóng mà không bắt buộc phải tải toàn bộ mã nguồn của các module gián tiếp về máy.
 
 ### Go Checksum Database (`sum.golang.org`)
 Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư viện bên thứ ba và tráo đổi nội dung của release tag `v1.2.0`, điều gì sẽ xảy ra?
@@ -70,7 +70,7 @@ JSON của govulncheck là stream message theo schema của version dùng, có O
 
 ### Giới hạn phân tích cần lưu ý
 
-Cần lưu ý rằng khả năng phân tích tĩnh của `govulncheck` tập trung hoàn toàn vào mã nguồn Go thuần túy. Công cụ không phân tích các phụ thuộc liên kết động qua CGO runtime, không tự động lần vết mã độc trong các plugin tải động tại thời điểm chạy (`plugin.Open`), và không quét các thư viện hệ thống nhị phân trong base image container (như OpenSSL hay glibc — những thành phần này vẫn cần các công cụ quét container chuyên dụng bổ trợ).
+Cần lưu ý rằng khả năng phân tích tĩnh của `govulncheck` tập trung vào mã nguồn Go. Kỹ thuật xấp xỉ đồ thị cuộc gọi tĩnh có giới hạn trước reflection, hàm assembly hay điều phối động, không phân tích các phụ thuộc liên kết động qua CGO runtime, không lần vết trong plugin tải động (`plugin.Open`), và không quét các thư viện hệ thống nhị phân của base image container (như OpenSSL hay glibc — những thành phần này cần công cụ quét container chuyên dụng).
 
 ### Thiết kế chính sách thông minh
 
@@ -101,7 +101,7 @@ Làm sao chúng ta biết một container image có mã băm `sha256:abc...` th�
 
 Sigstore/Cosign là một lựa chọn cho việc ký và xác minh artifact:
 
-Một là, Ký không cần khóa (Keyless Signing): Không còn nỗi lo lưu trữ private key dài hạn trên máy chủ CI (vốn rất dễ bị rò rỉ). CI Runner sử dụng OpenID Connect (OIDC) token do GitHub Actions cấp phát để chứng minh danh tính với nhà cấp phát chứng chỉ Sigstore (Fulcio).
+Một là, Ký không cần khóa tĩnh (Keyless Signing): Thay vì quản lý private key dài hạn trên máy chủ CI, runner tạo cặp khóa tạm thời (ephemeral keys) cho mỗi lần ký và dùng OpenID Connect (OIDC) token để xin chứng chỉ ngắn hạn từ Fulcio ràng buộc danh tính workflow với public key.
 
 Hai là, chứng chỉ ngắn hạn: Fulcio ràng buộc public key với identity OIDC theo policy của CA. `https://token.actions.githubusercontent.com` là issuer, không phải danh tính riêng của workflow. Verifier phải xét cả certificate identity được phép và issuer, validity cùng evidence của đường verify đang dùng.
 
@@ -226,7 +226,7 @@ func VerifyDigest(digest string) error {
 
 ### Xác thực chữ ký mật mã ECDSA và OIDC Issuer
 
-Đọc đoạn sau như một model dùng input fixture đã tin cậy, không phải verifier identity. Public key do caller cung cấp; `Issuer` chỉ là chuỗi caller khai báo, không được ràng buộc với key bằng certificate. `Attestation` cũng là struct chưa xác thực. Một người tự tạo key, ký digest rồi chép issuer/builder được allowlist vẫn được model chấp nhận. `TestModelDoesNotAuthenticateSelfAssertedIdentity` giữ phản ví dụ này để ngăn test ALLOW bị đọc thành bằng chứng GitHub OIDC hay SLSA. Khi dùng gate thật, phải thay các verifier bằng đường xác minh trust root, identity và provenance phù hợp; thêm một phép so chuỗi không đóng được gap này.
+Đọc đoạn sau như một model dùng input fixture đã tin cậy, không phải verifier identity. Public key do caller cung cấp; `Issuer` chỉ là chuỗi caller khai báo, không được ràng buộc với key bằng certificate. `Attestation` cũng là struct chưa xác thực. Một người tự tạo key, ký digest rồi chép issuer/builder được allowlist vẫn được model chấp nhận. `TestModelAllowsSelfAssertedIdentity` giữ phản ví dụ này để ngăn test ALLOW bị đọc thành bằng chứng GitHub OIDC hay SLSA. Khi dùng gate thật, phải thay các verifier bằng đường xác minh trust root, identity và provenance phù hợp; thêm một phép so chuỗi không đóng được gap này.
 
 ~~~go
 func (e *PolicyEngine) VerifySignature(
@@ -405,17 +405,19 @@ func (e *PolicyEngine) Evaluate(
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part26-supply-chain-gate`)
 
-Mã nguồn hoàn chỉnh của bài lab nằm tại thư mục `labs/part26-supply-chain-gate` (phân loại mức kiểm chứng: `UNIT_TESTED` / `MODEL_ONLY` đối với logic chính sách cổng fail-closed và chữ ký ECDSA P-256 nội bộ, chứng minh khế ước an ninh của 5 kịch bản thực chiến mà không phụ thuộc vào hạ tầng mạng Sigstore bên ngoài). Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
+Mã nguồn hoàn chỉnh của bài lab nằm tại thư mục `labs/part26-supply-chain-gate` (phân loại mức kiểm chứng: `UNIT_TESTED` / `MODEL_ONLY` đối với logic chính sách cổng fail-closed và chữ ký ECDSA P-256 nội bộ, chứng minh khế ước an ninh của 7 kịch bản kiểm định mà không phụ thuộc vào hạ tầng mạng Sigstore bên ngoài). Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
 
 ~~~bash
 go test -v -race ./...
 ~~~
 
-Bộ kiểm thử thực hiện xác minh 5 kịch bản thực chiến:
+Bộ kiểm thử thực hiện xác minh toàn bộ 7 kịch bản:
 
 ~~~
 === RUN   TestPolicyGateAllowedWithValidSignature
 --- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)
+=== RUN   TestModelAllowsSelfAssertedIdentity
+--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)
 === RUN   TestPolicyGateDenyUnsignedImage
 --- PASS: TestPolicyGateDenyUnsignedImage (0.00s)
 === RUN   TestPolicyGateDenyReachableVulnerability
@@ -424,6 +426,8 @@ Bộ kiểm thử thực hiện xác minh 5 kịch bản thực chiến:
 --- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)
 === RUN   TestPolicyGateFailClosedOnMutableTag
 --- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)
+=== RUN   TestPolicyGateStopsOnSignatureFailure
+--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)
 PASS
 ok      part26-supply-chain-gate   2.128s
 ~~~
@@ -433,10 +437,12 @@ ok      part26-supply-chain-gate   2.128s
 | Kịch bản fixture | Điều kiểm tra trong model | Quyết định (`Decision`) |
 | :--- | :--- | :--- |
 | Input được model chấp nhận | ECDSA tự tạo trong test; chuỗi issuer/builder khớp; không truyền finding. Không gọi GitHub OIDC hay scanner. | **ALLOW** theo policy model |
+| Phản ví dụ tự khai danh tính (`TestModel...`) | Model chấp nhận key tự tạo và issuer/builder tự khai; chứng minh model chưa xác thực OIDC | **`ALLOW`** (nhấn mạnh ranh giới model) |
 | Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
 | Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
 | Finding không được fixture đánh dấu reachable (`Reachable = false`) | `http2.Server.ServeConn` là tên symbol minh họa, không phải bằng chứng quan sát mọi đường chạy | **`ALLOW`** (kèm cảnh báo trong `Warnings`, theo policy lab) |
 | Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 → **`DENY`** |
+| Dừng trước provenance sau lỗi chữ ký | Khi chữ ký sai, cổng dừng ngay tại Cửa 2 và không kiểm tra tiếp Cửa 3 | **`DENY`** (fail-closed tuần tự) |
 
 ---
 
@@ -444,7 +450,7 @@ ok      part26-supply-chain-gate   2.128s
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Triển khai bằng Docker tag** (`:latest` hoặc `:v1.0.0`) thay vì sha256 digest. | Bị tấn công tráo đổi container image khi registry bị thỏa hiệp; pod scale up chạy phiên bản khác nhau. | Bắt buộc ghim (pin) mã băm bất biến `sha256:<hex>` trong Kubernetes Pod Spec. |
+| **Triển khai bằng Docker tag** (`:latest` hoặc `:v1.0.0`) thay vì sha256 digest. | Bị tấn công tráo đổi container image khi registry bị thỏa hiệp; pod scale up chạy phiên bản khác nhau. | Ghim (pin) mã băm bất biến `sha256:<hex>` trong Kubernetes Pod Spec. |
 | **Nhận public key và issuer do caller tự khai mà coi là identity đã xác thực.** | Caller tự ký rồi khai issuer được phép; model vẫn có thể chấp nhận. | Dùng verifier thật kiểm tra trust roots, certificate identity/issuer và claim digest; so chuỗi không đủ. |
 | **Thiết kế Cổng dạng Fail-Open:** Bỏ qua kiểm tra khi mạng tới OIDC/Registry bị timeout. | Khi mạng gặp sự cố, hệ thống tự động cho phép mọi image chưa được kiểm chứng đi thẳng vào production. | Luôn áp dụng nguyên tắc Fail-Closed: Bất kỳ lỗi mạng hay timeout nào cũng phải quy về `DENY`. |
 | **Bỏ go.sum vì xem nó là file rác.** | Mất checksum đã ghi nhận trong project; không tự đồng nghĩa checksum database bị tắt. | Commit checksum khi có dependency; hiểu GOSUMDB/GOPRIVATE/replace. go mod verify kiểm tra cache, không quét mã độc. |

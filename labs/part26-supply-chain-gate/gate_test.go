@@ -64,7 +64,7 @@ func TestPolicyGateAllowedWithValidSignature(t *testing.T) {
 
 // This is an evidence-boundary test, not a production authorization guarantee.
 // A model ALLOW cannot establish the signer or builder's authenticated identity.
-func TestModelDoesNotAuthenticateSelfAssertedIdentity(t *testing.T) {
+func TestModelAllowsSelfAssertedIdentity(t *testing.T) {
 	issuer := "https://token.actions.githubusercontent.com"
 	builder := "https://github.com/allowed/repo/build"
 	engine := NewPolicyEngine([]string{builder}, []string{issuer})
@@ -185,7 +185,7 @@ func TestPolicyGateFailClosedOnMutableTag(t *testing.T) {
 	}
 }
 
-func TestPolicyGateStopsBeforeProvenanceAfterSignatureFailure(t *testing.T) {
+func TestPolicyGateStopsOnSignatureFailure(t *testing.T) {
 	engine := NewPolicyEngine(nil, nil)
 	provenanceCalled := false
 	engine.SigVerifier = failingSignatureVerifier{}

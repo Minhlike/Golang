@@ -89,9 +89,9 @@ Các trường struct có thể được bổ sung thêm tag `jsonschema` để 
 ## 5. Phân quyền vai trò theo Ngữ cảnh Phiên và Rào chắn Đột biến
 
 Policy phải lấy quyền của caller từ nguồn tin cậy:
-> **Vai trò của Agent BẮT BUỘC phải được xác định qua Ngữ cảnh Phiên (Session Context), tuyệt đối không để Agent tự khai báo vai trò trong tham số JSON của công cụ!**
+> *Vai trò của Agent phải được xác định qua Ngữ cảnh Phiên (Session Context), không để Agent tự khai báo vai trò trong tham số JSON của công cụ.*
 
-Nếu bạn để Agent gửi `{"role": "admin"}` trong JSON arguments, một cuộc tấn công Prompt Injection đơn giản có thể ép Agent mạo danh quản trị viên để chiếm quyền điều khiển toàn bộ hệ thống!
+Nếu để Agent gửi `{"role": "admin"}` trong JSON arguments, việc prompt injection có thể dẫn tới việc Agent mạo danh quản trị viên để chiếm quyền điều khiển hệ thống.
 
 ### Gắn danh tính vào context.Context
 
@@ -147,7 +147,7 @@ Dưới đây là các phần chính của `OpsServer` trong `labs/part28-mcp-op
 
 ### 6.1. Khởi tạo server và ranh giới danh tính
 
-Trong kiến trúc của MCP Go SDK, `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp RPC gửi đến trước khi điều phối tới handler cụ thể. Ta sử dụng middleware này để bóc tách định danh caller từ phiên làm việc (`Session Context`) và tiêm vai trò bảo mật vào `context.Context`:
+Trong kiến trúc của MCP Go SDK, `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp RPC gửi đến trước khi điều phối tới handler cụ thể. Ta sử dụng middleware này để bóc tách định danh caller từ phiên làm việc (`Session Context`) và tiêm vai trò bảo mật vào `context.Context`. Cần lưu ý rằng `context.Context` không tự tạo ra authenticated identity; middleware trong bài lab lấy role từ ánh xạ phiên giả lập để phục vụ kiểm thử mô hình. Trên môi trường production, tầng transport hoặc identity provider phải xác thực danh tính caller trước khi tiêm role vào context:
 
 ~~~go
 type OpsServer struct {
@@ -460,7 +460,7 @@ Các test xác nhận unknown target bị từ chối, observer không gọi đ�
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
 | **Phó mặc an ninh cho JSON Schema** của MCP. | Bị tấn công SSRF hoặc Prompt Injection đánh cắp token IAM đám mây. | Luôn coi tham số từ Agent là không tin cậy; kiểm tra ngữ nghĩa và IP trong Go handler. |
-| **Cho phép Agent gọi tool mutating** mà không có mã phiếu phê duyệt. | Agent tự ý xóa hoặc khởi động lại các dịch vụ quan trọng khi hiểu nhầm bối cảnh. | Bắt buộc yêu cầu `change_ticket` và chỉ cấp quyền mutating cho vai trò Operator. |
+| **Cho phép Agent gọi tool mutating** mà không có mã phiếu phê duyệt. | Agent tự ý xóa hoặc khởi động lại các dịch vụ quan trọng khi hiểu nhầm bối cảnh. | Yêu cầu `change_ticket` và chỉ cấp quyền mutating cho vai trò Operator. |
 | **Mở HTTP không bảo vệ identity/kênh truyền.** | Có thể bị nghe lén hoặc mạo danh. | Chọn Stdio khi phù hợp; với Streamable HTTP, dùng TLS và authorization theo spec/deployment. mTLS là một lựa chọn, không yêu cầu chung cho mọi MCP transport. |
 | **Không ghi nhật ký kiểm toán** (Audit Trail). | Thiếu dữ liệu ở boundary tool để xác định caller và hành động, dù có thể còn log từ các tầng khác. | Ghi structured audit log phù hợp policy lưu trữ và bảo vệ dữ liệu. |
 
@@ -505,7 +505,7 @@ type ApprovalManager struct {
 }
 
 func (m *ApprovalManager) RequestApproval(
-	action string,
+	action, target string,
 ) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -513,8 +513,8 @@ func (m *ApprovalManager) RequestApproval(
 	// Dùng crypto/rand, không dùng timestamp dự đoán được.
 	token := randomTokenFromCryptoRand()
 	m.pendings[token] = PendingApproval{
-		Action: action,
-		Target: target,
+		Action:    action,
+		Target:    target,
 		ExpiresAt: time.Now().Add(5 * time.Minute),
 	}
 	return token

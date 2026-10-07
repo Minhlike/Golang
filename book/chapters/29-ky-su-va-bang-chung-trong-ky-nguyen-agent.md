@@ -8,7 +8,7 @@ Chương 28 đã dạy cách trao một công cụ có giới hạn. Chương n�
 
 ## Đọc số liệu theo câu hỏi nó thực sự trả lời
 
-Ngày đối chiếu lại nguồn của chương là 01-10-2026. “AI giúp lập trình nhanh hơn” thiếu ít nhất ba đối tượng: ai làm, làm việc gì, và nhanh hơn theo phép đo nào. Dữ liệu sau không dùng chung mẫu hay cùng loại outcome, nên không được lấy trung bình các phần trăm để tạo một con số về “năng suất AI”.
+Ngày đối chiếu lại nguồn của chương là 08-10-2026. “AI giúp lập trình nhanh hơn” thiếu ít nhất ba đối tượng: ai làm, làm việc gì, và nhanh hơn theo phép đo nào. Dữ liệu sau không dùng chung mẫu hay cùng loại outcome, nên không được lấy trung bình các phần trăm để tạo một con số về “năng suất AI”.
 
 Nghiên cứu của Peng và cộng sự, công bố tháng 2-2023 trên arXiv, phân nhóm ngẫu nhiên 95 lập trình viên tuyển qua Upwork trong 15-05 đến 20-06-2022. Công việc là viết HTTP server JavaScript. Có 70 người hoàn thành task và survey, 35 ở mỗi nhóm; phân tích thời gian trên nhóm hoàn thành cho mức giảm 55,8% khi được dùng GitHub Copilot, khoảng tin cậy 95% 21–89%. Mẫu phần lớn từ Ấn Độ và Pakistan. Kết quả thuộc nhiệm vụ chuẩn hóa và công cụ năm 2022, không đại diện toàn vòng đời service hay incident production. Tác giả có liên hệ Microsoft/GitHub; nghiên cứu không đo đầy đủ chất lượng bảo trì dài hạn.
 
