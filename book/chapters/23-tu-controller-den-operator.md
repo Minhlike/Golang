@@ -103,9 +103,9 @@ if err := controllerutil.SetControllerReference(
 }
 ~~~
 
-### Lợi ích tối cao của OwnerReference
+### OwnerReference giúp quản lý vòng đời thế nào
 
-Thứ nhất là cascading deletion theo policy: garbage collector dùng ownerReferences hợp lệ để xét dependent, nhưng propagation policy, owner khác còn tồn tại và finalizer có thể giữ object. Lab gắn owner cho Deployment; không suy ra mọi tài nguyên con bị xóa ngay hay tài nguyên ngoài cluster được thu hồi. Đồng thời, cần lưu ý ranh giới namespace: trong Kubernetes, OwnerReference không hoạt động xuyên namespace (cross-namespace). Một tài nguyên cha có namespace không thể sở hữu một tài nguyên con thuộc namespace khác hay tài nguyên cluster-scoped; Garbage Collector sẽ bỏ qua các tham chiếu vượt ranh giới này.
+Thứ nhất là cascading deletion theo policy: garbage collector dùng ownerReferences hợp lệ để xét dependent, nhưng propagation policy, owner khác còn tồn tại và finalizer có thể giữ object. Lab gắn owner cho Deployment; không suy ra mọi tài nguyên con bị xóa ngay hay tài nguyên ngoài cluster được thu hồi. Về ranh giới namespace, OwnerReference là ownership metadata có quy tắc scope chặt chẽ chứ không phải liên kết cha con tùy ý. Đối với namespaced dependent, tài nguyên có thể tham chiếu owner namespaced trong cùng namespace hoặc owner cluster-scoped; nếu trỏ tới owner namespaced ở namespace khác, tham chiếu không hợp lệ và bị coi như owner không tồn tại, khiến dependent có thể bị thu hồi khi mọi owner hợp lệ khác không còn. Ngược lại, cluster-scoped dependent chỉ được phép tham chiếu owner cluster-scoped; nếu trỏ tới namespaced owner, tham chiếu trở nên không thể phân giải (unresolvable), từ Kubernetes v1.20+ garbage collector sẽ ghi nhận warning event OwnerRefInvalidNamespace và dependent không thể được thu hồi dựa trên tham chiếu đó.
 
 Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): Controller có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
 

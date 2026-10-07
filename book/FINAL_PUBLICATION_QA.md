@@ -1,3 +1,58 @@
+# Final micro-correctness repair close-out (Ch23–Ch24) — 08-10-2026
+
+Biên bản sửa vi chỉnh tính đúng kỹ thuật và ranh giới chứng cứ cuối cùng này áp dụng cho `Golang_Master.pdf` SHA-256
+`3cfb07121a0b266143f8aa1eded18c4b9ec85c43d46bdc7ebb81f68390ecc250`,
+493 trang, xuất phát từ baseline HEAD `db81e9e08a04f540cf4854712194ae3ed531e9de`.
+
+## Phạm vi sửa và kết quả kiểm định kỹ thuật
+
+Lượt sửa vi chỉnh cuối cùng này giải quyết dứt điểm 3 ranh giới chứng cứ/tính đúng kỹ thuật trước khi freeze Ch21–Ch24:
+
+1. Chương 23 (OwnerReference scope semantics & heading):
+   - Đổi tiêu đề mục sang tiếng Việt trung tính: `### OwnerReference giúp quản lý vòng đời thế nào` (loại bỏ từ khoa trương "tối cao").
+   - Chuẩn hóa chính xác ngữ nghĩa tham chiếu theo Kubernetes Garbage Collection official specification:
+     * Đối với namespaced dependent: có thể tham chiếu owner namespaced trong cùng namespace hoặc owner cluster-scoped. Nếu trỏ tới owner namespaced ở namespace khác, tham chiếu không hợp lệ và được coi như owner không tồn tại; dependent có thể bị thu hồi khi mọi owner hợp lệ khác không còn.
+     * Đối với cluster-scoped dependent: chỉ được phép tham chiếu owner cluster-scoped. Nếu trỏ tới namespaced owner, tham chiếu trở thành unresolvable; từ Kubernetes v1.20+ garbage collector ghi nhận warning event `OwnerRefInvalidNamespace`, và dependent không thể được thu hồi dựa trên tham chiếu đó.
+     * Loại bỏ nhận định chung chung "GC bỏ qua".
+
+2. Chương 24 (S3 PutObject Idempotency boundary):
+   - Thu hẹp ranh giới tính lũy đẳng: không mô tả "cùng key trong S3" như một cơ chế lũy đẳng phổ quát.
+   - Làm rõ ngữ nghĩa của S3 `PutObject`: đối với bucket bật Versioning, nhiều lượt `PUT` với cùng một key sẽ tạo ra các object version riêng biệt chứ không ghi đè tại chỗ; do đó cùng key không đảm bảo một tác dụng phụ duy nhất.
+   - Nêu rõ giải pháp có điều kiện: khi nghiệp vụ đòi hỏi tạo mới hoặc tránh ghi đè, hệ thống có thể cần conditional request (`If-None-Match: *` khi dịch vụ hỗ trợ), nhưng đây không phải giải pháp vạn năng.
+   - Nhấn mạnh nguyên tắc cốt lõi: SDK transport retry (`aws.Retryer`) không đồng nghĩa với tính lũy đẳng nghiệp vụ (business idempotency).
+
+3. Chương 24 & Lab Part 24 (Kiểm thử thực sự cho typed S3 errors):
+   - Bổ sung unit test xác minh trực tiếp trong `labs/part24-aws-sdk-go-v2/storage_test.go` (`TestErrorClassification`) cho hai kiểu lỗi dịch vụ S3 mô hình hóa: `types.NoSuchKey` và `types.NoSuchBucket` (thông qua `errors.As` với lỗi được bọc qua `fmt.Errorf`).
+   - Xác nhận cả hai lỗi đều được phân loại `isRetryable == false` và trích xuất đúng mã lỗi (`"NoSuchKey"`, `"NoSuchBucket"`), bên cạnh các lỗi `SlowDown` và `AccessDenied` của `smithy.GenericAPIError`.
+   - Cập nhật văn bản Chương 24 để xác nhận cả nhánh typed error đã được bao phủ bởi test thực sự của lab.
+
+## Kiểm tra xuất bản và trạng thái nghiệm thu
+
+- Mã nguồn và validator:
+  - ZERO_BULLET (`validate_main_manuscript_no_bullets.py`): PASS.
+  - PROSE_LANGUAGE (`audit_prose_language.py`): PASS (76.95% overall; Ch23: 73.5%, Ch24: 77.4%).
+  - CODE_WIDTH (`validate_code_width.py`): PASS (0 dòng tràn ở 11.5 pt / 448.22 pt).
+  - PUBLICATION_CONTRACTS (`test_publication_contracts.py`): 16/16 PASS.
+  - DIAGRAM_ENCODING: MOJIBAKE_HITS=0.
+  - DIAGRAM_SEMANTICS: PASS (0 character-art diagrams).
+  - VISUAL_MANIFEST: PASS (58 assets).
+  - ERROR_ATLAS: PASS (85 entries, 89 patterns).
+  - LIBRARY_SOURCES: PASS (50 locked catalog libraries).
+  - Go lab tests:
+    - `labs/part24-aws-sdk-go-v2`: PASS (`test`, `vet`, `race` 100%).
+  - Git diff check (`git diff --check`): PASS (0 lỗi khoảng trắng).
+
+- PDF Preflight (`validate_publication_pdf.py`):
+  - Kích thước: 493 trang.
+  - Kiểm tra tự động: PASS (0 broken glyphs, 0 clipping, 0 blank pages, 34 bookmarks hợp lệ, 0 duplicate pages).
+
+- Trạng thái kiểm định trực quan (Visual QA Scope):
+  - Kiểm tra trực quan được giới hạn ở các trang thuộc phạm vi Chương 23 và 24 (các trang 305–337) và các trang chịu tác động reflow trực tiếp.
+  - Trạng thái: `SCOPED_CH23_CH24_FINAL_CORRECTION_PASS`.
+  - Kết luận nội dung Ch21–24: `CH21_CH24_CONTENT_STATUS=FREEZE_CANDIDATE`.
+
+---
+
 # Content correctness audit and targeted repair close-out (Ch21–Ch24) — 07-10-2026
 
 Biên bản kiểm định tính đúng nội dung và sửa chữa có trọng tâm này áp dụng cho `Golang_Master.pdf` SHA-256

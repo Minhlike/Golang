@@ -108,7 +108,7 @@ Paginator chỉ giữ trang đang xử lý; mức nhớ của caller còn phụ 
 
 Khi một lệnh gọi AWS thất bại, bạn không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
 
-Thử lại ở tầng transport của SDK (`aws.Retryer`, mặc định tối đa 3 lần với backoff lũy thừa và jitter cho lỗi tạm thời) không bảo đảm tính lũy đẳng nghiệp vụ (business idempotency). Nếu một yêu cầu ghi bị ngắt kết nối sau khi máy chủ AWS đã tiếp nhận, việc thử lại tự động mà không có cơ chế định danh lũy đẳng (như `ClientToken` trong EC2 hay ghi đè theo key của S3) có thể dẫn đến việc tạo tài nguyên trùng lặp. Trong policy của lab, `AccessDenied` không được retry như lỗi tạm thời. Các lỗi throttling hay service unavailable có thể cần backoff/jitter, nhưng retry còn phụ thuộc operation, budget và idempotency. Với timeout sau write, server có thể đã thực hiện side effect; không lặp mù quáng chỉ vì tên lỗi chứa `RequestTimeout`. Dùng classifier kết hợp với contract service và retryer đã cấu hình.
+Thử lại ở tầng transport của SDK (`aws.Retryer`, mặc định tối đa 3 lần với backoff lũy thừa và jitter cho lỗi tạm thời) không bảo đảm tính lũy đẳng nghiệp vụ (business idempotency). Nếu một yêu cầu ghi bị ngắt kết nối mạng sau khi máy chủ AWS đã tiếp nhận và thực thi, việc SDK tự động thử lại có thể gây ra tác dụng phụ lặp lại ngoài mong muốn. Một số API của AWS cung cấp token lũy đẳng tường minh (như `ClientToken` trong EC2) để máy chủ nhận diện yêu cầu lặp; nhưng với Amazon S3 `PutObject`, ngữ nghĩa phụ thuộc chặt chẽ vào cấu hình bucket và điều kiện tiền đề. Khi bucket bật Versioning, nhiều lượt `PUT` với cùng một key sẽ tạo ra các version riêng biệt chứ không ghi đè tại chỗ, vì vậy việc dùng chung key không đảm bảo một tác dụng phụ duy nhất. Khi nghiệp vụ đòi hỏi tạo mới mà không ghi đè, hệ thống có thể cần yêu cầu có điều kiện (conditional request như `If-None-Match: *` khi dịch vụ hỗ trợ), nhưng đây không phải giải pháp vạn năng cho mọi tình huống. Tính lũy đẳng nghiệp vụ bắt buộc phải được thiết kế dựa trên đúng hợp đồng của từng thao tác và dịch vụ cụ thể. Trong policy của lab, `AccessDenied` không được retry như lỗi tạm thời. Các lỗi throttling hay service unavailable có thể cần backoff/jitter, nhưng retry còn phụ thuộc operation, budget và idempotency. Với timeout sau write, server có thể đã thực hiện side effect; không lặp mù quáng chỉ vì tên lỗi chứa `RequestTimeout`. Dùng classifier kết hợp với contract service và retryer đã cấu hình.
 
 ~~~go
 func ClassifyError(err error) (bool, string) {
@@ -255,7 +255,7 @@ Kiểm chứng tính toàn vẹn của chuỗi dữ liệu nhị phân khi uploa
 Máy chủ giả lập trả về trang 1 kèm `IsTruncated: true` và `NextContinuationToken`, sau đó trả về trang 2 với `IsTruncated: false`. Hàm `ListAllKeys` tự động gọi 2 lần HTTP và thu thập đầy đủ 3 file mà không cần người dùng tự quản lý token phân trang.
 
 ### 5. Phân loại lỗi chính xác (TestErrorClassification)
-Kiểm chứng hàm phân loại bóc tách chính xác mã lỗi `SlowDown` (đánh dấu `isRetryable = true`) và mã lỗi `AccessDenied` (đánh dấu `isRetryable = false`).
+Kiểm chứng hàm phân loại bóc tách chính xác các lỗi nghiệp vụ mô hình hóa của S3 (`types.NoSuchKey` và `types.NoSuchBucket`) thông qua `errors.As` (đều xác định `isRetryable = false`), đồng thời phân biệt chính xác mã lỗi tạm thời `SlowDown` (đánh dấu `isRetryable = true`) và lỗi phân quyền `AccessDenied` (đánh dấu `isRetryable = false`) của interface `smithy.APIError`.
 
 ---
 

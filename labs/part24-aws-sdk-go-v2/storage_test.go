@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 )
@@ -204,17 +205,39 @@ func TestPaginatorListAllKeys(t *testing.T) {
 	}
 }
 
-// TestErrorClassification verifies typed error classification using Smithy APIError.
+// TestErrorClassification verifies typed error classification using S3 modeled errors and Smithy APIError.
 func TestErrorClassification(t *testing.T) {
+	// 1. Modeled S3 service error: NoSuchKey
+	noSuchKeyErr := &types.NoSuchKey{
+		Message: aws.String("The specified key does not exist."),
+	}
+	wrappedKeyErr := fmt.Errorf("operation failed: %w", noSuchKeyErr)
+	isRetryable, code := ClassifyError(wrappedKeyErr)
+	if isRetryable || code != "NoSuchKey" {
+		t.Errorf("expected NoSuchKey to be non-retryable, got isRetryable=%v, code=%s", isRetryable, code)
+	}
+
+	// 2. Modeled S3 service error: NoSuchBucket
+	noSuchBucketErr := &types.NoSuchBucket{
+		Message: aws.String("The specified bucket does not exist."),
+	}
+	wrappedBucketErr := fmt.Errorf("operation failed: %w", noSuchBucketErr)
+	isRetryable, code = ClassifyError(wrappedBucketErr)
+	if isRetryable || code != "NoSuchBucket" {
+		t.Errorf("expected NoSuchBucket to be non-retryable, got isRetryable=%v, code=%s", isRetryable, code)
+	}
+
+	// 3. Transient error: SlowDown
 	retryableErr := &smithy.GenericAPIError{
 		Code:    "SlowDown",
 		Message: "Please reduce your request rate.",
 	}
-	isRetryable, code := ClassifyError(retryableErr)
+	isRetryable, code = ClassifyError(retryableErr)
 	if !isRetryable || code != "SlowDown" {
 		t.Errorf("expected SlowDown to be retryable, got isRetryable=%v, code=%s", isRetryable, code)
 	}
 
+	// 4. Non-transient authorization error: AccessDenied
 	nonRetryableErr := &smithy.GenericAPIError{
 		Code:    "AccessDenied",
 		Message: "User is not authorized to perform: s3:GetObject",
