@@ -13,7 +13,7 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 |---|---|---|---|---|
 | 01 | `k8s.io/client-go` | `28076445520055420e3be4255b4cd27fd19df1f9` | **SEMANTIC_CLAIM_VERIFIED** | `tools/cache/delta_fifo.go` (`DeltaFIFO`), `tools/cache/index.go` (`Indexer`, `sync.RWMutex`), `util/workqueue/queue.go` (`type Typed[T] struct`, `dirty`/`processing` sets) |
 | 02 | `sigs.k8s.io/controller-runtime` | `67b72c2517be1d2b0dec612477eb20c3c959a8aa` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/manager/internal.go` (`controllerManager.Start`), `pkg/client/client.go` (`type CacheOptions struct`, `Reader`, `DisableFor`), `pkg/controller/controller.go` (`reconcile.Reconciler`) |
-| 03 | `github.com/aws/aws-sdk-go-v2` | `b189f382f4924bc6c948c9942e17c547553faf0d` | **SEMANTIC_CLAIM_VERIFIED** | `aws/middleware/stack.go` (`type Stack struct`), `aws/signer/v4/middleware.go` (`SignHTTPRequest`), `aws/retry/retry.go` (`Standard`), `aws/transport/http/client.go` |
+| 03 | `github.com/aws/aws-sdk-go-v2` | `b189f382f4924bc6c948c9942e17c547553faf0d` | **SEMANTIC_CLAIM_VERIFIED** | `aws/signer/v4/middleware.go` (`UseDynamicPayloadSigningMiddleware`, `SignHTTPRequestMiddleware`), `aws/middleware/middleware.go` (`ClientRequestID`), `aws/retry/retry.go` |
 | 04 | `github.com/prometheus/client_golang` | `d6087ee482e06716ee21dc03819432d5d40f72db` | **SEMANTIC_CLAIM_VERIFIED** | `prometheus/counter.go` (`type counter struct`, `valBits uint64`), `prometheus/vec.go` (`type MetricVec struct`, `sync.RWMutex`), `prometheus/registry.go` (`Gatherer`) |
 | 05 | `go.opentelemetry.io/otel` | `58db4c898f5b5594f8ba78f156475bf48486e2f2` | **SEMANTIC_CLAIM_VERIFIED** | `sdk/trace/batch_span_processor.go` (`type batchSpanProcessor struct`, `queue chan ReadOnlySpan`), `propagation/trace_context.go` (`TraceContext`), `trace/tracer.go` (`Tracer`) |
 | 06 | `go.opentelemetry.io/collector` | `0bf928af5487d3c4e0b4174eabb7ba075c322517` | SOURCE_FILE_VERIFIED | `consumer/consumer.go`, `processor/processor.go` |
@@ -54,7 +54,7 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 | 41 | `github.com/theupdateframework/go-tuf/v2` | `f5edbde31e5507f46db2069402dc38903fe6d9d4` | SOURCE_FILE_VERIFIED | `metadata/trustedmetadata/trustedmetadata.go` |
 | 42 | `cloud.google.com/go` | `4e8373586a5e48c18fbfd4bb0a3e259184e49a91` | SOURCE_FILE_VERIFIED | `storage/reader.go`, `storage/http_client.go` |
 | 43 | `github.com/Azure/azure-sdk-for-go/sdk/azcore` | `d86ae78bd655d233689866cf78930f3c5fd42c35` | SOURCE_FILE_VERIFIED | `sdk/azcore/runtime/pipeline.go`, `sdk/azcore/arm/client.go` |
-| 44 | `github.com/modelcontextprotocol/go-sdk` | `3f3b699b2b67e1ed033a63d6651671dab53c2d32` | **SEMANTIC_CLAIM_VERIFIED** | `mcp/server.go` (`Server.RegisterTool`, `Server.HandleMessage`), `mcp/protocol.go` (`JSONRPCMessage`, `Request`, `Response`), `mcp/transport.go` |
+| 44 | `github.com/modelcontextprotocol/go-sdk` | `3f3b699b2b67e1ed033a63d6651671dab53c2d32` | **SEMANTIC_CLAIM_VERIFIED** | `mcp/server.go` (`(*Server).AddTool`, `mcp.AddTool`, `(*ServerSession).handle`), `mcp/protocol.go`, `mcp/transport.go` |
 | 45 | `github.com/google/adk-go` | `f9ce16ef9cb334b69f5ee3e64e9dfc915f02d0b7` | SOURCE_FILE_VERIFIED | `agent/agent.go` |
 | 46 | `github.com/microsoft/agent-framework-go` | `5fea526630dac7b74dca5b04e6bcf6cbbcd2a2f0` | SOURCE_FILE_VERIFIED | `agent/agent.go` |
 | 47 | `github.com/cloudwego/eino` | `ba04fde8641057055c358d7ab5d3015a9ba825e1` | SOURCE_FILE_VERIFIED | `compose/graph.go`, `schema/message.go` |
@@ -72,9 +72,14 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Nếu controller lặp List toàn bộ Pod mỗi giây, nó tạo công việc tuần tự hóa và truyền snapshot lặp lại. Mức tải phụ thuộc số object, kích thước và API server; không suy ra CPU 100% hay cluster sập chỉ từ 500 Pod. Informer hỗ trợ duy trì observation local từ list/watch để nhiều consumer không phải tự polling toàn bộ tài nguyên theo cùng nhịp.
-- **Source Files & Symbols đối chiếu**: `tools/cache/delta_fifo.go` (`DeltaFIFO`), `tools/cache/index.go` (`Indexer`, `sync.RWMutex`), `util/workqueue/queue.go` (`type Typed[T] struct`, `dirty`/`processing` sets)
-- **Cơ chế kỹ thuật xác minh**: Informer dùng Reflector stream sự kiện vào DeltaFIFO; worker rút key từ workqueue. Hàm Add() chỉ đánh dấu vào tập dirty nếu key đang trong processing, ngăn trùng lặp xử lý; Done() đưa key trở lại hàng đợi đúng một lần nếu dirty còn tồn tại.
-- **Giới hạn điều kiện & Phiên bản**: Quan sát từ Indexer có thể stale so với API server. Lỗi watch stream không đồng nghĩa cache sập vì Reflector có cơ chế relist/recovery. Áp dụng cho client-go v0.37.0.
+- **Source Files & Symbols đối chiếu**:
+  - `tools/cache/delta_fifo.go` (lines 96–120: `type DeltaFIFO struct`, lines 212–250: `func (f *DeltaFIFO) Add`)
+  - `tools/cache/index.go` (lines 35–45: `type Indexer interface`, lines 100–120: `type cache struct`, `sync.RWMutex`)
+  - `util/workqueue/queue.go` (lines 190–205: `type Typed[t comparable] struct`, `dirty sets.Set[t]`, `processing sets.Set[t]`, lines 220–250: `func (q *Typed[t]) Add`, `func (q *Typed[t]) Done`)
+- **Cơ chế kỹ thuật xác minh**: Informer dùng Reflector stream sự kiện từ apiserver vào `DeltaFIFO`; worker rút key từ workqueue (`Typed[t]`). Hàm `Add()` chỉ đánh dấu key vào tập `dirty` nếu key đang nằm trong `processing`, ngăn xử lý trùng lặp đồng thời của cùng một resource key; `Done()` đưa key trở lại hàng đợi nếu `dirty` còn tồn tại.
+- **Điều kiện áp dụng**: Áp dụng cho `k8s.io/client-go v0.37.0` (commit `28076445520055420e3be4255b4cd27fd19df1f9`, tag `v0.37.0` / `kubernetes-1.37.0`).
+- **Những gì source không chứng minh**: Source không chứng minh rằng dùng Informer sẽ triệt tiêu 100% tải lên API server (Initial List vẫn cần serialize toàn bộ tập đối tượng); không chứng minh local cache luôn phản ánh trạng thái mới nhất tức thời (observation từ `Indexer` có độ trễ do event stream propagation delay).
+
 
 ### Rank 02: `sigs.k8s.io/controller-runtime` (v0.25.1)
 - **Official Remote**: `https://github.com/kubernetes-sigs/controller-runtime.git`
@@ -82,9 +87,14 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > `controller-runtime` tổ chức cache, controller và lifecycle dùng chung, giảm phần wiring phải tự làm với `client-go`. `Reconcile(ctx, Request)` là contract điều hòa, không xóa trách nhiệm thiết kế retry, quyền, cleanup hay shutdown của ứng dụng. Không có một số dòng boilerplate cố định cho mọi controller.
-- **Source Files & Symbols đối chiếu**: `pkg/manager/internal.go` (`controllerManager.Start`), `pkg/client/client.go` (`type CacheOptions struct`, `Reader`, `DisableFor`), `pkg/controller/controller.go` (`reconcile.Reconciler`)
-- **Cơ chế kỹ thuật xác minh**: Manager khởi động HTTP server và webhook trước cache, sau đó mới kích hoạt controller runnables. Split client định tuyến lệnh đọc qua CacheOptions.Reader và cho phép dùng DisableFor để bypass cache đọc thẳng API server.
-- **Giới hạn điều kiện & Phiên bản**: Reconcile() không tự giải phóng side effects khi shutdown; client.New không có CacheOptions thì đọc trực tiếp API. Cấu trúc đã thay đổi, không còn split.go của các version trước v0.15. Áp dụng cho v0.25.1.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/manager/internal.go` (lines 360–420: `type controllerManager struct`, `func (cm *controllerManager) Start`)
+  - `pkg/client/client.go` (lines 115–140: `type CacheOptions struct`, `Reader`, `DisableFor`, lines 210–230: `func New`)
+  - `pkg/controller/controller.go` (lines 40–60: `type Controller interface`, lines 80–110: `reconcile.Reconciler`)
+- **Cơ chế kỹ thuật xác minh**: Manager quản lý vòng đời chung: khởi động cache và chờ Informer sync trước khi kích hoạt controller runnables. Split client tích hợp định tuyến lệnh đọc qua `CacheOptions.Reader` (mặc định trỏ vào local informer cache) và cung cấp `DisableFor` để bypass cache đọc trực tiếp từ API server cho các loại tài nguyên cụ thể.
+- **Điều kiện áp dụng**: Áp dụng cho `sigs.k8s.io/controller-runtime v0.25.1` (commit `67b72c2517be1d2b0dec612477eb20c3c959a8aa`, tag `v0.25.1`).
+- **Những gì source không chứng minh**: Source không chứng minh `Reconcile()` tự động rollback side-effects khi ngữ cảnh bị hủy; không đảm bảo crash-loop nếu logic ứng dụng không xử lý exponential backoff retry hợp lý. Cấu trúc đã thay đổi, không còn split.go của các version trước v0.15.
+
 
 ### Rank 03: `github.com/aws/aws-sdk-go-v2` (v1.47.0)
 - **Official Remote**: `https://github.com/aws/aws-sdk-go-v2.git`
@@ -92,9 +102,15 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Một lời gọi S3 được SDK serialize, resolve endpoint, ký khi operation yêu cầu và gửi qua HTTP. SigV4 dùng canonical request và credential; không phải mọi đường S3 đều băm toàn bộ body, vì có chế độ unsigned payload. Đọc `aws/signer/v4/middleware.go` và operation source để biết đường ký cụ thể.
-- **Source Files & Symbols đối chiếu**: `aws/middleware/stack.go` (`type Stack struct`), `aws/signer/v4/middleware.go` (`SignHTTPRequest`), `aws/retry/retry.go` (`Standard`), `aws/transport/http/client.go`
-- **Cơ chế kỹ thuật xác minh**: SDK tổ chức request qua middleware stack 5 giai đoạn (Initialize -> Serialize -> Build -> Finalize -> Deserialize). Endpoint resolution và SigV4 signature được tiêm tại Finalize; retry loop bọc ngoài cùng với standard exponential backoff.
-- **Giới hạn điều kiện & Phiên bản**: Client credential refresh phụ thuộc vào aws.CredentialsCache; nếu gọi Retrieve() trực tiếp trên provider cơ sở thì không có cơ chế tái sử dụng token. Áp dụng cho aws-sdk-go-v2 v1.36.3.
+- **Source Files & Symbols đối chiếu**:
+  - `aws/signer/v4/middleware.go` (lines 53–80: `func UseDynamicPayloadSigningMiddleware`, lines 105–125: `func AddUnsignedPayloadMiddleware`, lines 138–165: `func AddComputePayloadSHA256Middleware`, lines 202–215: `func SwapComputePayloadSHA256ForUnsignedPayloadMiddleware`, lines 282–310: `type SignHTTPRequestMiddleware struct`, `func (s *SignHTTPRequestMiddleware) HandleFinalize`)
+  - `aws/middleware/middleware.go` (lines 18–43: `type ClientRequestID struct`, `func (r ClientRequestID) HandleBuild`, lines 46–65: `type RecordResponseTiming struct`)
+  - `aws/retry/retry.go` (lines 35–60: `type Standard struct`)
+  - `aws/transport/http/client.go` (lines 50–70: `type BuildableClient struct`)
+- **Cơ chế kỹ thuật xác minh**: SDK tổ chức pipeline xử lý qua Smithy middleware stack. Trong `aws/signer/v4/middleware.go`, hàm `UseDynamicPayloadSigningMiddleware` linh hoạt chuyển đổi giữa tính SHA-256 payload và chế độ `UnsignedPayload` dựa trên việc kết nối có bật TLS hay không (cho phép S3 PutObject stream dữ liệu mà không cần băm toàn bộ body). `SignHTTPRequestMiddleware` tại pha Finalize ký request theo chuẩn SigV4.
+- **Điều kiện áp dụng**: Áp dụng cho repo `github.com/aws/aws-sdk-go-v2 v1.47.0` (commit `b189f382f4924bc6c948c9942e17c547553faf0d`). Trong lab Chương 24, ứng dụng pin module `github.com/aws/aws-sdk-go-v2 v1.36.3` (cả hai phiên bản đều chia sẻ chung cơ chế middleware SigV4 payload signing này).
+- **Những gì source không chứng minh**: Source không chứng minh mọi API của AWS đều cho phép unsigned payload (middleware ghi rõ: không áp dụng cho AWS APIs không hỗ trợ unsigned payload signing auth). Source không tự động gia hạn token nếu gọi trực tiếp `provider.Retrieve()` mà không đi qua `aws.CredentialsCache`.
+
 
 ### Rank 04: `github.com/prometheus/client_golang` (v1.24.1)
 - **Official Remote**: `https://github.com/prometheus/client_golang.git`
@@ -102,9 +118,14 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Nhiều goroutine cập nhật cùng counter có thể tranh chấp lock và cache line chứa state chia sẻ. Chi phí phụ thuộc workload, số writer, kiến trúc và đường đồng bộ; không hứa nó tăng theo một quy luật chung khi thêm core. Cần profile/benchmark trước khi chọn một primitive khác.
-- **Source Files & Symbols đối chiếu**: `prometheus/counter.go` (`type counter struct`, `valBits uint64`), `prometheus/vec.go` (`type MetricVec struct`, `sync.RWMutex`), `prometheus/registry.go` (`Gatherer`)
-- **Cơ chế kỹ thuật xác minh**: Counter triển khai atomic addition trên float64 bits (LoadUint64/CompareAndSwapUint64) để tránh lock tranh chấp trên hot path. MetricVec sử dụng RWMutex quản lý map metric con, chỉ lock ghi khi sinh nhãn mới.
-- **Giới hạn điều kiện & Phiên bản**: Label values phân tán sinh ra nhiều time-series làm tăng bộ nhớ; exporter parse text format Prometheus/OpenMetrics. Áp dụng cho client_golang v1.23.2.
+- **Source Files & Symbols đối chiếu**:
+  - `prometheus/counter.go` (lines 104–115: `type counter struct`, `valBits uint64`, lines 127–145: `func (c *counter) Add(v float64)` với vòng lặp `atomic.CompareAndSwapUint64(&c.valBits, oldBits, newBits)`)
+  - `prometheus/vec.go` (lines 36–45: `type MetricVec struct`, lines 320–330: `mtx sync.RWMutex`)
+  - `prometheus/registry.go` (lines 30–50: `type Gatherer interface`, `type Registry struct`)
+- **Cơ chế kỹ thuật xác minh**: `counter` lưu trữ giá trị float64 dưới dạng bit pattern trong `valBits uint64`. Hàm `Add(v float64)` thực hiện thao tác cộng lock-free thông qua `atomic.LoadUint64` và `atomic.CompareAndSwapUint64`. Khi nhiều goroutine cùng ghi đồng thời, hiện tượng cache line contention và CAS retry xuất hiện. `MetricVec` dùng `sync.RWMutex` bảo vệ map chứa metrics con, chỉ lock ghi khi khởi tạo label tuple mới.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/prometheus/client_golang v1.24.1` (commit `d6087ee482e06716ee21dc03819432d5d40f72db`, tag `v1.24.1`).
+- **Những gì source không chứng minh**: Source không chứng minh độ trễ tăng tuyến tính theo số core CPU (tranh chấp cache line phụ thuộc vào topology CPU, bus và tần suất ghi của goroutine); không chứng minh counter lock-free miễn nhiễm hoàn toàn với memory contention. Exporter parse text format Prometheus/OpenMetrics.
+
 
 ### Rank 05: `go.opentelemetry.io/otel` (v1.46.0)
 - **Official Remote**: `https://github.com/open-telemetry/opentelemetry-go.git`
@@ -112,9 +133,14 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Telemetry có overhead và cần budget. Export đồng bộ thêm thời gian chờ vào request path; queue không giới hạn có thể giữ quá nhiều memory khi backend lỗi. Không có tỷ lệ latency tăng gấp đôi phổ quát. Batch processor chọn queue, timeout, drop/block policy và shutdown behavior; đo overhead và loss theo workload thay vì coi instrumentation là miễn phí.
-- **Source Files & Symbols đối chiếu**: `sdk/trace/batch_span_processor.go` (`type batchSpanProcessor struct`, `queue chan ReadOnlySpan`), `propagation/trace_context.go` (`TraceContext`), `trace/tracer.go` (`Tracer`)
-- **Cơ chế kỹ thuật xác minh**: BatchSpanProcessor nhận span qua unbuffered/buffered channel và gom nhóm theo thời gian batchTimeout hoặc kích thước maxExportBatchSize trên worker goroutine độc lập, giải phóng thread xử lý chính.
-- **Giới hạn điều kiện & Phiên bản**: Nếu channel queue đầy (vượt maxQueueSize), processor buộc phải drop span mới và tăng counter droppedSpanCount để bảo vệ tiến trình không bị OOM. Áp dụng cho otel v1.36.0.
+- **Source Files & Symbols đối chiếu**:
+  - `sdk/trace/batch_span_processor.go` (lines 67–85: `type batchSpanProcessor struct`, `queue chan ReadOnlySpan`, `dropped atomic.Uint32`, lines 91–110: `func NewBatchSpanProcessor`, lines 415–435: `func (bsp *batchSpanProcessor) onEnd(s ReadOnlySpan)`)
+  - `propagation/trace_context.go` (lines 30–60: `type TraceContext struct`, `func (tc TraceContext) Inject`, `func (tc TraceContext) Extract`)
+  - `trace/tracer.go` (lines 35–55: `type Tracer interface`, `type TracerConfig struct`)
+- **Cơ chế kỹ thuật xác minh**: `batchSpanProcessor` đẩy các span đã kết thúc vào `queue chan ReadOnlySpan` có dung lượng giới hạn (`maxQueueSize`). Một goroutine nền độc lập sẽ rút span, gom thành đợt (`batch []ReadOnlySpan`) và gọi `exporter.ExportSpans`. Trong `onEnd()`, nếu hàng đợi đầy, lệnh ghi non-blocking qua `select-default` sẽ drop span và tăng biến đếm `bsp.dropped.Add(1)` để bảo vệ bộ nhớ không bị phình to (OOM).
+- **Điều kiện áp dụng**: Áp dụng cho `go.opentelemetry.io/otel v1.46.0` (commit `58db4c898f5b5594f8ba78f156475bf48486e2f2`, tag `v1.46.0` / `sdk/v1.46.0`).
+- **Những gì source không chứng minh**: Source không chứng minh tỷ lệ tăng độ trễ cố định (overhead phụ thuộc cấu hình sampler, số lượng attribute và exporter transport); không đảm bảo không mất span khi backend export bị nghẽn (span bị drop có chủ đích khi queue đầy).
+
 
 ### Rank 06: `go.opentelemetry.io/collector` (v0.161.0)
 - **Official Remote**: `https://github.com/open-telemetry/opentelemetry-collector.git`
@@ -167,9 +193,15 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Một image `scratch` không tự mang shell, git hay C runtime; các biến thể distroless có thành phần khác nhau và có thể mang library native. Nếu image không có executable git, gọi `exec.Command` không thể dùng nó. go-git là một lựa chọn library in-process; lựa chọn khác là đóng gói git phù hợp. Phải kiểm tra đúng image digest và dependency cần dùng, không suy ra từ nhãn “tối giản”.
-- **Source Files & Symbols đối chiếu**: `plumbing/format/packfile/parser.go` (`type Parser struct`), `plumbing/storer/storer.go` (`EncodedObjectStorer`), `repository.go` (`PlainOpen`, `Clone`), `worktree.go`
-- **Cơ chế kỹ thuật xác minh**: Triển khai Git engine 100% bằng Go thuần. Parser giải mã nhị phân packfile format (hỗ trợ OFS_DELTA và REF_DELTA), nạp đối tượng Git trực tiếp vào bộ lưu trữ trừu tượng (Storer) không cần shell hay C runtime.
-- **Giới hạn điều kiện & Phiên bản**: Xử lý kho mã nguồn kích thước lớn tiêu tốn RAM đáng kể so với cgit; không hỗ trợ đầy đủ các filter driver phức tạp hoặc hook ngoài. Áp dụng cho go-git v5.14.0.
+- **Source Files & Symbols đối chiếu**:
+  - `plumbing/format/packfile/parser.go` (lines 82–110: `type Parser struct`, `func NewParser`, `func NewParserWithStorage`)
+  - `plumbing/storer/object.go` (lines 17–30: `type EncodedObjectStorer interface`)
+  - `repository.go` (lines 227–245: `func Clone`, `func CloneContext`, lines 304–315: `func PlainOpen`, lines 465–480: `func PlainClone`, `func PlainCloneContext`)
+  - `worktree.go` (lines 40–60: `type Worktree struct`, `func (w *Worktree) Status`)
+- **Cơ chế kỹ thuật xác minh**: `go-git` cài đặt toàn bộ định dạng lưu trữ đối tượng Git (commit, tree, blob, tag) và packfile parser hoàn toàn bằng Go thuần (in-process). Thư viện tương tác trực tiếp với filesystem trừu tượng (`billy.Filesystem`) và bộ lưu trữ đối tượng (`EncodedObjectStorer`), cho phép thực thi `PlainClone` hoặc đọc commit history mà không cần gọi tiến trình con nhị phân `/usr/bin/git` qua `os/exec` hay C runtime.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/go-git/go-git/v5 v5.19.2` (commit `3eeb238da61eb9c7a324f3ee04f990ce89175642`, tag `v5.19.2`).
+- **Những gì source không chứng minh**: Source không chứng minh `go-git` nhanh hơn hoặc tiết kiệm bộ nhớ hơn C-git trên các kho mã nguồn khổng lồ; không hỗ trợ đầy đủ các hook ngoài, filter driver hay partial clone phức tạp của Git CLI chuẩn.
+
 
 ### Rank 12: `golang.org/x/crypto` (v0.57.0)
 - **Official Remote**: `https://github.com/golang/crypto.git`
@@ -249,9 +281,15 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Để quan sát syscall hay xử lý packet trong Linux, đã có nhiều cơ chế như audit, ptrace, ftrace, packet capture và kernel module, với điểm quan sát và chi phí khác nhau. eBPF bổ sung cách nạp chương trình vào hook được kernel hỗ trợ. Chọn nó theo dữ liệu cần thu, quyền, kernel và workload, không từ một so sánh chỉ có hai lựa chọn cực đoan.
-- **Source Files & Symbols đối chiếu**: `prog.go` (`Program.Test`), `map.go` (`Map.Lookup`, `Map.Update`), `ringbuf/reader.go` (`Reader.Read`, `Reader.Close`), `collection.go` (`LoadCollectionSpec`)
-- **Cơ chế kỹ thuật xác minh**: Nạp mã eBPF ELF qua bpf syscall (BPF_PROG_LOAD/BPF_MAP_CREATE) từ Go. Reader đọc dữ liệu sự kiện từ kernel qua bộ đệm vòng (ring buffer memory mapped) không qua copy trung gian người dùng.
-- **Giới hạn điều kiện & Phiên bản**: Đòi hỏi Linux kernel >= 5.8 đối với ring buffer API và quyền CAP_BPF/CAP_SYS_ADMIN trên máy chủ thực tế; không thể chạy trực tiếp kernel BPF trên Windows. Áp dụng cho cilium/ebpf v0.17.3.
+- **Source Files & Symbols đối chiếu**:
+  - `prog.go` (lines 150–180: `type Program struct`, lines 340–370: `func (p *Program) Test(in *ProgramTestOptions) error`)
+  - `map.go` (lines 90–120: `type Map struct`, lines 210–235: `func (m *Map) Lookup`, lines 250–270: `func (m *Map) Update`)
+  - `ringbuf/reader.go` (lines 45–65: `type Reader struct`, lines 95–130: `func (r *Reader) Read`, lines 170–190: `func (r *Reader) Close`)
+  - `collection.go` (lines 40–70: `type CollectionSpec struct`, `func LoadCollectionSpec`)
+- **Cơ chế kỹ thuật xác minh**: Thư viện sử dụng Linux `bpf(2)` syscall trực tiếp để nạp chương trình ELF bytecode (`BPF_PROG_LOAD`), cấp phát BPF maps (`BPF_MAP_CREATE`) và gắn vào tracepoint/kprobe/cgroup. `ringbuf.Reader` ánh xạ bộ nhớ đệm vòng (memory mapped circular buffer) giữa kernel và userspace, cho phép đọc sự kiện zero-copy mà không cần polling liên tục.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/cilium/ebpf v0.22.0` (commit `e55144e17360b60cc4583229c35c2dbf0935b308`, tag `v0.22.0`).
+- **Những gì source không chứng minh**: Source không chứng minh eBPF có thể chạy độc lập không cần quyền đặc quyền (yêu cầu kernel Linux >= 5.8 và capabilities `CAP_BPF` hoặc `CAP_SYS_ADMIN`); source không thể nạp và chạy BPF kernel thực tế trên Windows host.
+
 
 ### Rank 21: `github.com/vishvananda/netlink` (v1.3.1)
 - **Official Remote**: `https://github.com/vishvananda/netlink.git`
@@ -286,9 +324,13 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Khi viết một con bot tự động hóa GitHub Actions hoặc công cụ dọn dẹp các pull request cũ trong một tổ chức doanh nghiệp có hàng nghìn repositories, bạn sẽ phải đối mặt với bài toán phân trang (pagination) và giới hạn tần suất gọi API (Rate Limiting).
-- **Source Files & Symbols đối chiếu**: `github/github.go` (`Client.Do`, `Response.Rate`), `github/actions_workflows.go` (`ActionsService.ListWorkflows`, `ActionsService.CreateWorkflowDispatchEvent`)
-- **Cơ chế kỹ thuật xác minh**: Client bao bọc http.Client, phân tích header X-RateLimit-* để ghi nhận hạn ngạch rate limit còn lại và giải mã Link header hỗ trợ phân trang danh sách workflow actions.
-- **Giới hạn điều kiện & Phiên bản**: Không tự động chờ/ngủ khi rate limit về 0 mà trả về RateLimitError; ứng dụng phải tự quản lý retry backoff. Áp dụng cho go-github v92.0.0.
+- **Source Files & Symbols đối chiếu**:
+  - `github/github.go` (lines 530–570: `func (c *Client) Do`, lines 800–840: `type Response struct`, `Rate Rate`, `func parseRate(r *http.Response) Rate`)
+  - `github/actions_workflows.go` (lines 75–95: `func (s *ActionsService) ListWorkflows`, lines 130–155: `func (s *ActionsService) CreateWorkflowDispatchEvent`)
+- **Cơ chế kỹ thuật xác minh**: `Client.Do` thực hiện gửi HTTP request, tự động phân tích các response headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) và lưu trữ vào cấu trúc `Response.Rate`. Đối với danh sách phân trang (như `ListWorkflows`), client phân tích header `Link` với các quan hệ `rel="next"`, `rel="last"` để caller biết offset và điều phối gọi tiếp.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/google/go-github/v92 v92.0.0` (commit `5149b4d74590b63154fcc43c4dac05e881f9aea3`, tag `v92.0.0`).
+- **Những gì source không chứng minh**: Source không tự động sleep/pause khi rate limit cạn (`Remaining == 0`), mà trả về lỗi `*RateLimitError`; ứng dụng caller phải tự chịu trách nhiệm lập trình retry logic và backoff thời gian chờ theo `Reset.Time`.
+
 
 ### Rank 25: `github.com/spf13/cobra` (v1.10.2)
 - **Official Remote**: `https://github.com/spf13/cobra.git`
@@ -470,9 +512,15 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > MCP định nghĩa cách client và server trao đổi tool/resource qua protocol; ứng dụng vẫn phải xác định server nào được tin, dữ liệu nào được phép đọc và hành động nào caller được phép yêu cầu.
-- **Source Files & Symbols đối chiếu**: `mcp/server.go` (`Server.RegisterTool`, `Server.HandleMessage`), `mcp/protocol.go` (`JSONRPCMessage`, `Request`, `Response`), `mcp/transport.go`
-- **Cơ chế kỹ thuật xác minh**: Định nghĩa giao thức Model Context Protocol chuẩn JSON-RPC 2.0. Phân tách ranh giới giữa giao vận (stdio/SSE) và tầng xử lý; Server xác thực schema tham số trước khi chuyển tới tool handler.
-- **Giới hạn điều kiện & Phiên bản**: SDK không tự cô lập lệnh shell hay ngăn chặn prompt injection; trách nhiệm sandbox nằm ở ứng dụng tích hợp Agent. Áp dụng cho mcp-go-sdk v0.2.0.
+- **Source Files & Symbols đối chiếu**:
+  - `mcp/server.go` (line 315: `func (s *Server) AddTool(t *Tool, h ToolHandler)`, line 603: `func AddTool[In, Out any](s *Server, t *Tool, h ToolHandlerFor[In, Out])`, line 1005: `func (s *Server) callTool(ctx context.Context, req *CallToolRequest) (*CallToolResult, error)`, lines 1941–1975: `func (ss *ServerSession) handle(ctx context.Context, req *jsonrpc.Request) (any, error)`)
+  - `mcp/protocol.go` (lines 49–60: `type InputRequest interface`, lines 18–35: JSON-RPC request/result structures)
+  - `mcp/transport.go` (line 52: `type Transport interface`)
+  - `mcp/mcp.go` (lines 8–35: `NewServer`, `StdioTransport`, `CommandTransport`)
+- **Cơ chế kỹ thuật xác minh**: SDK cung cấp triển khai Model Context Protocol chuẩn qua giao thức JSON-RPC 2.0. `Server` hỗ trợ đăng ký tool qua `(*Server).AddTool` hoặc hàm generic `mcp.AddTool[In, Out any]` tự động sinh JSON schema từ Go struct tag (`jsonschema:`). Khi client gửi request `tools/call`, phương thức `(*ServerSession).handle` tiếp nhận JSON-RPC message, xác thực giao thức và dispatch tới `(*Server).callTool`.
+- **Điều kiện áp dụng**: Áp dụng cho repo `github.com/modelcontextprotocol/go-sdk v1.8.0` (commit `3f3b699b2b67e1ed033a63d6651671dab53c2d32`, tag `v1.8.0`).
+- **Những gì source không chứng minh**: SDK chỉ xử lý tầng framing và serialization/deserialization giao thức; SDK không tự kiểm duyệt quyền truy cập (authorization), không cô lập môi trường thực thi (sandbox command), và không bảo vệ chống prompt injection. Ứng dụng tích hợp Agent phải tự thiết lập Human-in-the-loop gate và target allowlist.
+
 
 ### Rank 45: `github.com/google/adk-go` (HEAD-main)
 - **Official Remote**: `https://github.com/google/adk-go.git`

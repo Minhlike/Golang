@@ -16,7 +16,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Phương pháp thẩm định**:
   - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
   - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
-- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **134 trang**
+- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **188 trang**
   - Danh sách và phạm vi trang:
     - Trang 1 (Bìa) & Trang 2 (Mục lục)
     - Trang 3–13: Lời mở đầu & Toàn bộ Chương 00 (11 trang)
@@ -27,9 +27,15 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
     - Trang 81–93: Toàn bộ Chương 05 (13 trang: package boundary, DAG khởi tạo gói, import cycle, cấu hình an toàn, net.SplitHostPort, IPv6, loại bỏ bool không rõ nghĩa, go.mod/MVS/replace, go.work, toolchain Go 1.27 vs language version, build tags //go:build, cross-compilation, Hình 19)
     - Trang 94–113: Toàn bộ Chương 06 (20 trang: refactor kiểm chứng quanh app.Run, Bảng 3 phạm vi unit test, Bảng 4 policy lỗi cấu hình vs probe, table-driven test, ngữ nghĩa biến lặp Go 1.22+, bẫy &tt, lọc test -run, race detector, Bảng 5 race report, sync.Mutex, sync.WaitGroup, fuzzing với invariant property, seed corpus, benchmark với b.Loop() Go 1.24/1.27.1, contract stdout/stderr process boundary)
     - Trang 114–123: Toàn bộ Chương 07 (10 trang: mô hình stream byte-by-byte, io.Reader/Writer contract, io.EOF, Bảng 6 kết quả Read, io.LimitReader, json.NewDecoder xử lý trailing data, encoding/json v1 vs v2 duplicate keys, flush/close defer, short write sentinel, bufio user-space buffering 4096B, Bảng đối chiếu 5 Reader vs Syscall, Linux fd_unix vs Windows IOCP, io/fs, embed.FS, os.Root, bufio.Scanner giới hạn token)
-    - 11 trang chốt trọng yếu rải đều toàn sách: Trang 124 (Ch08 Opener), Trang 140 (Ch10 Opener), Trang 224 (Ch17 Manifest / REPLACE_ME exception), Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11).
-  - Trạng thái kiểm tra trực quan: 134/134 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **359 trang** (`visual_status = PENDING`).
+    - Trang 124–131: Toàn bộ Chương 08 (8 trang: race hazards, Go Memory Model, Happens-before, Mutex vs WaitGroup, sync.Once, sync.Cond, atomic.Pointer, Hình 20, Bảng 7)
+    - Trang 132–139: Toàn bộ Chương 09 (8 trang: channel backpressure, select timeout/cancellation, buffer backlog, ownership đóng kênh, worker pool contract, G/M/P coordination, hchan internals, Hình 21, Bảng 8)
+    - Trang 140–152: Toàn bộ Chương 10 (13 trang: compiler escape analysis, SSA prove / bounds check elimination, GC mark-sweep & mgcpacer, Green Tea GC, GOGC, GOMEMLIMIT, benchmark b.Loop(), pprof CPU/mem, execution trace G/M/P states, PGO, Hình 22, Bảng đối chiếu chẩn đoán)
+    - Trang 153–159: Toàn bộ Chương 11 (7 trang: HTTP request lifecycle, net/http/httptrace, TLS handshake, context deadlines, connection reuse, body draining contract, Hình 23, Bảng 9)
+    - Trang 160–169: Toàn bộ Chương 12 (10 trang: service graceful shutdown, ServeUntilStopped, signal.NotifyContext, MaxBytesReader, JSON decoding EOF strictness, server timeouts, Hình 24, Bảng 10)
+    - Trang 170–179: Toàn bộ Chương 13 (10 trang: transaction atomicity, db.BeginTx, defer tx.Rollback, RowsAffected, database/sql connection pool, SetMaxOpenConns/IdleConns, prepared statements, Hình 25)
+    - 9 trang chốt trọng yếu rải đều các chương sau: Trang 224 (Ch17 Manifest / REPLACE_ME exception), Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11).
+  - Trạng thái kiểm tra trực quan: 188/188 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
+- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **305 trang** (`visual_status = PENDING`).
 - **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
 - **Ledger bằng chứng thị giác chi tiết**:
   - Đường dẫn: [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv)
@@ -88,9 +94,9 @@ Báo cáo kiểm định preflight ghi nhận 2 ngoại lệ (Exceptions: 2):
 
 ## 6. Kết luận Nghiệm thu (Verification Verdict)
 
-- Vì 134/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 359/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
+- Vì 188/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 305/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
 - **Trạng thái chính thức**:
   ```
   PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE
   ```
-  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 359/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
+  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 305/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
