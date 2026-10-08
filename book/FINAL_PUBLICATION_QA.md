@@ -10,7 +10,7 @@
 > - `RELEASE_COMMIT`: `24267405bfa6bdaa81901691cf56d182ba8cfd47` (Commit phát hành promoted PDF `Golang_Master.pdf`).
 > - `EVIDENCE_COMMIT`: `8ff67af44ae32b2215ed2c7907504ad40ce93af8` (Commit thiết lập manifest minh bạch `book/PUBLICATION_EVIDENCE.md`).
 >
-> Chi tiết ranh giới bằng chứng, phân loại giữa kiểm định hình học tự động (415 trang) và kiểm định trực quan thực tế (78 trang) được quy định chính thức tại [book/PUBLICATION_EVIDENCE.md](PUBLICATION_EVIDENCE.md) và ledger [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
+> Chi tiết ranh giới bằng chứng, phân loại giữa kiểm định hình học tự động (359 trang) và kiểm định trực quan thực tế (134 trang) được quy định chính thức tại [book/PUBLICATION_EVIDENCE.md](PUBLICATION_EVIDENCE.md) và ledger [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
 ---
 
