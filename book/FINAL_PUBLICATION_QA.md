@@ -1,14 +1,19 @@
 # THÔNG BÁO TRẠNG THÁI NGHIỆM THU HIỆN HÀNH (CURRENT AUDIT STATUS)
 
 > [!WARNING]
-> **TRẠNG THÁI XUẤT BẢN HIỆN TẠI (CURRENT STATUS)**: `PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE`
+> **KẾT QUẢ ĐÓNG ĐỢT HIỆU CHỈNH CHỨNG CỨ (EVIDENCE CORRECTION FREEZE)**:
+> - `EVIDENCE_CORRECTION_STATUS=CLOSED_WITH_DECLARED_LIMITATIONS`
+> - `PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE`
 >
-> Tuyên bố `READY_FOR_THIS_PDF_SHA` và `BOOK_STATUS=READY` trong mục kiểm định ngày 08-10-2026 bên dưới được đánh dấu là **SUPERSEDED** (ĐÃ BỊ THAY THẾ) do quy trình kiểm định trước đó đã dùng script duyệt cây hình học AST/DOM (`scripts/audit_visual_pages.py`) thay cho việc quan sát trực quan từng ảnh raster render bằng mắt/thị giác.
+> **Giới hạn chứng cứ đã công khai minh bạch (Declared Known Limitations)**:
+> - **Visual Page Inspection**: **352/493 trang visual PASS**, **141/493 trang PENDING** (toàn bộ 493 trang đã đạt chuẩn hình học AST/DOM nhưng 141 trang còn lại bảo lưu trạng thái chờ mô hình thị giác duyệt raster 150 DPI).
+> - **Library Atlas Verification**: **24/50 thư viện semantic verified** (`SEMANTIC_CLAIM_VERIFIED`), **26/50 thư viện source-file-only** (`SOURCE_FILE_VERIFIED`).
+> *(Lưu ý: Đây là các giới hạn bằng chứng đã công khai minh bạch trong hồ sơ xuất bản, không phải các lỗi cần xử lý trong đợt này. Toàn bộ chapter mapping 287–345 và source anchors của 24 thư viện semantic đã được đối soát chính xác tuyệt đối).*
 >
 > **Phân định rõ các mốc Commit**:
 > - `REVIEWED_SOURCE_HEAD`: `0a4cea0bef424430cae87519697c5eeed60a7aad` (Toàn bộ mã nguồn bản thảo Ch00–Ch29 và các labs được thẩm định và đóng băng tại đây).
 > - `RELEASE_COMMIT`: `24267405bfa6bdaa81901691cf56d182ba8cfd47` (Commit phát hành promoted PDF `Golang_Master.pdf`).
-> - `EVIDENCE_COMMIT`: `8ff67af44ae32b2215ed2c7907504ad40ce93af8` (Commit thiết lập manifest minh bạch `book/PUBLICATION_EVIDENCE.md`).
+> - `EVIDENCE_FREEZE_COMMIT`: `7ee9f494cea3939fc436bc72259cb7df53f2c057` (Commit chuẩn hóa chapter mapping 287–345 và đối soát chính xác toàn bộ source anchors của 24 thư viện semantic).
 >
 > Chi tiết ranh giới bằng chứng, phân loại giữa kiểm định hình học tự động (141 trang) và kiểm định trực quan thực tế (352 trang) được quy định chính thức tại [book/PUBLICATION_EVIDENCE.md](PUBLICATION_EVIDENCE.md) và ledger [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
