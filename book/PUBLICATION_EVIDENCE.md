@@ -9,35 +9,44 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Số trang thực tế**: 493 trang
 - **Reviewed Source HEAD**: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - **Release Commit**: `24267405bfa6bdaa81901691cf56d182ba8cfd47`
-- **Tương đồng Candidate**: Byte-identical với `tmp/pdfs/Golang_Master.candidate.pdf` (100% khớp byte).
+- **Tương đồng Candidate**: Byte-identical với `tmp/pdfs/Golang_Master.candidate.pdf` (100% khớp từng byte).
 
 ## 2. Phương pháp và phân loại Visual Review
 
-- **Phương pháp thực hiện**: `AUTOMATED_GEOMETRIC_AST_INSPECTION_WITH_TARGETED_SEMANTIC_SAMPLING`
-  - Thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF) kiểm tra: kích thước trang A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng, trang trùng lặp, và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
-  - Kiểm tra phát hiện orphan heading: đối chiếu font `SourceSans3-Semibold` ở đáy trang kết hợp thuộc tính `keepWithNext=True` của ReportLab.
-- **Số trang được xem trực tiếp (Direct Visual/Semantic Reviews)**: 20 trang
-  - Trang 1 (Bìa), Trang 2 (Mục lục).
-  - Trang mở đầu các chương trọng yếu: Ch01 (p14), Ch08 (p124), Ch10 (p140), Ch13 (p170), Ch16 (p207), Ch18 (p236), Ch19 (p254), Ch20 (p264), Ch24 (p322), Ch25 (p339), Ch26 (p355), Ch27 (p379), Ch28 (p399), Ch29 (p419).
-  - Các trang giải quyết cảnh báo phân đoạn/biên lỗi: Ch17 (p224, p225), Ch27 (p397), Ch29 (p424, p425), Back Matter (p429, p482), Phụ lục A (p484).
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: 473 trang.
+- **Phương pháp thẩm định**:
+  - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
+  - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
+- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **15 trang**
+  - Danh sách trang: Trang 1 (Bìa), Trang 2 (Mục lục), Trang 14 (Ch01 Opener), Trang 35 (Ch02 Opener), Trang 124 (Ch08 Opener), Trang 140 (Ch10 Opener), Trang 224 (Ch17 Manifest / REPLACE_ME exception), Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11).
+  - Trạng thái kiểm tra trực quan: 15/15 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét.
+- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **478 trang** (`visual_status = PENDING`).
 - **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
-- **Đường dẫn Ledger gốc**: `.workspace/final-publication-gate/page_review.csv`
-- **SHA-256 của Ledger gốc**: `6b0a7ddae98fd92026d5d231a1e1aeec019198050340597e4637825562e54776`
-- **Ghi chú về Ledger**: Toàn bộ 493 dòng trong CSV có chung một mốc thời gian batch-run (`2026-10-07T23:23:46.565499+00:00`), phản ánh kết quả chạy script kiểm tra tự động hình học chứ không phải 493 phiên xem ảnh render thủ công độc lập.
+- **Ledger bằng chứng thị giác chi tiết**:
+  - Đường dẫn: [book/publication/page_visual_evidence.csv](file:///D:/Golang/book/publication/page_visual_evidence.csv)
+  - Bao gồm từng hàng với: `page`, `pdf_sha256`, `render_sha256`, `review_method`, `reviewer_type`, `visual_status`, `reviewed_at`, `observation`.
+- **Thư mục ảnh render để tái kiểm tra**:
+  - Lệnh render: `page.get_pixmap(dpi=150)` qua PyMuPDF.
+  - Vị trí tệp: `.workspace/final-publication-gate/renders/page_XXX.png`.
+  - Manifest mã băm 493 ảnh: `.workspace/final-publication-gate/render_manifest.json`.
 
 ## 3. Bằng chứng đối soát Atlas 50 Thư viện & 85 Mục Lỗi
 
 ### 3.1. Atlas 50 Thư viện DevOps & Cloud (`LIBRARY_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/devops-library-atlas.md` (50 mục Rank 01–50).
-- **Hồ sơ định danh & Khóa commit**:
-  - `library_sources/catalog.json`: 50 bản ghi danh mục.
-  - `library_sources/lock.json`: 50 commit hash và release tag đã khóa.
-  - `library_sources/source_maps/*.json`: 50 tập tin ánh xạ mã nguồn và entrypoint.
-  - `library_sources/provenance/*.json`: 50 hồ sơ nguồn gốc.
-- **Kho mã nguồn ghim tại chỗ (`library_sources/repos/` - nằm trong `.gitignore`)**:
-  - 9 repo cốt lõi (Tier S & Primary Labs) được clone và checkout tại đúng commit đã khóa: `aws-sdk-go-v2` (`b189f382f4`), `cilium-ebpf` (`e55144e173`), `controller-runtime` (`67b72c2517`), `go-git` (`3eeb238da6`), `go-github` (`5149b4d745`), `k8s-client-go` (`2807644552`), `mcp-go-sdk` (`3f3b699b2b`), `opentelemetry-go` (`58db4c898f`), `prometheus-client-golang` (`d6087ee482`).
-  - 41 thư viện còn lại: Khóa identity, mã băm cây và source map đầy đủ; fingerprint checkouts ở trạng thái chờ khi có yêu cầu full-tree audit.
+- **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](file:///D:/Golang/book/publication/library_atlas_evidence_ledger.md)
+  - **`SEMANTIC_SOURCE_VERIFIED`**: **9/50 thư viện**
+    - Đã clone/checkout kho mã nguồn thực tế tại commit đã ghim trong `library_sources/repos/` và đối chiếu trực tiếp tập tin source:
+      1. `aws-sdk-go-v2` (`b189f382f4`)
+      2. `cilium-ebpf` (`e55144e173`)
+      3. `controller-runtime` (`67b72c2517`)
+      4. `go-git` (`3eeb238da6`)
+      5. `go-github` (`5149b4d745`)
+      6. `k8s-client-go` (`2807644552`)
+      7. `mcp-go-sdk` (`3f3b699b2b`)
+      8. `opentelemetry-go` (`58db4c898f`)
+      9. `prometheus-client-golang` (`d6087ee482`)
+  - **`IDENTITY_VERIFIED_ONLY`**: **41/50 thư viện**
+    - Đã xác thực danh mục định danh (`catalog.json`), commit hash (`lock.json`), bản đồ mã nguồn (`source_maps/*.json`), và nguồn gốc (`provenance/*.json`); chưa checkout toàn bộ cây mã nguồn local.
 
 ### 3.2. Atlas 85 Mục Lỗi (`ERROR_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/error-atlas.md`.
@@ -68,9 +77,9 @@ Báo cáo kiểm định preflight ghi nhận 2 ngoại lệ (Exceptions: 2):
 
 ## 6. Kết luận Nghiệm thu (Verification Verdict)
 
-- Vì 473/493 trang được thẩm định tự động qua giải thuật kiểm tra hình học/AST bounding box (thay vì xem trực tiếp từng ảnh raster phân giải cao với 493 phiên thẩm định độc lập), theo tiêu chuẩn nghiêm ngặt của giao thức nghiệm thu:
+- Vì 15/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 478/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
 - **Trạng thái chính thức**:
   ```
   PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE
   ```
-  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 493/493 trang bằng mắt; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
+  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 478/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*

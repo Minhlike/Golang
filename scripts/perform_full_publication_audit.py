@@ -32,42 +32,43 @@ HIGHRES_DIR = WORKSPACE_QA / "highres"
 SHEETS_DIR = WORKSPACE_QA / "contact-sheets"
 PAGE_REVIEW_CSV = WORKSPACE_QA / "page_review.csv"
 
-# Chapter boundaries mapping from TOC
+# Chapter boundaries mapping from TOC (493 pages)
 CHAPTER_RANGES = [
     (1, 1, "Cover", "Bìa sách"),
     (2, 2, "TOC", "Mục lục"),
     (3, 7, "Front Matter", "Trước khi viết dòng Go đầu tiên"),
     (8, 13, "Ch00", "Mở cửa vào Go"),
-    (14, 31, "Ch01", "Chương 1 — Đọc và viết một chương trình Go"),
-    (32, 40, "Ch02", "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu"),
-    (41, 59, "Ch03", "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi"),
-    (60, 71, "Ch04", "Chương 4 — Biên lỗi: để caller quyết định"),
-    (72, 81, "Ch05", "Chương 5 — Package là ranh giới"),
-    (82, 101, "Ch06", "Chương 6 — Thay đổi không sợ hãi"),
-    (102, 109, "Ch07", "Chương 7 — Dữ liệu đi vào và đi ra"),
-    (110, 115, "Ch08", "Chương 8 — Một race bắt đầu từ đâu"),
-    (116, 123, "Ch09", "Chương 9 — Dòng công việc có áp suất"),
-    (124, 133, "Ch10", "Chương 10 — Khi chương trình chậm hoặc phình"),
-    (134, 140, "Ch11", "Chương 11 — Lần theo một request HTTP"),
-    (141, 148, "Ch12", "Chương 12 — Một service sống và tắt thế nào"),
-    (149, 157, "Ch13", "Chương 13 — Một thay đổi hoặc không có gì"),
-    (158, 168, "Ch14", "Chương 14 — Khi kiểu trở thành dữ liệu"),
-    (169, 176, "Ch15", "Chương 15 — Từ incident đến công cụ"),
-    (177, 186, "Ch16", "Chương 16 — Thấy được hệ thống"),
-    (187, 200, "Ch17", "Chương 17 — Đóng gói và điều phối"),
-    (201, 214, "Ch18", "Chương 18 — Đưa thay đổi ra production"),
-    (215, 224, "Ch19", "Chương 19 — Giữ type information khi abstraction lớn lên"),
-    (225, 236, "Ch20", "Chương 20 — Dự án tổng kết: opsprobe"),
-    (237, 244, "Ch21", "Chương 21 — Vòng lặp điều hòa và Controller Pattern"),
-    (245, 261, "Ch22", "Chương 22 — Từ watch đến một controller Kubernetes thật"),
-    (262, 275, "Ch23", "Chương 23 — Từ controller đến operator"),
-    (276, 287, "Ch24", "Chương 24 — Tự động hóa AWS bằng Go"),
-    (288, 302, "Ch25", "Chương 25 — Git và GitHub trong tự động hóa"),
-    (303, 321, "Ch26", "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng"),
-    (322, 338, "Ch27", "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go"),
-    (339, 358, "Ch28", "Chương 28 — MCP và AIOps bằng Go"),
-    (359, 411, "Library Guides", "Atlas Mã nguồn 50 Thư viện Go DevOps & Cloud"),
-    (412, 421, "Error Atlas", "Phụ lục A — Atlas Lỗi Go"),
+    (14, 34, "Ch01", "Chương 1 — Đọc và viết một chương trình Go"),
+    (35, 44, "Ch02", "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu"),
+    (45, 67, "Ch03", "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi"),
+    (68, 80, "Ch04", "Chương 4 — Biên lỗi: để caller quyết định"),
+    (81, 93, "Ch05", "Chương 5 — Package là ranh giới"),
+    (94, 113, "Ch06", "Chương 6 — Thay đổi không sợ hãi"),
+    (114, 123, "Ch07", "Chương 7 — Dữ liệu đi vào và đi ra"),
+    (124, 131, "Ch08", "Chương 8 — Một race bắt đầu từ đâu"),
+    (132, 139, "Ch09", "Chương 9 — Dòng công việc có áp suất"),
+    (140, 152, "Ch10", "Chương 10 — Khi chương trình chậm hoặc phình"),
+    (153, 159, "Ch11", "Chương 11 — Lần theo một request HTTP"),
+    (160, 169, "Ch12", "Chương 12 — Một service sống và tắt thế nào"),
+    (170, 185, "Ch13", "Chương 13 — Một thay đổi hoặc không có gì"),
+    (186, 197, "Ch14", "Chương 14 — Khi kiểu trở thành dữ liệu"),
+    (198, 206, "Ch15", "Chương 15 — Từ incident đến công cụ"),
+    (207, 217, "Ch16", "Chương 16 — Thấy được hệ thống"),
+    (218, 235, "Ch17", "Chương 17 — Đóng gói và điều phối"),
+    (236, 253, "Ch18", "Chương 18 — Đưa thay đổi ra production"),
+    (254, 263, "Ch19", "Chương 19 — Giữ type information khi abstraction lớn lên"),
+    (264, 276, "Ch20", "Chương 20 — Dự án tổng kết: opsprobe"),
+    (277, 286, "Ch21", "Chương 21 — Vòng lặp điều hòa và Controller Pattern"),
+    (287, 304, "Ch22", "Chương 22 — Từ watch đến một controller Kubernetes thật"),
+    (305, 321, "Ch23", "Chương 23 — Từ controller đến operator"),
+    (322, 338, "Ch24", "Chương 24 — Tự động hóa AWS bằng Go"),
+    (339, 354, "Ch25", "Chương 25 — Git và GitHub trong tự động hóa"),
+    (355, 378, "Ch26", "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng"),
+    (379, 398, "Ch27", "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go"),
+    (399, 418, "Ch28", "Chương 28 — MCP và AIOps bằng Go"),
+    (419, 428, "Ch29", "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent"),
+    (429, 483, "Library Guides", "Atlas Mã nguồn 50 Thư viện Go DevOps & Cloud"),
+    (484, 493, "Error Atlas", "Phụ lục A — Atlas Lỗi Go"),
 ]
 
 
@@ -165,8 +166,8 @@ def main():
             "page": pno,
             "section": sec_id,
             "page_type": ptype,
-            "automated_check": "PASS" if auto_pass else "FAIL",
-            "visual_check": "VISUAL_PASS",
+            "geometry_check": "PASS" if auto_pass else "FAIL",
+            "visual_check": "PENDING",
             "issue_ids": "",
             "notes": note_str,
         })
@@ -178,7 +179,7 @@ def main():
     print(f"Writing {PAGE_REVIEW_CSV} with {len(rows)} entries...")
     with open(PAGE_REVIEW_CSV, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
-            "page", "section", "page_type", "automated_check", "visual_check", "issue_ids", "notes"
+            "page", "section", "page_type", "geometry_check", "visual_check", "issue_ids", "notes"
         ])
         writer.writeheader()
         writer.writerows(rows)

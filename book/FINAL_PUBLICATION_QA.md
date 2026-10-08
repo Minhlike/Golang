@@ -1,3 +1,19 @@
+# THÔNG BÁO TRẠNG THÁI NGHIỆM THU HIỆN HÀNH (CURRENT AUDIT STATUS)
+
+> [!WARNING]
+> **TRẠNG THÁI XUẤT BẢN HIỆN TẠI (CURRENT STATUS)**: `PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE`
+>
+> Tuyên bố `READY_FOR_THIS_PDF_SHA` và `BOOK_STATUS=READY` trong mục kiểm định ngày 08-10-2026 bên dưới được đánh dấu là **SUPERSEDED** (ĐÃ BỊ THAY THẾ) do quy trình kiểm định trước đó đã dùng script duyệt cây hình học AST/DOM (`scripts/audit_visual_pages.py`) thay cho việc quan sát trực quan từng ảnh raster render bằng mắt/thị giác.
+>
+> **Phân định rõ các mốc Commit**:
+> - `REVIEWED_SOURCE_HEAD`: `0a4cea0bef424430cae87519697c5eeed60a7aad` (Toàn bộ mã nguồn bản thảo Ch00–Ch29 và các labs được thẩm định và đóng băng tại đây).
+> - `RELEASE_COMMIT`: `24267405bfa6bdaa81901691cf56d182ba8cfd47` (Commit phát hành promoted PDF `Golang_Master.pdf`).
+> - `EVIDENCE_COMMIT`: `8ff67af44ae32b2215ed2c7907504ad40ce93af8` (Commit thiết lập manifest minh bạch `book/PUBLICATION_EVIDENCE.md`).
+>
+> Chi tiết ranh giới bằng chứng, phân loại giữa kiểm định hình học tự động (478 trang) và kiểm định trực quan thực tế (15 trang) được quy định chính thức tại [book/PUBLICATION_EVIDENCE.md](file:///D:/Golang/book/PUBLICATION_EVIDENCE.md) và ledger [book/publication/page_visual_evidence.csv](file:///D:/Golang/book/publication/page_visual_evidence.csv).
+
+---
+
 # Final whole-book publication gate — 08-10-2026
 
 Biên bản thẩm định và nghiệm thu xuất bản toàn diện (Final Whole-Book Publication Gate) cho toàn bộ cuốn sách Golang Living Textbook.
@@ -7,8 +23,8 @@ Biên bản thẩm định và nghiệm thu xuất bản toàn diện (Final Who
 - SOURCE_FREEZE_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - PDF_SHA256: `f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09`
 - PAGE_COUNT: `493`
-- PUBLICATION_STATUS: `READY_FOR_THIS_PDF_SHA`
-- BOOK_STATUS: `READY`
+- PUBLICATION_STATUS: `SUPERSEDED` (Trước đây ghi READY_FOR_THIS_PDF_SHA; Hiện tại xem thông báo trên cùng: `BLOCKED_PENDING_EVIDENCE`)
+- BOOK_STATUS: `SUPERSEDED` (Trước đây ghi READY; Hiện tại xem thông báo trên cùng: `BLOCKED_PENDING_EVIDENCE`)
 
 ## Bảng chỉ số kiểm định toàn diện (Whole-Book Gate Metrics)
 
