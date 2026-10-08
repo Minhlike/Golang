@@ -47,9 +47,10 @@ Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trư
 > Về mặt cú pháp C thuần túy, trình biên dịch Clang có thể coi việc truy cập `val->count` là hợp lệ và phát sinh mã bytecode ELF. Tuy nhiên, khi chương trình Go nạp bytecode này vào kernel, bộ kiểm định Verifier sẽ từ chối chương trình tại thời điểm load. Vì sao Verifier lại nghiêm ngặt hơn trình biên dịch ngôn ngữ, và người viết eBPF phải thay đổi cách viết như thế nào?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-Trình biên dịch C chỉ chịu trách nhiệm kiểm tra cú pháp và hệ thống kiểu ở tầng ngôn ngữ; nó không thể biết trước liệu tại thời điểm chạy trong nhân, phần tử ứng với `key` có thực sự tồn tại trong bộ nhớ hay không. Hàm trợ giúp `bpf_map_lookup_elem` luôn có khả năng trả về con trỏ NULL nếu tra cứu thất bại. Trong không gian nhân Linux, bất kỳ thao tác giải tham chiếu con trỏ NULL nào cũng sẽ gây sập toàn bộ hệ điều hành.
 
-Do đó, Kernel Verifier thực hiện phân tích đường đi trừu tượng và theo dõi kiểu của thanh ghi BPF chứa kết quả trả về dưới dạng có thể là NULL. Khi thanh ghi còn mang trạng thái chưa được kiểm chứng, mọi chỉ thị đọc hoặc ghi bộ nhớ thông qua thanh ghi đó đều bị Verifier chặn đứng và ghi nhận lỗi truy cập bộ nhớ không hợp lệ. Để chương trình được chấp thuận nạp vào nhân, lập trình viên bắt buộc phải chèn một nhánh kiểm tra điều kiện tường minh ngay sau khi tra cứu:
+Trình biên dịch C chỉ chịu trách nhiệm kiểm tra cú pháp và hệ thống kiểu ở tầng ngôn ngữ; nó không thể biết trước liệu tại thời điểm thực thi trong nhân, phần tử ứng với `key` có thực sự tồn tại trong bộ nhớ hay không. Hàm trợ giúp `bpf_map_lookup_elem` luôn có khả năng trả về con trỏ NULL nếu tra cứu thất bại. Trong không gian nhân Linux, việc giải tham chiếu con trỏ NULL tiềm ẩn nguy cơ nghiêm trọng đối với tính toàn vẹn của hệ thống: nó có thể gây ra kernel oops, làm đổ vỡ tiến trình liên quan, làm hỏng trạng thái nhân hoặc kích hoạt kernel panic tùy thuộc vào ngữ cảnh thực thi và cấu hình nhân.
+
+Do đó, Kernel Verifier thực hiện phân tích đường đi trừu tượng và theo dõi trạng thái thanh ghi BPF chứa kết quả trả về dưới dạng con trỏ có thể mang giá trị NULL. Khi thanh ghi chưa được chứng minh an toàn, mọi chỉ thị đọc hoặc ghi bộ nhớ thông qua thanh ghi đó đều bị Verifier chặn đứng và từ chối nạp vì lỗi truy cập bộ nhớ không hợp lệ. Để vượt qua rào cản này, lập trình viên bắt buộc phải chèn một nhánh kiểm tra điều kiện tường minh ngay sau khi tra cứu:
 
 ~~~c
 struct event *val = bpf_map_lookup_elem(&counters, &key);
@@ -59,7 +60,7 @@ if (!val) {
 val->count++;
 ~~~
 
-Chính cấu trúc kiểm tra `if (!val)` này cho phép Verifier chứng minh rằng trên mọi đường thực thi đi tới câu lệnh `val->count++`, giá trị con trỏ trong thanh ghi chắc chắn khác NULL, từ đó an tâm cấp phép nạp chương trình vào nhân.
+Nhánh kiểm tra `if (!val)` cung cấp cho Verifier bằng chứng cần thiết để chứng minh rằng trên mọi nhánh thực thi đi tới câu lệnh `val->count++`, con trỏ trong thanh ghi chắc chắn khác NULL. Tuy nhiên, việc vượt qua kiểm tra con trỏ NULL chỉ giải quyết riêng lỗi truy cập con trỏ chưa kiểm chứng; nó hoàn toàn không bảo đảm chương trình sẽ vượt qua tất cả các tiêu chuẩn kiểm định khác của Verifier, chẳng hạn như giới hạn kích thước stack, tính hữu hạn của vòng lặp hay tính hợp lệ của các vùng đệm bộ nhớ truyền vào hàm trợ giúp.
 
 ---
 

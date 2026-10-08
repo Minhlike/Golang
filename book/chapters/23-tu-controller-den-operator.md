@@ -363,6 +363,14 @@ func (r *AppServiceReconciler) reconcileConfigMap(
 		return err
 	}
 
+	// Kiểm tra quyền sở hữu, từ chối ghi đè nếu owner khác
+	if !metav1.IsControlledBy(found, app) {
+		return fmt.Errorf(
+			"configmap %s exists but not owned by %s",
+			found.Name, app.Name,
+		)
+	}
+
 	// Phát hiện và sửa trôi cấu hình (configuration drift)
 	if found.Data["app.json"] != cm.Data["app.json"] {
 		found.Data = cm.Data
@@ -374,9 +382,13 @@ func (r *AppServiceReconciler) reconcileConfigMap(
 
 #### Phân tích ranh giới điều hòa (Reconcile Boundaries)
 
-Trong một reconciler chuẩn mực, việc chỉ dừng ở kiểm tra `IsNotFound` rồi gọi `Create` là chưa đủ. Nếu người quản trị vô tình sửa nhầm ConfigMap trực tiếp trên cụm hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, logic chỉ tạo mới khi thiếu sẽ hoàn toàn bỏ qua hiện tượng trôi cấu hình (configuration drift). Do đó, hàm điều hòa bắt buộc phải đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi phát lệnh `Update(ctx, found)` khi có sai lệch để bảo đảm tính nhất quán sau cùng (eventual consistency).
+Trong một reconciler chuẩn mực, việc kiểm soát và bảo vệ ranh giới tài nguyên gồm ba kỷ luật cốt lõi:
 
-Tuy nhiên, ranh giới tác động đến tiến trình chạy trong Pod (workload boundary) lại đặt ra một thách thức khác: việc cập nhật ConfigMap trên API server không tự động khởi động lại Pod đang chạy, trừ khi ứng dụng tự thiết lập cơ chế theo dõi file trên đĩa để nạp lại. Nếu tiến trình nạp cấu hình qua biến môi trường (`envFrom`) hoặc mount qua `subPath`, kubelet sẽ không tự động đẩy nội dung mới vào container. Để giải quyết triệt để ranh giới này trên môi trường vận hành thực tế, Operator thường tính mã băm SHA-256 của chuỗi cấu hình `app.json` rồi gắn trực tiếp vào trường annotation của Pod template bên trong Deployment (chẳng hạn `app.kubernetes.io/config-hash: <sha256>`). Khi ConfigMap thay đổi nội dung, giá trị hash này lập tức biến động theo, kích hoạt Deployment controller tự động thực hiện Rolling Update để thay thế toàn bộ Pod bằng các tiến trình nạp cấu hình mới.
+Thứ nhất là kiểm tra quyền sở hữu (ownership verification). Khi `r.Get` tìm thấy ConfigMap đã tồn tại trên cụm, reconciler không được vội vàng cập nhật dữ liệu. Tài nguyên này có thể do một tiến trình khác tạo ra hoặc do người quản trị cấu hình thủ công. Hàm sử dụng `metav1.IsControlledBy(found, app)` để xác minh quyền điều khiển. Nếu ConfigMap không thuộc sở hữu của `AppService` hiện tại, chính sách an toàn nhất là từ chối can thiệp và trả về lỗi tường minh, tuyệt đối không ghi đè lên tài nguyên của chủ sở hữu khác.
+
+Thứ hai là khắc phục trôi cấu hình (drift correction). Với ConfigMap đã xác thực đúng quyền sở hữu, việc chỉ kiểm tra `IsNotFound` khi khởi tạo ban đầu là chưa đủ. Nếu ai đó vô tình chỉnh sửa ConfigMap trực tiếp hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, logic chỉ tạo mới sẽ bỏ sót sai lệch dữ liệu. Do đó, hàm điều hòa đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi gọi `Update(ctx, found)` khi có khác biệt để bảo đảm tính nhất quán sau cùng (eventual consistency).
+
+Thứ ba là ranh giới tác động đến tiến trình trong Pod (workload boundary). Cập nhật ConfigMap trên API server không làm cho Pod tự động khởi động lại, trừ khi ứng dụng tự thiết lập cơ chế theo dõi file trên đĩa để nạp lại. Nếu ứng dụng nạp cấu hình qua biến môi trường (`envFrom`) hoặc mount qua `subPath`, kubelet sẽ không tự đẩy dữ liệu mới vào container. Để giải quyết ranh giới này, bản thân ConfigMap thay đổi không thể tự động làm đổi Deployment; chính reconciler của Operator phải chủ động tính mã băm SHA-256 của chuỗi `app.json` mới rồi gán vào annotation của Pod template trong Deployment (chẳng hạn `app.kubernetes.io/config-hash: <sha256>`). Khi Operator cập nhật Deployment với template annotation mới, Deployment controller của Kubernetes mới nhận diện được sự thay đổi ở cấp độ Pod template và kích hoạt Rolling Update để thay thế toàn bộ Pod bằng phiên bản nạp cấu hình mới.
 
 ### Lời giải Thử thách 2: Quản lý Condition bằng meta.SetStatusCondition
 

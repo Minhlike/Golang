@@ -33,7 +33,7 @@
 | **Ch06** | Thay đổi Không sợ hãi | `KEEP` | Giữ nguyên kịch bản điều tra race condition và kiểm thử song song. |
 | **Ch07** | Dữ liệu Đi vào và Đi ra | `KEEP` | Giữ nguyên ranh giới stream reader và bộ đệm. |
 | **Ch12** | Một Service Sống và Tắt Thế nào | `REFINE` | Thống nhất biến decoder, xóa spoiler `io.EOF`; phân tích buffering của `json.Decoder` và giữ kiểm tra decode lần hai trả `io.EOF`. |
-| **Ch13** | Một Thay đổi hoặc Không có gì | `REFINE` | Tách câu hỏi suy luận timeout sau commit; phân định atomicity vs idempotency và audit count; chuyển đáp án sang văn xuôi. |
+| **Ch13** | Một Thay đổi hoặc Không có gì | `REFINE` | Đặt tình huống response thất lạc và server có thể đã commit; phân biệt sự thật phía server với bằng chứng caller sở hữu; phân định atomicity vs idempotency. |
 | **Ch14** | Khi Kiểu Trở thành Dữ liệu | `REFINE` | Bỏ khẳng định struct copy nằm trên stack; giải thích unaddressability và `CanSet()` qua `reflect.ValueOf(dst)`; nhấn mạnh pointer guard. |
 | **Ch16** | Thấy được Hệ thống | `REFINE` | Thử thách phân biệt `timeout` với dependency sập; nêu rõ việc đưa timeout vào mẫu số là contract cụ thể của lab SLI này. |
 | **Ch17** | Đóng gói và Điều phối | `KEEP` | Giữ nguyên bài tập xử lý tín hiệu POSIX, PID 1 và zombie process reaping trong container. |
@@ -42,9 +42,9 @@
 | **Ch20** | Dự án Tổng kết Opsprobe | `REFINE` | Trình bày triệu chứng/chỉ số lâm sàng trước; hiệu chỉnh giả thuyết cURL và tài liệu `net/http` về connection reuse; bỏ giả định 5s deadline. |
 | **Ch21** | Vòng lặp Điều hòa Controller | `ADD` | Bổ sung bảng trace $T_0 \to T_4$; phân biệt level-triggered coalescing với message queue; nêu rõ giới hạn hàng đợi in-memory. |
 | **Ch22** | Từ Watch đến Controller Thật | `KEEP` | Giữ nguyên bài tập tombstone handler, Object UID và reconcile resync. |
-| **Ch23** | Từ Controller đến Operator | `REFINE` | Khớp hợp đồng `app.json` giữa đề bài và lời giải ConfigMap; phân tích drift và ranh giới Pod restart; chuyển toàn bộ phân tích sang văn xuôi. |
-| **Ch27** | Quan sát Linux bằng eBPF và Go | `ADD` | Kịch bản suy luận mã C minh họa; làm rõ cơ chế abstract interpretation và nhãn `PTR_TO_MAP_VALUE_OR_NULL` của verifier. |
-| **Ch28** | MCP và AIOps An toàn bằng Go | `REFINE` | Đối chiếu chính sách tiêu thụ token (thành công vs mọi lần thử) và rủi ro DoS; khẳng định tính minh họa kiến trúc của `ApprovalManager`. |
+| **Ch23** | Từ Controller đến Operator | `REFINE` | Khớp hợp đồng `app.json`; kiểm tra ownership qua `IsControlledBy`, từ chối ghi đè tài nguyên của owner khác; sửa diễn giải config hash do Operator chủ động cập nhật Deployment. |
+| **Ch27** | Quan sát Linux bằng eBPF và Go | `ADD` | Kịch bản suy luận mã C minh họa; loại bỏ khẳng định sập toàn bộ OS; giải thích nguy cơ thực tế và verifier; null check không bảo đảm qua hết mọi kiểm tra khác. |
+| **Ch28** | MCP và AIOps An toàn bằng Go | `REFINE` | Đối chiếu chính sách tiêu thụ token khi thành công và rủi ro DoS; bổ sung chính sách dọn token hết hạn; nhấn mạnh `ApprovalManager` là mô hình bộ nhớ cục bộ. |
 | **Ch29** | Kỹ sư và Bằng chứng | `KEEP` | Giữ nguyên bài tập phê duyệt đồng thời và đối chiếu bằng chứng tự động. |
 
 ---
@@ -63,8 +63,8 @@
 
 ### 3. Chương 13: Timeout Sau Commit và Phân định Idempotency
 - **Trước (Before):** Câu hỏi và câu trả lời được gộp chung trong cùng một dòng văn bản ngắn gọn, triệt tiêu không gian suy nghĩ độc lập.
-- **Sau (After):** Tách thành bài suy luận 3 tầng: (1) Trạng thái `enabled = false` chứng minh được gì và không chứng minh được gì? (2) Audit count tăng lên 2 nói lên điều gì về tính an toàn của retry? (3) Kiến trúc cần cơ chế gì? Đáp án giải thích bằng văn xuôi liền mạch sự khác biệt giữa transaction atomicity và API idempotency.
-- **Hiệu quả sư phạm:** Kỹ sư hiểu bản chất vì sao atomicity không tự động đem lại tính an toàn khi client retry sau sự cố mạng.
+- **Sau (After):** Đặt tình huống kênh truyền mạng gặp sự cố làm thất lạc phản hồi khiến caller chỉ biết request bị quá hạn, trong khi server có thể đã commit thành công. Phân biệt rõ sự thật phía server với bằng chứng caller sở hữu; chỉ ra tại sao quan sát thấy `enabled = false` không chứng minh được lần gọi nào thành công, và sự gia tăng của audit event chứng minh atomicity không tự động đem lại idempotency; chuyển toàn bộ lời giải sang văn xuôi liền mạch.
+- **Hiệu quả sư phạm:** Kỹ sư hiểu bản chất vì sao atomicity không tự động đem lại tính an toàn khi client retry sau sự cố mạng, và nhận thức sâu sắc khoảng cách giữa sự thật phía server và bằng chứng của caller.
 
 ### 4. Chương 14: Quyền Đột biến Bộ nhớ và `CanSet()` trong Reflection
 - **Trước (Before):** Đoạn hỏi giải thích ngay trong 2 câu ngắn: "Vì không có đường nào để thay variable của caller. Một nil ở đây là lời nói dối...".
@@ -93,25 +93,24 @@
 
 ### 9. Chương 23: Khớp Hợp đồng ConfigMap và Ranh giới Tác động Pod
 - **Trước (Before):** Đề bài yêu cầu tạo ConfigMap chứa `app.json`, nhưng mã giải lại dùng key `"port"` và chỉ kiểm tra `IsNotFound` mà không cập nhật khi cấu hình bị trôi (drift).
-- **Sau (After):** Đồng bộ hóa hoàn toàn đề bài và lời giải: ConfigMap con lưu key `"app.json"` với nội dung `{"port": <Spec.Port>}`. Mã giải bổ sung logic kiểm tra và cập nhật `found.Data["app.json"] != cm.Data["app.json"]`. Thêm mục phân tích chuyên sâu bằng văn xuôi liền mạch về ranh giới điều hòa: tại sao cập nhật ConfigMap không tự kích hoạt rolling restart cho Pod và kỹ thuật config hash annotation.
-- **Hiệu quả sư phạm:** Xóa bỏ sự thiếu nhất quán giữa yêu cầu và đáp án; truyền tải tri thức vận hành thực chiến về eventual consistency và vòng đời Pod.
+- **Sau (After):** Đồng bộ hóa hoàn toàn đề bài và lời giải: ConfigMap con lưu key `"app.json"` với nội dung `{"port": <Spec.Port>}`. Mã giải bổ sung kiểm tra quyền sở hữu bằng `metav1.IsControlledBy(found, app)` để từ chối ghi đè lên tài nguyên của owner khác, đồng thời sửa trôi cấu hình khi đúng chủ sở hữu. Hiệu chỉnh phân tích ranh giới: ConfigMap đổi không tự làm đổi Deployment; chính Operator phải chủ động cập nhật annotation hash vào Pod template trong Deployment để kích hoạt rolling update.
+- **Hiệu quả sư phạm:** Xóa bỏ sự thiếu nhất quán giữa yêu cầu và đáp án; bảo vệ ranh giới tài nguyên trên cụm và truyền tải tri thức vận hành thực chiến về eventual consistency.
 
 ### 10. Chương 27: Kịch bản Kiểm định Nhân eBPF Verifier vs Trình biên dịch Clang
 - **Trước (Before):** Chỉ có bảng lý thuyết mô tả các tiêu chuẩn kiểm tra của Verifier mà không có tình huống thực tế.
-- **Sau (After):** Đưa ra kịch bản suy luận mã C mang tính minh họa: gọi hàm tra cứu map rồi giải tham chiếu trực tiếp. Clang có thể biên dịch thành công nhưng khi Go nạp bytecode vào nhân thì Verifier từ chối truy cập con trỏ có thể null. Giải thích cơ chế gán nhãn thanh ghi `PTR_TO_MAP_VALUE_OR_NULL` của verifier và yêu cầu rẽ nhánh kiểm tra an toàn trước khi truy cập bộ nhớ nhân.
-- **Hiệu quả sư phạm:** Người học hiểu rõ bản chất bảo vệ của nhân Linux: Verifier không tin tưởng trình biên dịch C mà phân tích mọi nhánh thực thi để ngăn ngừa Kernel Panic.
+- **Sau (After):** Đưa ra kịch bản suy luận mã C mang tính minh họa: gọi hàm tra cứu map rồi giải tham chiếu trực tiếp. Clang có thể biên dịch thành công nhưng khi Go nạp bytecode vào nhân thì Verifier từ chối truy cập con trỏ có thể null. Loại bỏ khẳng định cực đoan về việc sập toàn bộ OS; giải thích chuẩn xác các nguy cơ thực tế (oops, crash tiến trình, hoại tử trạng thái hoặc panic tùy cấu hình); làm rõ null check chỉ giải quyết lỗi con trỏ có thể null chứ không bảo đảm chương trình vượt qua mọi tiêu chuẩn kiểm định khác của Verifier.
+- **Hiệu quả sư phạm:** Người học hiểu rõ bản chất bảo vệ của nhân Linux và vai trò phân tích tĩnh của Verifier mà không bị tiếp nhận kiến thức phóng đại sai lệch.
 
 ### 11. Chương 28: Hợp đồng Phê duyệt Hai bước và Rào chắn Chống Replay
 - **Trước (Before):** Đề bài yêu cầu chung chung về việc cấp token trong 5 phút. Lời giải chưa nêu bật ràng buộc chống replay và gắn kết hành vi.
-- **Sau (After):** Xác lập 2 ràng buộc an ninh: ràng buộc hành động (`Action` và `Target`) và chính sách tiêu thụ token khi khớp thành công (single-use successful claim). Đối chiếu với chính sách xóa token trên mọi lần thử để làm rõ nguy cơ từ chối dịch vụ (DoS); chứng minh gửi token sai không ảnh hưởng token hợp lệ; thực thi kiểm tra nguyên tử dưới `m.mu.Lock()` trong bộ nhớ tiến trình và nêu rõ đây là mô hình sư phạm, không thay thế hệ thống xác thực độc lập cho production.
-- **Hiệu quả sư phạm:** Cung cấp mô hình phòng vệ chiều sâu (defense-in-depth) thực sự an toàn khi tích hợp AI Agent vào hạ tầng sản xuất.
+- **Sau (After):** Xác lập 2 ràng buộc an ninh: ràng buộc hành động (`Action` và `Target`) và chính sách tiêu thụ token khi khớp thành công (single-use successful claim). Sửa đoạn văn cũ: token chỉ xóa khi xác nhận thành công, gửi sai tham số không xóa token để tránh nguy cơ DoS; bổ sung yêu cầu về chính sách dọn dẹp các token hết hạn không bao giờ được xác nhận (cleanup / lazy eviction); nhấn mạnh thao tác kiểm tra/tiêu thụ nguyên tử dưới `m.mu.Lock()` và khẳng định `ApprovalManager` là mô hình kiến trúc bộ nhớ minh họa, không tuyên bố an toàn production.
+- **Hiệu quả sư phạm:** Cung cấp mô hình phòng vệ chiều sâu (defense-in-depth) thực sự an toàn và phân tích rủi ro toàn diện khi tích hợp AI Agent vào hạ tầng sản xuất.
 
 ---
 
 ## 4. Tối ưu Tốc độ Đọc, Giảm Tải Nhận thức và Tuân thủ Phong cách
 
-1. **Chuẩn hóa khuôn mẫu dự đoán:** Mọi câu hỏi xuyên suốt các chương đều tuân thủ chặt chẽ cấu trúc 4 bước:
-   $$\text{Đầu vào Cụ thể} \longrightarrow \text{Dừng để Suy luận} \longrightarrow \text{Đáp án & Cơ chế Bộ nhớ} \longrightarrow \text{Phản ví dụ Biên giới}$$
+1. **Tôn trọng chiến lược sư phạm đặc thù của từng chương:** Tuân thủ triệt để nguyên tắc cốt lõi của `MASTER PROMPT.txt`, mỗi chương áp dụng phương thức kích hoạt tư duy riêng biệt (từ suy luận scope ở Ch01, phân tích ranh giới stream ở Ch12, điều tra triệu chứng ở Ch20, đến trace state ở Ch21 và đối chiếu ràng buộc nhân ở Ch27), tuyệt đối không áp đặt một khuôn mẫu cơ học cứng nhắc lên toàn bộ sách.
 2. **Triệt tiêu danh sách giải thích trong chính văn (Zero-Bullet Policy):** Tuân thủ tuyệt đối quy chuẩn biên tập của `MASTER PROMPT.txt`, toàn bộ các khối đáp án, lời giải và phân tích ranh giới trong các chương được chuyển hóa hoàn toàn sang các đoạn văn xuôi tiếng Việt tự nhiên, liền mạch, không sử dụng danh sách đánh số (`1. ... 2. ...`) hay bullet points (`- ...`, `* ...`) để diễn giải kỹ thuật.
 3. **Loại bỏ nhiễu thông tin:** Cắt giảm các câu giải thích suy diễn, các giả định không có căn cứ thực nghiệm, và các đoạn văn trùng lặp giữa đề bài và lời giải.
 4. **Bảo toàn bề rộng dòng mã (Code Width Safety):** Toàn bộ các chương sửa đổi đã được quét kiểm tra tự động, xác nhận $100\%$ các dòng trong khối mã nguồn (`~~~` và ````) đều có độ dài $\le 65$ ký tự, loại bỏ nguy cơ tràn khung in trên bản in sách A4.

@@ -546,11 +546,11 @@ func (m *ApprovalManager) Confirm(
 }
 ~~~
 
-Toàn bộ thao tác kiểm tra và tiêu thụ token phải diễn ra nguyên tử dưới cùng một khóa `m.mu.Lock()` để ngăn chặn hai goroutine chạy đua cùng lúc với một token. Cần lưu ý rằng `ApprovalManager` trên đây là mô hình kiến trúc minh họa trong bộ nhớ của một tiến trình, chưa phải giải pháp bảo mật hoàn chỉnh cho môi trường sản xuất. Một hệ thống thực tế đòi hỏi kho lưu trữ bền vững chịu lỗi qua các lần khởi động lại, xác thực danh tính con người độc lập khỏi AI agent, và ghi nhật ký kiểm toán không thể sửa đổi.
+Toàn bộ thao tác kiểm tra và tiêu thụ token phải diễn ra nguyên tử dưới cùng một khóa `m.mu.Lock()` nhằm ngăn chặn hai goroutine chạy đua cùng lúc với một token và bảo toàn liên kết chặt chẽ với hành động cùng mục tiêu (`Action` và `Target`). Trong mô hình này, việc chỉ xóa token khi xác nhận thành công giúp duy trì tính hợp lệ của phiên phê duyệt trước các lần gửi sai tham số hoặc thử lại nhầm lẫn, đồng thời bảo đảm mỗi token chỉ được sử dụng đúng một lần.
+
+Tuy nhiên, việc không xóa token khi kiểm tra thất bại đặt ra yêu cầu bắt buộc về chính sách dọn dẹp: những token đã hết hạn mà không bao giờ được xác nhận sẽ tích tụ vĩnh viễn trong bản đồ nếu không có cơ chế thu gom. Một hệ thống hoàn chỉnh đòi hỏi tiến trình chạy nền dọn dẹp định kỳ (periodic cleanup worker) hoặc cơ chế loại bỏ lười (lazy eviction) để quét và xóa các mục có `time.Now().After(item.ExpiresAt)`. Cần nhấn mạnh rằng `ApprovalManager` trên đây là mô hình kiến trúc minh họa trong bộ nhớ cục bộ của một tiến trình, chưa phải giải pháp an toàn cho môi trường sản xuất. Môi trường thực tế đòi hỏi kho dữ liệu bền vững chịu lỗi qua các lần khởi động lại, xác thực danh tính con người độc lập khỏi AI agent, và nhật ký kiểm toán không thể sửa đổi.
 
 Một HTTP request hoàn thành không đồng nghĩa service khỏe. Lab dùng quy ước hẹp: chỉ `2xx` là `healthy`; `4xx`/`5xx` được trả về như trạng thái `unhealthy`, còn lỗi transport mới là lỗi gọi tool. Hệ thống thật cần contract health riêng (ví dụ readiness, body schema và timeout) thay vì suy ra sức khỏe chỉ từ mã HTTP.
-
-Xóa record trước khi return khiến cả một confirmation sai cũng không thể trở thành lượt thử đoán/replay tiếp theo. Mã trong lab còn kiểm chứng token chỉ dùng một lần. Đây vẫn là state process-local; production cần store transactionally bền vững và danh tính con người được xác thực tách khỏi agent.
 
 ---
 
