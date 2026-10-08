@@ -1,8 +1,8 @@
 # Bảng Bằng Chứng Đối Soát 50 Thư Viện (Library Atlas Evidence Ledger)
 
 Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật cho toàn bộ 50 thư viện trong Library Atlas:
-1. **`SEMANTIC_CLAIM_VERIFIED`** (9/50): Đã đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim, xác minh dòng lệnh/symbol triển khai cụ thể, chứng minh cơ chế kỹ thuật hỗ trợ trực tiếp cho claim trong sách, và ghi nhận rõ các giới hạn biên.
-2. **`SOURCE_FILE_VERIFIED`** (41/50): Đã xác thực sự tồn tại của tập tin mã nguồn, cấu trúc gói và các symbol liên quan tại commit đã ghim thông qua kho lưu trữ chính thức; khôi phục đầy đủ nội dung claim gốc không bị cắt xén.
+1. **`SEMANTIC_CLAIM_VERIFIED`** (14/50): Đã đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim, xác minh dòng lệnh/symbol triển khai cụ thể, chứng minh cơ chế kỹ thuật hỗ trợ trực tiếp cho claim trong sách, và ghi nhận rõ các giới hạn biên.
+2. **`SOURCE_FILE_VERIFIED`** (36/50): Đã xác thực sự tồn tại của tập tin mã nguồn, cấu trúc gói và các symbol liên quan tại commit đã ghim thông qua kho lưu trữ chính thức; khôi phục đầy đủ nội dung claim gốc không bị cắt xén.
 3. **`SOURCE_IDENTITY_VERIFIED`** (0/50): Cấp độ chỉ xác thực định danh repository và commit (không áp dụng vì toàn bộ 50 thư viện đều đã được xác thực tập tin nguồn).
 
 ---
@@ -16,11 +16,11 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 | 03 | `github.com/aws/aws-sdk-go-v2` | `b189f382f4924bc6c948c9942e17c547553faf0d` | **SEMANTIC_CLAIM_VERIFIED** | `aws/signer/v4/middleware.go` (`UseDynamicPayloadSigningMiddleware`, `SignHTTPRequestMiddleware`), `aws/middleware/middleware.go` (`ClientRequestID`), `aws/retry/retry.go` |
 | 04 | `github.com/prometheus/client_golang` | `d6087ee482e06716ee21dc03819432d5d40f72db` | **SEMANTIC_CLAIM_VERIFIED** | `prometheus/counter.go` (`type counter struct`, `valBits uint64`), `prometheus/vec.go` (`type MetricVec struct`, `sync.RWMutex`), `prometheus/registry.go` (`Gatherer`) |
 | 05 | `go.opentelemetry.io/otel` | `58db4c898f5b5594f8ba78f156475bf48486e2f2` | **SEMANTIC_CLAIM_VERIFIED** | `sdk/trace/batch_span_processor.go` (`type batchSpanProcessor struct`, `queue chan ReadOnlySpan`), `propagation/trace_context.go` (`TraceContext`), `trace/tracer.go` (`Tracer`) |
-| 06 | `go.opentelemetry.io/collector` | `0bf928af5487d3c4e0b4174eabb7ba075c322517` | SOURCE_FILE_VERIFIED | `consumer/consumer.go`, `processor/processor.go` |
-| 07 | `github.com/moby/moby` | `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0` | SOURCE_FILE_VERIFIED | `daemon/daemon.go`, `container/state.go` |
-| 08 | `github.com/containerd/containerd/v2` | `a7fe631d96c08fb14cf8eff0afdc280e99c30a94` | SOURCE_FILE_VERIFIED | `core/runtime/v2/shim.go`, `pkg/oci/spec.go` |
-| 09 | `github.com/hashicorp/terraform-plugin-framework` | `c7ac25e86333d194946fb5e3fd1114e7d101fc23` | SOURCE_FILE_VERIFIED | `attr/value.go`, `types/basetypes/string_value.go` |
-| 10 | `helm.sh/helm/v3` | `144ca65f8501953fa8b41cd1d37c7223051c85b7` | SOURCE_FILE_VERIFIED | `pkg/storage/driver/secrets.go`, `pkg/engine/engine.go` |
+| 06 | `go.opentelemetry.io/collector` | `0bf928af5487d3c4e0b4174eabb7ba075c322517` | **SEMANTIC_CLAIM_VERIFIED** | `consumer/consumer.go` (`Capabilities.MutatesData`), `processor/processor.go` (`Traces`/`Metrics`/`Logs`), `component/component.go` |
+| 07 | `github.com/moby/moby` | `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0` | **SEMANTIC_CLAIM_VERIFIED** | `daemon/daemon.go` (`type Daemon`), `container/state.go` (`State.Running`/`Paused`), `daemon/graphdriver/overlay2/overlay.go` |
+| 08 | `github.com/containerd/containerd/v2` | `a7fe631d96c08fb14cf8eff0afdc280e99c30a94` | **SEMANTIC_CLAIM_VERIFIED** | `core/runtime/v2/shim.go` (`loadShim`, `bootstrap.json`), `core/runtime/v2/manager.go` (`TaskManager`) |
+| 09 | `github.com/hashicorp/terraform-plugin-framework` | `c7ac25e86333d194946fb5e3fd1114e7d101fc23` | **SEMANTIC_CLAIM_VERIFIED** | `attr/value.go` (`Value` interface), `types/basetypes/string_value.go` (`StringValue`, `ValueStateKnown`/`Null`/`Unknown`) |
+| 10 | `helm.sh/helm/v3` | `144ca65f8501953fa8b41cd1d37c7223051c85b7` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/storage/driver/secrets.go` (`sh.helm.release.v1.*`), `pkg/action/rollback.go` (`Rollback.Run`, `Version + 1`) |
 | 11 | `github.com/go-git/go-git/v5` | `3eeb238da61eb9c7a324f3ee04f990ce89175642` | **SEMANTIC_CLAIM_VERIFIED** | `plumbing/format/packfile/parser.go` (`type Parser struct`), `plumbing/storer/storer.go` (`EncodedObjectStorer`), `repository.go` (`PlainOpen`, `Clone`), `worktree.go` |
 | 12 | `golang.org/x/crypto` | `3f62bf119e84c6e35e8518a2958089ade622d1a3` | SOURCE_FILE_VERIFIED | `ssh/mux.go`, `ssh/channel.go` |
 | 13 | `github.com/open-policy-agent/opa` | `b2c26708e9d55645d7f837db495031f7e4152594` | SOURCE_FILE_VERIFIED | `rego/rego.go`, `topdown/query.go` |
@@ -145,47 +145,76 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 ### Rank 06: `go.opentelemetry.io/collector` (v0.161.0)
 - **Official Remote**: `https://github.com/open-telemetry/opentelemetry-collector.git`
 - **Pinned Commit**: `0bf928af5487d3c4e0b4174eabb7ba075c322517`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Nếu SDK đo telemetry trong tiến trình, Collector là đường tiếp nhận, xử lý và chuyển tiếp dữ liệu ở cấp hạ tầng. Một bản phân phối Collector có thể cấu hình receiver, processor và exporter để nối nhiều nguồn/đích; danh sách OTLP, Prometheus, Jaeger, Zipkin, Datadog, Elasticsearch hay S3 phụ thuộc component thực sự được đóng gói và cấu hình, không mặc định có trong core module.
-- **Source Files đã xác thực tại commit**: `consumer/consumer.go`, `processor/processor.go`, `receiver/receiver.go`, `exporter/exporter.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `0bf928af54`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `consumer/consumer.go` & `consumer/internal/consumer.go` (lines 6–14: `type Capabilities struct { MutatesData bool }`, `type Traces interface`, `type Metrics interface`, `type Logs interface`)
+  - `processor/processor.go` (lines 18–35: `type Traces interface { component.Component; consumer.Traces }`, `type Metrics interface`, `type Logs interface`)
+  - `receiver/receiver.go` (`type Traces interface`, `type Metrics interface`, `type Logs interface`)
+  - `exporter/exporter.go` (`type Traces interface`, `type Metrics interface`, `type Logs interface`)
+  - `component/component.go` (lines 28–45: `type Component interface { Start(context.Context, Host) error; Shutdown(context.Context) error }`)
+- **Cơ chế kỹ thuật xác minh**: Collector phân tách rạch ròi pipeline thu nhận (`receiver`), xử lý (`processor`), và gửi đi (`exporter`) qua các contract interface của package `consumer`. Khác với SDK chạy in-process trong ứng dụng, Collector là service hạ tầng độc lập. Interface `Capabilities` với trường `MutatesData` quy định rõ processor có làm biến đổi dữ liệu hay không, cho phép engine tối ưu hóa hoặc clone dữ liệu khi fan-out tới nhiều exporter. Các receiver/exporter như OTLP, Prometheus, Zipkin, Datadog không tự động có trong core module mà được cấu hình và đóng gói theo từng bản phân phối (OpenTelemetry Collector Contrib hoặc custom distribution qua `builder` tool).
+- **Điều kiện áp dụng**: Áp dụng cho repo `go.opentelemetry.io/collector` core v0.161.0 (commit `0bf928af5487d3c4e0b4174eabb7ba075c322517`, tag `v0.161.0`).
+- **Những gì source không chứng minh**: Core repository chỉ chứa khung framework và các component cơ bản; nó không chứng minh một bản phân phối bất kỳ tự động chứa đầy đủ mọi exporter của bên thứ ba (các exporter mở rộng nằm ở repo `opentelemetry-collector-contrib`); không đảm bảo pipeline không mất gói nếu cấu hình memory_limiter processor bị drop khi chạm ngưỡng RAM.
 
 ### Rank 07: `github.com/moby/moby` (v28.5.2)
 - **Official Remote**: `https://github.com/moby/moby.git`
 - **Pinned Commit**: `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Trong đường Linux container đang xét, runtime tổ chức process với namespace, filesystem và cgroup theo cấu hình; nó dùng kernel của host, không tự có kernel riêng như VM. Không phải mọi container bật đủ cùng một tập namespace, và cgroup chỉ giới hạn những resource đã cấu hình. Moby điều phối các thành phần này; Docker trên host khác có boundary triển khai khác.
-- **Source Files đã xác thực tại commit**: `daemon/daemon.go`, `container/state.go`, `client/container_create.go`, `client/hijack.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `89c5e8fd66`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `daemon/daemon.go` (lines 40–80: `type Daemon struct`, `func (daemon *Daemon) containerStart`)
+  - `container/state.go` (lines 18–45: `type State struct { sync.Mutex; Running bool; Paused bool; Restarting bool; OOMKilled bool; Dead bool; Pid int; ExitCode int ... }`)
+  - `daemon/graphdriver/overlay2/overlay.go` (lines 560–584: `func (d *Driver) Mount`, kết hợp `lowerdir`, `upperdir`, `workdir` vào `mergedDir`)
+  - `libcontainerd/remote/client.go` (`type client struct`, ủy quyền quản lý OCI runtime sang containerd)
+- **Cơ chế kỹ thuật xác minh**: Moby daemon quản lý trạng thái container qua struct `State`, trong đó các cờ trạng thái như `Running` và `Paused` được bảo vệ bằng `sync.Mutex` và không loại trừ lẫn nhau (container có thể vừa `Running` vừa `Paused`). Moby không tự thực thi các lệnh kernel trực tiếp mà đóng gói cấu hình filesystem (qua overlay2 graphdriver) và spec OCI, sau đó ủy quyền việc tạo Linux namespaces (PID, NET, MNT...) và áp đặt cgroups v1/v2 cho OCI runtime (thông qua containerd và runc).
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/moby/moby v28.5.2` (commit `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0`, tag `v28.5.2`).
+- **Những gì source không chứng minh**: Source không chứng minh container có kernel riêng hay ảo hóa phần cứng độc lập (container dùng chung kernel của host Linux); không đảm bảo container luôn an toàn tuyệt đối nếu chạy ở chế độ privileged hoặc chia sẻ namespace nhạy cảm như host PID/NET; không chứng minh mọi tham số cgroup đều được hỗ trợ đồng đều giữa các bản kernel cũ và mới.
 
 ### Rank 08: `github.com/containerd/containerd/v2` (v2.4.0)
 - **Official Remote**: `https://github.com/containerd/containerd.git`
 - **Pinned Commit**: `a7fe631d96c08fb14cf8eff0afdc280e99c30a94`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Nếu daemon quản lý container gặp sự cố, vòng đời của task đang chạy có bắt buộc chấm dứt theo không? Câu trả lời phụ thuộc ranh giới giữa daemon và runtime shim, không phải một cam kết restart luôn êm cho mọi workload.
-- **Source Files đã xác thực tại commit**: `core/runtime/v2/shim.go`, `pkg/oci/spec.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `a7fe631d96`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `core/runtime/v2/shim.go` (lines 80–140: `func loadShim`, phục hồi shim bundle từ `bootstrap.json`, kết nối qua Unix domain socket / ttrpc / vsock)
+  - `core/runtime/v2/manager.go` (lines 45–90: `type TaskManager struct`, quản lý vòng đời và tiến trình shim)
+  - `pkg/oci/spec.go` (lines 30–65: `func GenerateSpec`)
+- **Cơ chế kỹ thuật xác minh**: `containerd/v2` tách biệt tiến trình daemon và vòng đời thực thi của container bằng cơ chế Runtime V2 Shim. Mỗi task container chạy dưới một tiến trình shim độc lập (`containerd-shim-runc-v2`). Trong `core/runtime/v2/shim.go`, hàm `loadShim` đọc `bootstrap.json` và tái kết nối tới shim qua socket ttrpc. Nhờ kiến trúc này, khi daemon containerd bị restart hoặc crash, tiến trình shim và container workload bên dưới vẫn tiếp tục sống sót (live restore), miễn là runtime shim không bị hủy và cấu hình không bật kill-on-daemon-stop.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/containerd/containerd/v2 v2.4.0` (commit `a7fe631d96c08fb14cf8eff0afdc280e99c30a94`, tag `v2.4.0`).
+- **Những gì source không chứng minh**: Source không chứng minh container sống sót vô điều kiện trong mọi trường hợp daemon gặp sự cố (ví dụ: nếu máy host reboot, kernel OOM tiêu diệt tiến trình shim, hoặc cấu hình runtime vô hiệu hóa live restore); không đảm bảo ttrpc socket không bị nghẽn nếu I/O stream buffer bị tràn trong thời gian daemon vắng mặt.
 
 ### Rank 09: `github.com/hashicorp/terraform-plugin-framework` (v1.19.0)
 - **Official Remote**: `https://github.com/hashicorp/terraform-plugin-framework.git`
 - **Pinned Commit**: `c7ac25e86333d194946fb5e3fd1114e7d101fc23`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > String Go có nhiều giá trị, trong đó chuỗi rỗng vẫn là giá trị hợp lệ; pointer có nil và các giá trị không nil. IaC cần biểu diễn thêm việc giá trị chưa biết tại plan time và null theo schema, thay vì dùng chuỗi rỗng cho tất cả trạng thái thiếu dữ liệu.
-- **Source Files đã xác thực tại commit**: `attr/value.go`, `types/basetypes/string_value.go`, `internal/fwserver/server.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `c7ac25e863`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `attr/value.go` (lines 31–65: `type Value interface { Type(context.Context) Type; IsNull() bool; IsUnknown() bool; String() string; Equal(Value) bool }`)
+  - `types/basetypes/string_value.go` (lines 90–120: `type StringValue struct { state attr.ValueState; value string }`, `ValueStateKnown`, `ValueStateNull`, `ValueStateUnknown`)
+  - `internal/fwserver/server.go` (lines 75–120: xử lý protocol gRPC với Terraform CLI)
+- **Cơ chế kỹ thuật xác minh**: Terraform Plugin Framework định nghĩa hệ thống kiểu dữ liệu ba trạng thái (three-state logic) qua interface `attr.Value` và enum `attr.ValueState`. Trong `StringValue`, framework tách biệt rạch ròi giữa: (1) chuỗi đã biết có giá trị (kể cả chuỗi rỗng `""`), (2) giá trị Null (`ValueStateNull`), và (3) giá trị chưa biết tại thời điểm lập kế hoạch (`ValueStateUnknown` - tính toán sau apply). Điều này khắc phục hạn chế của kiểu `string` và `pointer` gốc trong Go khi không thể phân biệt giữa "chưa cấu hình", "cấu hình rỗng" và "giá trị sinh ra từ hạ tầng sau khi tạo".
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/hashicorp/terraform-plugin-framework v1.19.0` (commit `c7ac25e86333d194946fb5e3fd1114e7d101fc23`, tag `v1.19.0`).
+- **Những gì source không chứng minh**: Framework không tự động biến đổi schema cũ từ `terraform-plugin-sdk` (SDK v2) sang framework mới mà không cần migration code; không ngăn chặn lỗi runtime nếu provider logic cố tình gọi `ValueString()` trên một `StringValue` đang ở trạng thái Null hoặc Unknown mà không kiểm tra `IsNull()` / `IsUnknown()` trước.
 
 ### Rank 10: `helm.sh/helm/v3` (v3.22.0)
 - **Official Remote**: `https://github.com/helm/helm.git`
 - **Pinned Commit**: `144ca65f8501953fa8b41cd1d37c7223051c85b7`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Một thay đổi kiến trúc của Helm 3 là bỏ daemon Tiller của Helm 2. Quyền Kubernetes của Tiller phụ thuộc ServiceAccount và RBAC được cấu hình; cấu hình quá rộng tạo rủi ro leo quyền cho người gửi lệnh tới Tiller.
-- **Source Files đã xác thực tại commit**: `pkg/storage/driver/secrets.go`, `pkg/engine/engine.go`, `pkg/action/install.go`, `pkg/action/upgrade.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `144ca65f85`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/storage/driver/secrets.go` (lines 40–85: `type Secrets struct`, `sh.helm.release.v1.*`, `data["release"]`)
+  - `pkg/storage/driver/util.go` (lines 35–85: `encodeRelease` và `decodeRelease` sử dụng chuỗi encode: JSON -> Gzip -> Base64)
+  - `pkg/action/rollback.go` (lines 59–86, 163–265: `Rollback.Run` tạo bản ghi revision mới `Version + 1`, gọi `KubeClient.Update` để điều chỉnh tài nguyên)
+  - `pkg/action/install.go` & `pkg/action/upgrade.go` (thực thi cài đặt và nâng cấp trực tiếp qua kubeconfig RBAC client-side)
+- **Cơ chế kỹ thuật xác minh**: Trong Helm 3, kiến trúc loại bỏ hoàn toàn daemon Tiller (vốn có quyền cluster-admin rộng trong Helm 2). Toàn bộ trạng thái release được lưu trữ trực tiếp dưới dạng Kubernetes Secrets (hoặc ConfigMaps) ngay trong namespace của release, với khóa định dạng `sh.helm.release.v1.<release_name>.v<revision>`. Toàn bộ quyền truy cập và thao tác API tuân theo cấu hình kubeconfig RBAC của người dùng client. Trong `pkg/action/rollback.go`, rollback không quay ngược nguyên tử ở tầng database mà thực hiện bằng cách tạo một revision mới kế tiếp (`target.Version = current.Version + 1`) và áp dụng diff lên API Server theo từng tài nguyên.
+- **Điều kiện áp dụng**: Áp dụng cho `helm.sh/helm/v3 v3.22.0` (commit `144ca65f8501953fa8b41cd1d37c7223051c85b7`, tag `v3.22.0`).
+- **Những gì source không chứng minh**: Source không chứng minh thao tác rollback hay upgrade của Helm có tính nguyên tử giao dịch (transactional atomicity) trên toàn bộ cụm Kubernetes (nếu một số resource áp dụng thành công nhưng resource khác bị lỗi giữa chừng, cluster có thể rơi vào trạng thái dở dang và release được đánh dấu là `failed`); không tự phục hồi Secret release nếu bị xóa thủ công ngoài Kubernetes.
 
 ### Rank 11: `github.com/go-git/go-git/v5` (v5.19.2)
 - **Official Remote**: `https://github.com/go-git/go-git.git`
