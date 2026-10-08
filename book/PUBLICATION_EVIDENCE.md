@@ -16,7 +16,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Phương pháp thẩm định**:
   - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
   - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
-- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **243 trang**
+- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **298 trang**
   - Danh sách và phạm vi trang:
     - Trang 1 (Bìa) & Trang 2 (Mục lục)
     - Trang 3–13: Lời mở đầu & Toàn bộ Chương 00 (11 trang)
@@ -37,9 +37,14 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
     - Trang 197–207: Toàn bộ Chương 15 (11 trang: os/exec CLI automation, exec.Cmd, môi trường và cwd, Hình 26 sequence diagram, Bảng 12 exit methods, CommandContext, timeout, orphan process trees, Setpgid, ProcessRunner buffer pipeline, test runner exit codes)
     - Trang 208–220: Toàn bộ Chương 16 (13 trang: observability, log/slog, JSONHandler/TextHandler, Hình 27 tree handler, Bảng 13 slog.Attr/Group, trace context propagation, OpenTelemetry Tracing, TracerProvider, batch processor, Metrics types, Hình 28 Prometheus architecture, Bảng 14 telemetry hazards, SLO dashboards)
     - Trang 221–235: Toàn bộ Chương 17 (15 trang: Linux namespaces và cgroups, Bảng 15 namespaces, Hình 29 controller reconciliation loop, multi-stage Dockerfile, distroless/scratch tradeoffs, Hình 30 NASA servers, non-root user, GOMEMLIMIT, NextAction controller reconciler, Bảng 16 Pod lifecycle, Hình 31 Kubernetes architecture, Kind cluster, rollout status / ImagePullBackOff, client-go observer, Generation vs ObservedGeneration, Bảng 17 control layers, Dừng để dự đoán)
+    - Trang 236–247: Toàn bộ Chương 18 (12 trang: đóng gói OCI, ký số Cosign, tự động hóa chuyển giao, 7 lớp delivery, Hình 32 & 33, Bảng 18 & 19, promote-gate CLI, OIDC IAM constraints, Terraform)
+    - Trang 248–263: Toàn bộ Chương 19 (16 trang: generic vs interface, Unique[T comparable], Measurable constraints, Hình 34, generic method Go 1.27, typed nil, probe layout, labs/part19)
+    - Trang 264–276: Toàn bộ Chương 20 (13 trang: capstone dự án opsprobe, Bảng 20, worker pool backpressure, SQLite transaction atomic BeginTx, bounded drain 16 KiB, socket leak incident, distroless, curl commands)
+    - Trang 277–286: Toàn bộ Chương 21 (10 trang: reconcile loop, level vs edge trigger, Hình 35, 4 pha điều hòa, WorkQueue dirty/processing, exponential backoff, SelfHealingReconciler, graceful shutdown, labs/part21)
+    - Trang 287–290: Phần mở đầu và cơ chế then chốt Chương 22 (4 trang: watch đến controller Kubernetes thật, thông báo hint vs authoritative state, Informer cache, Hình 36 architecture, Bảng 4 thành phần then chốt, Hình 37 List/Watch sequence diagram)
     - 8 trang chốt trọng yếu rải đều các chương sau: Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11). (Trang 224 đã nằm trong toàn bộ Chương 17).
-  - Trạng thái kiểm tra trực quan: 243/243 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **250 trang** (`visual_status = PENDING`).
+  - Trạng thái kiểm tra trực quan: 298/298 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
+- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **195 trang** (`visual_status = PENDING`).
 - **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
 - **Ledger bằng chứng thị giác chi tiết**:
   - Đường dẫn: [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv)
@@ -54,7 +59,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 ### 3.1. Atlas 50 Thư viện DevOps & Cloud (`LIBRARY_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/devops-library-atlas.md` (50 mục Rank 01–50).
 - **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](publication/library_atlas_evidence_ledger.md)
-  - **`SEMANTIC_CLAIM_VERIFIED`**: **14/50 thư viện** (28%)
+  - **`SEMANTIC_CLAIM_VERIFIED`**: **19/50 thư viện** (38%)
     - Đã clone/checkout và đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim trong `library_sources/repos/`, đối chiếu trực tiếp tập tin source, symbol triển khai và cơ chế hỗ trợ claim:
       1. `k8s-client-go` (`28076445520055420e3be4255b4cd27fd19df1f9`)
       2. `controller-runtime` (`67b72c2517be1d2b0dec612477eb20c3c959a8aa`)
@@ -67,10 +72,15 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
       9. `terraform-plugin-framework` (`c7ac25e86333d194946fb5e3fd1114e7d101fc23`)
       10. `helm` (`144ca65f8501953fa8b41cd1d37c7223051c85b7`)
       11. `go-git` (`3eeb238da61eb9c7a324f3ee04f990ce89175642`)
-      12. `cilium-ebpf` (`e55144e17360b60cc4583229c35c2dbf0935b308`)
-      13. `go-github` (`5149b4d74590b63154fcc43c4dac05e881f9aea3`)
-      14. `mcp-go-sdk` (`3f3b699b2b67e1ed033a63d6651671dab53c2d32`)
-  - **`SOURCE_FILE_VERIFIED`**: **36/50 thư viện** (72%)
+      12. `golang-crypto` (`3f62bf119e84c6e35e8518a2958089ade622d1a3`)
+      13. `opa` (`b2c26708e9d55645d7f837db495031f7e4152594`)
+      14. `cosign` (`3e82f50a2839855693aacf7b3d0e7e2f30774cb4`)
+      15. `grpc-go` (`e84aa5ab15d1d2b29d54f838312ad490cb7551a8`)
+      16. `protobuf-go` (`cdd4c5f7406e82462949c7a65defa9f3029c162d`)
+      17. `cilium-ebpf` (`e55144e17360b60cc4583229c35c2dbf0935b308`)
+      18. `go-github` (`5149b4d74590b63154fcc43c4dac05e881f9aea3`)
+      19. `mcp-go-sdk` (`3f3b699b2b67e1ed033a63d6651671dab53c2d32`)
+  - **`SOURCE_FILE_VERIFIED`**: **31/50 thư viện** (62%)
     - Đã xác thực tập tin mã nguồn và symbol tồn tại tại commit đã ghim từ kho lưu trữ chính thức; khôi phục toàn vẹn nội dung claim kỹ thuật từ Atlas không rút gọn.
   - **`SOURCE_IDENTITY_VERIFIED`**: **0/50 thư viện** (0%)
 
@@ -103,9 +113,9 @@ Báo cáo kiểm định preflight ghi nhận 2 ngoại lệ (Exceptions: 2):
 
 ## 6. Kết luận Nghiệm thu (Verification Verdict)
 
-- Vì 243/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 250/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
+- Vì 298/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 195/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
 - **Trạng thái chính thức**:
   ```
   PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE
   ```
-  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 250/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
+  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 195/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*

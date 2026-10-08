@@ -1,8 +1,8 @@
 # Bảng Bằng Chứng Đối Soát 50 Thư Viện (Library Atlas Evidence Ledger)
 
 Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật cho toàn bộ 50 thư viện trong Library Atlas:
-1. **`SEMANTIC_CLAIM_VERIFIED`** (14/50): Đã đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim, xác minh dòng lệnh/symbol triển khai cụ thể, chứng minh cơ chế kỹ thuật hỗ trợ trực tiếp cho claim trong sách, và ghi nhận rõ các giới hạn biên.
-2. **`SOURCE_FILE_VERIFIED`** (36/50): Đã xác thực sự tồn tại của tập tin mã nguồn, cấu trúc gói và các symbol liên quan tại commit đã ghim thông qua kho lưu trữ chính thức; khôi phục đầy đủ nội dung claim gốc không bị cắt xén.
+1. **`SEMANTIC_CLAIM_VERIFIED`** (19/50): Đã đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim, xác minh dòng lệnh/symbol triển khai cụ thể, chứng minh cơ chế kỹ thuật hỗ trợ trực tiếp cho claim trong sách, và ghi nhận rõ các giới hạn biên.
+2. **`SOURCE_FILE_VERIFIED`** (31/50): Đã xác thực sự tồn tại của tập tin mã nguồn, cấu trúc gói và các symbol liên quan tại commit đã ghim thông qua kho lưu trữ chính thức; khôi phục đầy đủ nội dung claim gốc không bị cắt xén.
 3. **`SOURCE_IDENTITY_VERIFIED`** (0/50): Cấp độ chỉ xác thực định danh repository và commit (không áp dụng vì toàn bộ 50 thư viện đều đã được xác thực tập tin nguồn).
 
 ---
@@ -17,16 +17,16 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 | 04 | `github.com/prometheus/client_golang` | `d6087ee482e06716ee21dc03819432d5d40f72db` | **SEMANTIC_CLAIM_VERIFIED** | `prometheus/counter.go` (`type counter struct`, `valBits uint64`), `prometheus/vec.go` (`type MetricVec struct`, `sync.RWMutex`), `prometheus/registry.go` (`Gatherer`) |
 | 05 | `go.opentelemetry.io/otel` | `58db4c898f5b5594f8ba78f156475bf48486e2f2` | **SEMANTIC_CLAIM_VERIFIED** | `sdk/trace/batch_span_processor.go` (`type batchSpanProcessor struct`, `queue chan ReadOnlySpan`), `propagation/trace_context.go` (`TraceContext`), `trace/tracer.go` (`Tracer`) |
 | 06 | `go.opentelemetry.io/collector` | `0bf928af5487d3c4e0b4174eabb7ba075c322517` | **SEMANTIC_CLAIM_VERIFIED** | `consumer/consumer.go` (`Capabilities.MutatesData`), `processor/processor.go` (`Traces`/`Metrics`/`Logs`), `component/component.go` |
-| 07 | `github.com/moby/moby` | `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0` | **SEMANTIC_CLAIM_VERIFIED** | `daemon/daemon.go` (`type Daemon`), `container/state.go` (`State.Running`/`Paused`), `daemon/graphdriver/overlay2/overlay.go` |
+| 07 | `github.com/moby/moby` | `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0` | **SEMANTIC_CLAIM_VERIFIED** | `daemon/start.go` (`func (daemon *Daemon) containerStart`), `container/state.go` (`State.Running`/`Paused`), `daemon/graphdriver/overlay2/overlay.go` (`func (d *Driver) Get`) |
 | 08 | `github.com/containerd/containerd/v2` | `a7fe631d96c08fb14cf8eff0afdc280e99c30a94` | **SEMANTIC_CLAIM_VERIFIED** | `core/runtime/v2/shim.go` (`loadShim`, `bootstrap.json`), `core/runtime/v2/manager.go` (`TaskManager`) |
 | 09 | `github.com/hashicorp/terraform-plugin-framework` | `c7ac25e86333d194946fb5e3fd1114e7d101fc23` | **SEMANTIC_CLAIM_VERIFIED** | `attr/value.go` (`Value` interface), `types/basetypes/string_value.go` (`StringValue`, `ValueStateKnown`/`Null`/`Unknown`) |
 | 10 | `helm.sh/helm/v3` | `144ca65f8501953fa8b41cd1d37c7223051c85b7` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/storage/driver/secrets.go` (`sh.helm.release.v1.*`), `pkg/action/rollback.go` (`Rollback.Run`, `Version + 1`) |
 | 11 | `github.com/go-git/go-git/v5` | `3eeb238da61eb9c7a324f3ee04f990ce89175642` | **SEMANTIC_CLAIM_VERIFIED** | `plumbing/format/packfile/parser.go` (`type Parser struct`), `plumbing/storer/storer.go` (`EncodedObjectStorer`), `repository.go` (`PlainOpen`, `Clone`), `worktree.go` |
-| 12 | `golang.org/x/crypto` | `3f62bf119e84c6e35e8518a2958089ade622d1a3` | SOURCE_FILE_VERIFIED | `ssh/mux.go`, `ssh/channel.go` |
-| 13 | `github.com/open-policy-agent/opa` | `b2c26708e9d55645d7f837db495031f7e4152594` | SOURCE_FILE_VERIFIED | `rego/rego.go`, `topdown/query.go` |
-| 14 | `github.com/sigstore/cosign/v2` | `3e82f50a2839855693aacf7b3d0e7e2f30774cb4` | SOURCE_FILE_VERIFIED | `pkg/cosign/verify.go`, `pkg/oci/remote/signatures.go` |
-| 15 | `google.golang.org/grpc` | `e84aa5ab15d1d2b29d54f838312ad490cb7551a8` | SOURCE_FILE_VERIFIED | `clientconn.go`, `server.go` |
-| 16 | `google.golang.org/protobuf` | `cdd4c5f7406e82462949c7a65defa9f3029c162d` | SOURCE_FILE_VERIFIED | `encoding/protowire/wire.go`, `internal/impl/message.go` |
+| 12 | `golang.org/x/crypto` | `3f62bf119e84c6e35e8518a2958089ade622d1a3` | **SEMANTIC_CLAIM_VERIFIED** | `ssh/mux.go` (`type mux struct`, `chanList`), `ssh/channel.go` (`type channel struct`, RFC 4254 window), `ssh/client.go` (`NewSession`), `ssh/tcpip.go` (`DialContext` "direct-tcpip") |
+| 13 | `github.com/open-policy-agent/opa` | `b2c26708e9d55645d7f837db495031f7e4152594` | **SEMANTIC_CLAIM_VERIFIED** | `rego/rego.go` (`PreparedEvalQuery`), `v1/rego/rego.go` (`PreparedEvalQuery.Eval`, `PrepareForEval`), `topdown/query.go` |
+| 14 | `github.com/sigstore/cosign/v2` | `3e82f50a2839855693aacf7b3d0e7e2f30774cb4` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/cosign/verify.go` (`VerifyImageSignatures`), `pkg/oci/remote/signatures.go` (`Signatures`, `Bundle`), `ociremote.SignatureTag` |
+| 15 | `google.golang.org/grpc` | `e84aa5ab15d1d2b29d54f838312ad490cb7551a8` | **SEMANTIC_CLAIM_VERIFIED** | `clientconn.go` (`ClientConn`), `resolver/resolver.go` (`Resolver`), `balancer/balancer.go` (`Balancer`, `Picker`), `balancer/roundrobin/roundrobin.go` |
+| 16 | `google.golang.org/protobuf` | `cdd4c5f7406e82462949c7a65defa9f3029c162d` | **SEMANTIC_CLAIM_VERIFIED** | `encoding/protowire/wire.go` (`EncodeTag`, `DecodeTag`, `(num << 3) | (typ & 7)`), `proto/encode.go` (`MarshalOptions.Marshal`) |
 | 17 | `github.com/google/go-containerregistry` | `8a72a424fdecb4caa14f2d525e5d2503331442b5` | SOURCE_FILE_VERIFIED | `pkg/v1/image.go`, `pkg/v1/remote/puller.go` |
 | 18 | `oras.land/oras-go/v2` | `105715ee12eac6895ec736a075285c34d9f2eeb6` | SOURCE_FILE_VERIFIED | `registry/remote/repository.go`, `copy.go` |
 | 19 | `github.com/containernetworking/cni` | `3f51e8803ebbdba0ebeed735b42137e4c7302403` | SOURCE_FILE_VERIFIED | `pkg/skel/skel.go`, `pkg/invoke/raw_exec.go` |
@@ -165,11 +165,11 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Exact Claim trong Atlas**:
   > Trong đường Linux container đang xét, runtime tổ chức process với namespace, filesystem và cgroup theo cấu hình; nó dùng kernel của host, không tự có kernel riêng như VM. Không phải mọi container bật đủ cùng một tập namespace, và cgroup chỉ giới hạn những resource đã cấu hình. Moby điều phối các thành phần này; Docker trên host khác có boundary triển khai khác.
 - **Source Files & Symbols đối chiếu**:
-  - `daemon/daemon.go` (lines 40–80: `type Daemon struct`, `func (daemon *Daemon) containerStart`)
+  - `daemon/start.go` (lines 76–230: `func (daemon *Daemon) containerStart`)
   - `container/state.go` (lines 18–45: `type State struct { sync.Mutex; Running bool; Paused bool; Restarting bool; OOMKilled bool; Dead bool; Pid int; ExitCode int ... }`)
-  - `daemon/graphdriver/overlay2/overlay.go` (lines 560–584: `func (d *Driver) Mount`, kết hợp `lowerdir`, `upperdir`, `workdir` vào `mergedDir`)
+  - `daemon/graphdriver/overlay2/overlay.go` (lines 509–600: `func (d *Driver) Get(id, mountLabel string) (_ string, retErr error)`, gọi `unix.Mount` kết hợp `lowerdir`, `upperdir`, `workdir` vào `mergedDir` ở lines 560–585)
   - `libcontainerd/remote/client.go` (`type client struct`, ủy quyền quản lý OCI runtime sang containerd)
-- **Cơ chế kỹ thuật xác minh**: Moby daemon quản lý trạng thái container qua struct `State`, trong đó các cờ trạng thái như `Running` và `Paused` được bảo vệ bằng `sync.Mutex` và không loại trừ lẫn nhau (container có thể vừa `Running` vừa `Paused`). Moby không tự thực thi các lệnh kernel trực tiếp mà đóng gói cấu hình filesystem (qua overlay2 graphdriver) và spec OCI, sau đó ủy quyền việc tạo Linux namespaces (PID, NET, MNT...) và áp đặt cgroups v1/v2 cho OCI runtime (thông qua containerd và runc).
+- **Cơ chế kỹ thuật xác minh**: Moby daemon quản lý trạng thái container qua struct `State`, trong đó các cờ trạng thái như `Running` và `Paused` được bảo vệ bằng `sync.Mutex` và không loại trừ lẫn nhau (container có thể vừa `Running` vừa `Paused`). Moby không tự thực thi các lệnh kernel trực tiếp mà đóng gói cấu hình filesystem (qua phương thức `Driver.Get` trong overlay2 graphdriver gắn kết các layer qua `unix.Mount`) và spec OCI, sau đó trong `daemon/start.go` hàm `containerStart` ủy quyền việc tạo Linux namespaces (PID, NET, MNT...) và áp đặt cgroups v1/v2 cho OCI runtime (thông qua containerd và runc).
 - **Điều kiện áp dụng**: Áp dụng cho `github.com/moby/moby v28.5.2` (commit `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0`, tag `v28.5.2`).
 - **Những gì source không chứng minh**: Source không chứng minh container có kernel riêng hay ảo hóa phần cứng độc lập (container dùng chung kernel của host Linux); không đảm bảo container luôn an toàn tuyệt đối nếu chạy ở chế độ privileged hoặc chia sẻ namespace nhạy cảm như host PID/NET; không chứng minh mọi tham số cgroup đều được hỗ trợ đồng đều giữa các bản kernel cũ và mới.
 
@@ -231,51 +231,75 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Điều kiện áp dụng**: Áp dụng cho `github.com/go-git/go-git/v5 v5.19.2` (commit `3eeb238da61eb9c7a324f3ee04f990ce89175642`, tag `v5.19.2`).
 - **Những gì source không chứng minh**: Source không chứng minh `go-git` nhanh hơn hoặc tiết kiệm bộ nhớ hơn C-git trên các kho mã nguồn khổng lồ; không hỗ trợ đầy đủ các hook ngoài, filter driver hay partial clone phức tạp của Git CLI chuẩn.
 
-
 ### Rank 12: `golang.org/x/crypto` (v0.57.0)
 - **Official Remote**: `https://github.com/golang/crypto.git`
 - **Pinned Commit**: `3f62bf119e84c6e35e8518a2958089ade622d1a3`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Một `ssh.Client` có thể multiplex shell, SFTP và port-forwarding trên cùng một connection nếu các consumer dùng chung phiên ấy. Mở nhiều tab terminal độc lập thường tạo nhiều connection nếu không cấu hình chia sẻ. Channel của protocol cho phép nhiều luồng logic, không bảo đảm mọi ứng dụng SSH mặc định chỉ dùng một TCP socket.
-- **Source Files đã xác thực tại commit**: `ssh/mux.go`, `ssh/channel.go`, `ssh/client.go`, `ssh/server.go`, `ssh/handshake.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `3f62bf119e`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `ssh/mux.go` (lines 90–135: `type mux struct`, `conn packetConn`, `chanList chanList`, `newMux(p packetConn)`, `func (m *mux) loop()`)
+  - `ssh/channel.go` (lines 155–215: `type channel struct`, `localId, remoteId uint32`, `maxIncomingPayload uint32`, `msgChannelOpenConfirm`, xử lý flow control qua `msgChannelWindowAdjust` theo RFC 4254)
+  - `ssh/client.go` (lines 160–185: `func (c *Client) NewSession() (*Session, error)` mở channel kiểu "session")
+  - `ssh/tcpip.go` (lines 380–435: `func (c *Client) DialContext` / `Dial` mở channel kiểu "direct-tcpip" trên cùng kết nối transport)
+- **Cơ chế kỹ thuật xác minh**: Struct `ssh.Client` gói một kết nối `c.Conn` bên dưới bộ điều phối `mux` (`ssh/mux.go`). `mux` chạy một vòng lặp đơn (`loop()`) nhận các packet SSH trên cùng một TCP socket (`packetConn`) và định tuyến đến các channel logic khác nhau dựa vào channel ID (`chanList`). Khi client gọi `NewSession()`, một SSH channel kiểu `"session"` được mở; khi gọi `DialContext()` cho port-forwarding, một SSH channel kiểu `"direct-tcpip"` được mở trên cùng multiplexer. Mỗi channel quản lý cửa sổ trượt (window size) riêng biệt. Nếu caller tạo nhiều instance `ssh.Client` mới riêng rẽ (ví dụ qua nhiều lệnh gọi `ssh.Dial`), mỗi instance sẽ thiết lập một TCP connection độc lập.
+- **Điều kiện áp dụng**: Áp dụng cho module `golang.org/x/crypto v0.57.0` (commit `3f62bf119e84c6e35e8518a2958089ade622d1a3`, tag `v0.57.0`).
+- **Những gì source không chứng minh**: Source không chứng minh rằng mọi ứng dụng SSH (như OpenSSH CLI trên terminal) mặc định tự động chia sẻ kết nối (OpenSSH yêu cầu cấu hình `ControlMaster`/`ControlPath`); không đảm bảo throughput tối đa khi dồn nhiều kênh nặng vào một TCP socket đơn lẻ nếu xảy ra hiện tượng TCP head-of-line blocking do mất gói mạng.
 
 ### Rank 13: `github.com/open-policy-agent/opa` (v1.20.2)
 - **Official Remote**: `https://github.com/open-policy-agent/opa.git`
 - **Pinned Commit**: `b2c26708e9d55645d7f837db495031f7e4152594`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Một gateway cần budget cho authorization theo SLO và concurrency của chính nó. Không suy ra budget một millisecond chỉ từ request rate; đo policy, input, contention và end-to-end latency trước khi chọn cách evaluate.
-- **Source Files đã xác thực tại commit**: `rego/rego.go`, `topdown/query.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `b2c26708e9`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `rego/rego.go` (line 177: `type PreparedEvalQuery = v1.PreparedEvalQuery`)
+  - `v1/rego/rego.go` (lines 561–580: `func (pq *PreparedEvalQuery) Eval(ctx context.Context, options ...EvalOption)`, lines 1798–1835: `func (r *Rego) PrepareForEval(ctx context.Context) (PreparedEvalQuery, error)`)
+  - `topdown/query.go` (lines 140–210: `func (q *Query) Run(ctx context.Context)`)
+- **Cơ chế kỹ thuật xác minh**: OPA cung cấp phương thức `PrepareForEval()` biên dịch trước policy AST và query plan thành `PreparedEvalQuery` sẵn sàng thực thi trong bộ nhớ. Khi gateway xử lý request, việc gọi `PreparedEvalQuery.Eval(ctx, ...)` tránh được chi phí phân tích cú pháp (parsing) và biên dịch AST lặp lại trên từng lượt yêu cầu. Thời gian tính toán chính xác phụ thuộc độ phức tạp của luật Rego, kích thước tập dữ liệu đầu vào (`input`), và mức độ contention khóa/bộ nhớ; do đó budget phân quyền không thể giả định là 1ms cho mọi cấu hình nếu không đo đạc thực tế.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/open-policy-agent/opa v1.20.2` (commit `b2c26708e9d55645d7f837db495031f7e4152594`, tag `v1.20.2`).
+- **Những gì source không chứng minh**: Source không cam kết latency luôn dưới 1ms cho mọi query; việc evaluate các policy chứa vòng lặp lồng sâu (nested comprehensions) hoặc tập dữ liệu lớn (`data`) có thể vượt budget nếu không thiết kế index hoặc partial evaluation.
 
 ### Rank 14: `github.com/sigstore/cosign/v2` (v2.6.5)
 - **Official Remote**: `https://github.com/sigstore/cosign.git`
 - **Pinned Commit**: `3e82f50a2839855693aacf7b3d0e7e2f30774cb4`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Khi bạn kéo một container image `registry.internal/app:v1.2.0` về triển khai lên cụm Kubernetes sản xuất, làm sao bạn có thể chứng minh với hệ thống kiểm toán rằng image này thực sự được sinh ra từ pipeline CI/CD chính thức của công ty chứ không phải do một hacker nội bộ sửa đổi đè lên registry?
-- **Source Files đã xác thực tại commit**: `pkg/cosign/verify.go`, `pkg/oci/remote/signatures.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `3e82f50a28`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/cosign/verify.go` (lines 615–665: `func VerifyImageSignatures(ctx context.Context, ref name.Reference, co *CheckOpts) ([]oci.Signature, bool, error)`, gọi `ociremote.ResolveDigest`, `ociremote.SignatureTag(digest)`, và `ociremote.Signatures(st)`)
+  - `pkg/oci/remote/signatures.go` (lines 38–54: `func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error)`, lines 55–85: `type signatures struct`, `Bundle`)
+- **Cơ chế kỹ thuật xác minh**: Cosign thực hiện xác thực chữ ký số bằng cách giải quyết digest bất biến của image thông qua `ResolveDigest(ref)`. Chữ ký được lưu trữ tách rời (detached signature) dưới dạng artifact riêng biệt liên kết trực tiếp với digest nội dung (qua tag `sha256-<hash>.sig` trong OCI 1.0 hoặc OCI 1.1 referrers API) mà không làm thay đổi các layer của image gốc. Hàm `VerifyImageSignatures()` tải payload chữ ký và bundle chứng thực (Fulcio certificate, Rekor transparency log bundle) để xác minh khóa công khai hoặc danh tính OIDC và kiểm tra tính toàn vẹn của payload đối chiếu với digest của image.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/sigstore/cosign/v2 v2.6.5` (commit `3e82f50a2839855693aacf7b3d0e7e2f30774cb4`, tag `v2.6.5`).
+- **Những gì source không chứng minh**: Source không chứng minh container runtime (như containerd hay CRI-O) tự động chặn các image chưa ký nếu không cấu hình admission controller (như Kyverno hoặc Sigstore Policy Controller) tại cụm Kubernetes; không bảo vệ chống lại việc registry bị xóa mất tag chữ ký nếu không có bản sao lưu offline.
 
 ### Rank 15: `google.golang.org/grpc` (v1.84.0)
 - **Official Remote**: `https://github.com/grpc/grpc-go.git`
 - **Pinned Commit**: `e84aa5ab15d1d2b29d54f838312ad490cb7551a8`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Xét scenario có một gRPC client duy trì connection lâu tới Service có nhiều backend. Nếu connection đó được route vào một Pod, nhiều RPC trên nó có thể cùng tới Pod ấy, dù còn backend khác. Đây là ví dụ về granularity cân bằng tải, không phép đo CPU hay cam kết rằng backend chắc chắn sập.
-- **Source Files đã xác thực tại commit**: `clientconn.go`, `server.go`, `stream.go`, `rpc_util.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `e84aa5ab15`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `clientconn.go` (lines 668–750: `type ClientConn struct`, quản lý kết nối HTTP/2 dài hạn tái sử dụng)
+  - `resolver/resolver.go` (lines 315–335: `type Resolver interface { ResolveNow(ResolveNowOptions); Close() }`, `type Builder interface { Build(...) }`)
+  - `balancer/balancer.go` (lines 344–367: `type Balancer interface`, `type Picker interface { Pick(info PickInfo) (PickResult, error) }`)
+  - `balancer/roundrobin/roundrobin.go` (lines 40–72: round-robin picker triển khai cân bằng tải cấp RPC)
+- **Cơ chế kỹ thuật xác minh**: Thư viện gRPC multiplex nhiều RPC trên một kết nối TCP/HTTP/2 đơn lẻ thông qua `ClientConn`. Nếu kiến trúc triển khai dựa vào bộ cân bằng tải Layer 4 (như Kubernetes Service ClusterIP mặc định mà không cấu hình headless Service hoặc Service Mesh), kết nối TCP ban đầu chỉ kết thúc tại một Pod backend duy nhất. Vì kết nối này được duy trì dài hạn (long-lived connection), tất cả các RPC gửi qua `ClientConn` đó sẽ đi vào cùng một backend Pod, gây mất cân bằng tải. Để cân bằng tải ở mức RPC (per-RPC load balancing), gRPC yêu cầu cấu hình client-side resolver (`resolver.Resolver`) nhận danh sách địa chỉ của tất cả các backend pods kết hợp với balancer (`roundrobin.Builder`) để luân chuyển từng RPC qua `Picker.Pick()`.
+- **Điều kiện áp dụng**: Áp dụng cho `google.golang.org/grpc v1.84.0` (commit `e84aa5ab15d1d2b29d54f838312ad490cb7551a8`, tag `v1.84.0`).
+- **Những gì source không chứng minh**: Source không khẳng định backend Pod bị route dồn chắc chắn sẽ quá tải CPU 100% hay sập; mức độ ảnh hưởng phụ thuộc vào thông lượng (throughput), độ phức tạp tính toán của RPC và số lượng client đồng thời.
 
 ### Rank 16: `google.golang.org/protobuf` (v1.36.12)
 - **Official Remote**: `https://github.com/protocolbuffers/protobuf-go.git`
 - **Pinned Commit**: `cdd4c5f7406e82462949c7a65defa9f3029c162d`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Protobuf dùng field number và wire type thay cho lặp tên field trên wire. Dung lượng và tốc độ so với JSON phải đo trên schema, value, encoder và workload; không có tỷ lệ 3–10 lần chung.
-- **Source Files đã xác thực tại commit**: `encoding/protowire/wire.go`, `internal/impl/message.go`, `reflect/protoreflect/value.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `cdd4c5f740`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `encoding/protowire/wire.go` (lines 37–46: `type Type int8`, định nghĩa các wire type: `Varint = 0`, `Fixed32 = 5`, `Fixed64 = 1`, `Bytes = 2`, lines 525–536: `func DecodeTag(v uint64) (Number, Type, int)`, `func EncodeTag(num Number, typ Type) uint64` tính bằng `(num << 3) | (typ & 7)`)
+  - `proto/encode.go` (lines 20–65: `func (o MarshalOptions) Marshal(m Message) ([]byte, error)`)
+- **Cơ chế kỹ thuật xác minh**: Trong định dạng Protobuf trên đường truyền (wire format), mỗi trường dữ liệu không mã hóa chuỗi tên trường (field name string) như JSON mà gói gọn thành một số nguyên varint duy nhất qua `EncodeTag`: 3 bit cuối biểu diễn `wire type` (từ 0 đến 5) và các bit dịch trái biểu diễn `field number` (`(num << 3) | (typ & 7)`). Nhờ vậy, kích thước header của mỗi trường chỉ chiếm từ 1 byte (cho field 1–15). Tuy nhiên, mức độ tiết kiệm dung lượng và gia tăng tốc độ mã hóa phụ thuộc chặt chẽ vào kích thước payload, loại kiểu dữ liệu (số nguyên, chuỗi UTF-8, mảng bytes) và thuật toán nén; do đó không tồn tại một tỷ lệ vượt trội cố định 3–10 lần cho mọi workload nếu chưa đo đạc benchmark thực tế.
+- **Điều kiện áp dụng**: Áp dụng cho module `google.golang.org/protobuf v1.36.12` (commit `cdd4c5f7406e82462949c7a65defa9f3029c162d`, tag `v1.36.12`).
+- **Những gì source không chứng minh**: Source không chứng minh Protobuf luôn nhỏ hơn hoặc nhanh hơn JSON trong 100% mọi kịch bản (ví dụ: với các thông điệp chỉ chứa vài chuỗi ngắn hoặc khi JSON được nén gzip/zstd mức cao); không chứng minh việc giải mã Protobuf không tốn bộ nhớ cấp phát heap nếu schema chứa nhiều trường con lồng nhau.
 
 ### Rank 17: `github.com/google/go-containerregistry` (v0.22.1)
 - **Official Remote**: `https://github.com/google/go-containerregistry.git`
