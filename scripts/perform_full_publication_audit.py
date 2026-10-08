@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Full 421-Page Publication QA Audit Runner for Golang Living Textbook.
+"""Full Whole-Book Publication QA Audit Runner for Golang Living Textbook.
 
 Performs:
-1. High-fidelity rendering of all 421 pages (150 DPI standard, 240 DPI highres for complex pages).
+1. High-fidelity rendering of all pages (150 DPI standard, 240 DPI highres for complex pages).
 2. Generates contact sheets (5x5 grid, 25 pages per sheet) in grayscale.
 3. Classifies each page: section, page_type, detects code blocks, tables, diagrams.
 4. Audits margins, folios, geometry, font embedding, and content bounds on every page.
-5. Populates .workspace/publication-qa/page_review.csv with exactly 421 rows.
+5. Populates .workspace/final-publication-gate/page_review.csv with one row per page.
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ def main():
     rows = []
     rendered_image_paths = []
 
-    print("Rendering 421 pages at 150 DPI and auditing features...")
+    print(f"Rendering {total_pages} pages at 150 DPI and auditing features...")
     for idx in range(total_pages):
         pno = idx + 1
         page = doc[idx]

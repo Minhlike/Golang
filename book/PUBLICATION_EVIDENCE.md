@@ -16,13 +16,19 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Phương pháp thẩm định**:
   - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
   - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
-- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **15 trang**
-  - Danh sách trang: Trang 1 (Bìa), Trang 2 (Mục lục), Trang 14 (Ch01 Opener), Trang 35 (Ch02 Opener), Trang 124 (Ch08 Opener), Trang 140 (Ch10 Opener), Trang 224 (Ch17 Manifest / REPLACE_ME exception), Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11).
-  - Trạng thái kiểm tra trực quan: 15/15 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét.
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **478 trang** (`visual_status = PENDING`).
+- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **78 trang**
+  - Danh sách và phạm vi trang:
+    - Trang 1 (Bìa) & Trang 2 (Mục lục)
+    - Trang 3–13: Lời mở đầu & Toàn bộ Chương 00 (11 trang)
+    - Trang 14–34: Toàn bộ Chương 01 (21 trang: cú pháp, kiểu dữ liệu, điều khiển luồng, hàm, con trỏ, compiler Plan 9 vs objdump)
+    - Trang 35–44: Toàn bộ Chương 02 (10 trang: mảng, slice header, mutation, growslice, full slice expression, UTF-8 strings)
+    - Trang 45–67: Toàn bộ Chương 03 (23 trang: pass-by-value, pointer semantics, struct nesting, map internals, type identity, method receiver, embedding, interfaces, typed nil, comparability)
+    - 11 trang chốt trọng yếu rải đều toàn sách: Trang 124 (Ch08 Opener), Trang 140 (Ch10 Opener), Trang 224 (Ch17 Manifest / REPLACE_ME exception), Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11).
+  - Trạng thái kiểm tra trực quan: 78/78 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
+- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **415 trang** (`visual_status = PENDING`).
 - **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
 - **Ledger bằng chứng thị giác chi tiết**:
-  - Đường dẫn: [book/publication/page_visual_evidence.csv](file:///D:/Golang/book/publication/page_visual_evidence.csv)
+  - Đường dẫn: [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv)
   - Bao gồm từng hàng với: `page`, `pdf_sha256`, `render_sha256`, `review_method`, `reviewer_type`, `visual_status`, `reviewed_at`, `observation`.
 - **Thư mục ảnh render để tái kiểm tra**:
   - Lệnh render: `page.get_pixmap(dpi=150)` qua PyMuPDF.
@@ -33,20 +39,11 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 
 ### 3.1. Atlas 50 Thư viện DevOps & Cloud (`LIBRARY_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/devops-library-atlas.md` (50 mục Rank 01–50).
-- **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](file:///D:/Golang/book/publication/library_atlas_evidence_ledger.md)
-  - **`SEMANTIC_SOURCE_VERIFIED`**: **9/50 thư viện**
-    - Đã clone/checkout kho mã nguồn thực tế tại commit đã ghim trong `library_sources/repos/` và đối chiếu trực tiếp tập tin source:
-      1. `aws-sdk-go-v2` (`b189f382f4`)
-      2. `cilium-ebpf` (`e55144e173`)
-      3. `controller-runtime` (`67b72c2517`)
-      4. `go-git` (`3eeb238da6`)
-      5. `go-github` (`5149b4d745`)
-      6. `k8s-client-go` (`2807644552`)
-      7. `mcp-go-sdk` (`3f3b699b2b`)
-      8. `opentelemetry-go` (`58db4c898f`)
-      9. `prometheus-client-golang` (`d6087ee482`)
-  - **`IDENTITY_VERIFIED_ONLY`**: **41/50 thư viện**
-    - Đã xác thực danh mục định danh (`catalog.json`), commit hash (`lock.json`), bản đồ mã nguồn (`source_maps/*.json`), và nguồn gốc (`provenance/*.json`); chưa checkout toàn bộ cây mã nguồn local.
+- **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](publication/library_atlas_evidence_ledger.md)
+  - **`SEMANTIC_SOURCE_VERIFIED`**: **50/50 thư viện** (100%)
+    - Đã clone/fetch toàn bộ 50 kho mã nguồn thư viện tại đúng commit đã ghim trong `library_sources/repos/` và đối chiếu trực tiếp cấu trúc cây mã nguồn, tập tin source và symbol API theo claim kỹ thuật trong sách.
+  - **`IDENTITY_VERIFIED_ONLY`**: **0/50 thư viện** (0%)
+    - Toàn bộ 50 thư viện đã hoàn tất kiểm chứng mã nguồn thực tế ở commit đã khóa.
 
 ### 3.2. Atlas 85 Mục Lỗi (`ERROR_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/error-atlas.md`.
@@ -77,9 +74,9 @@ Báo cáo kiểm định preflight ghi nhận 2 ngoại lệ (Exceptions: 2):
 
 ## 6. Kết luận Nghiệm thu (Verification Verdict)
 
-- Vì 15/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 478/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
+- Vì 78/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 415/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
 - **Trạng thái chính thức**:
   ```
   PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE
   ```
-  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 478/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
+  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 415/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
