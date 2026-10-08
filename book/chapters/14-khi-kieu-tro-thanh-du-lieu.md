@@ -152,7 +152,12 @@ func ApplyEnv(dst any, values map[string]string) error {
 
 `Type` trả lời câu hỏi về declaration: field thứ `i` tên gì, tag gì, exported không, exact type nào. `Kind` chỉ là category underlying runtime kind; vì `type Token string` cũng có `Kind() == reflect.String`, nó không đủ cho contract chỉ nhận builtin `string`. `TypeFor[string]()` cung cấp identity của type cần nhận. `Value` trả lời câu hỏi về instance cụ thể: value hiện tại là gì, có set được không. Quy tắc đơn giản là đọc metadata từ `Type`, đọc hoặc ghi dữ liệu từ `Value`.
 
-> **Dừng để dự đoán:** Nếu caller gọi `ApplyEnv(Config{}, values)`, vì sao function không nên chấp nhận rồi return `nil`? Vì không có đường nào để thay variable của caller. Một `nil` ở đây là lời nói dối: input đã không thỏa quyền mutation mà API cần.
+> **Dừng để dự đoán.** Nếu caller gọi `cfg := Config{}` rồi thực hiện `ApplyEnv(cfg, values)` bằng giá trị thay vì truyền con trỏ `&cfg`, liệu hàm có thể cập nhật các trường cấu hình không? Vì sao implementation của `ApplyEnv` chặn lỗi ngay từ guard kiểm tra con trỏ ở đầu hàm thay vì duyệt qua từng field rồi kiểm tra `CanSet()`?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+Khi truyền struct bằng giá trị vào đối số interface `any`, giá trị được đóng gói thành một bản sao không có địa chỉ liên kết với biến gốc (unaddressable). Đối tượng `reflect.ValueOf(dst)` sinh ra từ một giá trị như vậy đại diện cho một bản sao độc lập, và phương thức `CanSet()` trên các trường của nó luôn trả về `false`. Nếu cố tình gọi `SetString()` lên một `reflect.Value` không có quyền gán, runtime sẽ lập tức gây panic. Kể cả khi hàm cố tình bỏ qua mà không panic, biến `cfg` ban đầu của caller cũng hoàn toàn không nhận được dữ liệu mới, biến giá trị trả về `nil` thành một tín hiệu thành công giả tạo.
+
+Trong cài đặt thực tế của `ApplyEnv`, ta không đợi đến lúc duyệt từng trường mới kiểm tra `CanSet()`. Guard clause ở ngay đầu hàm kiểm tra trực tiếp `value.Kind() != reflect.Pointer` cùng điều kiện con trỏ không nil và trả về `ErrDestination` ngay lập tức. Đây là ranh giới phòng vệ fail-fast: một khi đích đến không phải là con trỏ trỏ tới vùng nhớ có quyền đột biến, hàm từ chối dứt khoát toàn bộ thao tác trước khi tốn chi phí duyệt metadata của struct.
 
 ## Thực hành: viết kiểm tra bảo vệ trước khi gán giá trị (setter)
 

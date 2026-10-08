@@ -319,8 +319,8 @@ Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Re
 
 ## 9. Bài tập thực hành thiết kế Operator
 
-### Thử thách 1: Tự động khởi tạo ConfigMap đi kèm Deployment
-**Yêu cầu:** Mở rộng `AppServiceReconciler` để mỗi khi tạo một `AppService`, nó tự động tạo thêm một `ConfigMap` chứa file cấu hình ứng dụng (`app.json`). `ConfigMap` này cũng phải được gắn `OwnerReference` trỏ về `AppService`.
+### Thử thách 1: Tự động khởi tạo và đồng bộ ConfigMap đi kèm Deployment
+**Yêu cầu:** Mở rộng `AppServiceReconciler` để mỗi khi điều hòa một `AppService`, nó tự động tạo và đồng bộ một `ConfigMap` con (`<app-name>-config`) chứa file cấu hình ứng dụng `app.json` với nội dung `{"port": <Spec.Port>}`. `ConfigMap` này phải được gắn `OwnerReference` trỏ về `AppService`. Nếu `ConfigMap` đã tồn tại nhưng dữ liệu bị lệch (drift), reconciler phải cập nhật lại nội dung.
 
 ### Thử thách 2: Báo cáo Condition chuẩn mực trong Status
 **Yêu cầu:** Kubernetes khuyến nghị sử dụng slice `[]metav1.Condition` để thể hiện trạng thái chi tiết của tài nguyên. Hãy bổ sung hàm trợ giúp để cập nhật Condition `Type="DeploymentReady"` với `Status="True"` khi số lượng Pod sẵn sàng bằng số lượng replica mong muốn, hoặc `Status="False"` kèm Reason `"ReplicasUnavailable"` khi chưa đủ.
@@ -329,23 +329,24 @@ Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Re
 
 ## 10. Hướng dẫn giải và Phân tích kiến trúc bài tập
 
-### Lời giải Thử thách 1: Đồng bộ ConfigMap con
+### Lời giải Thử thách 1: Đồng bộ ConfigMap con và Xử lý Trôi cấu hình
 
 ~~~go
 func (r *AppServiceReconciler) reconcileConfigMap(
 	ctx context.Context, app *appsv1alpha1.AppService,
 ) error {
+	desiredJSON := fmt.Sprintf(`{"port": %d}`, app.Spec.Port)
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      app.Name + "-config",
 			Namespace: app.Namespace,
 		},
 		Data: map[string]string{
-			"port": fmt.Sprintf("%d", app.Spec.Port),
+			"app.json": desiredJSON,
 		},
 	}
 
-	// Gán quan hệ cha con để tự động xóa khi app bị xóa
+	// Gán quan hệ cha con để garbage collector tự động dọn dẹp
 	if err := controllerutil.SetControllerReference(
 		app, cm, r.Scheme,
 	); err != nil {
@@ -358,9 +359,36 @@ func (r *AppServiceReconciler) reconcileConfigMap(
 	if errors.IsNotFound(err) {
 		return r.Create(ctx, cm)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Kiểm tra quyền sở hữu, từ chối ghi đè nếu owner khác
+	if !metav1.IsControlledBy(found, app) {
+		return fmt.Errorf(
+			"configmap %s exists but not owned by %s",
+			found.Name, app.Name,
+		)
+	}
+
+	// Phát hiện và sửa trôi cấu hình (configuration drift)
+	if found.Data["app.json"] != cm.Data["app.json"] {
+		found.Data = cm.Data
+		return r.Update(ctx, found)
+	}
+	return nil
 }
 ~~~
+
+#### Phân tích ranh giới điều hòa (Reconcile Boundaries)
+
+Trong một reconciler chuẩn mực, việc kiểm soát và bảo vệ ranh giới tài nguyên gồm ba kỷ luật cốt lõi:
+
+Thứ nhất là kiểm tra quyền sở hữu (ownership verification). Khi `r.Get` tìm thấy ConfigMap đã tồn tại trên cụm, reconciler không được vội vàng cập nhật dữ liệu. Tài nguyên này có thể do một tiến trình khác tạo ra hoặc do người quản trị cấu hình thủ công. Hàm sử dụng `metav1.IsControlledBy(found, app)` để xác minh quyền điều khiển. Nếu ConfigMap không thuộc sở hữu của `AppService` hiện tại, chính sách an toàn nhất là từ chối can thiệp và trả về lỗi tường minh, tuyệt đối không ghi đè lên tài nguyên của chủ sở hữu khác.
+
+Thứ hai là khắc phục trôi cấu hình (drift correction). Với ConfigMap đã xác thực đúng quyền sở hữu, việc chỉ kiểm tra `IsNotFound` khi khởi tạo ban đầu là chưa đủ. Nếu ai đó vô tình chỉnh sửa ConfigMap trực tiếp hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, logic chỉ tạo mới sẽ bỏ sót sai lệch dữ liệu. Do đó, hàm điều hòa đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi gọi `Update(ctx, found)` khi có khác biệt để bảo đảm tính nhất quán sau cùng (eventual consistency).
+
+Thứ ba là ranh giới tác động đến tiến trình trong Pod (workload boundary). Cập nhật ConfigMap trên API server không làm cho Pod tự động khởi động lại, trừ khi ứng dụng tự thiết lập cơ chế theo dõi file trên đĩa để nạp lại. Nếu ứng dụng nạp cấu hình qua biến môi trường (`envFrom`) hoặc mount qua `subPath`, kubelet sẽ không tự đẩy dữ liệu mới vào container. Để giải quyết ranh giới này, bản thân ConfigMap thay đổi không thể tự động làm đổi Deployment; chính reconciler của Operator phải chủ động tính mã băm SHA-256 của chuỗi `app.json` mới rồi gán vào annotation của Pod template trong Deployment (chẳng hạn `app.kubernetes.io/config-hash: <sha256>`). Khi Operator cập nhật Deployment với template annotation mới, Deployment controller của Kubernetes mới nhận diện được sự thay đổi ở cấp độ Pod template và kích hoạt Rolling Update để thay thế toàn bộ Pod bằng phiên bản nạp cấu hình mới.
 
 ### Lời giải Thử thách 2: Quản lý Condition bằng meta.SetStatusCondition
 

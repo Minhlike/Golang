@@ -101,7 +101,12 @@ func (r *Recorder) Snapshot() Snapshot {
 
 Mutex ở đây không phải “metrics library tự viết”. Nó chỉ giữ invariant của một teaching recorder khi nhiều worker từ Chương 9 cùng báo outcome. `Snapshot` trả value copy, vì caller không được sửa state nội bộ để làm counter quay ngược. Nếu exporter sau này đọc snapshot định kỳ, nó vẫn phải có contract riêng về reset khi process restart, timestamp, cumulative counter hay delta. Bản ghi in-memory này không có retention, không có window và không phải evidence lịch sử sau khi process chết.
 
-> **Dừng để dự đoán:** Một probe `timeout` có phải luôn là “dependency down” không? Chưa chắc. Nó chỉ chứng minh caller không nhận được kết quả trong ngân sách đã chọn. Nhưng trong SLI của lab, timeout vẫn thuộc denominator failure vì user không nhận được lần probe thành công. Nếu product chọn policy khác, metric name, SLI và alert phải đổi cùng nhau.
+> **Dừng để dự đoán.** Một probe kết thúc với lỗi `context.DeadlineExceeded` (timeout). Sự kiện này có đồng nghĩa với việc máy chủ đích đã sập hoàn toàn không? Trong SLI đo độ khả dụng, kết quả timeout được phân loại vào đâu?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+Lỗi timeout chỉ chứng minh caller không nhận được phản hồi trong ngân sách thời gian đã định, hoàn toàn không đủ để suy ra dịch vụ đích đã chết. Trong thực tế, dịch vụ đích có thể vẫn đang chạy nhưng bị nghẽn hàng đợi xử lý, hoặc phản hồi đã được gửi đi nhưng bị chậm trễ trên mạng, thậm chí một tác vụ ghi dữ liệu đã được commit thành công ở phía sau trước khi caller hết giờ chờ.
+
+Theo hợp đồng SLI cụ thể được chọn trong lab này, timeout được tính vào mẫu số thất bại (denominator failure) bởi vì dưới góc nhìn của caller, lượt probe đó đã không thu được kết quả hợp lệ trong khung thời gian cam kết. Tuy nhiên, đây là một lựa chọn thiết kế chính sách, không phải quy luật bất biến cho mọi hệ thống. Một số dịch vụ có thể tách timeout thành SLI riêng về độ trễ, phân loại theo tác vụ idempotent, hoặc ghi nhận nhãn riêng `outcome="timeout"` để đội ngũ trực vận hành không đánh đồng nghẽn mạng với sự cố sập ứng dụng. Khi sản phẩm thay đổi chính sách phân loại, tên metric, công thức SLI và ngưỡng cảnh báo đều phải được cập nhật đồng bộ.
 
 ## SLO không phải một alert thật to
 

@@ -108,7 +108,20 @@ cancelApp()
 
 Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
 
-> **Dừng để dự đoán:** request có document đầu hợp lệ rồi nối thêm `{"debug":true}` có được gọi `Store` không? Nếu câu trả lời là không, code phải có một bước chứng minh stream đã kết thúc; `Decode` thành công một lần chưa đủ bằng chứng.
+> **Dừng để dự đoán.** Xét một handler HTTP đọc payload qua `json.Decoder`:
+> ~~~go
+> decoder := json.NewDecoder(r.Body)
+> var input Check
+> err := decoder.Decode(&input)
+> ~~~
+> Nếu client gửi body gồm một document hợp lệ rồi nối thêm dữ liệu thừa như `{"target":"https://example.com"}{"debug":true}`, lệnh `decoder.Decode(&input)` có báo lỗi không, và phần dữ liệu thừa phía sau sẽ đi về đâu? Làm thế nào để chứng minh stream đã thực sự kết thúc trước khi chuyển giao dữ liệu sang `Store`?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+Lệnh `decoder.Decode(&input)` đọc và giải mã thành công object đầu tiên vào biến `input` mà không trả về lỗi nào, bởi vì `json.Decoder` được thiết kế để xử lý luồng stream và dừng lại ngay khi hoàn tất một JSON value hợp lệ. Lúc này, phần dữ liệu thừa phía sau không nhất thiết còn nguyên vẹn trong `r.Body`. Do `json.Decoder` duy trì một bộ đệm đọc trước (read buffer) nội bộ, các byte của object thứ hai có thể đã được nạp sẵn vào bộ đệm của decoder hoặc vẫn còn nằm lại trên stream của request. Nếu handler dừng lại ở lần gọi đầu tiên rồi tiếp tục xử lý nghiệp vụ, dữ liệu thừa sẽ bị bỏ qua và ranh giới kiểm soát input bị phá vỡ.
+
+Để chứng minh stream không còn dữ liệu thừa ngoài khoảng trắng, handler thực hiện thêm một lần giải mã thứ hai vào một struct rỗng (`var extra struct{}`). Khi stream đã kết thúc đúng chuẩn, bộ giải mã bắt buộc phải trả về chính xác lỗi `io.EOF`. Mọi dữ liệu còn sót lại trong bộ đệm decoder hoặc trên stream mạng đều khiến lần gọi thứ hai trả về một kết quả khác `io.EOF`, tạo bằng chứng rõ ràng để handler từ chối request bằng mã 400 Bad Request trước khi chuyển giao việc cho `Store`.
+
+Dưới đây là cài đặt kiểm định ranh giới hoàn chỉnh của handler trong lab:
 
 ~~~go
 func (a app) createCheck(

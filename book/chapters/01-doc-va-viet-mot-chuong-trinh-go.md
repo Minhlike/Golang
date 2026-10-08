@@ -119,19 +119,24 @@ Với biến được khai báo theo ngữ nghĩa Go thông thường, không c�
 
 Cam kết ngữ nghĩa này không đồng nghĩa với việc mỗi biến đều bắt buộc phải chiếm một ô nhớ vật lý trong RAM và trình biên dịch luôn phải thực hiện lệnh memset xóa sạch các byte về số 0. Tùy thuộc vào chiến lược tối ưu hóa, trình biên dịch có thể xóa giá trị trên thanh ghi CPU, gấp hằng số (constant-fold), hoặc thậm chí loại bỏ hoàn toàn việc cấp phát lưu trữ nếu biến không còn được dùng đến. Việc xóa các byte bộ nhớ về 0 chỉ là một cơ chế triển khai (implementation mechanism) trong các trường hợp vùng nhớ lưu trữ thực sự được hiện thực hóa (materialized) trên stack frame hoặc heap.
 
-Khai báo ngắn cần ít nhất một biến mới không phải `_`. Nó có thể dùng lại biến đã khai báo trong cùng block nếu kiểu không đổi; khi ấy biến cũ được gán giá trị, không tạo bản thứ hai. Còn khai báo tên trùng ở block con tạo một biến khác. Hãy dự đoán hai dòng output:
+Khai báo ngắn cần ít nhất một biến mới không phải `_`. Nó có thể dùng lại biến đã khai báo trong cùng block nếu kiểu không đổi; khi ấy biến cũ được gán giá trị, không tạo bản thứ hai. Còn khai báo tên trùng ở block con tạo một biến khác.
+
+> **Dừng để dự đoán.** Đọc đoạn mã sau và dự đoán chính xác hai dòng output: biến `x` trong block con nhận giá trị nào? Sau khi thoát khỏi block con, `x` có giá trị là 1, 2 hay 4?
 
 ~~~go
 x := 1
-x, y := 2, 3 // x cũ nhận 2; y mới được khai báo
+x, y := 2, 3
 {
-	x := 4 // x mới trong block con
+	x := 4
 	fmt.Println(x, y)
 }
 fmt.Println(x, y)
 ~~~
 
-Kết quả là `4 3`, rồi `2 3`. Bỏ `y` để viết tiếp `x := 2` trong cùng block bị từ chối vì không có biến mới. Phép gán `x = 2` thì hợp lệ: nó chỉ đổi giá trị của biến đã có. Phạm vi tên, không phải hình dạng của `:=` riêng lẻ, quyết định biến nào được dùng lại.
+#### Đáp án — chỉ đọc sau khi đã tự làm
+Kết quả in ra lần lượt là `4 3` rồi `2 3`. Tại câu lệnh `x, y := 2, 3`, do xuất hiện trong cùng block và có thêm biến mới `y`, Go áp dụng quy tắc redeclaration: biến `x` cũ nhận giá trị mới là `2` mà không tạo ra bản sao thứ hai. Khi bước vào block con, khai báo ngắn `x := 4` tạo ra một biến hoàn toàn mới nằm trong phạm vi từ vựng hẹp hơn, che khuất biến ngoài và khiến lệnh in đầu tiên xuất ra `4 3`. Sau khi thoát khỏi block con, biến nội bộ này hết phạm vi từ vựng; lệnh in cuối cùng đọc lại biến `x` của block cha (đang giữ giá trị `2`) và biến `y` (`3`), cho kết quả `2 3`.
+
+Phản ví dụ biên giới làm rõ bản chất: nếu bỏ `y` để viết tiếp `x := 2` trong cùng block, compiler lập tức báo lỗi `no new variables on left side of :=`. Ngược lại, phép gán `x = 2` thì hợp lệ vì nó chỉ cập nhật giá trị của biến sẵn có. Phạm vi từ vựng, không phải hình thức của cú pháp `:=`, quyết định biến nào được dùng lại.
 
 ## Hằng số: giá trị chưa cần một ô nhớ
 

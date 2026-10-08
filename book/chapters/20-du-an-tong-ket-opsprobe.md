@@ -211,21 +211,22 @@ Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request chèn he
 
 Thư mục `projects/opsprobe/incident/` mô phỏng một sự cố kinh điển trong môi trường microservices.
 
-### Kịch bản mô phỏng sự cố
+### Kịch bản và Triệu chứng lâm sàng
 
 > **Ghi chú phương pháp luận:** Đây là kịch bản giả định mô phỏng tình huống sự cố thực tế để đặt ra bài toán chẩn đoán cho kỹ sư.
 
-Hệ thống probe giả định được triển khai để kiểm tra sức khỏe 50 microservices nội bộ. Khi tải tăng cao, hệ thống giám sát ghi nhận tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ chạm trần deadline. Tuy nhiên, khi kỹ sư kiểm tra trực tiếp từ máy trạm bằng lệnh cURL độc lập, target service vẫn phản hồi trong 2ms. Kiểm tra trạng thái hệ điều hành cho thấy số lượng socket TCP mở tăng liên tục, tiệm cận giới hạn file descriptors (`ulimit -n`).
+Hệ thống probe giả định được triển khai để kiểm tra sức khỏe các microservice nội bộ. Khi số lượng request tăng lên, hệ thống giám sát ghi nhận tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ probe tăng cao. Tuy nhiên, khi kỹ sư thực hiện một lệnh cURL độc lập trực tiếp tới dịch vụ đích, dịch vụ vẫn phản hồi rất nhanh trong vài phần nghìn giây. Kiểm tra tài nguyên hệ điều hành bằng `ss -s` cho thấy số lượng socket TCP mở tăng liên tục theo từng lượt gọi mà không được thu hồi, tiệm cận giới hạn file descriptors (`ulimit -n`). Đồng thời, khi kiểm tra bằng `net/http/httptrace`, hook `GotConnInfo.Reused` luôn trả về `false`, cho thấy `http.Transport` không tái sử dụng được kết nối rảnh nào giữa các lượt probe.
 
-### Bốn tầng bằng chứng chẩn đoán
+> **Dừng để điều tra và phản nghiệm.** Vì sao kết quả cURL nhanh chỉ là bằng chứng hỗ trợ thu hẹp giả thuyết chứ chưa đủ để bác bỏ hoàn toàn lỗi hạ tầng? Kỹ sư cần thiết kế phép thử nào với `httptrace` để xác minh vòng đời kết nối của client trước khi can thiệp vào cấu hình hệ thống?
 
-Thứ nhất ở tầng Hệ điều hành: `ss -s` ghi nhận số lượng socket mở tăng liên tục theo số lượng request mà không được thu hồi.
+#### Đáp án — chỉ đọc sau khi đã tự làm
+Kết quả cURL phản hồi nhanh chỉ cho thấy dịch vụ đích có khả năng phục vụ một kết nối đơn lẻ tại thời điểm thử nghiệm. Nó giúp thu hẹp nghi vấn về việc máy chủ đích bị treo hoàn toàn, nhưng chưa đủ để loại trừ các yếu tố hạ tầng phức tạp như giới hạn kết nối đồng thời trên tường lửa, chính sách cân bằng tải hay tình trạng bão hòa hàng đợi socket.
 
-Thứ hai ở tầng Transport Pool: `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi.
+Để cô lập nguyên nhân, kỹ sư sử dụng `net/http/httptrace` đo lường tỷ lệ kết nối mới so với kết nối tái sử dụng qua trường `info.Reused`. Theo tài liệu của gói `net/http`, một kết nối HTTP/1.x chỉ đủ điều kiện đưa trở lại pool tái sử dụng khi client đã đọc hết dữ liệu của response body và đóng nó tường minh qua `resp.Body.Close()`. Nếu client bỏ rơi body hoặc quên đóng, `http.Transport` buộc phải để kết nối ở trạng thái dở dang hoặc ngắt bỏ, khiến mỗi request tiếp theo đều phải mở một kết nối TCP mới cho đến khi cạn kiệt tài nguyên hệ thống.
 
-Thứ ba ở tầng Runtime Trace: Sử dụng `net/http/httptrace` với hook `GotConnInfo.Reused`. Kết quả cho thấy `info.Reused` luôn bằng `false`.
+### Bằng chứng mã nguồn và Đo đạc thực nghiệm
 
-Thứ tư ở tầng Mã nguồn: Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
+Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
 
 ~~~go
 resp, err := client.Do(req)
