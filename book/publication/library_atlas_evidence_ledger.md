@@ -19,20 +19,20 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 | 06 | `go.opentelemetry.io/collector` | `0bf928af5487d3c4e0b4174eabb7ba075c322517` | **SEMANTIC_CLAIM_VERIFIED** | `consumer/consumer.go` (`Capabilities.MutatesData`), `processor/processor.go` (`Traces`/`Metrics`/`Logs`), `component/component.go` |
 | 07 | `github.com/moby/moby` | `89c5e8fd66634b6128fc4c0e6f1236e2540e46e0` | **SEMANTIC_CLAIM_VERIFIED** | `daemon/start.go` (`func (daemon *Daemon) containerStart`), `container/state.go` (`State.Running`/`Paused`), `daemon/graphdriver/overlay2/overlay.go` (`func (d *Driver) Get`) |
 | 08 | `github.com/containerd/containerd/v2` | `a7fe631d96c08fb14cf8eff0afdc280e99c30a94` | **SEMANTIC_CLAIM_VERIFIED** | `core/runtime/v2/shim.go` (`loadShim`, `bootstrap.json`), `core/runtime/v2/manager.go` (`TaskManager`) |
-| 09 | `github.com/hashicorp/terraform-plugin-framework` | `c7ac25e86333d194946fb5e3fd1114e7d101fc23` | **SEMANTIC_CLAIM_VERIFIED** | `attr/value.go` (`Value` interface), `types/basetypes/string_value.go` (`StringValue`, `ValueStateKnown`/`Null`/`Unknown`) |
+| 09 | `github.com/hashicorp/terraform-plugin-framework` | `c7ac25e86333d194946fb5e3fd1114e7d101fc23` | **SEMANTIC_CLAIM_VERIFIED** | `attr/value.go` (`Value` interface), `types/basetypes/string_value.go` (`StringValue`, `ValueString`, `ValueStateKnown`/`Null`/`Unknown`) |
 | 10 | `helm.sh/helm/v3` | `144ca65f8501953fa8b41cd1d37c7223051c85b7` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/storage/driver/secrets.go` (`sh.helm.release.v1.*`), `pkg/action/rollback.go` (`Rollback.Run`, `Version + 1`) |
 | 11 | `github.com/go-git/go-git/v5` | `3eeb238da61eb9c7a324f3ee04f990ce89175642` | **SEMANTIC_CLAIM_VERIFIED** | `plumbing/format/packfile/parser.go` (`type Parser struct`), `plumbing/storer/storer.go` (`EncodedObjectStorer`), `repository.go` (`PlainOpen`, `Clone`), `worktree.go` |
 | 12 | `golang.org/x/crypto` | `3f62bf119e84c6e35e8518a2958089ade622d1a3` | **SEMANTIC_CLAIM_VERIFIED** | `ssh/mux.go` (`type mux struct`, `chanList`), `ssh/channel.go` (`type channel struct`, RFC 4254 window), `ssh/client.go` (`NewSession`), `ssh/tcpip.go` (`DialContext` "direct-tcpip") |
-| 13 | `github.com/open-policy-agent/opa` | `b2c26708e9d55645d7f837db495031f7e4152594` | **SEMANTIC_CLAIM_VERIFIED** | `rego/rego.go` (`PreparedEvalQuery`), `v1/rego/rego.go` (`PreparedEvalQuery.Eval`, `PrepareForEval`), `topdown/query.go` |
+| 13 | `github.com/open-policy-agent/opa` | `b2c26708e9d55645d7f837db495031f7e4152594` | **SEMANTIC_CLAIM_VERIFIED** | `rego/rego.go` (`PreparedEvalQuery`), `v1/rego/rego.go` (`func (pq PreparedEvalQuery) Eval`, `PrepareForEval`), `topdown/query.go` |
 | 14 | `github.com/sigstore/cosign/v2` | `3e82f50a2839855693aacf7b3d0e7e2f30774cb4` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/cosign/verify.go` (`VerifyImageSignatures`), `pkg/oci/remote/signatures.go` (`Signatures`, `Bundle`), `ociremote.SignatureTag` |
 | 15 | `google.golang.org/grpc` | `e84aa5ab15d1d2b29d54f838312ad490cb7551a8` | **SEMANTIC_CLAIM_VERIFIED** | `clientconn.go` (`ClientConn`), `resolver/resolver.go` (`Resolver`), `balancer/balancer.go` (`Balancer`, `Picker`), `balancer/roundrobin/roundrobin.go` |
-| 16 | `google.golang.org/protobuf` | `cdd4c5f7406e82462949c7a65defa9f3029c162d` | **SEMANTIC_CLAIM_VERIFIED** | `encoding/protowire/wire.go` (`EncodeTag`, `DecodeTag`, `(num << 3) | (typ & 7)`), `proto/encode.go` (`MarshalOptions.Marshal`) |
-| 17 | `github.com/google/go-containerregistry` | `8a72a424fdecb4caa14f2d525e5d2503331442b5` | SOURCE_FILE_VERIFIED | `pkg/v1/image.go`, `pkg/v1/remote/puller.go` |
-| 18 | `oras.land/oras-go/v2` | `105715ee12eac6895ec736a075285c34d9f2eeb6` | SOURCE_FILE_VERIFIED | `registry/remote/repository.go`, `copy.go` |
-| 19 | `github.com/containernetworking/cni` | `3f51e8803ebbdba0ebeed735b42137e4c7302403` | SOURCE_FILE_VERIFIED | `pkg/skel/skel.go`, `pkg/invoke/raw_exec.go` |
+| 16 | `google.golang.org/protobuf` | `cdd4c5f7406e82462949c7a65defa9f3029c162d` | **SEMANTIC_CLAIM_VERIFIED** | `encoding/protowire/wire.go` (`EncodeTag`, `DecodeTag(x uint64) (Number, Type)`, `(num << 3) | (typ & 7)`), `proto/encode.go` (`MarshalOptions.Marshal`) |
+| 17 | `github.com/google/go-containerregistry` | `8a72a424fdecb4caa14f2d525e5d2503331442b5` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/v1/image.go` (`type Image interface`), `pkg/v1/remote/image.go` (`remoteImage`, `partial.CompressedImageCore`), `pkg/v1/remote/puller.go` |
+| 18 | `oras.land/oras-go/v2` | `105715ee12eac6895ec736a075285c34d9f2eeb6` | **SEMANTIC_CLAIM_VERIFIED** | `target.go` (`type Target interface`), `registry/remote/repository.go` (`Repository`), `content/oci/oci.go` (`Store`), `copy.go` (`Copy`) |
+| 19 | `github.com/containernetworking/cni` | `3f51e8803ebbdba0ebeed735b42137e4c7302403` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/skel/skel.go` (`CmdArgs`, `PluginMainWithError`), `pkg/invoke/raw_exec.go` (`RawExec.ExecPlugin`), `pkg/types/types.go` |
 | 20 | `github.com/cilium/ebpf` | `e55144e17360b60cc4583229c35c2dbf0935b308` | **SEMANTIC_CLAIM_VERIFIED** | `prog.go` (`Program.Test`), `map.go` (`Map.Lookup`, `Map.Update`), `ringbuf/reader.go` (`Reader.Read`, `Reader.Close`), `collection.go` (`LoadCollectionSpec`) |
-| 21 | `github.com/vishvananda/netlink` | `17daef607c6442d47b0565343cf8a69f985a4cb7` | SOURCE_FILE_VERIFIED | `netlink_linux.go`, `link_linux.go` |
-| 22 | `github.com/crossplane/crossplane-runtime` | `84fc49a3e3b88733677824b1a4dcce5097ca0c59` | SOURCE_FILE_VERIFIED | `pkg/reconciler/managed/reconciler.go`, `pkg/resource/interfaces.go` |
+| 21 | `github.com/vishvananda/netlink` | `17daef607c6442d47b0565343cf8a69f985a4cb7` | **SEMANTIC_CLAIM_VERIFIED** | `link_linux.go` (`LinkAdd`), `route_linux.go` (`RouteAdd`), `netlink_linux.go` (`NETLINK_ROUTE` socket) |
+| 22 | `github.com/crossplane/crossplane-runtime` | `84fc49a3e3b88733677824b1a4dcce5097ca0c59` | **SEMANTIC_CLAIM_VERIFIED** | `pkg/reconciler/managed/reconciler.go` (`TypedExternalClient`, `Reconciler`), `pkg/resource/interfaces.go` (`Managed` interface) |
 | 23 | `github.com/fluxcd/pkg/runtime` | `a1797f9a0f060b8e2556a980c853b0fb304114c6` | SOURCE_FILE_VERIFIED | `runtime/conditions/setter.go` |
 | 24 | `github.com/google/go-github/v92` | `5149b4d74590b63154fcc43c4dac05e881f9aea3` | **SEMANTIC_CLAIM_VERIFIED** | `github/github.go` (`Client.Do`, `Response.Rate`), `github/actions_workflows.go` (`ActionsService.ListWorkflows`, `ActionsService.CreateWorkflowDispatchEvent`) |
 | 25 | `github.com/spf13/cobra` | `88b30ab89da2d0d0abb153818746c5a2d30eccec` | SOURCE_FILE_VERIFIED | `command.go`, `args.go` |
@@ -195,11 +195,11 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
   > String Go có nhiều giá trị, trong đó chuỗi rỗng vẫn là giá trị hợp lệ; pointer có nil và các giá trị không nil. IaC cần biểu diễn thêm việc giá trị chưa biết tại plan time và null theo schema, thay vì dùng chuỗi rỗng cho tất cả trạng thái thiếu dữ liệu.
 - **Source Files & Symbols đối chiếu**:
   - `attr/value.go` (lines 31–65: `type Value interface { Type(context.Context) Type; IsNull() bool; IsUnknown() bool; String() string; Equal(Value) bool }`)
-  - `types/basetypes/string_value.go` (lines 90–120: `type StringValue struct { state attr.ValueState; value string }`, `ValueStateKnown`, `ValueStateNull`, `ValueStateUnknown`)
+  - `types/basetypes/string_value.go` (lines 90–120: `type StringValue struct { state attr.ValueState; value string }`, `ValueStateKnown`, `ValueStateNull`, `ValueStateUnknown`; lines 168–172: `func (s StringValue) ValueString() string` trả về `s.value`)
   - `internal/fwserver/server.go` (lines 75–120: xử lý protocol gRPC với Terraform CLI)
 - **Cơ chế kỹ thuật xác minh**: Terraform Plugin Framework định nghĩa hệ thống kiểu dữ liệu ba trạng thái (three-state logic) qua interface `attr.Value` và enum `attr.ValueState`. Trong `StringValue`, framework tách biệt rạch ròi giữa: (1) chuỗi đã biết có giá trị (kể cả chuỗi rỗng `""`), (2) giá trị Null (`ValueStateNull`), và (3) giá trị chưa biết tại thời điểm lập kế hoạch (`ValueStateUnknown` - tính toán sau apply). Điều này khắc phục hạn chế của kiểu `string` và `pointer` gốc trong Go khi không thể phân biệt giữa "chưa cấu hình", "cấu hình rỗng" và "giá trị sinh ra từ hạ tầng sau khi tạo".
 - **Điều kiện áp dụng**: Áp dụng cho `github.com/hashicorp/terraform-plugin-framework v1.19.0` (commit `c7ac25e86333d194946fb5e3fd1114e7d101fc23`, tag `v1.19.0`).
-- **Những gì source không chứng minh**: Framework không tự động biến đổi schema cũ từ `terraform-plugin-sdk` (SDK v2) sang framework mới mà không cần migration code; không ngăn chặn lỗi runtime nếu provider logic cố tình gọi `ValueString()` trên một `StringValue` đang ở trạng thái Null hoặc Unknown mà không kiểm tra `IsNull()` / `IsUnknown()` trước.
+- **Những gì source không chứng minh**: Framework không tự động biến đổi schema cũ từ `terraform-plugin-sdk` (SDK v2) sang framework mới mà không cần migration code; hàm `ValueString()` (dòng 168–172) trả về `s.value` (chuỗi rỗng `""` khi Null hoặc Unknown mà không gây runtime panic), rủi ro kỹ thuật là mất thông tin phân biệt ba trạng thái (tri-state: `Known Empty` vs `Null` vs `Unknown`), khiến provider xử lý nhầm trạng thái chưa cấu hình hoặc tính toán sau apply thành chuỗi rỗng và có thể ghi đè sai trạng thái hạ tầng.
 
 ### Rank 10: `helm.sh/helm/v3` (v3.22.0)
 - **Official Remote**: `https://github.com/helm/helm.git`
@@ -254,7 +254,7 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
   > Một gateway cần budget cho authorization theo SLO và concurrency của chính nó. Không suy ra budget một millisecond chỉ từ request rate; đo policy, input, contention và end-to-end latency trước khi chọn cách evaluate.
 - **Source Files & Symbols đối chiếu**:
   - `rego/rego.go` (line 177: `type PreparedEvalQuery = v1.PreparedEvalQuery`)
-  - `v1/rego/rego.go` (lines 561–580: `func (pq *PreparedEvalQuery) Eval(ctx context.Context, options ...EvalOption)`, lines 1798–1835: `func (r *Rego) PrepareForEval(ctx context.Context) (PreparedEvalQuery, error)`)
+  - `v1/rego/rego.go` (lines 561–580: `func (pq PreparedEvalQuery) Eval(ctx context.Context, options ...EvalOption) (ResultSet, error)` với value receiver; lines 1798–1835: `func (r *Rego) PrepareForEval(ctx context.Context, opts ...PrepareOption) (PreparedEvalQuery, error)`)
   - `topdown/query.go` (lines 140–210: `func (q *Query) Run(ctx context.Context)`)
 - **Cơ chế kỹ thuật xác minh**: OPA cung cấp phương thức `PrepareForEval()` biên dịch trước policy AST và query plan thành `PreparedEvalQuery` sẵn sàng thực thi trong bộ nhớ. Khi gateway xử lý request, việc gọi `PreparedEvalQuery.Eval(ctx, ...)` tránh được chi phí phân tích cú pháp (parsing) và biên dịch AST lặp lại trên từng lượt yêu cầu. Thời gian tính toán chính xác phụ thuộc độ phức tạp của luật Rego, kích thước tập dữ liệu đầu vào (`input`), và mức độ contention khóa/bộ nhớ; do đó budget phân quyền không thể giả định là 1ms cho mọi cấu hình nếu không đo đạc thực tế.
 - **Điều kiện áp dụng**: Áp dụng cho `github.com/open-policy-agent/opa v1.20.2` (commit `b2c26708e9d55645d7f837db495031f7e4152594`, tag `v1.20.2`).
@@ -295,7 +295,7 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 - **Exact Claim trong Atlas**:
   > Protobuf dùng field number và wire type thay cho lặp tên field trên wire. Dung lượng và tốc độ so với JSON phải đo trên schema, value, encoder và workload; không có tỷ lệ 3–10 lần chung.
 - **Source Files & Symbols đối chiếu**:
-  - `encoding/protowire/wire.go` (lines 37–46: `type Type int8`, định nghĩa các wire type: `Varint = 0`, `Fixed32 = 5`, `Fixed64 = 1`, `Bytes = 2`, lines 525–536: `func DecodeTag(v uint64) (Number, Type, int)`, `func EncodeTag(num Number, typ Type) uint64` tính bằng `(num << 3) | (typ & 7)`)
+  - `encoding/protowire/wire.go` (lines 37–46: `type Type int8`, định nghĩa các wire type: `Varint = 0`, `Fixed32 = 5`, `Fixed64 = 1`, `Bytes = 2`; lines 522–536: `func DecodeTag(x uint64) (Number, Type)` trả về 2 giá trị `(Number, Type)`; `func EncodeTag(num Number, typ Type) uint64` mã hóa `(uint64(num) << 3) | uint64(typ & 7)`)
   - `proto/encode.go` (lines 20–65: `func (o MarshalOptions) Marshal(m Message) ([]byte, error)`)
 - **Cơ chế kỹ thuật xác minh**: Trong định dạng Protobuf trên đường truyền (wire format), mỗi trường dữ liệu không mã hóa chuỗi tên trường (field name string) như JSON mà gói gọn thành một số nguyên varint duy nhất qua `EncodeTag`: 3 bit cuối biểu diễn `wire type` (từ 0 đến 5) và các bit dịch trái biểu diễn `field number` (`(num << 3) | (typ & 7)`). Nhờ vậy, kích thước header của mỗi trường chỉ chiếm từ 1 byte (cho field 1–15). Tuy nhiên, mức độ tiết kiệm dung lượng và gia tăng tốc độ mã hóa phụ thuộc chặt chẽ vào kích thước payload, loại kiểu dữ liệu (số nguyên, chuỗi UTF-8, mảng bytes) và thuật toán nén; do đó không tồn tại một tỷ lệ vượt trội cố định 3–10 lần cho mọi workload nếu chưa đo đạc benchmark thực tế.
 - **Điều kiện áp dụng**: Áp dụng cho module `google.golang.org/protobuf v1.36.12` (commit `cdd4c5f7406e82462949c7a65defa9f3029c162d`, tag `v1.36.12`).
@@ -304,29 +304,45 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 ### Rank 17: `github.com/google/go-containerregistry` (v0.22.1)
 - **Official Remote**: `https://github.com/google/go-containerregistry.git`
 - **Pinned Commit**: `8a72a424fdecb4caa14f2d525e5d2503331442b5`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Xét scenario chỉ cần đọc metadata hoặc tìm một file trong image lớn. `docker pull` tải những layer cần mà local store chưa có; kích thước image đã giải nén không phải số byte phải truyền. Nếu công việc chưa cần layer content, một client đọc manifest/config riêng có thể tránh tải dư. Tìm file còn cần xét layer, whiteout và filesystem view, không chỉ thấy một path trong một tar bất kỳ.
-- **Source Files đã xác thực tại commit**: `pkg/v1/image.go`, `pkg/v1/remote/puller.go`, `pkg/v1/remote/pusher.go`, `pkg/v1/remote/descriptor.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `8a72a424fd`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/v1/image.go` (lines 25–45: `type Image interface { Manifest() (*Manifest, error); ConfigName() (Hash, error); RawConfigFile() ([]byte, error); Layers() ([]Layer, error); LayerByDigest(Hash) (Layer, error) }`)
+  - `pkg/v1/remote/image.go` (lines 35–65: `type remoteImage struct`, `func Image(ref name.Reference, options ...Option) (v1.Image, error)`, triển khai `partial.CompressedImageCore`)
+  - `pkg/v1/remote/puller.go` & `pkg/v1/remote/descriptor.go` (lines 40–90: lazy fetching layer stream qua blobs endpoint)
+- **Cơ chế kỹ thuật xác minh**: `remote.Image` hiện thực hóa interface `v1.Image` bằng cách tách biệt việc tải metadata (manifest và config JSON) khỏi việc tải nội dung các tầng (layer blobs). Khi khởi tạo client qua `remote.Image(ref)`, SDK chỉ tải manifest và config để truy xuất metadata, kích thước hoặc danh sách layer digests mà không tải toàn bộ blob dữ liệu. Các layer chỉ được kéo về qua reader stream khi caller chủ động gọi `Layer.Compressed()` hoặc `Layer.Uncompressed()`, cho phép kiểm tra file hoặc kiểm toán cấu hình mà không tốn băng thông kéo hàng chục gigabyte dữ liệu. Quá trình đọc nội dung file trong image phải xử lý whiteout (`.wh.*`) và thứ tự layer để tái hiện filesystem view chính xác.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/google/go-containerregistry v0.22.1` (commit `8a72a424fdecb4caa14f2d525e5d2503331442b5`, tag `v0.22.1`).
+- **Những gì source không chứng minh**: Source không cam kết mọi registry đều hỗ trợ chunked/partial blob download qua HTTP Range request; không đảm bảo đọc layer stream không tốn RAM nếu caller tự buffer toàn bộ tarball vào bộ nhớ thay vì dùng streaming parser.
 
 ### Rank 18: `oras.land/oras-go/v2` (v2.6.2)
 - **Official Remote**: `https://github.com/oras-project/oras-go.git`
 - **Pinned Commit**: `105715ee12eac6895ec736a075285c34d9f2eeb6`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > OCI Distribution quy định API trao đổi manifest và blob, trong đó digest hỗ trợ định danh nội dung. Authentication, authorization, backup và phân phối nhiều vùng là khả năng hay policy của registry cụ thể, không phải tất cả đều có sẵn vì nó tuân theo OCI.
-- **Source Files đã xác thực tại commit**: `registry/remote/repository.go`, `copy.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `105715ee12`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `target.go` (lines 22–32: `type Target interface { content.Storage; content.TagResolver }`, `type GraphTarget interface`)
+  - `registry/remote/repository.go` (lines 80–120: `type Repository struct`, `func (r *Repository) Fetch`, `func (r *Repository) Push`, `func (r *Repository) Resolve`)
+  - `content/oci/oci.go` & `content/oci/storage.go` (lines 35–80: `type Store struct`, quản lý OCI image layout cục bộ)
+  - `copy.go` (lines 35–75: `func Copy(ctx context.Context, src Target, srcRef string, dst Target, dstRef string, opts CopyOptions) (ocispec.Descriptor, error)`)
+- **Cơ chế kỹ thuật xác minh**: ORAS v2 trừu tượng hóa tương tác với OCI registry và bộ lưu trữ cục bộ thông qua interface `Target` (kết hợp `content.Storage` và `content.TagResolver`). Kiến trúc này cho phép đẩy (`Push`), kéo (`Fetch`) và sao chép (`Copy`) bất kỳ dạng artifact nào (Wasm, Helm chart, SBOM, cấu hình) dưới dạng manifest và blob định danh bằng SHA-256 digest theo chuẩn OCI Distribution Spec. Các tính năng mở rộng như OCI 1.1 `subject` và Referrers API cho phép gắn kèm metadata/chữ ký với image gốc. Tuy nhiên, các chính sách xác thực đa vùng, sao lưu, dọn dẹp rác (garbage collection) hay chấp nhận các mediaType tùy biến hoàn toàn phụ thuộc vào backend implementation của registry đích, không phải thuộc tính mặc định của chuẩn OCI.
+- **Điều kiện áp dụng**: Áp dụng cho `oras.land/oras-go/v2 v2.6.2` (commit `105715ee12eac6895ec736a075285c34d9f2eeb6`, tag `v2.6.2`).
+- **Những gì source không chứng minh**: Source không bảo đảm mọi OCI registry trên thị trường đều hỗ trợ OCI 1.1 Referrers API hoặc cho phép lưu trữ mediaType tùy ý mà không bị chặn bởi policy; không bảo đảm xóa image chính sẽ tự động kích hoạt cascading garbage collection xóa mọi SBOM/chữ ký liên kết.
 
 ### Rank 19: `github.com/containernetworking/cni` (v1.3.1)
 - **Official Remote**: `https://github.com/containernetworking/cni.git`
 - **Pinned Commit**: `3f51e8803ebbdba0ebeed735b42137e4c7302403`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Trong đường CNI thông thường của Pod không dùng hostNetwork, runtime chuẩn bị network namespace rồi plugin thiết lập network theo cấu hình. Không coi mọi Pod đều có namespace mới không interface: loopback, hostNetwork và plugin implementation tạo các trường hợp khác. CNI là contract giữa runtime và plugin, không một topology veth duy nhất.
-- **Source Files đã xác thực tại commit**: `pkg/skel/skel.go`, `pkg/invoke/raw_exec.go`, `pkg/types/types.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `3f51e8803e`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/skel/skel.go` (lines 33–42: `type CmdArgs struct { ContainerID, Netns, IfName, Args, Path, NetnsOverride, StdinData }`, lines 120–135: `func PluginMainWithError(cmdAdd, cmdCheck, cmdDel func(_ *CmdArgs) error, ...)` và `PluginMainFuncsWithError`)
+  - `pkg/invoke/raw_exec.go` (lines 20–55: `type RawExec struct`, `func (e *RawExec) ExecPlugin(ctx context.Context, pluginPath string, stdinData []byte, environ []string) ([]byte, error)`)
+  - `pkg/types/types.go` (lines 30–80: `type NetConf struct`, `type Result interface`)
+- **Cơ chế kỹ thuật xác minh**: CNI là một giao thức hợp đồng (contract) thực thi quy trình giữa container runtime và các plugin mạng qua stdin và biến môi trường (`CNI_COMMAND`, `CNI_CONTAINERID`, `CNI_NETNS`, `CNI_IFNAME`), chứ không phải giao thức RPC hay gRPC daemon. Khung làm việc `pkg/skel/skel.go` tiếp nhận các tham số qua `CmdArgs` và điều phối gọi hàm callback tương ứng (`cmdAdd`, `cmdCheck`, `cmdDel`). Runtime chuẩn bị network namespace trước khi gọi plugin (qua `pkg/invoke/raw_exec.go`), và plugin chịu trách nhiệm cấu hình interface theo cấu hình JSON nhận từ stdin. CNI không ép buộc một kiến trúc liên kết cố định (như veth pair với bridge); các plugin khác nhau có thể cấu hình topology macvlan, ipvlan, SR-IOV hoặc định tuyến eBPF.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/containernetworking/cni v1.3.1` (commit `3f51e8803ebbdba0ebeed735b42137e4c7302403`, tag `v1.3.1`).
+- **Những gì source không chứng minh**: Source không cam kết mọi plugin CNI đều dùng veth pair; không đảm bảo quá trình cấu hình interface là an toàn luồng nếu runtime gọi đồng thời nhiều lệnh trên cùng một network namespace mà không có cơ chế khóa ngoài (external synchronization).
 
 ### Rank 20: `github.com/cilium/ebpf` (v0.22.0)
 - **Official Remote**: `https://github.com/cilium/ebpf.git`
@@ -347,20 +363,29 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 ### Rank 21: `github.com/vishvananda/netlink` (v1.3.1)
 - **Official Remote**: `https://github.com/vishvananda/netlink.git`
 - **Pinned Commit**: `17daef607c6442d47b0565343cf8a69f985a4cb7`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Gọi ip bằng subprocess là một dependency vào executable, quoting/arguments và lifecycle process. Một CNI plugin có thể dùng library netlink để bỏ các lượt spawn đó. Chi phí phải đo theo số operation và workload; không tự suy ra bảng process bị quá tải chỉ vì code dùng CLI.
-- **Source Files đã xác thực tại commit**: `netlink_linux.go`, `link_linux.go`, `route_linux.go`, `addr_linux.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `17daef607c`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `link_linux.go` (lines 30–70: `func LinkAdd(link Link) error`, `func (h *Handle) LinkAdd`, gửi cờ `unix.NLM_F_CREATE|unix.NLM_F_EXCL|unix.NLM_F_ACK`)
+  - `route_linux.go` (lines 35–65: `func RouteAdd(route *Route) error`, `func (h *Handle) RouteAdd`, thông điệp `unix.RTM_NEWROUTE`)
+  - `netlink_linux.go` & `socket.go` (mở socket `unix.AF_NETLINK`, `unix.SOCK_RAW`, `unix.NETLINK_ROUTE` gửi nhận gói tin nhị phân Netlink trực tiếp tới kernel Linux)
+- **Cơ chế kỹ thuật xác minh**: Thư viện `netlink` giao tiếp trực tiếp với kernel Linux thông qua giao thức socket Netlink họ `NETLINK_ROUTE` mà không cần gọi tiến trình con thực thi dòng lệnh `/sbin/ip` qua `os/exec`. Các hàm cấp cao như `LinkAdd`, `LinkSetNsFd`, `RouteAdd` đóng gói yêu cầu thành các struct bản tin kernel (ví dụ `nl.NetlinkRequest`, `RTM_NEWLINK`, `RTM_NEWROUTE`) và đọc phản hồi qua socket. Việc loại bỏ subprocess giúp giảm overhead tạo tiến trình và quản lý quoting/argument injection, tuy nhiên hiệu năng thực tế phụ thuộc số lượng thao tác và độ trễ xử lý của kernel, không thể suy diễn một tỷ lệ tăng tốc chung chung cho mọi kịch bản nếu không benchmark.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/vishvananda/netlink v1.3.1` (commit `17daef607c6442d47b0565343cf8a69f985a4cb7`, tag `v1.3.1`).
+- **Những gì source không chứng minh**: Source chỉ hoạt động trên Linux (các file có hậu tố `_linux.go`), không hỗ trợ trực tiếp các hệ điều hành khác; gọi API thành công không bảo đảm gói tin mạng chắc chắn thông tuyến nếu bảng iptables/nftables hoặc firewall kernel chặn lưu lượng; yêu cầu quyền `CAP_NET_ADMIN` để thao tác cấu hình network stack.
 
 ### Rank 22: `github.com/crossplane/crossplane-runtime` (v1.20.11)
 - **Official Remote**: `https://github.com/crossplane/crossplane-runtime.git`
 - **Pinned Commit**: `84fc49a3e3b88733677824b1a4dcce5097ca0c59`
-- **Trạng thái kiểm định**: **SOURCE_FILE_VERIFIED**
+- **Trạng thái kiểm định**: **SEMANTIC_CLAIM_VERIFIED**
 - **Exact Claim trong Atlas**:
   > Kubernetes vốn được thiết kế để điều phối container trên một cụm máy chủ cục bộ. Nhưng triết lý điều hòa (Reconciliation loop) của Kubernetes xuất sắc đến mức người ta muốn dùng nó để quản lý toàn bộ thế giới điện toán đám mây: tạo database AWS RDS, cấp phát Google Cloud Storage, hay cấu hình Azure Virtual Network.
-- **Source Files đã xác thực tại commit**: `pkg/reconciler/managed/reconciler.go`, `pkg/resource/interfaces.go`
-- **Ghi chú bằng chứng**: Tập tin nguồn và cấu trúc định nghĩa tồn tại chính xác tại commit đã ghim `84fc49a3e3`. Trạng thái giữ nguyên ở mức `SOURCE_FILE_VERIFIED` theo nguyên tắc không suy diễn semantic mà không phân tích sâu từng dòng lệnh.
+- **Source Files & Symbols đối chiếu**:
+  - `pkg/reconciler/managed/reconciler.go` (lines 150–190: `type TypedExternalClient[managedType resource.Managed] interface { Observe, Create, Update, Delete, Disconnect }`, `type ExternalClient = TypedExternalClient[resource.Managed]`, `type Reconciler struct`)
+  - `pkg/resource/interfaces.go` (lines 48–60: `type Managed interface { Object; ProviderConfigReferencer; ConnectionSecretWriterTo; ConnectionDetailsPublisherTo; Manageable; Orphanable; Conditioned }`)
+- **Cơ chế kỹ thuật xác minh**: `crossplane-runtime` thiết lập hợp đồng chuẩn mực kết nối giữa vòng lặp điều hòa Kubernetes và API tài nguyên hạ tầng đám mây thông qua generic interface `TypedExternalClient[resource.Managed]`. Trong hàm `Reconcile()`, reconciler thực hiện các pha theo hợp đồng: (1) `Observe()` kiểm tra sự tồn tại và độ lệch (drift) của tài nguyên ngoại vi, (2) `Late initialization` điền các giá trị mặc định được trả về từ đám mây vào spec nếu chưa cấu hình, (3) `Create()` hoặc `Update()` điều hòa trạng thái sai lệch, và (4) `Delete()` kết hợp với Kubernetes Finalizer dọn dẹp tài nguyên ngoài trước khi cho phép đối tượng CRD biến mất. Hợp đồng này cho phép đồng bộ tài nguyên bất đồng bộ của AWS/GCP/Azure vào mô hình khai báo của Kubernetes.
+- **Điều kiện áp dụng**: Áp dụng cho `github.com/crossplane/crossplane-runtime v1.20.11` (commit `84fc49a3e3b88733677824b1a4dcce5097ca0c59`, tag `v1.20.11`).
+- **Những gì source không chứng minh**: Source không cam kết mọi tài nguyên đám mây đều hỗ trợ đầy đủ 4 thao tác với cùng ngữ nghĩa nhất quán (một số cloud service không hỗ trợ in-place update mà yêu cầu recreate); việc xóa CRD có thể bị treo vĩnh viễn nếu provider gặp lỗi mạng hoặc thiếu quyền khi gọi `Delete()` khiến finalizer không được gỡ bỏ; management policy có thể cấu hình `orphan` thay vì xóa tài nguyên thực tế ngoài đám mây.
 
 ### Rank 23: `github.com/fluxcd/pkg/runtime` (v0.114.0)
 - **Official Remote**: `https://github.com/fluxcd/pkg.git`
@@ -634,6 +659,6 @@ Bảng này phân định minh bạch ba cấp độ kiểm chứng kỹ thuật
 ## 3. Thống Kê Tổng Hợp Bằng Chứng
 
 - **Tổng số thư viện trong Atlas**: 50
-- **SEMANTIC_CLAIM_VERIFIED**: **9/50** (18% — Phân tích chi tiết dòng lệnh, cấu trúc symbol, cơ chế vận hành và giới hạn biên tại repo local)
-- **SOURCE_FILE_VERIFIED**: **41/50** (82% — Kiểm chứng tập tin mã nguồn thực tế và symbol tồn tại tại commit đã ghim)
+- **SEMANTIC_CLAIM_VERIFIED**: **24/50** (48% — Phân tích chi tiết dòng lệnh, cấu trúc symbol, cơ chế vận hành và giới hạn biên tại repo local)
+- **SOURCE_FILE_VERIFIED**: **26/50** (52% — Kiểm chứng tập tin mã nguồn thực tế và symbol tồn tại tại commit đã ghim)
 - **SOURCE_IDENTITY_VERIFIED**: **0/50** (0%)

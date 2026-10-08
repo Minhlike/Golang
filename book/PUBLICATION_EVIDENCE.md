@@ -16,7 +16,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Phương pháp thẩm định**:
   - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
   - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
-- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **298 trang**
+- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **352 trang**
   - Danh sách và phạm vi trang:
     - Trang 1 (Bìa) & Trang 2 (Mục lục)
     - Trang 3–13: Lời mở đầu & Toàn bộ Chương 00 (11 trang)
@@ -42,9 +42,13 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
     - Trang 264–276: Toàn bộ Chương 20 (13 trang: capstone dự án opsprobe, Bảng 20, worker pool backpressure, SQLite transaction atomic BeginTx, bounded drain 16 KiB, socket leak incident, distroless, curl commands)
     - Trang 277–286: Toàn bộ Chương 21 (10 trang: reconcile loop, level vs edge trigger, Hình 35, 4 pha điều hòa, WorkQueue dirty/processing, exponential backoff, SelfHealingReconciler, graceful shutdown, labs/part21)
     - Trang 287–290: Phần mở đầu và cơ chế then chốt Chương 22 (4 trang: watch đến controller Kubernetes thật, thông báo hint vs authoritative state, Informer cache, Hình 36 architecture, Bảng 4 thành phần then chốt, Hình 37 List/Watch sequence diagram)
-    - 8 trang chốt trọng yếu rải đều các chương sau: Trang 322 (Ch24 Opener), Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11). (Trang 224 đã nằm trong toàn bộ Chương 17).
-  - Trạng thái kiểm tra trực quan: 298/298 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **195 trang** (`visual_status = PENDING`).
+    - Trang 291–301: Toàn bộ phần còn lại của Chương 22 (11 trang: Indexer cache, shared informer factory, workqueue rate limiting, worker dispatch loop, reconciliation metrics)
+    - Trang 302–318: Toàn bộ Chương 23 (17 trang: Kubernetes Admission Webhook, Mutating/Validating admission review, TLS cert management, failurePolicy Fail vs Ignore, timeoutSeconds, JSON patch)
+    - Trang 319–335: Toàn bộ Chương 24 (17 trang: CRD schema OpenAPI v3, subresources status/scale, controller-runtime Reconciler, reconcile loop, client.Client Reader vs Cache, finalizer logic)
+    - Trang 336–345: Phần đầu và trọng tâm Chương 25 (10 trang: Dynamic client, metadata client, unstructured.Unstructured, schema.GroupVersionResource, typed vs dynamic client tradeoffs)
+    - 7 trang chốt trọng yếu rải đều các chương sau: Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11). (Trang 224 đã nằm trong Chương 17, Trang 322 đã nằm trong Chương 24).
+  - Trạng thái kiểm tra trực quan: 352/352 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
+- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **141 trang** (`visual_status = PENDING`).
 - **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
 - **Ledger bằng chứng thị giác chi tiết**:
   - Đường dẫn: [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv)
@@ -59,7 +63,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 ### 3.1. Atlas 50 Thư viện DevOps & Cloud (`LIBRARY_ATLAS_SEMANTIC_AUDIT`)
 - **Tập tin bản thảo**: `book/appendices/devops-library-atlas.md` (50 mục Rank 01–50).
 - **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](publication/library_atlas_evidence_ledger.md)
-  - **`SEMANTIC_CLAIM_VERIFIED`**: **19/50 thư viện** (38%)
+  - **`SEMANTIC_CLAIM_VERIFIED`**: **24/50 thư viện** (48%)
     - Đã clone/checkout và đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim trong `library_sources/repos/`, đối chiếu trực tiếp tập tin source, symbol triển khai và cơ chế hỗ trợ claim:
       1. `k8s-client-go` (`28076445520055420e3be4255b4cd27fd19df1f9`)
       2. `controller-runtime` (`67b72c2517be1d2b0dec612477eb20c3c959a8aa`)
@@ -77,10 +81,15 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
       14. `cosign` (`3e82f50a2839855693aacf7b3d0e7e2f30774cb4`)
       15. `grpc-go` (`e84aa5ab15d1d2b29d54f838312ad490cb7551a8`)
       16. `protobuf-go` (`cdd4c5f7406e82462949c7a65defa9f3029c162d`)
-      17. `cilium-ebpf` (`e55144e17360b60cc4583229c35c2dbf0935b308`)
-      18. `go-github` (`5149b4d74590b63154fcc43c4dac05e881f9aea3`)
-      19. `mcp-go-sdk` (`3f3b699b2b67e1ed033a63d6651671dab53c2d32`)
-  - **`SOURCE_FILE_VERIFIED`**: **31/50 thư viện** (62%)
+      17. `go-containerregistry` (`8a72a424fdecb4caa14f2d525e5d2503331442b5`)
+      18. `oras-go` (`105715ee12eac6895ec736a075285c34d9f2eeb6`)
+      19. `cni` (`3f51e8803ebbdba0ebeed735b42137e4c7302403`)
+      20. `cilium-ebpf` (`e55144e17360b60cc4583229c35c2dbf0935b308`)
+      21. `netlink` (`17daef607c6442d47b0565343cf8a69f985a4cb7`)
+      22. `crossplane-runtime` (`84fc49a3e3b88733677824b1a4dcce5097ca0c59`)
+      23. `go-github` (`5149b4d74590b63154fcc43c4dac05e881f9aea3`)
+      24. `mcp-go-sdk` (`3f3b699b2b67e1ed033a63d6651671dab53c2d32`)
+  - **`SOURCE_FILE_VERIFIED`**: **26/50 thư viện** (52%)
     - Đã xác thực tập tin mã nguồn và symbol tồn tại tại commit đã ghim từ kho lưu trữ chính thức; khôi phục toàn vẹn nội dung claim kỹ thuật từ Atlas không rút gọn.
   - **`SOURCE_IDENTITY_VERIFIED`**: **0/50 thư viện** (0%)
 
@@ -113,9 +122,9 @@ Báo cáo kiểm định preflight ghi nhận 2 ngoại lệ (Exceptions: 2):
 
 ## 6. Kết luận Nghiệm thu (Verification Verdict)
 
-- Vì 298/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 195/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
+- Vì 352/493 trang đã được trực tiếp quan sát bằng hình ảnh raster và 141/493 trang đang ở trạng thái kiểm định hình học (`VISUAL_PENDING`), theo tiêu chuẩn khắt khe dựa trên bằng chứng:
 - **Trạng thái chính thức**:
   ```
   PUBLICATION_STATUS=BLOCKED_PENDING_EVIDENCE
   ```
-  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 195/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
+  *(Lưu ý: Đây là trạng thái ghi nhận sự thiếu hụt bằng chứng nghiệm thu trực quan 141/493 trang còn lại; bản thân tệp PDF hiện tại hoàn toàn hợp lệ về mặt kỹ thuật, hình học và nội dung).*
