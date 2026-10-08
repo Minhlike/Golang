@@ -101,16 +101,12 @@ func (r *Recorder) Snapshot() Snapshot {
 
 Mutex ở đây không phải “metrics library tự viết”. Nó chỉ giữ invariant của một teaching recorder khi nhiều worker từ Chương 9 cùng báo outcome. `Snapshot` trả value copy, vì caller không được sửa state nội bộ để làm counter quay ngược. Nếu exporter sau này đọc snapshot định kỳ, nó vẫn phải có contract riêng về reset khi process restart, timestamp, cumulative counter hay delta. Bản ghi in-memory này không có retention, không có window và không phải evidence lịch sử sau khi process chết.
 
-> **Dừng để dự đoán.** Xét một tình huống giám sát: Probe gửi yêu cầu đến dependency nhưng bị kết thúc bởi `context.DeadlineExceeded` (timeout) sau 500 ms.
-> 1. Sự kiện `timeout` này có chứng minh chắc chắn rằng máy chủ đích đã sập hoàn toàn ("dependency dead") hay không? Những kịch bản nào khác ở tầng mạng hoặc xử lý có thể dẫn đến kết quả này?
-> 2. Khi tính toán Service Level Indicator (SLI) về độ khả dụng (Availability) cho caller, sự kiện `timeout` này nên được tính vào đâu: thành công, thất bại, hay loại bỏ khỏi mẫu số?
+> **Dừng để dự đoán.** Một probe kết thúc với lỗi `context.DeadlineExceeded` (timeout). Sự kiện này có đồng nghĩa với việc máy chủ đích đã sập hoàn toàn không? Trong SLI đo độ khả dụng, kết quả timeout được phân loại vào đâu?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **`timeout` không đồng nghĩa với "dependency dead".** Nó chỉ chứng minh rằng caller không nhận được kết quả trong giới hạn ngân sách thời gian đã chọn (time budget). Thực tế có ít nhất ba kịch bản khác:
-   - Dependency vẫn hoạt động bình thường nhưng bị quá tải hàng đợi (queue backlog) hoặc xử lý chậm dẫn đến trễ hạn phản hồi.
-   - Request đã đến nơi và dependency đã xử lý xong, nhưng gói tin phản hồi bị nghẽn hoặc rớt trên đường truyền mạng trở về caller.
-   - Thao tác là một write request; dù caller bị timeout và coi là lỗi, dependency thực tế vẫn đã commit thay đổi thành công vào cơ sở dữ liệu.
-2. **Trong cách tính SLI của caller:** Dưới góc nhìn trải nghiệm người dùng, `timeout` là một yêu cầu không được phục vụ thành công. Do đó, nó bắt buộc phải nằm trong mẫu số tổng số lượt yêu cầu (`total`) và được tính là thất bại (failure). Việc loại bỏ `timeout` khỏi mẫu số sẽ làm sai lệch nghiêm trọng tỷ lệ khả dụng thực tế. Tuy nhiên, trên hệ thống telemetry, metric cần phân tách nhãn `outcome="timeout"` khỏi `outcome="error"` (5xx) để kỹ sư trực vận hành không nhầm lẫn giữa nghẽn mạng/quá tải với lỗi sập mã nguồn.
+Lỗi timeout chỉ chứng minh caller không nhận được phản hồi trong ngân sách thời gian đã định, hoàn toàn không đủ để suy ra dịch vụ đích đã chết. Trong thực tế, dịch vụ đích có thể vẫn đang chạy nhưng bị nghẽn hàng đợi xử lý, hoặc phản hồi đã được gửi đi nhưng bị chậm trễ trên mạng, thậm chí một tác vụ ghi dữ liệu đã được commit thành công ở phía sau trước khi caller hết giờ chờ.
+
+Theo hợp đồng SLI cụ thể được chọn trong lab này, timeout được tính vào mẫu số thất bại (denominator failure) bởi vì dưới góc nhìn của caller, lượt probe đó đã không thu được kết quả hợp lệ trong khung thời gian cam kết. Tuy nhiên, đây là một lựa chọn thiết kế chính sách, không phải quy luật bất biến cho mọi hệ thống. Một số dịch vụ có thể tách timeout thành SLI riêng về độ trễ, phân loại theo tác vụ idempotent, hoặc ghi nhận nhãn riêng `outcome="timeout"` để đội ngũ trực vận hành không đánh đồng nghẽn mạng với sự cố sập ứng dụng. Khi sản phẩm thay đổi chính sách phân loại, tên metric, công thức SLI và ngưỡng cảnh báo đều phải được cập nhật đồng bộ.
 
 ## SLO không phải một alert thật to
 

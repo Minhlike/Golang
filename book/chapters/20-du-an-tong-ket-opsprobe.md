@@ -215,23 +215,14 @@ Thư mục `projects/opsprobe/incident/` mô phỏng một sự cố kinh điể
 
 > **Ghi chú phương pháp luận:** Đây là kịch bản giả định mô phỏng tình huống sự cố thực tế để đặt ra bài toán chẩn đoán cho kỹ sư.
 
-Hệ thống probe giả định được triển khai để kiểm tra sức khỏe 50 microservices nội bộ.
-- **Triệu chứng giám sát:** Tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ chạm trần deadline (5 giây).
-- **Phản nghiệm độc lập:** Kỹ sư kiểm tra trực tiếp từ máy trạm bằng lệnh cURL độc lập: target service vẫn phản hồi cực nhanh trong 2ms!
-- **Tầng Hệ điều hành (`ss -s`):** Số lượng socket TCP mở tăng liên tục theo số lượng request mà không được thu hồi, tiệm cận giới hạn file descriptors (`ulimit -n`).
-- **Tầng Transport Pool & Trace:** `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi. Hook `GotConnInfo.Reused` qua `net/http/httptrace` luôn ghi nhận `info.Reused == false`.
+Hệ thống probe giả định được triển khai để kiểm tra sức khỏe các microservice nội bộ. Khi số lượng request tăng lên, hệ thống giám sát ghi nhận tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ probe tăng cao. Tuy nhiên, khi kỹ sư thực hiện một lệnh cURL độc lập trực tiếp tới dịch vụ đích, dịch vụ vẫn phản hồi rất nhanh trong vài phần nghìn giây. Kiểm tra tài nguyên hệ điều hành bằng `ss -s` cho thấy số lượng socket TCP mở tăng liên tục theo từng lượt gọi mà không được thu hồi, tiệm cận giới hạn file descriptors (`ulimit -n`). Đồng thời, khi kiểm tra bằng `net/http/httptrace`, hook `GotConnInfo.Reused` luôn trả về `false`, cho thấy `http.Transport` không tái sử dụng được kết nối rảnh nào giữa các lượt probe.
 
-> **Dừng để điều tra và phản nghiệm.**
-> 1. Dựa trên các triệu chứng trên (target phản hồi trong 2ms nhưng probe client cạn kiệt socket và timeout), hãy nêu 2 giả thuyết đối lập: Sự cố xuất phát từ máy chủ đích hay từ chính vòng đời kết nối của client?
-> 2. Kỹ sư cần thiết kế thí nghiệm phản nghiệm (falsification test) nào để xác định chính xác nguyên nhân gốc rễ trong mã nguồn client trước khi can thiệp cấu hình hệ thống?
+> **Dừng để điều tra và phản nghiệm.** Vì sao kết quả cURL nhanh chỉ là bằng chứng hỗ trợ thu hẹp giả thuyết chứ chưa đủ để bác bỏ hoàn toàn lỗi hạ tầng? Kỹ sư cần thiết kế phép thử nào với `httptrace` để xác minh vòng đời kết nối của client trước khi can thiệp vào cấu hình hệ thống?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **Phân tích giả thuyết:**
-   - *Giả thuyết A (Lỗi phía target/hạ tầng mạng):* Server đích bị treo hoặc tường lửa làm rớt gói tin. Giả thuyết này bị bác bỏ ngay lập tức bởi phép thử cURL độc lập: target service vẫn phản hồi cực nhanh trong 2ms.
-   - *Giả thuyết B (Rò rỉ kết nối phía client):* Client mở socket mới cho mỗi lượt gọi nhưng không đưa kết nối trở lại pool của `http.Transport`. Khi tiệm cận giới hạn file descriptor hoặc socket, các request tiếp theo bị nghẽn ở khâu thiết lập kết nối (dial backlog), dẫn đến timeout trước khi kịp gửi dữ liệu.
-2. **Thí nghiệm phản nghiệm:**
-   - Gắn `net/http/httptrace` vào client để ghi nhận số kết nối mở mới vs tái sử dụng (`GotConnInfo.Reused`).
-   - Kiểm tra mã nguồn xử lý HTTP response: trong HTTP/1.x của Go, một kết nối TCP chỉ được `http.Transport` đưa vào pool tái sử dụng (keep-alive) khi và chỉ khi response body được đọc hết (drain) và đóng tường minh qua `resp.Body.Close()`.
+Kết quả cURL phản hồi nhanh chỉ cho thấy dịch vụ đích có khả năng phục vụ một kết nối đơn lẻ tại thời điểm thử nghiệm. Nó giúp thu hẹp nghi vấn về việc máy chủ đích bị treo hoàn toàn, nhưng chưa đủ để loại trừ các yếu tố hạ tầng phức tạp như giới hạn kết nối đồng thời trên tường lửa, chính sách cân bằng tải hay tình trạng bão hòa hàng đợi socket.
+
+Để cô lập nguyên nhân, kỹ sư sử dụng `net/http/httptrace` đo lường tỷ lệ kết nối mới so với kết nối tái sử dụng qua trường `info.Reused`. Theo tài liệu của gói `net/http`, một kết nối HTTP/1.x chỉ đủ điều kiện đưa trở lại pool tái sử dụng khi client đã đọc hết dữ liệu của response body và đóng nó tường minh qua `resp.Body.Close()`. Nếu client bỏ rơi body hoặc quên đóng, `http.Transport` buộc phải để kết nối ở trạng thái dở dang hoặc ngắt bỏ, khiến mỗi request tiếp theo đều phải mở một kết nối TCP mới cho đến khi cạn kiệt tài nguyên hệ thống.
 
 ### Bằng chứng mã nguồn và Đo đạc thực nghiệm
 

@@ -108,20 +108,18 @@ cancelApp()
 
 Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
 
-> **Dừng để dự đoán.** Giả sử một handler HTTP chỉ thực hiện giải mã một lần:
+> **Dừng để dự đoán.** Xét một handler HTTP đọc payload qua `json.Decoder`:
 > ~~~go
+> decoder := json.NewDecoder(r.Body)
 > var input Check
-> err := json.NewDecoder(r.Body).Decode(&input)
+> err := decoder.Decode(&input)
 > ~~~
-> Nếu client gửi body gồm một JSON document hợp lệ rồi nối thêm một object thứ hai: `{"target":"https://example.com"}{"debug":true}`:
-> 1. Lệnh `decoder.Decode(&input)` trên có trả về lỗi không?
-> 2. Các byte còn lại (`{"debug":true}`) trong stream request body sẽ đi về đâu? Lời gọi lưu trữ `Store.Create` có bị thực thi khi payload chứa dữ liệu thừa không mong muốn hay không?
-> 3. Làm thế nào để handler chứng minh một cách chặt chẽ rằng toàn bộ stream body chỉ chứa duy nhất một JSON value hợp lệ trước khi chuyển giao dữ liệu sang `Store`?
+> Nếu client gửi body gồm một document hợp lệ rồi nối thêm dữ liệu thừa như `{"target":"https://example.com"}{"debug":true}`, lệnh `decoder.Decode(&input)` có báo lỗi không, và phần dữ liệu thừa phía sau sẽ đi về đâu? Làm thế nào để chứng minh stream đã thực sự kết thúc trước khi chuyển giao dữ liệu sang `Store`?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **`decoder.Decode(&input)` không trả về lỗi.** Nó đọc và parse thành công object đầu tiên `{"target":"https://example.com"}` vào biến `input` và dừng lại ngay tại ranh giới kết thúc của object đó.
-2. **Các byte thừa vẫn nằm lại trong stream `r.Body`.** Do hàm `Decode` không tự động đọc hết toàn bộ stream, nếu không kiểm tra thêm, handler sẽ coi request là hợp lệ và tiếp tục gọi `Store.Create`. Điều này vi phạm nguyên tắc kiểm soát ranh giới dữ liệu vào (input boundary validation).
-3. **Giải pháp kiểm định ranh giới stream:** Handler phải thực hiện thêm một lần giải mã thứ hai vào một struct rỗng (`var extra struct{}`) và xác nhận rằng lỗi trả về chính xác là `io.EOF`. Bất kỳ dữ liệu nào còn sót lại (kể cả object thừa hay byte rác) đều khiến lần decode thứ hai không trả về `io.EOF`, cho phép handler từ chối request ngay lập tức bằng mã `400 Bad Request`.
+Lệnh `decoder.Decode(&input)` đọc và giải mã thành công object đầu tiên vào biến `input` mà không trả về lỗi nào, bởi vì `json.Decoder` được thiết kế để xử lý luồng stream và dừng lại ngay khi hoàn tất một JSON value hợp lệ. Lúc này, phần dữ liệu thừa phía sau không nhất thiết còn nguyên vẹn trong `r.Body`. Do `json.Decoder` duy trì một bộ đệm đọc trước (read buffer) nội bộ, các byte của object thứ hai có thể đã được nạp sẵn vào bộ đệm của decoder hoặc vẫn còn nằm lại trên stream của request. Nếu handler dừng lại ở lần gọi đầu tiên rồi tiếp tục xử lý nghiệp vụ, dữ liệu thừa sẽ bị bỏ qua và ranh giới kiểm soát input bị phá vỡ.
+
+Để chứng minh stream không còn dữ liệu thừa ngoài khoảng trắng, handler thực hiện thêm một lần giải mã thứ hai vào một struct rỗng (`var extra struct{}`). Khi stream đã kết thúc đúng chuẩn, bộ giải mã bắt buộc phải trả về chính xác lỗi `io.EOF`. Mọi dữ liệu còn sót lại trong bộ đệm decoder hoặc trên stream mạng đều khiến lần gọi thứ hai trả về một kết quả khác `io.EOF`, tạo bằng chứng rõ ràng để handler từ chối request bằng mã 400 Bad Request trước khi chuyển giao việc cho `Store`.
 
 Dưới đây là cài đặt kiểm định ranh giới hoàn chỉnh của handler trong lab:
 

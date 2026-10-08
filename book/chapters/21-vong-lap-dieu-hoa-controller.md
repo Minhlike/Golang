@@ -119,26 +119,22 @@ func (q *WorkQueue) Done(item string) {
 
 Trong mô hình này, một key không được hai worker xử lý đồng thời. Nếu `Add` xuất hiện khi key đang xử lý, `dirty` ghi nhận rằng cần có một lượt sau `Done`. Đây là cơ chế gộp lịch xử lý, không phải cam kết exactly-once: worker có thể lỗi, tiến trình có thể dừng, và trạng thái có thẩm quyền vẫn phải được đọc lại ở lần reconcile sau.
 
-> **Dừng để dự đoán: Trace trạng thái khi sự kiện cập nhật xuất hiện giữa lúc Reconcile đang chạy.**
-> Giả sử hàng đợi đang rỗng (`queue=[]`, `dirty={}`, `processing={}`).
-> 1. Tại thời điểm $T_1$, sự kiện `Add("pod-1")` được gọi, sau đó Worker 1 gọi `Get()` để nhận `"pod-1"` và bắt đầu thực thi `Reconcile`. Trạng thái của ba tập hợp `queue`, `dirty`, `processing` là gì?
-> 2. Tại thời điểm $T_2$, trong khi Worker 1 vẫn đang chạy `Reconcile("pod-1")`, có hai sự kiện cập nhật liên tiếp đến cùng key: `Add("pod-1")` lần thứ nhất rồi `Add("pod-1")` lần thứ hai. Sau hai lần gọi này, trạng thái của `queue`, `dirty`, `processing` thay đổi thế nào? Sự kiện thứ hai có tạo thêm phần tử trong `queue` không?
-> 3. Tại thời điểm $T_3$, Worker 1 hoàn tất và gọi `Done("pod-1")`. Chuyện gì xảy ra tiếp theo?
+> **Dừng để dự đoán.** Giả sử hàng đợi đang rỗng và Worker 1 vừa lấy key `"pod-1"` ra để chạy `Reconcile`. Trong lúc hàm reconcile đang thực thi dở dang, liên tiếp có hai sự kiện `Add("pod-1")` mới xuất hiện. Hàng đợi phối hợp `dirty` và `processing` như thế nào để đảm bảo worker thứ hai không nhảy vào can thiệp, và chuyện gì xảy ra khi Worker 1 gọi `Done("pod-1")`?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-Bảng trace trạng thái chi tiết qua từng bước:
+Bảng dưới đây mô tả sự dịch chuyển trạng thái nội bộ của hàng đợi qua từng thời điểm:
 
-| Thời điểm | Thao tác | `queue` | `dirty` | `processing` | Ghi chú ngữ nghĩa |
+| Thời điểm | Thao tác | `queue` | `dirty` | `processing` | Ý nghĩa vận hành |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| $T_0$ | Khởi tạo ban đầu | `[]` | `{}` | `{}` | Hàng đợi rỗng. |
+| $T_0$ | Ban đầu | `[]` | `{}` | `{}` | Hàng đợi rỗng. |
 | $T_1$ | `Add("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Đưa vào slice và đánh dấu dirty. |
 | $T_1'$ | Worker 1 gọi `Get()` | `[]` | `{}` | `{"pod-1"}` | Lấy ra xử lý: xóa khỏi dirty, đưa vào processing. |
-| $T_2$ | `Add("pod-1")` (lần 1) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đang trong processing: chỉ đánh dấu dirty, **không** thêm vào slice. |
-| $T_2'$ | `Add("pod-1")` (lần 2) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đã nằm trong dirty: **deduplicate**, bỏ qua hoàn toàn! |
-| $T_3$ | Worker 1 gọi `Done("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Xóa khỏi processing; phát hiện dirty có phần tử: **đẩy lại vào slice**, phát `Signal()`. |
-| $T_4$ | Lượt `Get()` tiếp theo | `[]` | `{}` | `{"pod-1"}` | Reconcile lại với trạng thái mới nhất; không bỏ sót bất kỳ sự kiện nào. |
+| $T_2$ | `Add("pod-1")` (lần 1) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đang processing: chỉ đánh dấu dirty, không thêm vào slice. |
+| $T_2'$ | `Add("pod-1")` (lần 2) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đã trong dirty: gộp lại (deduplicate), bỏ qua. |
+| $T_3$ | Worker 1 gọi `Done("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Xóa khỏi processing; thấy dirty còn key: đưa lại vào slice. |
+| $T_4$ | Lượt `Get()` kế tiếp | `[]` | `{}` | `{"pod-1"}` | Reconcile lại để quan sát trạng thái mới nhất. |
 
-Cơ chế này bảo đảm ba tính chất thiết yếu của Controller: (1) **Tuần tự hóa theo key:** Không bao giờ có 2 worker cùng reconcile một key tại cùng thời điểm; (2) **Gộp sự kiện (coalescing/deduplication):** Nhiều cập nhật dồn dập trong lúc xử lý chỉ tạo ra tối đa một lượt reconcile kế tiếp; (3) **Không nuốt mất trạng thái:** Cập nhật đến giữa chừng luôn được kích hoạt lại ngay sau khi lượt hiện tại kết thúc.
+Cơ chế này hiện thực hóa mô hình điều hòa dựa trên trạng thái (level-triggered), không phải một hệ thống hàng đợi tin nhắn đảm bảo chuyển phát từng sự kiện riêng lẻ. Việc gộp sự kiện (coalescing) bảo đảm rằng dù có bao nhiêu thay đổi dồn dập trong lúc xử lý, hàng đợi chỉ lên lịch thêm đúng một lượt reconcile kế tiếp sau khi worker hiện tại hoàn tất, đồng thời ngăn chặn việc hai worker cùng xử lý một key song song. Quan trọng hơn, hàng đợi trong bộ nhớ không đưa ra cam kết exactly-once: nếu tiến trình bị dừng đột ngột, toàn bộ dữ liệu trong slice và map sẽ biến mất và controller phụ thuộc hoàn toàn vào chu kỳ quan sát kế tiếp để tái lập bức tranh trạng thái có thẩm quyền từ nguồn chân lý.
 
 ## Kiểm soát giãn cách lũy thừa khi có sự cố
 

@@ -134,12 +134,9 @@ fmt.Println(x, y)
 ~~~
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-Kết quả in ra là `4 3`, sau đó là `2 3`.
-1. **Tại `x, y := 2, 3`**: Do xuất hiện trong cùng block và có biến mới `y`, Go áp dụng quy tắc redeclaration: `x` cũ nhận giá trị mới `2`, không tạo biến mới thứ hai.
-2. **Tại block con `{ x := 4 ... }`**: Khai báo ngắn trong một phạm vi từ vựng mới tạo ra một biến `x` hoàn toàn mới, che khuất (shadowing) biến `x` của block ngoài. Lệnh in đầu tiên xuất ra `4` (từ `x` nội bộ) và `3` (từ `y` của block cha).
-3. **Sau khi thoát block con**: Biến `x` cục bộ hết phạm vi từ vựng. Dòng in cuối cùng đọc `x` của block cha (đang mang giá trị `2`) và `y` (`3`), cho kết quả `2 3`.
+Kết quả in ra lần lượt là `4 3` rồi `2 3`. Tại câu lệnh `x, y := 2, 3`, do xuất hiện trong cùng block và có thêm biến mới `y`, Go áp dụng quy tắc redeclaration: biến `x` cũ nhận giá trị mới là `2` mà không tạo ra bản sao thứ hai. Khi bước vào block con, khai báo ngắn `x := 4` tạo ra một biến hoàn toàn mới nằm trong phạm vi từ vựng hẹp hơn, che khuất biến ngoài và khiến lệnh in đầu tiên xuất ra `4 3`. Sau khi thoát khỏi block con, biến nội bộ này hết phạm vi từ vựng; lệnh in cuối cùng đọc lại biến `x` của block cha (đang giữ giá trị `2`) và biến `y` (`3`), cho kết quả `2 3`.
 
-Phản ví dụ: Bỏ `y` để viết tiếp `x := 2` trong cùng block sẽ bị compiler từ chối với lỗi `no new variables on left side of :=`. Ngược lại, phép gán `x = 2` thì hợp lệ vì chỉ thay đổi giá trị của biến sẵn có. Phạm vi từ vựng, không phải hình dạng riêng lẻ của `:=`, quyết định biến nào được dùng lại.
+Phản ví dụ biên giới làm rõ bản chất: nếu bỏ `y` để viết tiếp `x := 2` trong cùng block, compiler lập tức báo lỗi `no new variables on left side of :=`. Ngược lại, phép gán `x = 2` thì hợp lệ vì nó chỉ cập nhật giá trị của biến sẵn có. Phạm vi từ vựng, không phải hình thức của cú pháp `:=`, quyết định biến nào được dùng lại.
 
 ## Hằng số: giá trị chưa cần một ô nhớ
 

@@ -152,19 +152,12 @@ func ApplyEnv(dst any, values map[string]string) error {
 
 `Type` trả lời câu hỏi về declaration: field thứ `i` tên gì, tag gì, exported không, exact type nào. `Kind` chỉ là category underlying runtime kind; vì `type Token string` cũng có `Kind() == reflect.String`, nó không đủ cho contract chỉ nhận builtin `string`. `TypeFor[string]()` cung cấp identity của type cần nhận. `Value` trả lời câu hỏi về instance cụ thể: value hiện tại là gì, có set được không. Quy tắc đơn giản là đọc metadata từ `Type`, đọc hoặc ghi dữ liệu từ `Value`.
 
-> **Dừng để dự đoán.** Xét tình huống caller gọi hàm với một struct truyền theo giá trị thay vì con trỏ:
-> ~~~go
-> cfg := Config{}
-> err := ApplyEnv(cfg, values)
-> ~~~
-> 1. Bên trong `ApplyEnv`, phương thức `fieldValue.CanSet()` đối với từng trường của `cfg` sẽ trả về `true` hay `false`?
-> 2. Nếu hàm âm thầm bỏ qua và trả về `nil`, biến `cfg` ban đầu của caller có nhận được dữ liệu từ `values` không?
-> 3. Vì sao việc trả về `nil` trong tình huống này là một "lời nói dối" nguy hiểm của API, và tại sao kiểm tra `value.Kind() != reflect.Pointer` là ranh giới phòng vệ bắt buộc?
+> **Dừng để dự đoán.** Nếu caller gọi `cfg := Config{}` rồi thực hiện `ApplyEnv(cfg, values)` bằng giá trị thay vì truyền con trỏ `&cfg`, liệu hàm có thể cập nhật các trường cấu hình không? Vì sao implementation của `ApplyEnv` chặn lỗi ngay từ guard kiểm tra con trỏ ở đầu hàm thay vì duyệt qua từng field rồi kiểm tra `CanSet()`?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **`fieldValue.CanSet()` trả về `false`** vì khi truyền struct theo giá trị (by-value), hàm chỉ nhận một bản sao (copy) trên stack. Bản sao này không có địa chỉ bộ nhớ gắn liền với biến gốc của caller (unaddressable). Gói `reflect` nghiêm cấm việc ghi đè lên một `reflect.Value` không thể gán; nếu cố tình gọi `SetString()`, runtime sẽ lập tức gây panic.
-2. **Biến `cfg` ban đầu hoàn toàn không thay đổi.** Mọi đột biến dữ liệu (nếu cố tình làm) cũng chỉ diễn ra trên bản sao tạm thời rồi biến mất khi hàm return.
-3. **Trả về `nil` là một thiết kế API độc hại:** Nó báo thành công giả tạo, khiến ứng dụng tiếp tục vận hành với cấu hình rỗng và gây sự cố ngầm. Ranh giới guard clause kiểm tra `value.Kind() != reflect.Pointer` và con trỏ không nil ở đầu hàm là điều kiện bắt buộc nhằm từ chối sớm (fail-fast) mọi input không đáp ứng quyền ghi (mutation capability).
+Khi truyền struct bằng giá trị vào đối số interface `any`, giá trị được đóng gói thành một bản sao không có địa chỉ liên kết với biến gốc (unaddressable). Đối tượng `reflect.ValueOf(dst)` sinh ra từ một giá trị như vậy đại diện cho một bản sao độc lập, và phương thức `CanSet()` trên các trường của nó luôn trả về `false`. Nếu cố tình gọi `SetString()` lên một `reflect.Value` không có quyền gán, runtime sẽ lập tức gây panic. Kể cả khi hàm cố tình bỏ qua mà không panic, biến `cfg` ban đầu của caller cũng hoàn toàn không nhận được dữ liệu mới, biến giá trị trả về `nil` thành một tín hiệu thành công giả tạo.
+
+Trong cài đặt thực tế của `ApplyEnv`, ta không đợi đến lúc duyệt từng trường mới kiểm tra `CanSet()`. Guard clause ở ngay đầu hàm kiểm tra trực tiếp `value.Kind() != reflect.Pointer` cùng điều kiện con trỏ không nil và trả về `ErrDestination` ngay lập tức. Đây là ranh giới phòng vệ fail-fast: một khi đích đến không phải là con trỏ trỏ tới vùng nhớ có quyền đột biến, hàm từ chối dứt khoát toàn bộ thao tác trước khi tốn chi phí duyệt metadata của struct.
 
 ## Thực hành: viết kiểm tra bảo vệ trước khi gán giá trị (setter)
 

@@ -472,10 +472,7 @@ Các test xác nhận unknown target bị từ chối, observer không gọi đ�
 **Yêu cầu:** Thiết kế ReceivingMiddleware cho tools/call, gắn rate limit với caller/session đã xác thực. Bài tập chọn 10 request/giây, không phải ngưỡng an toàn production. Test cả caller dùng nhiều session và cleanup state limiter; SDK không có API `ExecuteToolCall` trong ví dụ này.
 
 ### Thử thách 2: Cơ chế Phê duyệt Hai bước (Human-in-the-Loop Gate)
-**Yêu cầu:** Đối với các hành động phá hủy nghiêm trọng (ví dụ xóa cụm database hoặc giải phóng tài nguyên AWS), hãy thiết kế một công cụ MCP trả về trạng thái `PENDING_HUMAN_APPROVAL` kèm theo mã `confirmation_token` có hiệu lực trong 5 phút. Công cụ chỉ thực sự hành động khi nhận được lệnh xác nhận thứ hai chứa token hợp lệ do kỹ sư con người nhập vào.
-Ràng buộc an ninh bắt buộc:
-1. **Single-Use (Chống Replay):** Mỗi token chỉ được dùng đúng một lần; ngay khi gọi `Confirm`, token phải bị vô hiệu hóa lập tức bất kể kết quả kiểm tra thành công hay thất bại.
-2. **Action & Target Binding (Chống hoán đổi mục tiêu):** Token phải được gắn chặt với bộ đôi `(Action, Target)` lúc khởi tạo. Nếu token cấp cho lệnh `restart` bị đem dùng cho lệnh `delete`, hoặc token cấp cho `staging` bị áp vào `production`, hệ thống phải từ chối ngay.
+**Yêu cầu:** Đối với các hành động phá hủy nghiêm trọng (như xóa cơ sở dữ liệu hay thu hồi hạ tầng), hãy thiết kế cơ chế phê duyệt hai bước cho công cụ MCP: hành động ban đầu trả về trạng thái chờ kèm mã xác nhận tạm thời. Thao tác chỉ được thực thi khi nhận được lệnh xác nhận chứa token hợp lệ trong thời hạn 5 phút. Cơ chế phải ràng buộc chặt chẽ token với hành động và mục tiêu đã phê duyệt, đồng thời đảm bảo token chỉ được dùng thành công đúng một lần.
 
 ---
 
@@ -495,15 +492,14 @@ type ToolRateLimiter interface {
 
 ### Lời giải Thử thách 2: Rào chắn Phê duyệt Hai bước
 
-> **Dừng để dự đoán.** Xét tình huống: Agent yêu cầu quyền khởi động lại cache staging (`action="restart", target="redis-staging"`) và nhận được một `confirmation_token`. Kỹ sư phê duyệt thao tác này. Nhưng ngay sau đó, một lời nhắc độc hại (prompt injection) khiến Agent gửi lệnh `Confirm` với token đó kèm tham số `action="drop_table", target="users_production"`.
-> 1. Nếu `ApprovalManager` chỉ lưu `token -> ExpiresAt` mà không gắn kết chặt chẽ `(Action, Target)`, hậu quả an ninh nào sẽ xảy ra?
-> 2. Tại sao dòng lệnh `delete(m.pendings, token)` phải nằm ngay trước mọi câu lệnh kiểm tra logic chứ không được đặt ở cuối hàm sau khi đã xác thực thành công?
+> **Dừng để dự đoán.** Giả sử Agent xin cấp token để khởi động lại dịch vụ cache staging, nhưng sau đó gửi lệnh xác nhận kèm theo hành động xóa database production. Nếu hệ thống chỉ kiểm tra thời hạn của token mà không so sánh hành động và mục tiêu, rủi ro an ninh nào sẽ phát sinh? Khi thiết kế thao tác xác nhận, ta nên xóa token ngay ở lần thử sai đầu tiên hay chỉ hủy token sau khi đã khớp thành công?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **Lỗ hổng hoán đổi hành vi (Action Substitution):** Kẻ tấn công hoặc Agent bị hallucination có thể lợi dụng sự phê duyệt của con người cho một hành vi ít nguy hại (như restart staging) để thực thi một hành vi phá hủy nghiêm trọng trên tài nguyên trọng yếu (như drop table production). Do đó, token phê duyệt bắt buộc phải gắn kết bất biến (action-binding contract) với đúng `(Action, Target)` đã đăng ký.
-2. **Cơ chế chống thử lại và vét cạn (Replay & Brute-force Prevention):** Xóa token khỏi map NGAY LẬP TỨC tại thời điểm tiếp nhận bảo đảm nguyên tắc dùng một lần (single-use token). Kể cả khi lệnh xác nhận gửi sai token, sai action hoặc sai target, token đó vẫn bị hủy bỏ vĩnh viễn và không thể tiếp tục bị dùng làm mục tiêu để dò đoán hay replay.
+Nếu mã xác nhận không gắn chặt với hành động và mục tiêu (`Action` và `Target`), hệ thống sẽ vấp phải lỗ hổng tráo đổi mục tiêu (action substitution). Một lời nhắc độc hại từ bên ngoài có thể lợi dụng sự phê duyệt của con người cho một thao tác vô hại để thực thi lệnh phá hủy trên hệ thống trọng yếu. Vì vậy, bản ghi phê duyệt phải đóng băng bộ đôi hành động và tài nguyên ngay từ thời điểm tạo token.
 
-Cài đặt an toàn của `ApprovalManager`:
+Về chính sách tiêu thụ token, ta lựa chọn chính sách vô hiệu hóa khi khớp thành công (single-use successful claim). Khi nhận đúng token, đúng hành động, đúng mục tiêu và còn trong thời hạn 5 phút, hàm sẽ xóa token khỏi bộ nhớ để chống tấn công phát lại (replay attack). Ngược lại, nếu chọn chính sách xóa token ngay cả khi tham số truyền vào không khớp, kẻ tấn công hoặc một tiến trình thử lại nhầm lẫn có thể cố tình gửi sai tham số để hủy hoại phiên phê duyệt hợp lệ, tạo ra nguy cơ từ chối dịch vụ (denial-of-service). Việc người dùng gửi một token không tồn tại hoàn toàn không gây ảnh hưởng đến các token hợp lệ khác. Nguy cơ dò đoán tham số khi giữ token được kiểm soát bằng độ hỗn loạn cao của chuỗi sinh ngẫu nhiên từ `crypto/rand` và thời gian hết hạn ngắn.
+
+Cài đặt an toàn của `ApprovalManager` dưới mô hình bộ nhớ cục bộ:
 
 ~~~go
 type PendingApproval struct {
@@ -523,7 +519,6 @@ func (m *ApprovalManager) RequestApproval(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Dung crypto/rand, khong dung timestamp de doan duoc
 	token := randomTokenFromCryptoRand()
 	m.pendings[token] = PendingApproval{
 		Action:    action,
@@ -540,16 +535,18 @@ func (m *ApprovalManager) Confirm(
 	defer m.mu.Unlock()
 
 	item, exists := m.pendings[token]
-	// Huy token ngay lap tuc de chong replay/brute-force
-	delete(m.pendings, token)
-
 	if !exists || time.Now().After(item.ExpiresAt) {
 		return false
 	}
-	// Action-binding: phai khop ca Action lan Target
-	return item.Action == action && item.Target == target
+	if item.Action != action || item.Target != target {
+		return false
+	}
+	delete(m.pendings, token)
+	return true
 }
 ~~~
+
+Toàn bộ thao tác kiểm tra và tiêu thụ token phải diễn ra nguyên tử dưới cùng một khóa `m.mu.Lock()` để ngăn chặn hai goroutine chạy đua cùng lúc với một token. Cần lưu ý rằng `ApprovalManager` trên đây là mô hình kiến trúc minh họa trong bộ nhớ của một tiến trình, chưa phải giải pháp bảo mật hoàn chỉnh cho môi trường sản xuất. Một hệ thống thực tế đòi hỏi kho lưu trữ bền vững chịu lỗi qua các lần khởi động lại, xác thực danh tính con người độc lập khỏi AI agent, và ghi nhật ký kiểm toán không thể sửa đổi.
 
 Một HTTP request hoàn thành không đồng nghĩa service khỏe. Lab dùng quy ước hẹp: chỉ `2xx` là `healthy`; `4xx`/`5xx` được trả về như trạng thái `unhealthy`, còn lỗi transport mới là lỗi gọi tool. Hệ thống thật cần contract health riêng (ví dụ readiness, body schema và timeout) thay vì suy ra sức khỏe chỉ từ mã HTTP.
 

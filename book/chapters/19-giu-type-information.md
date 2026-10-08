@@ -91,11 +91,10 @@ Constraint có type term như `~int | ~int64` là general interface: nó dùng �
 > 3. Lệnh gán `var raw int64 = slowest` có biên dịch thành công không, hay bị compiler báo lỗi?
 
 #### Đáp án — chỉ đọc sau khi đã tự làm
-1. **Kiểu của `T` được suy luận chính xác là `Milliseconds`**. Compiler không thu gọn (decay) kiểu về underlying type `int64`. Do hai đối số truyền vào đều mang kiểu `Milliseconds`, quá trình suy luận kiểu (type unification) chọn `T = Milliseconds`.
-2. **Biến `slowest` có kiểu tĩnh là `Milliseconds`**. Hàm generic bảo toàn thông tin kiểu của đối số, trả về chính xác kiểu `T` thay vì kiểu nền hay interface rỗng.
-3. **Lệnh gán `var raw int64 = slowest` bị compiler TỪ CHỐI** với lỗi: `cannot use slowest (variable of type Milliseconds) as int64 value in variable declaration`. Dù `Milliseconds` có underlying type là `int64`, Go không bao giờ tự động ép kiểu ngầm định giữa hai defined type khác nhau. Muốn gán, lập trình viên bắt buộc phải viết conversion tường minh: `var raw int64 = int64(slowest)`.
 
-Đây chính là giá trị cốt lõi của Generic: bảo toàn thông tin kiểu (type preservation) ở thời điểm biên dịch, ngăn chặn việc gán nhầm đơn vị đo mà không phải trả giá bằng việc ép kiểu qua `any` rồi type assertion ở runtime.
+Quá trình suy luận kiểu (type unification) chọn `T` chính xác là `Milliseconds` chứ không hề thu gọn (decay) về underlying type `int64`. Do cả hai đối số truyền vào đều mang kiểu `Milliseconds`, hàm generic bảo toàn thông tin kiểu của đối số và trả về kết quả mang đúng kiểu tĩnh `Milliseconds` thay vì ép về kiểu nền hay bọc trong interface rỗng.
+
+Vì lý do đó, lệnh gán `var raw int64 = slowest` bị trình biên dịch từ chối ngay lập tức với lỗi: `cannot use slowest (variable of type Milliseconds) as int64 value in variable declaration`. Dù `Milliseconds` có underlying type là `int64`, hệ thống kiểu của Go không bao giờ cho phép ép kiểu ngầm định giữa hai defined type khác nhau. Muốn gán giá trị này sang một biến `int64`, lập trình viên bắt buộc phải chuyển đổi tường minh bằng cú pháp `int64(slowest)`. Đây chính là giá trị bảo toàn thông tin kiểu (type preservation) ở thời điểm biên dịch của Generic: nó loại bỏ nguy cơ gán nhầm đơn vị đo lường mà không đòi hỏi chi phí đánh đổi qua `any` và type assertion ở runtime.
 
 ## Generic named type giữ invariant cùng dữ liệu
 
