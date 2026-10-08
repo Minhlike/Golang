@@ -215,7 +215,15 @@ Với `Disable` trong lab, `UPDATE checks SET enabled = 0` có thể trông idem
 
 Khi requirement nói client có thể retry cùng một operation mà chỉ được tạo một hiệu ứng, API cần identity cho operation đó: chẳng hạn idempotency key được caller giữ lại qua lần gửi lại. Service cần xác định key đã được xử lý và trả kết quả phù hợp, thường bằng unique constraint hoặc record idempotency trong cùng database transaction. Chi tiết response khi key trùng, thời gian lưu key và side effect nào thuộc cùng operation đều là phần của điều API hứa. Chúng không tự xuất hiện từ `BeginTx`.
 
-> **Bài suy luận ngắn.** Một caller timeout sau `Commit` rồi gọi lại `Disable` mà không gửi operation identity. State `enabled=false` nói được gì, và audit count nói được gì? Đáp án: caller không thể phân biệt “lần trước của chính tôi đã commit” với “một actor khác đã tắt check”; count hai cũng không cho biết hai lần gọi có phải cùng ý định. Nếu distinction đó quan trọng, retry phải có contract riêng.
+> **Bài suy luận ngắn.** Một caller gặp sự cố timeout mạng sau khi server đã thực thi `Commit`, sau đó caller tự động gửi lại lệnh `Disable` mà không mang theo định danh thao tác (idempotency key / operation identity).
+> 1. Trạng thái `enabled = false` trên bảng `checks` nói được gì và *không thể chứng minh* được điều gì về lần gọi trước đó?
+> 2. Việc số lượng dòng trong bảng `audit_events` tăng lên 2 nói lên điều gì về tính an toàn của việc retry tự động?
+> 3. Nếu muốn caller có thể retry an toàn mà không sinh ra tác dụng phụ trùng lặp, kiến trúc bắt buộc phải bổ sung cơ chế gì?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **Trạng thái `enabled = false`** chỉ chứng minh rằng tài nguyên hiện đang ở trạng thái tắt. Nó hoàn toàn không thể chứng minh được liệu lần gọi trước của chính caller đã commit thành công trước khi rớt mạng, hay lần gọi trước đã bị hủy và một tiến trình khác đã tắt tài nguyên.
+2. **Audit count tăng lên 2** chứng minh rằng tính nguyên tử của giao dịch (transaction atomicity) không tự động đem lại tính bất biến khi gọi lại (idempotency). Lần retry thiếu định danh thao tác đã tạo ra thêm một bản ghi audit mới, làm sai lệch lịch sử kiểm toán vận hành.
+3. **Cơ chế bắt buộc:** Hệ thống phải thiết kế hợp đồng retry tường minh có lưu vết định danh thao tác (`idempotency_key`) ngay trong cùng database transaction. Khi nhận lại key đã xử lý, hệ thống trả về kết quả thành công trước đó thay vì thực thi lại chuỗi thao tác và chèn thêm audit event.
 
 Tương tự, transaction không biến mọi concurrent operation thành tuần tự. `sql.TxOptions` cho phép caller yêu cầu isolation; khi caller yêu cầu non-default isolation level mà driver không hỗ trợ, `BeginTx` trả error. Database và driver thực tế vẫn quyết định các anomaly, lock và latency có ý nghĩa gì, nên trước khi dùng isolation để bảo vệ một invariant thật, đọc tài liệu database đang chạy, viết test cạnh tranh cho invariant đó và quan sát lỗi/lock/latency. Ở chương này, ta chỉ khóa một contract nhỏ có thể chứng minh cục bộ: event lỗi thì update không được tồn tại.
 

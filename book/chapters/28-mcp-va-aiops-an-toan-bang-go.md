@@ -473,6 +473,9 @@ Các test xác nhận unknown target bị từ chối, observer không gọi đ�
 
 ### Thử thách 2: Cơ chế Phê duyệt Hai bước (Human-in-the-Loop Gate)
 **Yêu cầu:** Đối với các hành động phá hủy nghiêm trọng (ví dụ xóa cụm database hoặc giải phóng tài nguyên AWS), hãy thiết kế một công cụ MCP trả về trạng thái `PENDING_HUMAN_APPROVAL` kèm theo mã `confirmation_token` có hiệu lực trong 5 phút. Công cụ chỉ thực sự hành động khi nhận được lệnh xác nhận thứ hai chứa token hợp lệ do kỹ sư con người nhập vào.
+Ràng buộc an ninh bắt buộc:
+1. **Single-Use (Chống Replay):** Mỗi token chỉ được dùng đúng một lần; ngay khi gọi `Confirm`, token phải bị vô hiệu hóa lập tức bất kể kết quả kiểm tra thành công hay thất bại.
+2. **Action & Target Binding (Chống hoán đổi mục tiêu):** Token phải được gắn chặt với bộ đôi `(Action, Target)` lúc khởi tạo. Nếu token cấp cho lệnh `restart` bị đem dùng cho lệnh `delete`, hoặc token cấp cho `staging` bị áp vào `production`, hệ thống phải từ chối ngay.
 
 ---
 
@@ -492,10 +495,20 @@ type ToolRateLimiter interface {
 
 ### Lời giải Thử thách 2: Rào chắn Phê duyệt Hai bước
 
+> **Dừng để dự đoán.** Xét tình huống: Agent yêu cầu quyền khởi động lại cache staging (`action="restart", target="redis-staging"`) và nhận được một `confirmation_token`. Kỹ sư phê duyệt thao tác này. Nhưng ngay sau đó, một lời nhắc độc hại (prompt injection) khiến Agent gửi lệnh `Confirm` với token đó kèm tham số `action="drop_table", target="users_production"`.
+> 1. Nếu `ApprovalManager` chỉ lưu `token -> ExpiresAt` mà không gắn kết chặt chẽ `(Action, Target)`, hậu quả an ninh nào sẽ xảy ra?
+> 2. Tại sao dòng lệnh `delete(m.pendings, token)` phải nằm ngay trước mọi câu lệnh kiểm tra logic chứ không được đặt ở cuối hàm sau khi đã xác thực thành công?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **Lỗ hổng hoán đổi hành vi (Action Substitution):** Kẻ tấn công hoặc Agent bị hallucination có thể lợi dụng sự phê duyệt của con người cho một hành vi ít nguy hại (như restart staging) để thực thi một hành vi phá hủy nghiêm trọng trên tài nguyên trọng yếu (như drop table production). Do đó, token phê duyệt bắt buộc phải gắn kết bất biến (action-binding contract) với đúng `(Action, Target)` đã đăng ký.
+2. **Cơ chế chống thử lại và vét cạn (Replay & Brute-force Prevention):** Xóa token khỏi map NGAY LẬP TỨC tại thời điểm tiếp nhận bảo đảm nguyên tắc dùng một lần (single-use token). Kể cả khi lệnh xác nhận gửi sai token, sai action hoặc sai target, token đó vẫn bị hủy bỏ vĩnh viễn và không thể tiếp tục bị dùng làm mục tiêu để dò đoán hay replay.
+
+Cài đặt an toàn của `ApprovalManager`:
+
 ~~~go
 type PendingApproval struct {
-	Action string
-	Target string
+	Action    string
+	Target    string
 	ExpiresAt time.Time
 }
 
@@ -510,7 +523,7 @@ func (m *ApprovalManager) RequestApproval(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Dùng crypto/rand, không dùng timestamp dự đoán được.
+	// Dung crypto/rand, khong dung timestamp de doan duoc
 	token := randomTokenFromCryptoRand()
 	m.pendings[token] = PendingApproval{
 		Action:    action,
@@ -527,9 +540,14 @@ func (m *ApprovalManager) Confirm(
 	defer m.mu.Unlock()
 
 	item, exists := m.pendings[token]
+	// Huy token ngay lap tuc de chong replay/brute-force
 	delete(m.pendings, token)
-	return exists && time.Now().Before(item.ExpiresAt) &&
-		item.Action == action && item.Target == target
+
+	if !exists || time.Now().After(item.ExpiresAt) {
+		return false
+	}
+	// Action-binding: phai khop ca Action lan Target
+	return item.Action == action && item.Target == target
 }
 ~~~
 

@@ -211,21 +211,31 @@ Về phân tán ngữ cảnh (W3C TraceContext): Outbound probe request chèn he
 
 Thư mục `projects/opsprobe/incident/` mô phỏng một sự cố kinh điển trong môi trường microservices.
 
-### Kịch bản mô phỏng sự cố
+### Kịch bản và Triệu chứng lâm sàng
 
 > **Ghi chú phương pháp luận:** Đây là kịch bản giả định mô phỏng tình huống sự cố thực tế để đặt ra bài toán chẩn đoán cho kỹ sư.
 
-Hệ thống probe giả định được triển khai để kiểm tra sức khỏe 50 microservices nội bộ. Khi tải tăng cao, hệ thống giám sát ghi nhận tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ chạm trần deadline. Tuy nhiên, khi kỹ sư kiểm tra trực tiếp từ máy trạm bằng lệnh cURL độc lập, target service vẫn phản hồi trong 2ms. Kiểm tra trạng thái hệ điều hành cho thấy số lượng socket TCP mở tăng liên tục, tiệm cận giới hạn file descriptors (`ulimit -n`).
+Hệ thống probe giả định được triển khai để kiểm tra sức khỏe 50 microservices nội bộ.
+- **Triệu chứng giám sát:** Tỷ lệ `OutcomeTimeout` tăng vọt và độ trễ chạm trần deadline (5 giây).
+- **Phản nghiệm độc lập:** Kỹ sư kiểm tra trực tiếp từ máy trạm bằng lệnh cURL độc lập: target service vẫn phản hồi cực nhanh trong 2ms!
+- **Tầng Hệ điều hành (`ss -s`):** Số lượng socket TCP mở tăng liên tục theo số lượng request mà không được thu hồi, tiệm cận giới hạn file descriptors (`ulimit -n`).
+- **Tầng Transport Pool & Trace:** `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi. Hook `GotConnInfo.Reused` qua `net/http/httptrace` luôn ghi nhận `info.Reused == false`.
 
-### Bốn tầng bằng chứng chẩn đoán
+> **Dừng để điều tra và phản nghiệm.**
+> 1. Dựa trên các triệu chứng trên (target phản hồi trong 2ms nhưng probe client cạn kiệt socket và timeout), hãy nêu 2 giả thuyết đối lập: Sự cố xuất phát từ máy chủ đích hay từ chính vòng đời kết nối của client?
+> 2. Kỹ sư cần thiết kế thí nghiệm phản nghiệm (falsification test) nào để xác định chính xác nguyên nhân gốc rễ trong mã nguồn client trước khi can thiệp cấu hình hệ thống?
 
-Thứ nhất ở tầng Hệ điều hành: `ss -s` ghi nhận số lượng socket mở tăng liên tục theo số lượng request mà không được thu hồi.
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **Phân tích giả thuyết:**
+   - *Giả thuyết A (Lỗi phía target/hạ tầng mạng):* Server đích bị treo hoặc tường lửa làm rớt gói tin. Giả thuyết này bị bác bỏ ngay lập tức bởi phép thử cURL độc lập: target service vẫn phản hồi cực nhanh trong 2ms.
+   - *Giả thuyết B (Rò rỉ kết nối phía client):* Client mở socket mới cho mỗi lượt gọi nhưng không đưa kết nối trở lại pool của `http.Transport`. Khi tiệm cận giới hạn file descriptor hoặc socket, các request tiếp theo bị nghẽn ở khâu thiết lập kết nối (dial backlog), dẫn đến timeout trước khi kịp gửi dữ liệu.
+2. **Thí nghiệm phản nghiệm:**
+   - Gắn `net/http/httptrace` vào client để ghi nhận số kết nối mở mới vs tái sử dụng (`GotConnInfo.Reused`).
+   - Kiểm tra mã nguồn xử lý HTTP response: trong HTTP/1.x của Go, một kết nối TCP chỉ được `http.Transport` đưa vào pool tái sử dụng (keep-alive) khi và chỉ khi response body được đọc hết (drain) và đóng tường minh qua `resp.Body.Close()`.
 
-Thứ hai ở tầng Transport Pool: `http.Transport` không có kết nối rảnh (idle connection) nào được tái sử dụng giữa các lượt gọi.
+### Bằng chứng mã nguồn và Đo đạc thực nghiệm
 
-Thứ ba ở tầng Runtime Trace: Sử dụng `net/http/httptrace` với hook `GotConnInfo.Reused`. Kết quả cho thấy `info.Reused` luôn bằng `false`.
-
-Thứ tư ở tầng Mã nguồn: Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
+Kiểm tra `incident/incident.go` (đoạn hàm `BuggyProbe`):
 
 ~~~go
 resp, err := client.Do(req)

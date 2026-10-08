@@ -108,7 +108,22 @@ cancelApp()
 
 Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
 
-> **Dừng để dự đoán:** request có document đầu hợp lệ rồi nối thêm `{"debug":true}` có được gọi `Store` không? Nếu câu trả lời là không, code phải có một bước chứng minh stream đã kết thúc; `Decode` thành công một lần chưa đủ bằng chứng.
+> **Dừng để dự đoán.** Giả sử một handler HTTP chỉ thực hiện giải mã một lần:
+> ~~~go
+> var input Check
+> err := json.NewDecoder(r.Body).Decode(&input)
+> ~~~
+> Nếu client gửi body gồm một JSON document hợp lệ rồi nối thêm một object thứ hai: `{"target":"https://example.com"}{"debug":true}`:
+> 1. Lệnh `decoder.Decode(&input)` trên có trả về lỗi không?
+> 2. Các byte còn lại (`{"debug":true}`) trong stream request body sẽ đi về đâu? Lời gọi lưu trữ `Store.Create` có bị thực thi khi payload chứa dữ liệu thừa không mong muốn hay không?
+> 3. Làm thế nào để handler chứng minh một cách chặt chẽ rằng toàn bộ stream body chỉ chứa duy nhất một JSON value hợp lệ trước khi chuyển giao dữ liệu sang `Store`?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **`decoder.Decode(&input)` không trả về lỗi.** Nó đọc và parse thành công object đầu tiên `{"target":"https://example.com"}` vào biến `input` và dừng lại ngay tại ranh giới kết thúc của object đó.
+2. **Các byte thừa vẫn nằm lại trong stream `r.Body`.** Do hàm `Decode` không tự động đọc hết toàn bộ stream, nếu không kiểm tra thêm, handler sẽ coi request là hợp lệ và tiếp tục gọi `Store.Create`. Điều này vi phạm nguyên tắc kiểm soát ranh giới dữ liệu vào (input boundary validation).
+3. **Giải pháp kiểm định ranh giới stream:** Handler phải thực hiện thêm một lần giải mã thứ hai vào một struct rỗng (`var extra struct{}`) và xác nhận rằng lỗi trả về chính xác là `io.EOF`. Bất kỳ dữ liệu nào còn sót lại (kể cả object thừa hay byte rác) đều khiến lần decode thứ hai không trả về `io.EOF`, cho phép handler từ chối request ngay lập tức bằng mã `400 Bad Request`.
+
+Dưới đây là cài đặt kiểm định ranh giới hoàn chỉnh của handler trong lab:
 
 ~~~go
 func (a app) createCheck(

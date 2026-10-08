@@ -152,7 +152,19 @@ func ApplyEnv(dst any, values map[string]string) error {
 
 `Type` trả lời câu hỏi về declaration: field thứ `i` tên gì, tag gì, exported không, exact type nào. `Kind` chỉ là category underlying runtime kind; vì `type Token string` cũng có `Kind() == reflect.String`, nó không đủ cho contract chỉ nhận builtin `string`. `TypeFor[string]()` cung cấp identity của type cần nhận. `Value` trả lời câu hỏi về instance cụ thể: value hiện tại là gì, có set được không. Quy tắc đơn giản là đọc metadata từ `Type`, đọc hoặc ghi dữ liệu từ `Value`.
 
-> **Dừng để dự đoán:** Nếu caller gọi `ApplyEnv(Config{}, values)`, vì sao function không nên chấp nhận rồi return `nil`? Vì không có đường nào để thay variable của caller. Một `nil` ở đây là lời nói dối: input đã không thỏa quyền mutation mà API cần.
+> **Dừng để dự đoán.** Xét tình huống caller gọi hàm với một struct truyền theo giá trị thay vì con trỏ:
+> ~~~go
+> cfg := Config{}
+> err := ApplyEnv(cfg, values)
+> ~~~
+> 1. Bên trong `ApplyEnv`, phương thức `fieldValue.CanSet()` đối với từng trường của `cfg` sẽ trả về `true` hay `false`?
+> 2. Nếu hàm âm thầm bỏ qua và trả về `nil`, biến `cfg` ban đầu của caller có nhận được dữ liệu từ `values` không?
+> 3. Vì sao việc trả về `nil` trong tình huống này là một "lời nói dối" nguy hiểm của API, và tại sao kiểm tra `value.Kind() != reflect.Pointer` là ranh giới phòng vệ bắt buộc?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **`fieldValue.CanSet()` trả về `false`** vì khi truyền struct theo giá trị (by-value), hàm chỉ nhận một bản sao (copy) trên stack. Bản sao này không có địa chỉ bộ nhớ gắn liền với biến gốc của caller (unaddressable). Gói `reflect` nghiêm cấm việc ghi đè lên một `reflect.Value` không thể gán; nếu cố tình gọi `SetString()`, runtime sẽ lập tức gây panic.
+2. **Biến `cfg` ban đầu hoàn toàn không thay đổi.** Mọi đột biến dữ liệu (nếu cố tình làm) cũng chỉ diễn ra trên bản sao tạm thời rồi biến mất khi hàm return.
+3. **Trả về `nil` là một thiết kế API độc hại:** Nó báo thành công giả tạo, khiến ứng dụng tiếp tục vận hành với cấu hình rỗng và gây sự cố ngầm. Ranh giới guard clause kiểm tra `value.Kind() != reflect.Pointer` và con trỏ không nil ở đầu hàm là điều kiện bắt buộc nhằm từ chối sớm (fail-fast) mọi input không đáp ứng quyền ghi (mutation capability).
 
 ## Thực hành: viết kiểm tra bảo vệ trước khi gán giá trị (setter)
 

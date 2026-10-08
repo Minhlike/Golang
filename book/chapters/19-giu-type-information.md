@@ -81,7 +81,21 @@ Union `|` nói rằng một type argument thuộc một trong các term. Dấu `
 
 Constraint có type term như `~int | ~int64` là general interface: nó dùng để giới hạn type parameter, không phải một interface value để truyền quanh chương trình. Basic interface có thể dùng làm kiểu của value: nó chỉ khai báo hoặc nhúng các method, cũng có thể rỗng như `any`. Constraint còn có thể dùng type term để giới hạn tập type và các operation compiler cho phép. Đặt cả hai dưới cùng từ “interface” dễ làm mờ hai nhiệm vụ này.
 
-> **Dừng để dự đoán:** `Max(Milliseconds(120), Milliseconds(80))` trả về type nào? Không phải `int64`. Sau substitution, `T` là `Milliseconds`, nên result giữ named type ấy. Đây là lợi ích của việc không ép value đi qua `any` rồi type assertion lại.
+> **Dừng để dự đoán.** Xét đoạn mã sau:
+> ~~~go
+> slowest := Max(Milliseconds(120), Milliseconds(80))
+> var raw int64 = slowest
+> ~~~
+> 1. Trình biên dịch thực hiện suy luận kiểu (type inference) cho `T` là `int64` hay `Milliseconds`?
+> 2. Biến `slowest` có kiểu dữ liệu tĩnh là gì?
+> 3. Lệnh gán `var raw int64 = slowest` có biên dịch thành công không, hay bị compiler báo lỗi?
+
+#### Đáp án — chỉ đọc sau khi đã tự làm
+1. **Kiểu của `T` được suy luận chính xác là `Milliseconds`**. Compiler không thu gọn (decay) kiểu về underlying type `int64`. Do hai đối số truyền vào đều mang kiểu `Milliseconds`, quá trình suy luận kiểu (type unification) chọn `T = Milliseconds`.
+2. **Biến `slowest` có kiểu tĩnh là `Milliseconds`**. Hàm generic bảo toàn thông tin kiểu của đối số, trả về chính xác kiểu `T` thay vì kiểu nền hay interface rỗng.
+3. **Lệnh gán `var raw int64 = slowest` bị compiler TỪ CHỐI** với lỗi: `cannot use slowest (variable of type Milliseconds) as int64 value in variable declaration`. Dù `Milliseconds` có underlying type là `int64`, Go không bao giờ tự động ép kiểu ngầm định giữa hai defined type khác nhau. Muốn gán, lập trình viên bắt buộc phải viết conversion tường minh: `var raw int64 = int64(slowest)`.
+
+Đây chính là giá trị cốt lõi của Generic: bảo toàn thông tin kiểu (type preservation) ở thời điểm biên dịch, ngăn chặn việc gán nhầm đơn vị đo mà không phải trả giá bằng việc ép kiểu qua `any` rồi type assertion ở runtime.
 
 ## Generic named type giữ invariant cùng dữ liệu
 
