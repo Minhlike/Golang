@@ -1,0 +1,33 @@
+{
+  "source_sha256": "7a40a2ad1e5abb77b7765fb6355f2242b76074c4ed25acd1c2e1ec65c9ba7c55",
+  "labels": [
+    "a: [3]int",
+    "[10] [20] [30]",
+    "b: [3]int",
+    "[99] [20] [30]",
+    "b := a",
+    "sao chép mọi phần tử",
+    "a[0] vẫn là 10",
+    "b[0] trở thành 99"
+  ],
+  "nodes": [
+    "a",
+    "b"
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "style": "dotted",
+      "label": [
+        "b := a",
+        "sao chép mọi phần tử"
+      ]
+    }
+  ],
+  "notes_attached": {
+    "a": "a[0] vẫn là 10",
+    "b": "b[0] trở thành 99"
+  },
+  "raster_keep": "library-informer-data-path.png"
+}

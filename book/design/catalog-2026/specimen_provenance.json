@@ -1,0 +1,518 @@
+[
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 1,
+    "type": "H1",
+    "sha256": "0f5e4ad15d51d01cce5f5cc324025b5077838dcb15580971cd643a78168de687"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 4,
+    "type": "prose",
+    "sha256": "a262b4f6c49bb499d951d0060def3cd0ee2ef0b0df5e6fbefcabc5ec2f863682"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 3,
+    "type": "H1",
+    "sha256": "fca1c454473c2d577a5ba87908b39ff28c1d248a9f829586a512755133d8abb7"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 5,
+    "type": "prose",
+    "sha256": "c1d8c001dd6ef79e3ce66a71edbe04b30a25e5f285c7b7229fe6447f33319d57"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 7,
+    "type": "code",
+    "sha256": "49f0b3db2eaf146373244f9865b7572f7938b5d09e739f4937a0704a3586bc55"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 16,
+    "type": "prose",
+    "sha256": "31ce1dfc800f510ab0fabcb1e4ddb7b9bc2deb049ce7fc8348e18fa23f85c59e"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 18,
+    "type": "terminal_output",
+    "sha256": "71a3d110ebdd41c52dcb71b00f247ab3d0a1afa21120913d269b4326df32e707"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 23,
+    "type": "prose",
+    "sha256": "f358e3a463de4e2c2ca0e9d544eb961a4c54d8f65fb97862c15e2b1cb6b3aeca"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 27,
+    "type": "prose",
+    "sha256": "0490169fa8ba5e64cf366772c1b65e77c7991e97b4f4199aafbba59a8f6d9b8b"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 29,
+    "type": "code",
+    "sha256": "184154fe37823a82b7ba4026d87b557085325392492c29dae71d603480e62956"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 37,
+    "type": "prose",
+    "sha256": "cfc7e462eb958370a0ff3603f2687b5c2f4be63b80b7aa1ed313e185f75e13c7"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 76,
+    "type": "directive_table",
+    "sha256": "c8a7cf94c34b91a2fab7a13f1fdc1d32cbc5ad34ec51712fb68eea9537d78059"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 78,
+    "type": "table",
+    "sha256": "48a46906ed80b5c008bd60da84ee2eb5aace2c358d1c68d142ceeaa6f286f030"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 83,
+    "type": "prose",
+    "sha256": "f7a762d04b058d5e28d3ff09ad7b712432ba2129b15923cf135689aa1040d15d"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 39,
+    "type": "prose",
+    "sha256": "a2bebc5dc05a35d263531044882139ad0eb463035fc51acba2cc3e888d8ae9dc"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 41,
+    "type": "code",
+    "sha256": "a43fa2887172879370b9a4e2b3ed74b16b3badf71e4a97a2175cefa469c953d0"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 50,
+    "type": "image",
+    "sha256": "5dcfb69ed8d52712da9a37c88f1a3dd41125d6c17fb66af31d549db1858c3f1a"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 52,
+    "type": "directive_figure",
+    "sha256": "a2152f1361476281c7cb56e0007b258bb0b893938af89095f277830a27586d16"
+  },
+  {
+    "source": "chapters/02-gia-tri-slice-va-aliasing.md",
+    "line": 54,
+    "type": "prose",
+    "sha256": "068147b804972b49766ceac012e455d7b7bd46e97b3c830a41e2826761069fe6"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 22,
+    "type": "image",
+    "sha256": "62de099c1d52f25abe31110620fe28d9a9ff928f8f66624d1efbae6935ce493c"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 23,
+    "type": "directive_figure",
+    "sha256": "17e2247fb96765982cd62ad790e2f41855e0e4e65e24f242ebdb1a2ef7183252"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 124,
+    "type": "callout",
+    "sha256": "d34916a48a3920bdd972bae4cacf77be5668be1d07993b9e3c3f9b0044162d1c"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 126,
+    "type": "code",
+    "sha256": "d9aa72836d6abc45dedeea9ccd4d2189df52dd1164c0602d396fcd72dc00845c"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 136,
+    "type": "H4",
+    "sha256": "f5371324d25f532b0d830d1fd35860195e315a27672080af46b8ec3785a1e83c"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 137,
+    "type": "prose",
+    "sha256": "9f6f75750482c9cb5e2873788324d451be724f17f8247707367b45bcd7bf81d0"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 139,
+    "type": "prose",
+    "sha256": "0fda51453e82f228786293d8deeb50d5552f6222369ed885ad909f70b7f534a0"
+  },
+  {
+    "source": "chapters/01-doc-va-viet-mot-chuong-trinh-go.md",
+    "line": 110,
+    "type": "table",
+    "sha256": "fc9196208a62c8c31d93a56d413a8044ead7c177b08183f641deec8488bc9a37"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 14,
+    "type": "H3",
+    "sha256": "b1365616e880e6f4f8b568d4fec3aa24561d6cbdc712abdd5458076a21eaaed1"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 16,
+    "type": "prose",
+    "sha256": "abcb8e0ff8c18448bbaa0da903765592837c075dca9f124289c3912070411192"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 18,
+    "type": "prose",
+    "sha256": "459ad9e071da33ebc673b1af0b7687c1e82638ebf8ac519e9a7d8e44536d2c59"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 20,
+    "type": "prose",
+    "sha256": "f9671b2ff5320421b876159bb49d17e55a7d26dde8bdd7c54f1a0cd9aa9311a7"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 22,
+    "type": "image",
+    "sha256": "62de099c1d52f25abe31110620fe28d9a9ff928f8f66624d1efbae6935ce493c"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 23,
+    "type": "directive_figure",
+    "sha256": "17e2247fb96765982cd62ad790e2f41855e0e4e65e24f242ebdb1a2ef7183252"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 25,
+    "type": "prose",
+    "sha256": "f071cd7496844c24d11d7537f15b2d431530773075c2319fc93a38e0eebe8290"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 27,
+    "type": "code",
+    "sha256": "73e4a301cd860b944304f4947cfa4a5259825ae4e9d19d44651bb0ebfcfc2804"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 37,
+    "type": "prose",
+    "sha256": "55eeb8d1f4f3f86c93fa183055e5acd1927a40c2914bc5a34e810ba62e005148"
+  },
+  {
+    "source": "appendices/devops-library-atlas.md",
+    "line": 39,
+    "type": "prose",
+    "sha256": "0ba852e8a9c694b7d13c945a4112243c42fb517d4405d892b741e87321eb5aa2"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 37,
+    "type": "H3",
+    "sha256": "b3d532b43f9e3f36d70f2a36b2b1c1ec209e46a23119dfc12847365e224cfddf"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 38,
+    "type": "prose",
+    "sha256": "2bc152526f3b791440c42cdf8c13050f68a1691a6685841b3d3581aa92035c97"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 41,
+    "type": "H3",
+    "sha256": "9c331079721d860fd92e55d726c613837611f41a5654636da0aa478a71f7ddbd"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 42,
+    "type": "prose",
+    "sha256": "160ea990bab07ea4e9d116b703619beaf625599477b6692f95eea511892b2b4a"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 45,
+    "type": "H3",
+    "sha256": "55c329c6bcb275a80fb0c79ea8c42025bb52914b7d8c95da685e44b6aa381103"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 46,
+    "type": "prose",
+    "sha256": "354d03be11a86e2c78ca6941d2008380962801702bfa63448d3684d9e636f353"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 49,
+    "type": "H3",
+    "sha256": "c60d3a2f38115b5fcd8e246a55883983bc58ffe117e966e90c5dd63116780b9d"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 50,
+    "type": "prose",
+    "sha256": "d0728f141016f5947add7d4e62e49a9bfa74260a20958d3e814fdf18b42bbb03"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 53,
+    "type": "H3",
+    "sha256": "5566c951deaf1095c41be6e5722ff69a1b92d9ba85d372252cbd29b0a971ea96"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 54,
+    "type": "prose",
+    "sha256": "0c131b38e16d0f5f0c34d503e5827ba4afe2d424fa2d8467df85fb67053d0ce7"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 57,
+    "type": "H3",
+    "sha256": "d126c34947561bef028799335ee8d46d0bc73ef55588c0950d6b993bb33e4a1d"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 58,
+    "type": "list",
+    "sha256": "6db3b19fdbe252bc6419a9ed3c0f4fa8e5211575287c6e2b00362ea94bc80435"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 60,
+    "type": "prose",
+    "sha256": "9fb5a658f9f8ebb33b1b166fcfd8a8faf6d4ce59da5fa2c26757d1a59b8af74c"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 63,
+    "type": "H3",
+    "sha256": "5a0d728923b052dcfb97ed335cc868c4c3e1472d66657a4499f17329f1481979"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 64,
+    "type": "prose",
+    "sha256": "f78562dd96acae850d7718cb8b022f2caa48f1fc26e49a5fce29a4725e9b67df"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 67,
+    "type": "H3",
+    "sha256": "684db2a78cf88e21a61b89d6153bd4ba485702f82f97ac7a1334a120e3cd6baa"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 68,
+    "type": "prose",
+    "sha256": "d3066ce2fa454c1f7ef11bea65b8a26b213cb86977ff562d70712839dd2e3cbf"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 71,
+    "type": "H3",
+    "sha256": "b2a0b684ad9d8ed630c17ff9661faee275e9c600c2f13b96d5655e0a067cd385"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 72,
+    "type": "prose",
+    "sha256": "c2ba14106a04b7ea2609a6fed39dc6aef35cd3bb0e3dbca9a7b6fcf5660ea5a5"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 75,
+    "type": "H3",
+    "sha256": "59eb650e81bef036cf8d72be6c5f19b3884f3c49508247497ef44dfd9a82861b"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 76,
+    "type": "prose",
+    "sha256": "a67fd7c54ad810690f1f2855dac45c3e9b71ddc567aa6a818411c7aa1551d437"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 79,
+    "type": "H3",
+    "sha256": "54a28c78e8fce58eb6160da5be6cdb6596926e351135161ee955000efd2d06d7"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 80,
+    "type": "prose",
+    "sha256": "017ef0a457a48e8bbbf47b7eb17cb91a62fc63b24475d5edd562b249dcebbe16"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 83,
+    "type": "H3",
+    "sha256": "59ac27bcb65f587c41b7f153bca29b16a4d1c797d68254fb6422c9c0a11ccf40"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 84,
+    "type": "prose",
+    "sha256": "49562f037858ebf90f11eaaa8744fffbce2c34dd6a73b6b88662d57de4d3484f"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 87,
+    "type": "H3",
+    "sha256": "043d5a5c8f0f463c15e209dda6614a6d23e2a75315747f1d895320381b9d0038"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 88,
+    "type": "prose",
+    "sha256": "55b5e5212d1e1545eb3a7234dd8e93a273cc13bd348441d197f28abc19dd5a5f"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 91,
+    "type": "H3",
+    "sha256": "07ce860d19fc9fee92168f873dc7dcde27bc1a1be6fc58a25e39199ba2e905d1"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 92,
+    "type": "list",
+    "sha256": "6416430fa50d7a4ed6939fa0706fa8de73866d2e1c5ecf76c15d72d58b73a74c"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 93,
+    "type": "prose",
+    "sha256": "f90cb01a84935b1f9c84f4cc50ea990489c89e76ab1794884a249ec34bd38be8"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 421,
+    "type": "H3",
+    "sha256": "8b0157e93a8fb34340f165db627171bd53243d3a16ca2a81df69b1bce8dc10f6"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 422,
+    "type": "prose",
+    "sha256": "e12a66167a5296fe408f6bac334d3ed3e2925698f5e01c02fcafe228a7d169b1"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 426,
+    "type": "H3",
+    "sha256": "581c3f36bfa4a901d888d6575463634e9938cd685384e9945be8269ac01f427a"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 427,
+    "type": "list",
+    "sha256": "4e0b2372191af3fc49e5aa31b25414bb89adf93edd3b0827e0964d2151d8c181"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 428,
+    "type": "prose",
+    "sha256": "ac21c66f003c183146cc059ad4a5817193438f4fe212038b9566e474ebd04fa9"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 432,
+    "type": "H3",
+    "sha256": "54018165641349ca72b4863153cb164b7036508a5b5841aad17e1443bbacac1b"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 433,
+    "type": "list",
+    "sha256": "144113d909678d923c2578d02be79c2537b6725ae9a43d5d4b97cf0bcbc3a4d1"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 434,
+    "type": "prose",
+    "sha256": "caae262bde069bea7cc5f6f6dc1ecfa6648f00cb6f4525add70cf08bbe6fb398"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 438,
+    "type": "H3",
+    "sha256": "de972c5504f49b7bb5a512915e82b859a3f9edcc02f4a38dd45d7e708f981d81"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 439,
+    "type": "list",
+    "sha256": "6dbeff946ce5f8af2ce299bd709d5729c09b527a5e71f4c75fbeb8dac341dba0"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 440,
+    "type": "prose",
+    "sha256": "a6e88c15dde21226aeb2e10e3fe05b4cd48e0a9c0e85234352581e1f2975747e"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 444,
+    "type": "H3",
+    "sha256": "31d157d7c9ca2de4fd6200e251ba8e263f6c8ce30725420ef208d360c7db874e"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 445,
+    "type": "list",
+    "sha256": "4dbaf7c7aa89d5ad82c81993b39526b37e6c843adde4428f47254b19c1534df4"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 447,
+    "type": "prose",
+    "sha256": "00104a3733b981d1e6d617944ad6b475e6b902b347d4d44262980791ca9b404c"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 451,
+    "type": "H3",
+    "sha256": "2fc70ca328e2f37767dc09c3ca7e84958fce97dc7cb72791f08e6f0e66f2557d"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 452,
+    "type": "list",
+    "sha256": "4b2a99d56d6c9085ab9c0097ff70759b88e9852a157756ffe69cc0e420005381"
+  },
+  {
+    "source": "appendices/error-atlas.md",
+    "line": 454,
+    "type": "prose",
+    "sha256": "62ad07b8f18ff4f25cdfe453e87f3d4c326d968ec6fe46bb79ea4697c1111407"
+  },
+  {
+    "source": "chapters/00-truoc-khi-viet-dong-go-dau-tien.md",
+    "line": 45,
+    "type": "directive_references",
+    "sha256": "b28b563e1300bfcfa88bcc7f4a0af4f9a786af02fff704467f8d4b13bc52d7c1"
+  },
+  {
+    "source": "chapters/00-truoc-khi-viet-dong-go-dau-tien.md",
+    "line": 46,
+    "type": "list",
+    "sha256": "6a49aa416d37b8ddf1e7f0e4c2c8db936833474b65d22af31cc4f86e9d72ac0c"
+  }
+]

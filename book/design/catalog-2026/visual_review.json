@@ -1,0 +1,29 @@
+{
+  "pdf_sha256": "8054281c8c627611b3f6c930ecfc0c6bb061a659035d925672ee247434a4a9e4",
+  "method": "Every final page opened separately with view_image from the actual 150 dpi render; no contact sheet. Observations entered by the reviewing agent after viewing. Layout review only, not byte-perfect clipboard acceptance.",
+  "pages": [
+    {"page": 1, "status": "VISUAL_PASS", "observation": "Navigation and scope notice readable; no clipped rows."},
+    {"page": 2, "status": "VISUAL_PASS", "observation": "Cover A: separated layers and dashed guides clear; title/art separated."},
+    {"page": 3, "status": "VISUAL_PASS", "observation": "Cover B: tallest strokes now below subtitle; fine construction lines visible."},
+    {"page": 4, "status": "VISUAL_PASS", "observation": "Cover C: contour lines distinct at render scale; no title collision."},
+    {"page": 5, "status": "VISUAL_PASS", "observation": "Cover D: large type contained; artwork and attribution separate."},
+    {"page": 6, "status": "VISUAL_PASS", "observation": "Hierarchy specimen and grid table fit; no heading confused with paragraph."},
+    {"page": 7, "status": "VISUAL_PASS", "observation": "Back/spine placeholders explicitly marked; actual Atlas excerpt legible."},
+    {"page": 8, "status": "VISUAL_PASS", "observation": "Chapter opening, complete code and both output lines fit; no gutter."},
+    {"page": 9, "status": "VISUAL_PASS", "observation": "Mixed prose/code/table; excerpt gap labeled and full table grid visible."},
+    {"page": 10, "status": "VISUAL_PASS", "observation": "Vector diagram now has allocated height; no collision with prose/code. Two nodes, rightward dotted copy arrow and both attached notes match source."},
+    {"page": 11, "status": "VISUAL_PASS", "observation": "Kept informer bitmap: all labels and cache-reading dashed edge visible; caption follows image."},
+    {"page": 12, "status": "VISUAL_PASS", "observation": "Prediction prompt and full code; no answer disclosed on question page. Whitespace intentional."},
+    {"page": 13, "status": "VISUAL_PASS", "observation": "Answer H4 rendered as heading, both paragraphs intact; long inline diagnostic wraps."},
+    {"page": 14, "status": "VISUAL_PASS", "observation": "Zero-value table: headers and five rows separated by full grid, readable cells."},
+    {"page": 15, "status": "VISUAL_PASS", "observation": "Dense Library Atlas prose remains 14 pt; heading not orphaned."},
+    {"page": 16, "status": "VISUAL_PASS", "observation": "Informer image/caption then source anchor/code, all readable; paragraph continues normally."},
+    {"page": 17, "status": "VISUAL_PASS", "observation": "Three-line paragraph continuation plus complete final paragraph. Short tail retained rather than shrinking text."},
+    {"page": 18, "status": "VISUAL_PASS", "observation": "Dense two-column Atlas; A01–A09 kept as entries, A06 diagnostics now separate bullet lines."},
+    {"page": 19, "status": "VISUAL_PASS", "observation": "A10–A14 then labeled excerpt gap/J06–J07; warnings and actions separated, no split entry."},
+    {"page": 20, "status": "VISUAL_PASS", "observation": "J08–J11: long diagnostics wrap inside columns, angle brackets and warning/action cues visible."},
+    {"page": 21, "status": "VISUAL_PASS", "observation": "Seven original references remain in order with full URLs; no clipped text."},
+    {"page": 22, "status": "VISUAL_PASS", "observation": "Both code experiments have readable Unicode, empty line and indentation; appearance passes, exact copy does not."},
+    {"page": 23, "status": "VISUAL_PASS", "observation": "Approval gate and unresolved requirements explicit; no invented publication-ready claim."}
+  ]
+}

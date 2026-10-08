@@ -1,0 +1,17 @@
+GOLANG / DESIGN PROTOTYPE 2026
+22
+Code-copy laboratory
+QA fixture, không phải nội dung bài học. Cùng payload được lưu trong copy_fixture.txt; có TAB, dấu tiếng Việt,
+hai dấu cách cuối dòng và dòng rỗng.
+A. Text thông thường; TAB được trình bày bằng tab-stop bốn cột.
+func main() {
+    fmt.Println("Tiếng Việt: ă â ê ô ơ ư đ")  
+}
+B. Cùng hình thức, thêm ActualText ở marked-content span.
+func main() {
+
+	fmt.Println("Tiếng Việt: ă â ê ô ơ ư đ")  
+
+}
+Không có gutter, số dòng hoặc số dòng ẩn. Hiển thị đúng indentation không chứng minh clipboard giữ đúng
+TAB. Kết quả extract và giới hạn PDF reader ghi riêng trong copy_code_report.md.

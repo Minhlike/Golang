@@ -1,0 +1,546 @@
+{
+  "scope": "catalog only; not full-book publication QA",
+  "pdf_sha256": "8054281c8c627611b3f6c930ecfc0c6bb061a659035d925672ee247434a4a9e4",
+  "page_count": 23,
+  "protected_files_unchanged": 586,
+  "lossless_ast_blocks_checked": 5692,
+  "specimen_raw_hashes": "PASS",
+  "A4_crop_rotation": "PASS",
+  "mirrored_frame": "PASS",
+  "grayscale_pixel_scan": "PASS: RGB channel delta <= 1 on every 150 dpi page",
+  "folio_position": "PASS",
+  "fonts_used_embedded": "PASS",
+  "unused_base14_resource": "Helvetica; not used in rendered text",
+  "TOC_links": "PASS: 12 internal destinations",
+  "bookmarks": "PASS: titles and destinations match rendered headings",
+  "pages": [
+    {
+      "page": 1,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        539.530517578125,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "df05f2850deecbac24a73e436818acd3a6341878f2b3ecc8f5e347aa74d637dd",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Navigation and scope notice readable; no clipped rows."
+    },
+    {
+      "page": 2,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        55.745121002197266,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "8cd31ffc4ee85b83bff632f362d1aa85c94c92d36e5c720c33887a0c9f10a1f1",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Cover A: separated layers and dashed guides clear; title/art separated."
+    },
+    {
+      "page": 3,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        539.530517578125,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "c7da2c3ec5725b94000f2961fe15b4c9b2462427fd8bd6d97460ba87e897dafc",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Cover B: tallest strokes now below subtitle; fine construction lines visible."
+    },
+    {
+      "page": 4,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        55.745121002197266,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "ccfd42a088c1712505e10997ee545d60086afb7cb38d160d62d0223354f863d3",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Cover C: contour lines distinct at render scale; no title collision."
+    },
+    {
+      "page": 5,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        539.530517578125,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "c8edf55144d713ee1c3d14c640a1a1400d56a3cc731cb8db1b75d77982091aab",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Cover D: large type contained; artwork and attribution separate."
+    },
+    {
+      "page": 6,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        55.745121002197266,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "c014febdc37504bb891fbec5c322a7482b63eaba07461d21f1b355bf6bff099d",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Hierarchy specimen and grid table fit; no heading confused with paragraph."
+    },
+    {
+      "page": 7,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        539.530517578125,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "046a561a3c33b50cf5d9915b0325357e65facfb9046114850c6107db02a96a0d",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Back/spine placeholders explicitly marked; actual Atlas excerpt legible."
+    },
+    {
+      "page": 8,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        55.745121002197266,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "6b4b5d815779c1f9efab4e87123d5c7deccc19d20502dfdd09c9e9142174f2d7",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Chapter opening, complete code and both output lines fit; no gutter."
+    },
+    {
+      "page": 9,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        539.530517578125,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "2a894b5d4433e3eb124648e8058f809e4dd7b88a20fd56a82857be9662a82850",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Mixed prose/code/table; excerpt gap labeled and full table grid visible."
+    },
+    {
+      "page": 10,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "529a06503829ae3aeef5f32fbf7443be619e85ee6f659dfcd6231b9ef468b4d8",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Vector diagram now has allocated height; no collision with prose/code. Two nodes, rightward dotted copy arrow and both attached notes match source."
+    },
+    {
+      "page": 11,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [
+        {
+          "width_px": 2257,
+          "height_px": 1259,
+          "effective_dpi_x": 341.2,
+          "effective_dpi_y": 341.2
+        }
+      ],
+      "render_sha256": "6c44c9902dd138dc8df1680944e5380d9d7276ebe00ac2e67d8d34f7658a29cb",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Kept informer bitmap: all labels and cache-reading dashed edge visible; caption follows image."
+    },
+    {
+      "page": 12,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular",
+        "SourceSerif4-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "3194ea4d4ad1d52126f3ab52133cc12a6155a8903a4de89a92077334e66a0bd5",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Prediction prompt and full code; no answer disclosed on question page. Whitespace intentional."
+    },
+    {
+      "page": 13,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "ddf6331899609ef9e54719169a9f900072f75edbb31c23397bbec8cf1d03202a",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Answer H4 rendered as heading, both paragraphs intact; long inline diagnostic wraps."
+    },
+    {
+      "page": 14,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "cf53685289db4d77b6fd3ac8892c534821740e2a2f9c4a3f86a68851c505d320",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Zero-value table: headers and five rows separated by full grid, readable cells."
+    },
+    {
+      "page": 15,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "4f2b65ca8560c19ac6126ac17aabcaec20a8db677c6bbd3a92f74b89bc5bed9a",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Dense Library Atlas prose remains 14 pt; heading not orphaned."
+    },
+    {
+      "page": 16,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [
+        {
+          "width_px": 2257,
+          "height_px": 1259,
+          "effective_dpi_x": 341.2,
+          "effective_dpi_y": 341.2
+        }
+      ],
+      "render_sha256": "e4abea12bd15d2e9c947e4dae537f0e40b2065d0aa6128d01934584140463bb7",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Informer image/caption then source anchor/code, all readable; paragraph continues normally."
+    },
+    {
+      "page": 17,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "4f7124e9962eeb9c12aded694d884fb3d259e60fdfa6ac6a4790fc492299a2e7",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Three-line paragraph continuation plus complete final paragraph. Short tail retained rather than shrinking text."
+    },
+    {
+      "page": 18,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "072cbc58bdcdcc8fbfbe2e4ad3ce5fb9135cdc45247081cb4337e8951888c1a5",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Dense two-column Atlas; A01–A09 kept as entries, A06 diagnostics now separate bullet lines."
+    },
+    {
+      "page": 19,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "d44bd613e366610e2783b23bbbd679553f78deb483bafc912a6226b0fccb99be",
+      "visual_check": "VISUAL_PASS",
+      "observation": "A10–A14 then labeled excerpt gap/J06–J07; warnings and actions separated, no split entry."
+    },
+    {
+      "page": 20,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "1ca73a0d020d07f830dfafc580a89bdebb42c817e38c5bc8161de058a24ec46d",
+      "visual_check": "VISUAL_PASS",
+      "observation": "J08–J11: long diagnostics wrap inside columns, angle brackets and warning/action cues visible."
+    },
+    {
+      "page": 21,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "e6d348315c5ac59c95146da0fe28f5bd706e0fcb83088cc163a5e05d671bfacc",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Seven original references remain in order with full URLs; no clipped text."
+    },
+    {
+      "page": 22,
+      "frame_left_pt": 51.024,
+      "folio_bbox": [
+        51.02362060546875,
+        800.6417236328125,
+        60.46662139892578,
+        813.2387084960938
+      ],
+      "fonts": [
+        "JetBrainsMono-Regular",
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "aa6fe64bdbfe6b08f8fce50a0ec9bdfe84be24a200c51dd349e5b835b4c8df28",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Both code experiments have readable Unicode, empty line and indentation; appearance passes, exact copy does not."
+    },
+    {
+      "page": 23,
+      "frame_left_pt": 68.031,
+      "folio_bbox": [
+        534.8090209960938,
+        800.6417236328125,
+        544.2520141601562,
+        813.2387084960938
+      ],
+      "fonts": [
+        "SourceSans3-Regular",
+        "SourceSans3-Semibold",
+        "SourceSerif4-Regular"
+      ],
+      "frame_offenders": [],
+      "grayscale_max_channel_difference": 1,
+      "raster_images": [],
+      "render_sha256": "a5f9e38d41082a8458e6bb73399253b10edb1c0c893d4c8ceb1a14b35164cd55",
+      "visual_check": "VISUAL_PASS",
+      "observation": "Approval gate and unresolved requirements explicit; no invented publication-ready claim."
+    }
+  ],
+  "copy_probe": {
+    "fixture_sha256": "f14408de1de0160565ebf27141450e5b9de4cdb9291da56513d115f41263d831",
+    "literal_tabs": 1,
+    "expandtabs4_preserves_bytes": false,
+    "expanded_sha256": "ed780f88827933d467c674ca7510b2d357c5f97ca4a2182dcdd8d807d82ec10c",
+    "reader_clipboard_tests": {
+      "reader_1": "UNKNOWN: not performed",
+      "reader_2": "UNKNOWN: not performed"
+    },
+    "extractors_are_not_pdf_readers": true,
+    "catalog_page": 22,
+    "extractors": {
+      "PyMuPDF": {
+        "contains_exact_fixture": false,
+        "tabs": 1,
+        "unicode_present": true,
+        "actual_text_supported_for_exact_fixture": false
+      },
+      "pypdf": {
+        "contains_exact_fixture": false,
+        "tabs": 0,
+        "unicode_present": true,
+        "actual_text_supported_for_exact_fixture": false
+      }
+    }
+  },
+  "visual_review": "23 individually opened final pages; manual ledger matches SHA"
+}

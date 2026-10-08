@@ -1,0 +1,97 @@
+[
+  {
+    "key": "catalog",
+    "title": "Hệ thống biên tập / 2026",
+    "page": 1
+  },
+  {
+    "key": "cover-A",
+    "title": "GOLANG",
+    "page": 2
+  },
+  {
+    "key": "cover-B",
+    "title": "GOLANG",
+    "page": 3
+  },
+  {
+    "key": "cover-C",
+    "title": "GOLANG",
+    "page": 4
+  },
+  {
+    "key": "cover-D",
+    "title": "GOLANG",
+    "page": 5
+  },
+  {
+    "key": "system",
+    "title": "Một hệ thống, không nhiều khuôn",
+    "page": 6
+  },
+  {
+    "key": "binding",
+    "title": "Bìa sau / gáy / mở phần",
+    "page": 7
+  },
+  {
+    "key": "chapter",
+    "title": "Mở chương: từ kết quả đến câu hỏi",
+    "page": 8
+  },
+  {
+    "key": "mixed",
+    "title": "Văn xuôi / code / bảng",
+    "page": 9
+  },
+  {
+    "key": "figure",
+    "title": "Văn xuôi / vector / caption",
+    "page": 10
+  },
+  {
+    "key": "raster",
+    "title": "Sơ đồ phức tạp: giữ nguồn trước",
+    "page": 11
+  },
+  {
+    "key": "question",
+    "title": "Câu hỏi trước đáp án",
+    "page": 12
+  },
+  {
+    "key": "answer",
+    "title": "Đọc lại sau khi tự dự đoán",
+    "page": 13
+  },
+  {
+    "key": "table",
+    "title": "Bảng: lưới phục vụ phân biệt dữ liệu",
+    "page": 14
+  },
+  {
+    "key": "library",
+    "title": "Library Atlas: cơ chế có điểm neo",
+    "page": 15
+  },
+  {
+    "key": "atlas",
+    "title": "Error Atlas / bản tra cứu",
+    "page": 18
+  },
+  {
+    "key": "references",
+    "title": "Tài liệu tham khảo: giữ điểm neo",
+    "page": 21
+  },
+  {
+    "key": "copy",
+    "title": "Code-copy laboratory",
+    "page": 22
+  },
+  {
+    "key": "gate",
+    "title": "Cổng phê duyệt",
+    "page": 23
+  }
+]

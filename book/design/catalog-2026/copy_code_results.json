@@ -1,0 +1,26 @@
+{
+  "fixture_sha256": "f14408de1de0160565ebf27141450e5b9de4cdb9291da56513d115f41263d831",
+  "literal_tabs": 1,
+  "expandtabs4_preserves_bytes": false,
+  "expanded_sha256": "ed780f88827933d467c674ca7510b2d357c5f97ca4a2182dcdd8d807d82ec10c",
+  "reader_clipboard_tests": {
+    "reader_1": "UNKNOWN: not performed",
+    "reader_2": "UNKNOWN: not performed"
+  },
+  "extractors_are_not_pdf_readers": true,
+  "catalog_page": 22,
+  "extractors": {
+    "PyMuPDF": {
+      "contains_exact_fixture": false,
+      "tabs": 1,
+      "unicode_present": true,
+      "actual_text_supported_for_exact_fixture": false
+    },
+    "pypdf": {
+      "contains_exact_fixture": false,
+      "tabs": 0,
+      "unicode_present": true,
+      "actual_text_supported_for_exact_fixture": false
+    }
+  }
+}

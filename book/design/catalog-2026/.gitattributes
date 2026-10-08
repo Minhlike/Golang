@@ -1,0 +1,7 @@
+# Keep evidence bytes intact across Windows checkouts; do not normalize PDF data.
+*.pdf binary
+copy_fixture.txt -text whitespace=-blank-at-eol
+copy_extracted_*.txt -text whitespace=-blank-at-eol
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
