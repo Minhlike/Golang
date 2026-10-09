@@ -325,6 +325,22 @@ if !found {
 delete(latencyByService, "billing")
 ~~~
 
+## Ai có quyền giữ một entry mãi mãi?
+
+Registry vừa giúp tìm service theo tên. Nhưng nếu tên không còn là tập hữu hạn mà mỗi request đưa vào một key mới, quyền sửa map còn bao gồm một trách nhiệm khác: quyết định khi nào bỏ dữ liệu. Hãy xét một cache sống cùng tiến trình. Mỗi lần miss, nó thêm `cache[key] = payload`; không có `delete`, không giới hạn key và không có ngày hết hạn. Vì owner vẫn giữ map, các value còn trong map vẫn được tham chiếu. GC không có quyền đoán rằng kết quả của request hôm qua đã hết giá trị nghiệp vụ rồi xóa hộ.
+
+Chưa thể kết luận “global map là leak”. Một bảng cấu hình hữu hạn sống suốt process là thiết kế bình thường. Một kho lịch sử có retention policy, dự báo tăng trưởng và ngân sách tương ứng cũng có thể tăng hợp lệ. Cache hứa tiết kiệm tài nguyên nhưng giữ mọi key từng thấy lại không có điểm dừng. Lỗi ở contract giữ dữ liệu, không ở vị trí khai báo map. Memory leak theo nghĩa vận hành là tài nguyên tiếp tục bị giữ sau khi nhu cầu đã hết; trong Go nó thường vẫn reachable, chứ không nhất thiết là allocation mất mọi pointer như cách người ta mô tả leak trong ngôn ngữ quản lý bộ nhớ thủ công.
+
+Trước khi đọc `fixed` của lab `part10-resource-retention`, anh hãy viết contract cho một cache đơn chủ sở hữu: tối đa hai entry, mỗi value tối đa 4 MiB, key tối đa 128 byte; khi thêm key thứ ba thì bỏ key được thêm sớm nhất. Cập nhật key cũ không làm mới tuổi của nó. Input vượt giới hạn phải bị từ chối trước khi thay cache. Caller được sửa byte slice của mình sau `Put` mà không đổi bản cache đã nhận. Đây là FIFO, không phải LRU, và không có TTL ngầm.
+
+Chính sách ấy dẫn tới những test không cần đo RAM. Sau chuỗi `a, b, a, c`, cache phải còn `b` và `c`; cập nhật `a` không tạo entry thứ ba và không cứu nó khỏi bị loại. Gửi value quá lớn phải trả error, không được đẩy một entry hợp lệ ra ngoài. Chạy nhiều vòng key mới, `Len()` không vượt hai. Sửa input sau `Put` không được đổi value đã lưu. Các test nằm trong `fixed/retention_test.go`; hãy làm bản `exercise` chạy được trước khi đối chiếu implementation.
+
+Giới hạn entry riêng lẻ chưa phải giới hạn byte: hai entry mỗi cái hàng gigabyte vẫn quá lớn. Ngược lại, kiểm `len(value)` rồi lưu thẳng một slice nhỏ cũng chưa đủ, vì nó có thể giữ backing array lớn như Chương 2. Bản sửa copy các byte thực sự được nhận; clone key string để một substring nhỏ không vô tình giữ storage của string lớn. Với chính sách lab, tổng độ dài payload được cache giữ không vượt `maxEntries * maxValueBytes`; key và metadata có chi phí riêng. Đây không phải trần RSS hay lời hứa rằng allocator trả bộ nhớ ngay sau eviction.
+
+Map mất entry thì đường tham chiếu từ map tới value cũ bị bỏ; alias ở nơi khác vẫn có thể giữ value ấy. Các slot trong hàng đợi FIFO cũng phải bỏ reference sau khi dịch, thay vì chỉ giảm length và để một string cũ nằm ở vùng capacity chưa dùng. Lab có đúng một owner nên không cần mutex; nếu cho nhiều goroutine gọi `Put`, ta phải thiết kế đồng bộ hóa trước, không suy ra map an toàn từ việc đã có capacity limit.
+
+Trong ca đo ở Chương 10, cùng chuỗi key mới làm bản không giới hạn tăng từ hai lên tám entry, trong khi bản sửa dừng ở hai. Bằng chứng kết thúc không phải “RAM trông đẹp hơn”, mà là contract hữu hạn được test giữ đúng, cộng profile xác nhận payload bị loại không còn bị cache giữ. Nếu product thật sự cần lưu tất cả key, đổi requirement và nơi lưu dữ liệu; đừng gọi việc mất lịch sử vì eviction là một bản sửa thành công.
+
 ## Một update có trách nhiệm trong registry
 
 `opsprobe` chưa cần network để hưởng lợi từ model này. Một update value-oriented cho registry không cần pointer: lấy struct value ra khỏi map, sửa bản local, rồi gán nó trở lại entry. Map parameter được truyền theo value, nhưng map value ấy vẫn mở đường tới map data của caller; chính phép gán cuối là mutation có chủ ý lên registry chung.
@@ -553,3 +569,8 @@ Hàm `func (service *Service) Record(bool)` tiếp nhận receiver dưới dạn
 Hàm `func renderSummary(SummarySource) string` nhận interface với hành vi mà consumer cần. Nó gọi `Summary` thay vì đọc field của một struct cụ thể; đây là boundary có thể thay provider mà không đổi code hiển thị.
 
 Mô hình cấu thành (composition) giúp dữ liệu có đường đi rõ ràng; method đặt hành vi cạnh kiểu dữ liệu; interface xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi nhà cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.
+
+@references
+1. Go Team. Go Specification, Map types và Deletion of map elements. go.dev/ref/spec#Map_types; go.dev/ref/spec#Deletion_of_map_elements
+2. Go Team. Package `strings`, `Clone`, Go 1.27.1. pkg.go.dev/strings@go1.27.1#Clone
+3. Go Team. Go Garbage Collector Guide, Tracing Garbage Collection. go.dev/doc/gc-guide#Tracing_Garbage_Collection

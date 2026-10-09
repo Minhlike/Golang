@@ -128,6 +128,63 @@ Chỉ số `flat` ghi nhận chi phí tiêu tốn trực tiếp bên trong thân
 
 Nếu nghi goroutine bị giữ lại, Go 1.27 có profile `goroutineleak` ở `runtime/pprof` và endpoint tương ứng của `net/http/pprof`, không còn cần experiment từ Go 1.26. Nó tìm một lớp chờ mà runtime xác định không thể được đánh thức, không tìm mọi leak và không tự thu hồi goroutine. Profile không có hit vẫn cần đối chiếu goroutine dump, ownership của channel và cancellation path như Chương 9. Khi mở trace UI, `go tool trace -http=:6060` từ Go 1.27 chỉ nghe localhost; muốn nghe địa chỉ khác phải chỉ định rõ. Đừng đưa profile/trace có dữ liệu nhạy cảm lên một listener công khai chỉ để tiện xem.
 
+## Ca điều tra: tăng bộ nhớ nhưng chưa biết ai đang giữ
+
+Một tiến trình nhận payload 4 MiB cho mỗi item. Sau mỗi chu kỳ hai item, anh thấy `TotalAlloc` tăng; người trực ca muốn thêm lệnh GC hoặc kết luận “Go bị leak”. Ta cần một câu hỏi chặt hơn: những allocation ấy chỉ đã từng xảy ra, hay vẫn sống sau khi công việc hoàn tất, và ai còn có quyền giữ chúng? Lab độc lập `labs/part10-resource-retention` cố ý tách đường giữ dữ liệu khỏi HTTP, database và opsprobe để câu trả lời không bị lẫn với connection pool hoặc cache của thư viện.
+
+Chạy từng mode trong process riêng, giữ nguyên máy, toolchain và tham số. Từ thư mục lab, lệnh dưới dùng PowerShell; thêm `-fixed` rồi đổi thư mục output để đo bản sửa, không ghi đè profile bản lỗi:
+
+~~~powershell
+go build -o artifacts/investigate.exe ./cmd/investigate
+./artifacts/investigate.exe -mode=slice `
+  -cycles=4 -items=2 -bytes=4194304 -limit=2 `
+  -out=artifacts/slice-baseline
+go tool pprof -inuse_space -top `
+  artifacts/slice-baseline/04.heap.pprof
+go tool pprof -alloc_space -top `
+  artifacts/slice-baseline/04.heap.pprof
+~~~
+
+Đổi mode thành `cache`, `churn`, `goroutine` hoặc `ticker` để giữ cùng nhịp công việc nhưng thay cơ chế. `churn` tạo rồi bỏ payload, không giữ kết quả; cờ `-fixed` không thay đường chạy của mode đối chứng này. Mode goroutine và ticker không cấp phát payload theo cờ `-bytes`: chúng tạo worker để điều tra vòng đời, không mô phỏng xử lý 4 MiB. README ghi cả giới hạn workload lẫn cách chạy mode context riêng.
+
+Trước khi đọc source, hãy đối chiếu bảng đã đo ngày 09-10-2026 trên `go1.27.1 windows/amd64`. Các dãy là quan sát sau chu kỳ 1 đến 4; mỗi chu kỳ lab chủ động hoàn thành hai lượt GC trước khi ghi số liệu. Anh sẽ mở heap profile hay goroutine dump cho từng dòng, và giả thuyết nào còn thiếu bằng chứng?
+
+@table Các triệu chứng dẫn tới những phép đo khác nhau
+
+| Mode | Quan sát bản lỗi hoặc đối chứng | Quan sát bản sửa |
+| --- | --- | --- |
+| Slice | Entry 2, 4, 6, 8; `HeapAlloc` 8.35, 16.35, 24.35, 32.35 MiB | Cùng số entry; `HeapAlloc` xấp xỉ 0.35 MiB |
+| Cache | Entry 2, 4, 6, 8; `HeapAlloc` 8.35, 16.35, 24.35, 32.36 MiB | Entry luôn 2; `HeapAlloc` xấp xỉ 8.35–8.36 MiB |
+| Churn | Entry 0; `HeapAlloc` xấp xỉ 0.35 MiB | Không có đường sửa riêng; đây là đối chứng |
+| Receive | `NumGoroutine`: 3, 5, 7, 9 sau khi caller cancel | Luôn 1, đã chờ `done` từng worker |
+| Ticker | `NumGoroutine`: 3, 5, 7, 9 sau khi caller cancel | Luôn 1, đã chờ `done` từng worker |
+
+Các số làm tròn không phải threshold cho test và không phải ngân sách RAM phổ quát. Lab đặt `MemProfileRate = 1` để theo dõi từng allocation trong một workload nhỏ; ghi profile và goroutine dump cũng tự cấp phát. Vì vậy `TotalAlloc` còn gồm chi phí quan sát, không bằng tổng payload. Bình thường runtime lấy mẫu; profile có độ trễ đối với việc ghi nhận allocation/free, được tài liệu `runtime.MemProfile` lưu ý. Hai lượt GC là lựa chọn chuẩn hóa thí nghiệm này, không phải cách vận hành service để “chữa leak”.
+
+### Từ vị trí cấp phát tới đường giữ dữ liệu
+
+Ở mode slice, `inuse_space` sau chu kỳ 4 ghi 32 MiB tại `main.payload`. Cùng workload bản sửa, lọc các stack `main.payload|fixed.Prefix` chỉ còn 128 byte tại `fixed.Prefix`. Nhưng `alloc_space` vẫn ghi 32 MiB tại `main.payload` ở cả hai bản: cả hai đều đã nhận tám payload, chỉ khác dữ liệu phải giữ sau khi xử lý. Mode churn cũng có 32 MiB đã cấp phát tại site này mà không còn payload sống trong profile quan sát. `alloc_space` là chi phí tích lũy cấp phát, không phải lượng sống và không phải detector leak.
+
+Profile dẫn tới nơi object được tạo, không tự vẽ reference nào đang giữ object. Đọc `Prefix` mới xác nhận đường `views` tới prefix, rồi tới array lớn; biểu thức ba index không copy. Copy ở boundary loại đường giữ đó. Đây là bản sửa có test aliasing ở Chương 2, không phải thay collector. Nếu một alias khác vẫn sống thì kết quả có thể khác, nên giữ workload và ownership của fixture cùng bằng chứng đo.
+
+Ở mode cache, profile bản lỗi cũng chỉ tới `main.payload`: 32 MiB sống sau bốn chu kỳ. Bản FIFO chỉ còn 8 MiB payload sống ở `fixed.(*Cache).Put`, vì cache sở hữu bản copy của hai entry cuối. Trong `alloc_space`, riêng hàm Put đã cấp phát 32 MiB để copy; bản sửa có thể cấp phát nhiều hơn nhưng giữ ít hơn. Không chọn implementation chỉ vì nhìn thấy `B/op` nhỏ hơn. Đối chiếu map entry với contract Chương 3 mới biết tăng trưởng nào là hợp lệ: tám key trong kho lưu trữ có chủ đích và tám key trong cache hứa tối đa hai có cùng hình heap nhưng khác kết luận.
+
+### Goroutine không cần nhiều heap để làm lỗi vòng đời
+
+Dãy 3, 5, 7, 9 đặt giả thuyết “mỗi chu kỳ giữ hai worker”, chưa chứng minh chúng bị leak. Mở `04.goroutines.txt`: mode receive có tám stack trong `baseline.Wait.func1` ở trạng thái chờ channel; mode ticker có tám stack trong `baseline.RunTicker.func1` chờ `select`. Tiếp theo đọc source và contract: owner đã cancel, receive không đọc context, còn loop ticker chỉ có tick hoặc kênh cứu hộ của lab. Không có đường cancellation nghiệp vụ để trả về. Số lượng worker tăng bền qua các chu kỳ và những đường chờ ấy mới liên kết được triệu chứng với nguyên nhân.
+
+Bản sửa chờ `done` sau cancel trước khi đo, nên worker đã kết thúc thay vì chỉ “hy vọng scheduler chạy sớm”. Cuối thí nghiệm, harness cứu cả các worker lỗi rồi join; số goroutine trở về 1 trong lượt đã chạy. Đây là bằng chứng ta quản lý được đường dọn dẹp, không phải runtime tự giết goroutine. Test với callback không hợp tác vẫn cần release riêng như Chương 9: nếu dump kẹt ở callback, sửa `select` của loop bên ngoài là chưa đủ.
+
+Mode context làm rõ giới hạn của bộ đếm này. Với 512 child có deadline một giờ, bản quên cancel vẫn chỉ có một goroutine trong lượt đo. Profile `inuse_objects` của nó còn 1024 object trực tiếp tại `context.WithDeadlineCause` ở chu kỳ 4; bản sửa không còn object trực tiếp tại site ấy trong profile đã đo. Không gọi 1024 là “1024 context”: một lời gọi có thể tạo nhiều object, còn một ít site timer/parent vẫn hiện trong profile. Test lifecycle và source `context` ở Chương 12 mới giải thích vì sao parent giữ child đến lúc bị hủy hoặc deadline đến. Sau harness hủy parent, allocation trực tiếp tại site này không còn trong profile quan sát. Quên cancel ở đây là giữ thừa theo vòng đời, không phải lời khẳng định mọi context lỗi sống vĩnh viễn.
+
+### Heap đã giảm, vì sao bộ nhớ process chưa giảm tương ứng?
+
+Ta còn phải phân biệt cái đã đo với cái đang suy ra. `HeapAlloc` là byte heap object được runtime tính đang cấp phát; `HeapInuse` là byte trong các span đang dùng, có thể gồm phần chưa chứa object. `HeapSys` là bộ nhớ heap runtime đã lấy từ OS, còn `HeapReleased` ghi phần trả lại cho OS. Chúng không phải RSS, và lab này không đo RSS. RSS hay working set còn phụ thuộc OS, stack, runtime và các vùng nhớ khác; bộ nhớ object giảm không hứa biểu đồ process giảm ngay cùng lượng ấy.
+
+Trong mode slice lỗi, sau khi harness bỏ toàn bộ view, `HeapAlloc` giảm từ 33,924,560 xuống 369,936 byte nhưng `HeapSys` vẫn là 41,680,896 byte trong lượt đã chạy. Đây là ví dụ cụ thể không được kết luận “GC chưa thu hồi object” chỉ từ phần heap đã lấy của OS. Cũng không suy ra toàn bộ phần chênh lệch là RSS: đó là chỉ số khác chưa đo. Nếu nghi nhu cầu bộ nhớ cao hợp lệ, kiểm tra số dữ liệu đang phục vụ và ngân sách; nếu nghi allocation tạm hoặc GC chưa kịp chạy, so các chu kỳ sau khi workload lắng xuống và GC hoàn tất; nếu object vẫn còn sống ngoài nhu cầu, tìm owner hoặc alias giữ nó; nếu file/connection cạn mà heap ổn, đo đúng resource thay vì tiếp tục nhìn heap.
+
+Một kết luận có thể bảo vệ được cần ghép chuỗi workload, vị trí allocation hoặc stack chờ, source giải thích đường giữ, rồi test contract và phép đo lại sau sửa. Mỗi bằng chứng trả lời một câu khác nhau. Một snapshot cao, một lần RSS không giảm hay một report vet sạch không thể thay toàn bộ chuỗi ấy.
+
 ## Đối chiếu G/M/P với Execution Trace: Nhìn vào nhịp đập của Runtime
 
 Ở Chương 09, ta đã xây dựng mô hình tư duy về bộ điều phối của Go runtime qua ba thực thể: Goroutine (G), Thread hệ điều hành (M), và Logical Processor (P). Ta đã biết P sở hữu hàng đợi cục bộ (`runq`), M gắn với P để thực thi mã máy của G, và runtime sử dụng các cơ chế trộm việc (`work-stealing`), cướp quyền (`preemption`) và chuyển giao P khi gọi syscall (`entersyscall`).
@@ -218,3 +275,6 @@ Bốn là, đối chiếu lại số liệu sau khi sửa đổi; nếu mức c�
 3. Go Team. Command trace. go.dev/cmd/trace
 4. Go Team. Go Garbage Collector Guide. go.dev/doc/gc-guide
 5. Go Team. Profile-guided optimization. go.dev/doc/pgo
+6. Go Team. Package `runtime/pprof`, heap và goroutine profiles, Go 1.27.1. pkg.go.dev/runtime/pprof@go1.27.1#Profile
+7. Go Team. Package `runtime`, `MemStats`, `MemProfile`, `MemProfileRate`, `NumGoroutine` và `KeepAlive`, Go 1.27.1. pkg.go.dev/runtime@go1.27.1#MemStats; pkg.go.dev/runtime@go1.27.1#MemProfile
+8. Go Team. Package `context`, lifecycle của derived context, Go 1.27.1. pkg.go.dev/context@go1.27.1

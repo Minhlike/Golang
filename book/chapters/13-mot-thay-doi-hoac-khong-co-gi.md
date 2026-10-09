@@ -225,6 +225,41 @@ Bằng chứng rõ ràng nhất nằm ở bảng `audit_events`: số lượng b
 
 Tương tự, transaction không biến mọi concurrent operation thành tuần tự. `sql.TxOptions` cho phép caller yêu cầu isolation; khi caller yêu cầu non-default isolation level mà driver không hỗ trợ, `BeginTx` trả error. Database và driver thực tế vẫn quyết định các anomaly, lock và latency có ý nghĩa gì, nên trước khi dùng isolation để bảo vệ một invariant thật, đọc tài liệu database đang chạy, viết test cạnh tranh cho invariant đó và quan sát lỗi/lock/latency. Ở chương này, ta chỉ khóa một contract nhỏ có thể chứng minh cục bộ: event lỗi thì update không được tồn tại.
 
+## Giết process ở khe giữa hai lời hứa
+
+Một yêu cầu cộng 7 đơn vị đã commit, nhưng caller chưa nhận phản hồi thì process chết. Khi khởi động lại, service có phải cộng thêm 7 không? Nếu còn phải gửi một sự kiện, làm sao nó biết sự kiện ấy chưa được gửi? Hai câu hỏi này không có cùng câu trả lời. Database có thể nhớ operation đã hoàn tất trong khi nghĩa vụ gửi vẫn còn dang dở.
+
+Lab `labs/part13-transaction-boundary/outbox` giữ bài toán nhỏ: một số dư, một operation key và một sự kiện. Payload là số nguyên `delta` từ 1 đến 100; cùng key và cùng delta là retry của cùng operation, còn đổi delta bị từ chối bằng `ErrConflict`. Đây là định nghĩa payload của fixture, không phải thuật toán canonicalize JSON hay chính sách retention cho mọi API. Mở `TestOutboxContract` trước khi đọc `store.go`: yêu cầu của nó là sau commit, số dư tăng đúng một lần và nghĩa vụ gửi phải tồn tại.
+
+Bản lỗi `BrokenApply` ghi số dư cùng operation record, commit, rồi mới thêm outbox. Subprocess thoát bằng `os.Exit(77)` ngay sau commit: deferred cleanup không chạy. Mở database bằng connection mới cho thấy số dư đã tăng nhưng không có event pending. Gửi lại cùng key không cứu được: operation record đã tồn tại, nên đường tạo event bị bỏ qua. Một job quét RAM khi startup không thể tìm lại nghĩa vụ chưa từng được lưu.
+
+Bản sửa đưa cả ba write vào một transaction: reserve key bằng unique constraint, đổi số dư, ghi event pending. Câu lệnh đầu tiên là write; lab không đọc rồi nâng khóa trong hai transaction cạnh tranh. Hai connection cùng gửi key được kiểm thử riêng: chỉ một operation và một event tồn tại. Duplicate kiểm tra lại payload trước khi kết thúc; nó không được coi một key bất kỳ là quyền thay payload đã chấp nhận.
+
+@table Trạng thái phải nhìn thấy khi mở lại database sau process death
+
+| Checkpoint chết | Dữ liệu nghiệp vụ | Nghĩa vụ gửi | Hành động khi khôi phục |
+| --- | --- | --- | --- |
+| Trước commit | Chưa cộng; không có operation. | Không có event. | Gửi lại cùng key để thực hiện. |
+| Sau commit, trước phản hồi | Đã cộng đúng một lần. | Pending. | Retry không cộng thêm; dispatcher đọc pending. |
+| Sau phía nhận commit, trước đánh dấu gửi xong | Đã cộng ở cả hai phía. | Phía gửi vẫn pending. | Gửi lại cùng identity; phía nhận khử trùng lặp. |
+
+Chạy fixture từ module Chương 13; mỗi lần chạy dùng file tạm do test sở hữu, không chạm database của dự án:
+
+~~~powershell
+go test -count=1 -v ./outbox
+go test -race ./outbox
+~~~
+
+`TestRecoveryWindows` là tên bộ test các cửa sổ lỗi, không phải test chỉ dành cho Windows. Nó chạy child tới checkpoint, đòi exit code 77, rồi mở file lại và kiểm tra state. Lần dispatch phục hồi cũng chạy ở process mới. Trường hợp sau send dùng file database phía nhận riêng: không có transaction xuyên hai file, nhưng phía nhận ghi inbox identity và tác dụng phụ của nó trong cùng transaction. Test mất acknowledgment gửi hai lần mà chỉ có một hiệu ứng; đó là contract idempotency của phía nhận, không phải exactly-once delivery.
+
+Dispatcher của lab có một owner, kể cả giữa các process. Nó để event pending cho tới khi sender báo thành công rồi mới đánh dấu completed. Vì vậy không có processing flag bị kẹt sau crash; đổi lại, chưa có claim/lease để nhiều dispatcher chia việc. Retry sau lỗi không rõ kết quả có thể phát lại. Nếu phía nhận không có durable dedup gắn nguyên tử với tác dụng phụ, hoặc xóa identity quá sớm, outbox không ngăn hiệu ứng lặp. Khi tích hợp provider bên ngoài, phải đọc contract idempotency và thời gian lưu key của provider, không thay bằng lời hứa của SQLite.
+
+**Dừng để tự chứng minh.** Đặt `RELIABILITY_MUTANT=split_commit` rồi chạy chỉ `TestOutboxContract`; test phải đỏ với số dư 7 nhưng pending 0. Bỏ biến ấy và chạy lại. Vì sao đổi thứ tự thành “đánh dấu completed rồi send” chỉ chuyển từ nguy cơ gửi lặp sang nguy cơ mất event?
+
+**Đáp án — đọc sau khi chạy thử.** Process có thể chết sau completed nhưng trước send, khiến lần khởi động lại không còn thấy việc cần làm. Pending tới acknowledgment giữ nghĩa vụ có thể khôi phục, nhưng không đóng được khe sau send. Tính nguyên tử cục bộ bảo vệ dữ liệu và nghĩa vụ; identity phía nhận mới bảo vệ hiệu ứng khi nghĩa vụ bị phát lại.
+
+Lab ghim driver `modernc.org/sqlite v1.59.0`, dùng rollback journal `DELETE`, `synchronous=FULL` và busy timeout 5 giây trên mỗi connection. Bằng chứng đã thử là process death tại checkpoint, không phải mất điện, disk hỏng hay filesystem mạng. Các giả định khóa và flush của SQLite vẫn phải đúng; một lần `os.Exit` không chứng minh toàn bộ độ bền của storage stack.
+
 ## Tiến hóa lược đồ dữ liệu (Schema Migration) như một trạng thái bền vững
 
 Cấu trúc bảng và các ràng buộc dữ liệu (schema) cũng là trạng thái bền vững. Mã nguồn ứng dụng có thể được rollback về một commit Git cũ chỉ trong vài giây, nhưng dữ liệu trên đĩa cứng đã bị thay đổi thì không thể đảo ngược một cách tự động. Khi dịch vụ bước vào môi trường sản xuất có dữ liệu người dùng thật, việc gọi các câu lệnh tạo bảng tùy tiện trong mã khởi động không còn là giải pháp khả thi. Quản lý schema đòi hỏi sáu nguyên tắc kỷ luật:
@@ -285,3 +320,5 @@ Khi các ranh giới này được phân định rõ ràng, hệ thống giảm 
 5. modernc.org. Package `sqlite`, driver thuần Go dùng trong lab cục bộ. pkg.go.dev/modernc.org/sqlite
 6. PostgreSQL Global Development Group. Transactional DDL. postgresql.org/docs/current/mvcc.html
 7. MySQL Authors. Statements That Cause an Implicit Commit & Atomic DDL. dev.mysql.com/doc/refman/8.0/en/implicit-commit.html, dev.mysql.com/doc/refman/8.0/en/atomic-ddl.html
+8. SQLite. Atomic Commit In SQLite: rollback journal, hot journal recovery và giả định khóa/flush của OS/storage. sqlite.org/atomiccommit.html
+9. modernc.org. SQLite driver v1.59.0: DSN `_pragma` áp dụng khi mở mỗi connection. pkg.go.dev/modernc.org/sqlite@v1.59.0

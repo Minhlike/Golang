@@ -1,0 +1,2358 @@
+DISPLAY TRANSCRIPT ONLY; exact merged output bytes are in validation.json.
+
+[baseline_ancestor] cwd=.
+command=["git", "merge-base", "--is-ancestor", "ba25116038d35d86ef138fbb089d9094a614ded8", "eb1714e7ba335d3f222932dea041467d1c8d5c4b"]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[git_commit_range_check] cwd=.
+command=["git", "diff", "--check", "ba25116038d35d86ef138fbb089d9094a614ded8..eb1714e7ba335d3f222932dea041467d1c8d5c4b"]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[git_index_state] cwd=.
+command=["git", "diff", "--cached", "--quiet"]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[git_worktree_diff_check] cwd=.
+command=["git", "diff", "--check"]
+environment={}
+warning: in the working copy of 'book/evidence/reliability-failure-paths/validation.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'book/evidence/reliability-failure-paths/validation.log', LF will be replaced by CRLF the next time Git touches it
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[toolchain] cwd=.
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "version"]
+environment={}
+go version go1.27.1 windows/amd64
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[go_environment] cwd=.
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "env", "-json", "GOOS", "GOARCH", "GOVERSION", "CGO_ENABLED", "CC"]
+environment={}
+{
+    "CC": "gcc",
+    "CGO_ENABLED": "1",
+    "GOARCH": "amd64",
+    "GOOS": "windows",
+    "GOVERSION": "go1.27.1"
+}
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part11-request-path:test] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestFetchReadsLocalServerResponse
+--- PASS: TestFetchReadsLocalServerResponse (0.01s)
+=== RUN   TestFetchReturnsStatusError
+--- PASS: TestFetchReturnsStatusError (0.00s)
+=== RUN   TestTransportReusesIdleConnection
+--- PASS: TestTransportReusesIdleConnection (0.00s)
+=== RUN   TestTraceRecorderKeepsNamedStages
+--- PASS: TestTraceRecorderKeepsNamedStages (0.00s)
+=== RUN   TestTraceRecorderAcceptsConcurrentHooks
+--- PASS: TestTraceRecorderAcceptsConcurrentHooks (0.00s)
+PASS
+ok      example.com/golang-master/part11-request-path/fixed 1.909s
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:42953/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+PASS
+ok      example.com/golang-master/part11-request-path/identity  1.944s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part11-request-path:vet] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part11-request-path:race] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok      example.com/golang-master/part11-request-path/fixed 3.264s
+ok      example.com/golang-master/part11-request-path/identity  3.359s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part13-transaction-boundary:test] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestDisableCommitsCheckAndAuditEvent
+--- PASS: TestDisableCommitsCheckAndAuditEvent (0.00s)
+=== RUN   TestDisableRollsBackWhenAuditCannotBeWritten
+--- PASS: TestDisableRollsBackWhenAuditCannotBeWritten (0.00s)
+=== RUN   TestDisableDoesNotInventAnAuditEvent
+--- PASS: TestDisableDoesNotInventAnAuditEvent (0.00s)
+=== RUN   TestDisableRejectsNilDatabase
+--- PASS: TestDisableRejectsNilDatabase (0.00s)
+=== RUN   TestDisableRepeatedCallRecordsAnotherAuditEvent
+--- PASS: TestDisableRepeatedCallRecordsAnotherAuditEvent (0.00s)
+=== RUN   TestPreparedStatementInTransaction
+--- PASS: TestPreparedStatementInTransaction (0.00s)
+=== RUN   TestConnectionPoolStatsObservation
+--- PASS: TestConnectionPoolStatsObservation (0.00s)
+=== RUN   TestSchemaMigrationOrderingAndRollback
+--- PASS: TestSchemaMigrationOrderingAndRollback (0.00s)
+=== RUN   TestCacheAsideStaleReadOnInvalidationFailure
+--- PASS: TestCacheAsideStaleReadOnInvalidationFailure (0.00s)
+PASS
+ok      example.com/golang-master/part13-transaction-boundary/fixed 1.210s
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (1.04s)
+    --- PASS: TestRecoveryWindows/before_commit (0.74s)
+    --- PASS: TestRecoveryWindows/after_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_send (0.18s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.03s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.05s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.08s)
+PASS
+ok      example.com/golang-master/part13-transaction-boundary/outbox    2.426s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part13-transaction-boundary:vet] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part13-transaction-boundary:race] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok      example.com/golang-master/part13-transaction-boundary/fixed 4.124s
+ok      example.com/golang-master/part13-transaction-boundary/outbox    9.150s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[projects/opsprobe:test] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./failurelab"]
+environment={}
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.01s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=536100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=526700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100218100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=548100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1057400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1054100 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:339: optional 64-attempt load observation
+--- SKIP: TestBoundedWorkloadObservation (0.00s)
+PASS
+ok      example.com/golang-master/projects/opsprobe/failurelab  2.769s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[projects/opsprobe:vet] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./failurelab"]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[projects/opsprobe:race] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./failurelab"]
+environment={}
+ok      example.com/golang-master/projects/opsprobe/failurelab  4.656s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part23-controller-runtime-operator:test] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+?       example.com/golang-master/part23-controller-runtime-operator/api/v1alpha1   [no test files]
+=== RUN   TestReconcileCreateOwnedDeployment
+--- PASS: TestReconcileCreateOwnedDeployment (0.09s)
+=== RUN   TestReconcileDriftCorrection
+--- PASS: TestReconcileDriftCorrection (0.00s)
+=== RUN   TestReconcileFinalizerExecution
+--- PASS: TestReconcileFinalizerExecution (0.00s)
+=== RUN   TestReconcileDoesNotRemoveFinalizerWithoutCleaner
+--- PASS: TestReconcileDoesNotRemoveFinalizerWithoutCleaner (0.00s)
+=== RUN   TestReconcileStatusSubresource
+--- PASS: TestReconcileStatusSubresource (0.00s)
+=== RUN   TestNotFoundResourceNoOp
+--- PASS: TestNotFoundResourceNoOp (0.00s)
+PASS
+ok      example.com/golang-master/part23-controller-runtime-operator/controllers    3.702s
+=== RUN   TestFakeDoesNotProveGeneration
+    fake_limit_test.go:28: MOCK_VERIFIED fake Update retains generation=1; this does not validate API-server generation semantics
+--- PASS: TestFakeDoesNotProveGeneration (0.08s)
+PASS
+ok      example.com/golang-master/part23-controller-runtime-operator/integration    3.550s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part23-controller-runtime-operator:vet] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part23-controller-runtime-operator:race] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+?       example.com/golang-master/part23-controller-runtime-operator/api/v1alpha1   [no test files]
+ok      example.com/golang-master/part23-controller-runtime-operator/controllers    5.569s
+ok      example.com/golang-master/part23-controller-runtime-operator/integration    4.758s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part10-resource-retention:test] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+?       example.com/golang-master/part10-resource-retention/baseline    [no test files]
+=== RUN   TestRejectsUnsafeOptions
+--- PASS: TestRejectsUnsafeOptions (0.00s)
+=== RUN   TestAllFixturesWriteProfilesAndCleanUp
+go=go1.27.1 target=windows/amd64 mode=slice fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,384184,811008,3964928,3022848,398576
+1,1,2,398168,835584,8126464,4947968,2426120
+2,0,2,398144,835584,8126464,4349952,4685432
+go=go1.27.1 target=windows/amd64 mode=slice fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403240,851968,8126464,4341760,7016400
+1,1,2,403256,860160,8126464,4374528,9421896
+2,0,2,403240,851968,8126464,4407296,11832960
+go=go1.27.1 target=windows/amd64 mode=cache fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403296,843776,8126464,4374528,14262656
+1,1,2,403680,860160,8126464,4440064,16701080
+2,0,2,403256,843776,8126464,3817472,19168984
+go=go1.27.1 target=windows/amd64 mode=cache fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403352,843776,8126464,4243456,21640304
+1,1,2,403752,851968,8126464,4538368,24120104
+2,0,2,403384,843776,8126464,4407296,26606968
+go=go1.27.1 target=windows/amd64 mode=churn fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403400,860160,8126464,3719168,29123864
+1,0,2,403400,860160,8126464,4046848,31645648
+2,0,2,403400,860160,8126464,3997696,34158480
+go=go1.27.1 target=windows/amd64 mode=churn fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403400,851968,8126464,4030464,36680232
+1,0,2,403400,851968,8126464,3850240,39201272
+2,0,2,403400,851968,8126464,3850240,41730024
+go=go1.27.1 target=windows/amd64 mode=goroutine fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403400,843776,8126464,3907584,44266424
+1,0,3,404472,843776,8093696,4251648,46813088
+2,0,2,404104,843776,8093696,4259840,49385128
+go=go1.27.1 target=windows/amd64 mode=goroutine fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403992,851968,8093696,3735552,51964392
+1,0,2,404584,868352,8093696,3661824,54547752
+2,0,2,404104,851968,8093696,4030464,57118848
+go=go1.27.1 target=windows/amd64 mode=ticker fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403992,843776,8093696,3842048,59698368
+1,0,3,405024,860160,8093696,4014080,62279528
+2,0,2,404360,851968,8093696,4800512,64889976
+go=go1.27.1 target=windows/amd64 mode=ticker fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,404248,851968,8093696,4218880,67510624
+1,0,2,405768,851968,8093696,4120576,70131760
+2,0,2,405288,851968,8093696,3735552,72758368
+go=go1.27.1 target=windows/amd64 mode=context fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,405176,851968,8093696,4202496,75392440
+1,0,2,405800,876544,8093696,3522560,78019288
+2,0,2,405288,851968,8093696,4046848,80653984
+go=go1.27.1 target=windows/amd64 mode=context fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,405176,860160,8093696,3743744,83295520
+1,0,2,405560,876544,8093696,3989504,85936144
+2,0,2,405304,860160,8093696,3719168,88599008
+--- PASS: TestAllFixturesWriteProfilesAndCleanUp (1.08s)
+PASS
+ok      example.com/golang-master/part10-resource-retention/cmd/investigate 1.659s
+=== RUN   TestPrefixOwnership
+--- PASS: TestPrefixOwnership (0.00s)
+=== RUN   TestCacheBoundAndOwnership
+--- PASS: TestCacheBoundAndOwnership (0.00s)
+=== RUN   TestBaselineCacheKeepsEveryDistinctKey
+--- PASS: TestBaselineCacheKeepsEveryDistinctKey (0.00s)
+=== RUN   TestWaitHonorsCancellationAndInput
+--- PASS: TestWaitHonorsCancellationAndInput (0.00s)
+=== RUN   TestBaselineReceiveNeedsRescue
+--- PASS: TestBaselineReceiveNeedsRescue (0.00s)
+=== RUN   TestTickerStopIsNotWorkerShutdown
+--- PASS: TestTickerStopIsNotWorkerShutdown (0.00s)
+=== RUN   TestTickerLoopHonorsCancellation
+--- PASS: TestTickerLoopHonorsCancellation (0.00s)
+=== RUN   TestCancellationDoesNotKillNoncooperativeCallback
+--- PASS: TestCancellationDoesNotKillNoncooperativeCallback (0.00s)
+=== RUN   TestCooperativeCallbackFinishes
+--- PASS: TestCooperativeCallbackFinishes (0.00s)
+=== RUN   TestTimeoutResourceLifecycle
+--- PASS: TestTimeoutResourceLifecycle (0.00s)
+=== RUN   TestTimeoutErrorPathCancelsChild
+--- PASS: TestTimeoutErrorPathCancelsChild (0.00s)
+=== RUN   TestChildUsesEarlierParentDeadline
+--- PASS: TestChildUsesEarlierParentDeadline (0.00s)
+PASS
+ok      example.com/golang-master/part10-resource-retention/fixed   0.572s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part10-resource-retention:vet] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part10-resource-retention:race] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+?       example.com/golang-master/part10-resource-retention/baseline    [no test files]
+ok      example.com/golang-master/part10-resource-retention/cmd/investigate 3.516s
+ok      example.com/golang-master/part10-resource-retention/fixed   1.910s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part11-request-path:repeat] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "-v", "./identity"]
+environment={}
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1816/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1829/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1842/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1855/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1868/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1881/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1894/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1907/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1920/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1933/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1946/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1959/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1972/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1985/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:1998/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2011/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2024/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2037/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.02s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2050/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:2063/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+PASS
+ok      example.com/golang-master/part11-request-path/identity  2.620s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[labs/part13-transaction-boundary:repeat] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "-v", "./outbox"]
+environment={}
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (1.00s)
+    --- PASS: TestRecoveryWindows/before_commit (0.73s)
+    --- PASS: TestRecoveryWindows/after_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_send (0.16s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.42s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.14s)
+    --- PASS: TestRecoveryWindows/after_send (0.15s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.38s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.11s)
+    --- PASS: TestRecoveryWindows/after_send (0.15s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.37s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.37s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.37s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.11s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.02s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.02s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.37s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.15s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.35s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.01s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.37s)
+    --- PASS: TestRecoveryWindows/before_commit (0.14s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.38s)
+    --- PASS: TestRecoveryWindows/before_commit (0.14s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.15s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.35s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.38s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.16s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.35s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.14s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.12s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.36s)
+    --- PASS: TestRecoveryWindows/before_commit (0.13s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.02s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+PASS
+ok      example.com/golang-master/part13-transaction-boundary/outbox    11.047s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[projects/opsprobe:repeat] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "-v", "./failurelab"]
+environment={"RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.01s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=529500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1041400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100983200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=2734500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1331200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=917700 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.12s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.01s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=19 elapsed=202.7006ms throughput=93.73/s p50_ns=743500 p95_ns=100751000 timeout_rate=0.3684 failure_rate=0.3158 rejection_rate=0.7031 outcomes=map[failure:6 success:6 timeout:7] stats={Accepted:19 Rejected:45 Completed:19 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1585128 after=2037648 total_alloc_delta=452520
+--- PASS: TestBoundedWorkloadObservation (0.20s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=1190000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1569900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100826500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1224300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=906700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1074800 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=203.3394ms throughput=78.69/s p50_ns=1440400 p95_ns=101205700 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1921216 after=2274440 total_alloc_delta=353224
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=544200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=535500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100678900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1119800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1191500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1025800 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=204.185ms throughput=97.95/s p50_ns=1003200 p95_ns=100946600 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=2182464 after=1236280 total_alloc_delta=513376
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=1148100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=614800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100259900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1057800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=546600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1081800 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=203.5721ms throughput=98.25/s p50_ns=866400 p95_ns=100769900 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=13 heap_before=2121280 after=1299224 total_alloc_delta=521488
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=570100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1332200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=101229800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=2186000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1301000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=613400 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=204.8859ms throughput=82.97/s p50_ns=989300 p95_ns=104043100 timeout_rate=0.2941 failure_rate=0.2941 rejection_rate=0.7344 outcomes=map[failure:5 success:7 timeout:5] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1987792 after=1100032 total_alloc_delta=397960
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=539300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=622800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100956200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1337100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1432900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=841400 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=204.0729ms throughput=83.30/s p50_ns=1542600 p95_ns=102133700 timeout_rate=0.3529 failure_rate=0.2941 rejection_rate=0.7344 outcomes=map[failure:5 success:6 timeout:6] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1809200 after=2202512 total_alloc_delta=393312
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=1042500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1226600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100914600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=564500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1064200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1131800 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=18 elapsed=202.2976ms throughput=88.98/s p50_ns=1042100 p95_ns=100900300 timeout_rate=0.3333 failure_rate=0.3333 rejection_rate=0.7188 outcomes=map[failure:6 success:6 timeout:6] stats={Accepted:18 Rejected:46 Completed:18 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2019600 after=1114880 total_alloc_delta=408680
+--- PASS: TestBoundedWorkloadObservation (0.20s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=590100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1098300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100317000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=538800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=525600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=531400 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=202.9673ms throughput=83.76/s p50_ns=540400 p95_ns=100978700 timeout_rate=0.2941 failure_rate=0.3529 rejection_rate=0.7344 outcomes=map[failure:6 success:6 timeout:5] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1343856 after=1724856 total_alloc_delta=381000
+--- PASS: TestBoundedWorkloadObservation (0.20s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=536200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=578600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100333500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1077200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=432900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=566900 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=202.4394ms throughput=98.79/s p50_ns=508600 p95_ns=101979000 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=9 heap_before=1739088 after=2115512 total_alloc_delta=376424
+--- PASS: TestBoundedWorkloadObservation (0.20s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=533200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=663600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100628500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1733600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=592500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=616800 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=206.8005ms throughput=96.71/s p50_ns=720800 p95_ns=102741400 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2091336 after=2473512 total_alloc_delta=382176
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=554100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=453000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100821200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1158400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=791200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1089400 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=18 elapsed=202.9375ms throughput=88.70/s p50_ns=798500 p95_ns=101194500 timeout_rate=0.2778 failure_rate=0.3889 rejection_rate=0.7188 outcomes=map[failure:7 success:6 timeout:5] stats={Accepted:18 Rejected:46 Completed:18 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2319464 after=1205392 total_alloc_delta=433224
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=532700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=981700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100604200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1242300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1079400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=562600 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=205.3305ms throughput=77.92/s p50_ns=1203700 p95_ns=102358800 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=1904560 after=2243040 total_alloc_delta=338480
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=537100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=545300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=101081500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1607400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=671600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1148500 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=207.9016ms throughput=81.77/s p50_ns=989700 p95_ns=106520700 timeout_rate=0.2941 failure_rate=0.3529 rejection_rate=0.7344 outcomes=map[failure:6 success:6 timeout:5] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1726600 after=2121256 total_alloc_delta=394656
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=1110700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1107300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100917900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1863500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=2022100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=600100 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=206.218ms throughput=77.59/s p50_ns=1696800 p95_ns=104030600 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1589688 after=1979704 total_alloc_delta=390016
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=552000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1246900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100355000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=684000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1144700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=576300 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=207.1928ms throughput=96.53/s p50_ns=1401400 p95_ns=101602800 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2102408 after=1277904 total_alloc_delta=458960
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=707200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=601900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100437700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1134900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1105500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1172000 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=203.8807ms throughput=78.48/s p50_ns=1265300 p95_ns=101091200 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2269040 after=1393312 total_alloc_delta=418840
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=664500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=1279500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=101320200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1774000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=913400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=558900 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.12s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=204.0967ms throughput=78.39/s p50_ns=835700 p95_ns=101192200 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2131720 after=1391880 total_alloc_delta=391648
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=1079500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=534800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=101011700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1438900 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1234600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=1625900 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.12s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=18 elapsed=203.9072ms throughput=88.28/s p50_ns=844100 p95_ns=101364800 timeout_rate=0.2778 failure_rate=0.3889 rejection_rate=0.7188 outcomes=map[failure:7 success:6 timeout:5] stats={Accepted:18 Rejected:46 Completed:18 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2243736 after=1479464 total_alloc_delta=495240
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=556300 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=930700 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100778600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1110200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1208000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=704400 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=202.102ms throughput=79.17/s p50_ns=883000 p95_ns=101313700 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=12 heap_before=2384376 after=2733624 total_alloc_delta=349248
+--- PASS: TestBoundedWorkloadObservation (0.20s)
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.00s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:147: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=636500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=628600 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=101001000 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=1106800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1102400 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:243: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=673700 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:279: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=16 elapsed=203.4868ms throughput=78.63/s p50_ns=1415400 p95_ns=101301000 timeout_rate=0.3125 failure_rate=0.3125 rejection_rate=0.7500 outcomes=map[failure:5 success:6 timeout:5] stats={Accepted:16 Rejected:48 Completed:16 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=2495000 after=1330240 total_alloc_delta=392472
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+PASS
+ok      example.com/golang-master/projects/opsprobe/failurelab  9.141s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[bounded_load_race_repeat] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=20", "-timeout=120s", "-run", "^TestBoundedWorkloadObservation$", "-v", "./failurelab"]
+environment={"RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=210.2201ms throughput=95.14/s p50_ns=3125100 p95_ns=101408300 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1632888 after=960824 total_alloc_delta=665112
+--- PASS: TestBoundedWorkloadObservation (0.23s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=209.2041ms throughput=95.60/s p50_ns=1176800 p95_ns=101725700 timeout_rate=0.3500 failure_rate=0.3000 rejection_rate=0.6875 outcomes=map[failure:6 success:7 timeout:7] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=1521312 after=2042328 total_alloc_delta=521016
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=204.7141ms throughput=97.70/s p50_ns=1195400 p95_ns=100457100 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=2502760 after=1312512 total_alloc_delta=532992
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=205.9443ms throughput=97.11/s p50_ns=1129900 p95_ns=100649800 timeout_rate=0.3500 failure_rate=0.3000 rejection_rate=0.6875 outcomes=map[failure:6 success:7 timeout:7] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=5 heap_before=1774264 after=2237360 total_alloc_delta=463096
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=205.9723ms throughput=97.10/s p50_ns=1662800 p95_ns=100545400 timeout_rate=0.3500 failure_rate=0.3000 rejection_rate=0.6875 outcomes=map[failure:6 success:7 timeout:7] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=5 heap_before=2683760 after=1360680 total_alloc_delta=528688
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=202.729ms throughput=83.86/s p50_ns=1396100 p95_ns=100895800 timeout_rate=0.2941 failure_rate=0.3529 rejection_rate=0.7344 outcomes=map[failure:6 success:6 timeout:5] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1804856 after=1118048 total_alloc_delta=468344
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=204.7873ms throughput=97.66/s p50_ns=927900 p95_ns=100579500 timeout_rate=0.3500 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:6 timeout:7] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=7 heap_before=1457824 after=1970368 total_alloc_delta=512544
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=204.539ms throughput=97.78/s p50_ns=1357600 p95_ns=100331800 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=7 heap_before=2417600 after=1363360 total_alloc_delta=503568
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=204.4323ms throughput=97.83/s p50_ns=837900 p95_ns=100449300 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1827160 after=2241992 total_alloc_delta=414832
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=207.056ms throughput=96.59/s p50_ns=1527900 p95_ns=100828900 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=2710088 after=1405896 total_alloc_delta=547136
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=207.5753ms throughput=96.35/s p50_ns=1224800 p95_ns=101220200 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1867192 after=1368616 total_alloc_delta=546688
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=19 elapsed=206.604ms throughput=91.96/s p50_ns=1448500 p95_ns=101838500 timeout_rate=0.3158 failure_rate=0.3158 rejection_rate=0.7031 outcomes=map[failure:6 success:7 timeout:6] stats={Accepted:19 Rejected:45 Completed:19 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=1835056 after=1349360 total_alloc_delta=540680
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=206.1902ms throughput=97.00/s p50_ns=1864200 p95_ns=100754000 timeout_rate=0.2500 failure_rate=0.4000 rejection_rate=0.6875 outcomes=map[failure:8 success:7 timeout:5] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=12 heap_before=1792720 after=1356248 total_alloc_delta=608952
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=17 elapsed=205.7272ms throughput=82.63/s p50_ns=1705000 p95_ns=101989200 timeout_rate=0.2941 failure_rate=0.2941 rejection_rate=0.7344 outcomes=map[failure:5 success:7 timeout:5] stats={Accepted:17 Rejected:47 Completed:17 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1819352 after=1278120 total_alloc_delta=461504
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=208.1892ms throughput=96.07/s p50_ns=1454200 p95_ns=100957100 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1604240 after=1230456 total_alloc_delta=517768
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=205.857ms throughput=97.15/s p50_ns=1323200 p95_ns=101105300 timeout_rate=0.2500 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:8 timeout:5] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=1674072 after=1326872 total_alloc_delta=516712
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=18 elapsed=209.4365ms throughput=85.94/s p50_ns=1618500 p95_ns=101667800 timeout_rate=0.3333 failure_rate=0.3333 rejection_rate=0.7188 outcomes=map[failure:6 success:6 timeout:6] stats={Accepted:18 Rejected:46 Completed:18 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=8 heap_before=1787744 after=1132672 total_alloc_delta=458576
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=206.3191ms throughput=96.94/s p50_ns=1781200 p95_ns=101271000 timeout_rate=0.3000 failure_rate=0.3000 rejection_rate=0.6875 outcomes=map[failure:6 success:8 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1580792 after=1148520 total_alloc_delta=519488
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=209.7737ms throughput=95.34/s p50_ns=1762900 p95_ns=101499100 timeout_rate=0.3500 failure_rate=0.2500 rejection_rate=0.6875 outcomes=map[failure:5 success:8 timeout:7] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=7 heap_before=1612200 after=1137464 total_alloc_delta=539248
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:425: attempts=64 completed=20 elapsed=206.0297ms throughput=97.07/s p50_ns=1640500 p95_ns=101047800 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=10 heap_before=1589648 after=2102232 total_alloc_delta=512584
+--- PASS: TestBoundedWorkloadObservation (0.22s)
+PASS
+ok      example.com/golang-master/projects/opsprobe/failurelab  8.937s
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[EXPECTED_FAILURE:split_commit] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=30s", "-run", "^TestOutboxContract$", "-v", "./outbox"]
+environment={"RELIABILITY_MUTANT": "split_commit", "RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:215: committed business requires pending event: {Total:7 Pending:0 Completed:0 Operations:1 Received:0}
+--- FAIL: TestOutboxContract (0.64s)
+FAIL
+FAIL    example.com/golang-master/part13-transaction-boundary/outbox    1.882s
+FAIL
+capture_error=None exit_code=1 result=EXPECTED_FAILURE accepted=True
+
+[EXPECTED_FAILURE:uncancellable_send] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=30s", "-run", "^TestConsumerStopsContract$", "-v", "./failurelab"]
+environment={"RELIABILITY_MUTANT": "uncancellable_send", "RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestConsumerStopsContract
+    runner_test.go:142: contract: cancellation must release result handoff
+--- FAIL: TestConsumerStopsContract (1.01s)
+FAIL
+FAIL    example.com/golang-master/projects/opsprobe/failurelab  3.656s
+FAIL
+capture_error=None exit_code=1 result=EXPECTED_FAILURE accepted=True
+
+[EXPECTED_FAILURE:trust_equals_role] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=30s", "-run", "^TestAuthorizationContract$", "-v", "./identity"]
+environment={"RELIABILITY_MUTANT": "trust_equals_role", "RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestAuthorizationContract
+    identity_test.go:205: authenticated caller "urn:go-book:reader" unauthorized: status=200 err=<nil> effects=1
+--- FAIL: TestAuthorizationContract (0.01s)
+FAIL
+FAIL    example.com/golang-master/part11-request-path/identity  1.936s
+FAIL
+capture_error=None exit_code=1 result=EXPECTED_FAILURE accepted=True
+
+[EXPECTED_FAILURE:lost_completion_count] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=30s", "-run", "^TestBoundedWorkloadObservation$", "-v", "./failurelab"]
+environment={"RELIABILITY_MUTANT": "lost_completion_count", "RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:400: workload completion accounting: completed+dropped=19 accepted=20 stats={Accepted:20 Rejected:44 Completed:19 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16}
+--- FAIL: TestBoundedWorkloadObservation (0.23s)
+FAIL
+FAIL    example.com/golang-master/projects/opsprobe/failurelab  2.907s
+FAIL
+capture_error=None exit_code=1 result=EXPECTED_FAILURE accepted=True
+
+[real_api_host_prerequisite] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-tags", "integration", "-count=1", "-v", "./integration"]
+environment={}
+=== RUN   TestFakeDoesNotProveGeneration
+    fake_limit_test.go:28: MOCK_VERIFIED fake Update retains generation=1; this does not validate API-server generation semantics
+--- PASS: TestFakeDoesNotProveGeneration (0.08s)
+=== RUN   TestRealAPIContract
+    unavailable_test.go:8: NOT_RUN: pinned envtest requires Linux; run with Kubernetes 1.37.x assets in WSL/Linux
+--- SKIP: TestRealAPIContract (0.00s)
+PASS
+ok      example.com/golang-master/part23-controller-runtime-operator/integration    3.556s
+capture_error=None exit_code=0 result=NOT_RUN accepted=True
+
+[linux_integration_compile_ONLY] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-tags", "integration", "-c", "-o", "D:\\Golang\\.workspace\\reliability-envtest.test", "./integration"]
+environment={"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}
+
+capture_error=None exit_code=0 result=COMPILE_ONLY accepted=True
+
+[envtest_verified_extract] cwd=.
+command=["wsl", "-d", "Ubuntu-24.04", "--exec", "sh", "-lc", "cd /mnt/d/Golang/.tools/reliability-envtest-1.37.0 && tar -xzf envtest-v1.37.0-linux-amd64.tar.gz --no-same-owner"]
+environment={}
+
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[envtest_version:kube-apiserver] cwd=.
+command=["wsl", "-d", "Ubuntu-24.04", "--exec", "/mnt/d/Golang/.tools/reliability-envtest-1.37.0/controller-tools/envtest/kube-apiserver", "--version"]
+environment={}
+Kubernetes v1.37.0
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[envtest_version:etcd] cwd=.
+command=["wsl", "-d", "Ubuntu-24.04", "--exec", "/mnt/d/Golang/.tools/reliability-envtest-1.37.0/controller-tools/envtest/etcd", "--version"]
+environment={}
+etcd Version: 3.7.0
+Git SHA: 4d71f7c
+Go Version: go1.26.5
+Go OS/Arch: linux/amd64
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[real_api_contract] cwd=.
+command=["wsl", "-d", "Ubuntu-24.04", "--exec", "sh", "-lc", "cd /mnt/d/Golang/labs/part23-controller-runtime-operator/integration && env -u TEST_ASSET_KUBE_APISERVER -u TEST_ASSET_ETCD -u TEST_ASSET_KUBECTL -u KUBECONFIG -u RELIABILITY_MUTANT KUBEBUILDER_ASSETS=/mnt/d/Golang/.tools/reliability-envtest-1.37.0/controller-tools/envtest USE_EXISTING_CLUSTER=false /mnt/d/Golang/.workspace/reliability-envtest.test '-test.run=^TestRealAPIContract$' -test.v -test.timeout=120s"]
+environment={}
+=== RUN   TestRealAPIContract
+    api_contract_test.go:122: INTEGRATION_TESTED owned real API: status isolation, generation 1->2, observedGeneration remains 1, stale resourceVersion rejected
+--- PASS: TestRealAPIContract (15.82s)
+PASS
+capture_error=None exit_code=0 result=PASS accepted=True
+
+[EXPECTED_FAILURE:root_status_write] cwd=.
+command=["wsl", "-d", "Ubuntu-24.04", "--exec", "sh", "-lc", "cd /mnt/d/Golang/labs/part23-controller-runtime-operator/integration && env -u TEST_ASSET_KUBE_APISERVER -u TEST_ASSET_ETCD -u TEST_ASSET_KUBECTL -u KUBECONFIG -u RELIABILITY_MUTANT KUBEBUILDER_ASSETS=/mnt/d/Golang/.tools/reliability-envtest-1.37.0/controller-tools/envtest USE_EXISTING_CLUSTER=false RELIABILITY_MUTANT=root_status_write /mnt/d/Golang/.workspace/reliability-envtest.test '-test.run=^TestRealAPIContract$' -test.v -test.timeout=120s"]
+environment={}
+=== RUN   TestRealAPIContract
+    api_contract_test.go:102: status writer contract: &{TypeMeta:{Kind: APIVersion:} ObjectMeta:{Name:reliability-contract GenerateName: Namespace:default SelfLink: UID:ea87f50d-1582-437f-8c86-fc65f33b94f9 ResourceVersion:220 Generation:2 CreationTimestamp:2026-10-09 08:31:12 +0700 +07 DeletionTimestamp:<nil> DeletionGracePeriodSeconds:<nil> Labels:map[stage:root-update] Annotations:map[] OwnerReferences:[] Finalizers:[] ManagedFields:[{Manager:reliability-envtest.test Operation:Update APIVersion:apps.example.com/v1alpha1 Time:2026-10-09 08:31:12 +0700 +07 FieldsType:FieldsV1 FieldsV1:{"f:metadata":{"f:labels":{".":{},"f:stage":{}}},"f:spec":{".":{},"f:image":{},"f:port":{},"f:replicas":{}}} Subresource:}]} Spec:{Image:forged-spec Replicas:1 Port:8080} Status:{AvailableReplicas:0 Phase: ObservedGeneration:0 Conditions:[]}}
+--- FAIL: TestRealAPIContract (17.11s)
+FAIL
+capture_error=None exit_code=1 result=EXPECTED_FAILURE accepted=True

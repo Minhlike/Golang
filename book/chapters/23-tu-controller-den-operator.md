@@ -306,6 +306,26 @@ Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Re
 
 ---
 
+### Đặt cùng assertion trước API server thật
+
+Fake client ở trên cho phép kiểm tra reconciler đã gọi đúng đường ghi và xử lý các object của fixture. Nó không phải một API server thu nhỏ. `TestFakeDoesNotProveGeneration` trong thư mục `integration` đổi spec mà generation vẫn là 1 trên fake của `controller-runtime v0.25.1`. Đừng sửa số ấy thành 2 bằng test helper rồi gọi đó là bằng chứng Kubernetes tự tăng generation.
+
+Thử một contract cụ thể: status subresource phải tách đường ghi mong muốn khỏi đường ghi quan sát. Test `TestRealAPIContract` nạp CRD có structural schema và `subresources.status` vào một control plane `envtest` riêng. Nó không đọc kubeconfig của anh và không sửa cluster từ Chương 17. Sau create, status tự khai bị bỏ; root `Update` không ghi được status; `Status().Update` không đổi được spec. Spec update tăng generation từ 1 lên 2, còn observedGeneration vẫn 1 cho tới khi controller báo quan sát mới. Cuối cùng, status writer dùng resourceVersion cũ phải nhận conflict thay vì ghi đè observation mới.
+
+~~~bash
+# Từ module labs/part23-controller-runtime-operator
+export KUBEBUILDER_ASSETS=/path/to/k8s-1.37-assets
+go test -tags integration -count=1 -v ./integration
+~~~
+
+Đường thực thi này cần Linux/WSL và các binary `kube-apiserver`, `etcd` tương thích Kubernetes 1.37.x; dependency của lab đã ghim API v0.37.0. Môi trường Windows hiện tại chưa có assets đó, nên kiểm định API thật là `NOT_RUN`, không phải PASS. Test fake chạy được và việc biên dịch test cho Linux chỉ kiểm tra mã dùng đúng API thư viện. Khi tái lập trên Linux đủ prerequisite, hãy đọc output của chính test, không dùng kết quả compile làm chứng nhận integration.
+
+**Dừng trước đáp án.** Nếu thay `Status().Update` bằng `Update`, test nào phải bắt được lỗi dù request không trả error? Chạy lại với `RELIABILITY_MUTANT=root_status_write` trên môi trường đủ assets; assertion của đường status phải đỏ. Đây là biến thể được chuẩn bị cho integration, chưa được ghi đã chạy ở máy thiếu control plane.
+
+**Đáp án.** Root endpoint có thể chấp nhận request nhưng bỏ status, đồng thời chấp nhận spec mà code vô tình mang theo. Test đọc object lại bằng client không cache, kiểm tra cả phase, image và generation. Chỉ kiểm tra `err == nil` sẽ bỏ lọt việc ghi sai endpoint. Khi gặp conflict thật, reconciler phải đọc observation mới rồi tính lại thay đổi; ghi cùng object cũ nhiều lần không phải một cách sửa conflict.
+
+`envtest` chạy API server và etcd, không chạy kubelet, scheduler hay garbage collector. Vì vậy test này không chứng minh Pod ready, owner reference đã thu hồi child hay external finalizer đã dọn cloud. Tách contract API khỏi vòng điều hòa và khỏi workload thật giúp ta biết chính xác bằng chứng còn thiếu ở đâu.
+
 ## 8. Các cạm bẫy người học thường gặp (Learner Pitfalls)
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |

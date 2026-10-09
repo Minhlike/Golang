@@ -104,6 +104,36 @@ cancelApp()
 
 Đó là một policy khác với graceful drain thuần túy: handler nào quan sát context có thể dừng trước khi hoàn tất công việc đang phục vụ. Chọn nó khi bounded shutdown đáng giá hơn việc để request đang chạy hoàn thành. Trên Windows, `os.Interrupt` là signal portable; service host và process supervisor phải được kiểm chứng theo môi trường triển khai trước khi giả định `SIGTERM` có cùng đường đi.
 
+## Operation đã xong nhưng context con vẫn còn sống
+
+Một handler đã trả kết quả không đồng nghĩa mọi tài nguyên nó tạo đều được trả đúng lúc. Trong lab `part10-resource-retention`, `DoTimeout` tạo child có deadline một giờ dưới một parent có thể hủy nhưng sống lâu. Callback trả về ngay. Anh đoán child sẽ hết hạn cùng callback, cùng handler, hay theo đường hủy của chính context? Context không biết callback đã làm xong. Nếu owner bỏ quên CancelFunc, child chưa bị hủy chỉ vì hàm return.
+
+Theo contract của `context`, gọi cancel hủy child cùng các descendant, bỏ quan hệ giữ child từ parent và dừng timer liên quan. Trong source Go 1.27.1, `cancelCtx.propagateCancel` đăng ký child trong tập `children` của parent phù hợp; `timerCtx.cancel` tháo quan hệ đó và dừng timer. Đây là cách triển khai kiểm chứng trên version này, không phải field để application truy cập. Parent còn sống, deadline còn xa và không ai cancel là đủ để thí nghiệm giữ các child ngoài thời gian operation cần chúng. GC không thay được quyết định kết thúc này.
+
+Đặt trách nhiệm dọn dẹp ngay tại nơi sở hữu một lần gọi:
+
+~~~go
+func DoTimeout(
+    parent context.Context,
+    budget time.Duration,
+    work func(context.Context) error,
+) error {
+    ctx, cancel := context.WithTimeout(parent, budget)
+    defer cancel()
+    return work(ctx)
+}
+~~~
+
+`defer` bảo vệ cả đường thành công lẫn error. Nếu tạo nhiều child trong một vòng lặp của hàm sống suốt service rồi defer mọi cancel ở hàm ngoài, việc dọn dẹp bị đẩy tới lúc service kết thúc. Tách mỗi operation thành hàm có scope ngắn như trên, hoặc cancel ở đúng cuối từng vòng và mọi đường thoát. Cũng đừng trả child ra cho công việc còn chạy rồi cancel ngay khi hàm tạo nó return: cần bàn giao CancelFunc và trách nhiệm chờ hoàn tất cho owner mới, không áp dụng defer một cách máy móc.
+
+Test lab ghi nhận child mà callback đã nhận. Sau bản sửa trả về, `child.Err()` là `context.Canceled`; sau bản lỗi, child vẫn chưa có error, rồi nhận cancellation khi test hủy parent. Một test khác dùng deadline đã qua để xác nhận child có thể tự hết hạn dù owner quên cancel. Các test kiểm tra lifecycle công khai, không đọc field nội bộ hay đòi một mức giảm RAM.
+
+`go vet` phát hiện trường hợp phổ biến như bỏ CancelFunc bằng `_`; fixture `testdata/lostcancel` cố ý cho diagnostic ấy. Nhưng bản lỗi chuyển cancel cho hàm `ForgetCancel` không làm gì: kiểm tra cục bộ có thể xem trách nhiệm đã được bàn giao trong khi thực tế không ai thực hiện. Vì vậy vet sạch chưa chứng minh ownership đúng. Đọc đường gọi và test thời điểm child kết thúc là hai bằng chứng bổ sung cần thiết.
+
+Không phải mọi lần thiếu cancel đều là leak vĩnh viễn. Parent được hủy hoặc deadline đến thì child cũng kết thúc; với `WithCancel(context.Background())` không có timer hay parent đăng ký child, bỏ mọi reference tới child không tự tạo một chuỗi giữ từ parent như fixture này. Một child có value lớn, descendant, timer hoặc công việc đang chờ có chi phí khác với child nhỏ. Cần xác định đường giữ cụ thể và thời gian bị giữ thừa. CancelFunc cũng không chờ callback ngừng: câu hỏi chờ `done` của Chương 9 vẫn còn nguyên.
+
+Incoming `r.Context()` do HTTP server sở hữu; handler không nhận CancelFunc để tự hủy context gốc ấy. Handler chịu trách nhiệm cho child nó tạo để gọi downstream. Policy hủy active request khi process shutdown vẫn là quyết định riêng đã nêu ở trên, không được dùng thiếu cancel trong một operation để sửa sai mental model về `Server.Shutdown`.
+
 ## Handler là cửa kiểm tra, không phải nơi “cố hiểu” input
 
 Trong lab, `POST /v1/checks` là một boundary nhỏ. Nó nhận JSON chỉ có `target`, chấp nhận `http` hoặc `https` với host không rỗng, chuyển value hợp lệ sang `Store`, và không tiết lộ lỗi nội bộ của store cho client. Lab chưa thực hiện probe outbound: đó sẽ là một quyết định có rủi ro SSRF và quota, nên không được lén nhét vào một handler minh họa.
@@ -207,3 +237,6 @@ Service đáng tin được đánh giá ở boundary: input bị giới hạn �
 2. Go Team. Package `net/http/httptest`, phần `ResponseRecorder` và test server. pkg.go.dev/net/http/httptest
 3. Go Team. Package `os/signal`, phần `NotifyContext`. pkg.go.dev/os/signal
 4. Go Team. Security Best Practices for Go Developers. go.dev/doc/security/best-practices
+5. Go Team. Package `context`, Overview và `WithTimeout`, Go 1.27.1. pkg.go.dev/context@go1.27.1#WithTimeout
+6. Go Team. Source `context/context.go`, `cancelCtx.propagateCancel` và `timerCtx.cancel`, tag go1.27.1. github.com/golang/go/blob/go1.27.1/src/context/context.go
+7. Go Team. Analyzer `lostcancel`, kiểm tra CancelFunc và giới hạn phân tích tại lời gọi. pkg.go.dev/golang.org/x/tools/go/analysis/passes/lostcancel
