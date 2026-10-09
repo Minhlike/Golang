@@ -188,20 +188,24 @@ Gọi lệnh `Commit()` hoặc `Rollback()` trên một transaction cơ sở d�
 
 ### D01 `context canceled`
 Context bị hủy bởi `cancel()`, context cha bị hủy hoặc lifecycle của operation kết thúc.
+! Operation return không tự cancel child do nó tạo. Kiểm tra ai sở hữu CancelFunc; parent sống lâu và timer chưa hết có thể giữ child ngoài nhu cầu. `go vet` sạch không chứng minh mọi đường bàn giao cancel đều đúng. [Ch12]
 ! `http.Server.Shutdown` không tự hủy context của active request. Muốn signal dừng process hủy handler phải truyền application context có chủ đích; policy ấy có thể làm gián đoạn graceful drain.
 → Cho operation quan sát cancellation, dọn tài nguyên rồi trả kết quả theo contract caller. `OutcomeCancel` là phân loại của opsprobe; HTTP 499 là quy ước phi chuẩn của một số hệ thống, không phải status bắt buộc của Go server. [Ch4,11,12,20]
 
 ### D02 `context deadline exceeded`
 Tác vụ không hoàn thành trong khoảng thời gian timeout hoặc trước mốc thời gian deadline đã ấn định (`context.DeadlineExceeded`).
+! Deadline có thể giải phóng quan hệ context/timer, nhưng không giết goroutine không quan sát context. Đối chiếu tín hiệu hoàn tất với stack chờ, không chỉ `ctx.Err()`. [Ch9,10,12]
 ! Client bị timeout không có nghĩa là downstream service đã ngừng xử lý; kết nối có thể vẫn đang chạy ngầm gây nghẽn.
 → Xác định nơi khởi tạo deadline (`WithTimeout`), đo lường độ trễ từng phân đoạn và điều chỉnh timeout hợp lý. [Ch4,11,12,20]
 
 ### D03 Client Disconnect During Body Read
 Client ngắt kết nối khi handler đang đọc `req.Body`. Lỗi đọc tùy đường kết nối và trạng thái body; không bảo đảm luôn là `context.Canceled`. Incoming request context bị hủy khi kết nối đóng, request bị hủy trên HTTP/2 hoặc `ServeHTTP` kết thúc.
+! Hủy incoming context không chứng minh công việc dùng context tách rời như `Background` đã kết thúc. Tìm đường tạo child và owner của công việc chạy nền. [Ch12]
 → Kiểm tra `r.Context().Done()` hoặc `errors.Is(err, context.Canceled)` trong các tác vụ đọc stream để kịp thời giải phóng CPU và buffer. [Ch11,12,20]
 
 ### D04 Server Graceful Shutdown Timeout
 Phương thức `server.Shutdown(ctx)` chạm mốc timeout của context truyền vào trước khi toàn bộ các kết nối HTTP đang hoạt động được đóng mềm mại, trả về `context.DeadlineExceeded`.
+! Khi drain hết ngân sách, mở goroutine dump tìm handler/downstream chưa trả về và đường join của owner. Gọi cancel không đồng nghĩa đã chờ công việc dừng. [Ch9,10,12]
 → Điều tra request còn chạy và ngân sách drain. Context truyền cho `Shutdown` giới hạn thời gian chờ, không tự trở thành context của handler; kiểm tra policy hủy request riêng. [Ch12,20]
 
 ---
@@ -339,6 +343,8 @@ Go race detector (`go test -race` / `go run -race`) phát hiện các truy cập
 
 ### H03 Goroutine Leak
 Goroutine không kết thúc vì không còn đường thoát khỏi chờ channel, lock hoặc I/O. Context chỉ hữu ích nếu operation thực sự quan sát cancellation.
+! Loop nền vẫn chạy định kỳ cũng có thể vượt lifecycle của owner. `Ticker.Stop` không đóng channel hoặc kết thúc reader; với cơ chế timer mới từ Go 1.23, ticker không còn tham chiếu có thể được GC thu hồi, không phải mọi lần thiếu Stop đều là leak. [Ch9]
+→ So số goroutine qua các chu kỳ với dump/profile, xác nhận receive/loop/callback thiếu đường thoát trong source rồi chờ `done` sau sửa. Heap ổn không loại trừ lỗi vòng đời. [Ch9,10,12]
 ! Runtime không tự thu hồi một goroutine chỉ vì nó bị block; những reference còn sống có thể giữ dữ liệu. Go 1.27 có profile `goroutineleak` cho một lớp chờ không thể được đánh thức, không phải bộ phát hiện mọi leak hay cơ chế GC goroutine.
 → Xác định owner và đường thoát; truyền context/deadline tới API có hỗ trợ. Buffer chỉ đổi thời điểm block, không tự sửa leak. [Ch8,9,12,20]
 

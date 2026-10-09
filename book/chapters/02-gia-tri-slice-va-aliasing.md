@@ -183,6 +183,38 @@ copy sao chép tối đa số phần tử vừa với destination và trả về
 
 **Đáp án — chỉ đọc sau khi đã tự làm.** `preview := fields` chỉ copy slice descriptor, nên `preview[0]` vẫn sửa phần tử chung với `requestFields`. Bản đúng cần một backing array mới, chẳng hạn `make` rồi `copy`. Test phải giữ cả hai assertion: preview bị redacted và input không đổi; bỏ assertion thứ hai là bỏ mất contract ownership.
 
+## Một cửa sổ nhỏ giữ cả căn phòng
+
+Độc lập khi sửa dữ liệu chưa phải câu hỏi cuối cùng về ownership. Giả sử service nhận một buffer lớn, lấy 16 byte đầu làm mã nhận diện rồi giữ mã ấy trong lịch sử. Buffer không còn cần cho nghiệp vụ. Anh dự đoán: giới hạn cả length lẫn capacity xuống 16 có cho phép GC thu hồi phần còn lại không?
+
+~~~go
+buf := make([]byte, 4<<20)
+preview := buf[:16:16]
+fmt.Println(len(preview), cap(preview)) // 16 16
+~~~
+
+Hãy phân biệt ba câu hỏi. `len` cho biết bao nhiêu phần tử đang nằm trong cửa sổ; `cap` giới hạn cửa sổ có thể mở rộng tới đâu bằng reslice hoặc dùng lại storage khi append. Còn GC phải hỏi object nào vẫn được tham chiếu. `preview` vẫn dẫn tới underlying array của `buf`. Đối với allocation lớn trong thí nghiệm này, còn giữ cửa sổ là còn giữ object ấy, không phải chỉ 16 byte đầu. Biểu thức ba index thay quyền mở rộng, không chuyển quyền sở hữu sang một allocation độc lập.
+
+Ngay cả khi đặt `buf = nil`, nếu chương trình vẫn sử dụng `preview`, đường tham chiếu tới array còn tồn tại. Ngược lại, biến còn nằm trong phạm vi từ vựng không bảo đảm compiler coi nó còn sống đến cuối scope. Khi đo, ta cần giữ kết quả thực sự được dùng; lab ở Chương 10 dùng `runtime.KeepAlive` để bảo vệ ý đồ của thí nghiệm. Không suy ra số byte heap chính xác chỉ từ cú pháp `make`: vị trí cấp phát và cách tối ưu là chuyện phải quan sát trên đúng toolchain.
+
+Anh hãy mở `labs/part10-resource-retention/baseline/retention.go`, đọc `Prefix`, nhưng chưa đọc bản sửa. Viết test với hai yêu cầu: sửa prefix không đổi input, và prefix không dùng chung byte đầu với input khi độ dài khác zero. Bản ba index sẽ thất bại ở cả hai yêu cầu dù `cap(prefix) == len(prefix)`. Test ấy kiểm chứng sharing; profile sau nhiều chu kỳ mới cho thấy hệ quả về lượng bộ nhớ giữ lại.
+
+Nếu contract là trả về dữ liệu độc lập, lời giải trực tiếp đã nằm trong thao tác copy mà ta vừa học:
+
+~~~go
+func Prefix(buf []byte, n int) []byte {
+    out := make([]byte, n)
+    copy(out, buf[:n])
+    return out
+}
+~~~
+
+Tiền điều kiện ở đây là `0 <= n && n <= len(buf)`. Với prefix 16 byte, ta giữ 16 phần tử byte trong storage riêng thay vì kéo dài tuổi thọ của toàn bộ buffer đầu vào. Đây là copy các byte, không phải lời hứa giải phóng tức thì buffer cũ: nếu một alias khác còn giữ buffer, nó vẫn sống; nếu không, GC còn cần chạy. Chi phí cấp phát cũng đổi, nên chỉ copy ở boundary thật sự cần sở hữu độc lập, không rải copy để che mọi vấn đề.
+
+`bytes.Clone(buf[:n])` cũng phù hợp khi API làm việc với byte slice. `slices.Clone` dùng được với slice tổng quát nhưng là shallow copy: clone một `[]*Record` tạo storage mới cho các pointer, không clone những `Record` mà chúng trỏ tới. Hai hàm có contract về bản sao; không dùng capacity quan sát được của chúng làm bằng chứng về kích thước allocation. Bản `make` và `copy` trong lab cố ý đơn giản để ta kiểm tra ownership mà không phải học thêm generic API ở đây.
+
+Một view lớn sống lâu có thể hoàn toàn hợp lệ nếu caller vẫn cần toàn bộ dữ liệu. Trường hợp đáng sửa là tuổi thọ thực tế vượt nhu cầu của API: nghiệp vụ chỉ giữ một mã nhỏ nhưng implementation vô tình giữ cả buffer. Ta gọi đó là giữ bộ nhớ ngoài ý muốn, *memory retention*. GC không bị hỏng; contract về dữ liệu cần sống bao lâu đang bị implementation làm rộng hơn.
+
 ## String: bytes trước, text sau
 
 String cũng là value, nhưng nó có luật riêng: string là immutable sequence of bytes. len đếm byte; index trả về byte. Text thường là UTF-8, song Go không yêu cầu mọi string phải chứa UTF-8 hợp lệ.
@@ -232,3 +264,9 @@ Nếu câu trả lời là “không”, assignment thường tạo independence
 Khi một hàm nhận hoặc trả về slice, câu hỏi thiết kế không phải là “Go có copy không?” mà là: **ai được phép sửa storage này, và trong khoảng thời gian nào?** Một hàm lọc dữ liệu có thể trả về một view để tránh allocation; khi đó caller cần biết view ấy còn dùng chung buffer. Một hàm dựng response hoặc preview thường nên trả về dữ liệu độc lập, vì caller không có lý do để đoán một thay đổi sau đó sẽ đi ngược vào input.
 
 Không có đáp án mặc định miễn phí. Copy tốn allocation và thời gian; chia sẻ tiết kiệm chúng nhưng làm contract về ownership quan trọng hơn. Trước khi tối ưu, hãy viết test cho hành vi mutation mà API hứa. Sau đó, khi đọc một bug khó hiểu, lần theo ba bước: value nào được gán, value đó reference storage nào, và ai còn có thể chạm storage ấy. Đó là cách biến “slice lạ quá” thành một cuộc điều tra có thể kiểm chứng.
+
+@references
+1. Go Team. Go Specification, Slice types và Full slice expressions. go.dev/ref/spec#Slice_types; go.dev/ref/spec#Full_slice_expressions
+2. Go Team. Package `bytes`, `Clone`, Go 1.27.1. pkg.go.dev/bytes@go1.27.1#Clone
+3. Go Team. Package `slices`, `Clone`, Go 1.27.1. pkg.go.dev/slices@go1.27.1#Clone
+4. Go Team. Go Garbage Collector Guide, Tracing Garbage Collection. go.dev/doc/gc-guide#Tracing_Garbage_Collection

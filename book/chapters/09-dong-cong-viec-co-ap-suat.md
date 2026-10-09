@@ -130,6 +130,42 @@ func consume(in <-chan Job, out chan<- Result)
 
 Khi đọc code channel, đừng bắt đầu bằng câu “channel này buffered hay không?”. Hỏi theo thứ tự khó hơn nhưng hữu ích hơn: value nào đang được bàn giao, bên nào phải còn sống để receive nó, ai có quyền nói không còn send nữa, và cancellation có mở đường thoát cho mọi lần block không. Trả lời được bốn câu ấy trước khi chọn capacity thường ngăn được cả leak, deadlock và queue vô hạn.
 
+## Đã hủy công việc, vì sao goroutine vẫn còn?
+
+Ví dụ đầu chương kẹt ở send; đổi thành receive không tự làm vấn đề biến mất. Trong `baseline.Wait` của lab `part10-resource-retention`, caller truyền context rồi hủy nó, nhưng goroutine chỉ thực hiện `<-in`. Không có sender thì nó vẫn chờ. Context là một tín hiệu, không phải quyền của caller để runtime giết một goroutine khác. Bản sửa đặt receive và `ctx.Done()` trong cùng `select`, rồi đóng `done` khi goroutine thực sự trả về. Nhận `done` là bằng chứng hoàn tất; vừa gọi `cancel()` chỉ là đã phát yêu cầu.
+
+Test có tín hiệu `started` để chắc rằng goroutine đã bắt đầu, sau đó hủy context và chờ `done`. Bản lỗi có thêm kênh cứu hộ do test sở hữu để mở đường thoát sau khi quan sát lỗi, không để chính bộ test làm rò goroutine. Đếm số goroutine hỗ trợ điều tra, nhưng test hồi quy nên chờ đúng công việc mình sở hữu thay vì đo toàn bộ process rồi đòi một con số cố định.
+
+Vòng lặp định kỳ đặt ra một bẫy khác. Anh đọc đoạn dưới và thử chọn thao tác có thể kết thúc goroutine: hủy context bên ngoài, gọi `ticker.Stop()`, hay tạo một đường return riêng?
+
+~~~go
+for range ticker.C {
+    refresh()
+}
+~~~
+
+`Ticker.Stop` ngừng phát tick nhưng không đóng `ticker.C`. Vì thế vòng `range` không được đánh thức để kết thúc chỉ nhờ Stop; nó có thể chuyển từ chạy mãi sang chờ mãi. Hủy một context mà loop không đọc cũng không giúp. Bản lab sửa vòng đời theo dạng sau; khi tick đến, hàm `work` vẫn phải có contract tôn trọng context nếu caller cần shutdown hữu hạn:
+
+~~~go
+for {
+    select {
+    case <-ctx.Done():
+        return
+    case <-ticker.C:
+        if ctx.Err() != nil {
+            return
+        }
+        work(ctx)
+    }
+}
+~~~
+
+Owner gọi `defer ticker.Stop()` và đóng `done` khi loop kết thúc. Kiểm tra `ctx.Err()` trước `work` tránh bắt đầu việc khi đã quan sát cancellation; nó không bảo đảm cancellation không thể xảy ra ngay sau kiểm tra. Nếu callback đang kẹt trong một receive không đọc context, loop chưa quay lại `select`. Test `TestCancellationDoesNotKillNoncooperativeCallback` cố ý dùng callback như vậy: hủy context chưa đóng `done`, phải cứu callback trước. Test kế tiếp thay callback bằng tác vụ chọn cả `release` lẫn `ctx.Done()` và chờ được kết thúc. Truyền tham số context không đủ; operation phải dùng nó tại điểm có thể block.
+
+Đừng biến lỗi vòng đời này thành câu “quên Stop luôn gây memory leak”. Tài liệu `time` từ Go 1.23 cho phép GC thu hồi ticker không còn được tham chiếu dù chưa Stop. Trong giai đoạn Go 1.23–1.26, phiên bản module và `asynctimerchan` còn có thể chọn cơ chế cũ. Go 1.27 đã bỏ setting này và luôn dùng timer channel đồng bộ; lab chạy Go 1.27.1, không dùng cờ ấy để suy ra behavior cũ. Đó là điều kiện version cần ghi cùng phép đo. Ticker được giải phóng và goroutine đọc ticker kết thúc là hai câu hỏi khác nhau; khi một worker còn sống và giữ ticker, tiền đề “ticker không còn tham chiếu” cũng chưa được đáp ứng.
+
+Một worker nền có thể là công việc hợp lệ sống suốt service. Nó trở thành goroutine leak khi owner đã hết nhu cầu mà vẫn không có đường kết thúc, dù worker đang block hay thỉnh thoảng vẫn chạy. Resource leak rộng hơn: file, connection hoặc đăng ký callback không được trả đúng vòng đời có thể làm cạn tài nguyên dù heap không tăng đáng kể. Vì thế contract worker pool đã có cần giữ nguyên: ai nhận việc, ai phát hủy, ai close và ai xác nhận tất cả child đã kết thúc.
+
 ## Mô hình Điều phối G/M/P và Giới hạn Thực tế của Concurrency
 
 Khi trace cho thấy worker chờ chạy hoặc memory tăng theo số goroutine, mô hình điều phối runtime giúp đặt câu hỏi. Nó bổ sung cho contract worker pool, không phải điều kiện để người mới viết đúng channel.
@@ -145,3 +181,5 @@ Bản runtime này hiện thực channel bằng `hchan`, có khóa và hàng đ�
 @references
 1. Go Team. The Go Programming Language Specification, mục Channel types, Send statements, Receive operator, Close và Select statements. go.dev/ref/spec
 2. Go Team. The Go Memory Model, mục Channel communication; và Package context. go.dev/ref/mem, pkg.go.dev/context
+3. Go Team. Package `time`, `NewTicker` và `Ticker.Stop`, Go 1.27.1; Go 1.23 Timer Channel Changes, điều kiện module và `GODEBUG`. pkg.go.dev/time@go1.27.1#NewTicker; pkg.go.dev/time@go1.27.1#Ticker.Stop; go.dev/wiki/Go123Timer
+4. Go Team. Go 1.27 Release Notes, Runtime: bỏ `asynctimerchan`. go.dev/doc/go1.27#runtime
