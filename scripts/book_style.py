@@ -72,7 +72,7 @@ COLOR_COVER_GHOST  = colors.HexColor("#FAFAFA")  # Near-white fill
 # ==============================================================================
 # 3. LINE WEIGHTS (POINTS)
 # ==============================================================================
-LINE_WEIGHT_RULE       = 1.2   # Chapter opener rule
+LINE_WEIGHT_RULE       = 0.6   # Chapter opener hairline rule
 LINE_WEIGHT_ACCENT     = 2.0   # Left accent bar (code, blockquote)
 LINE_WEIGHT_BORDER     = 0.6   # Code box border
 LINE_WEIGHT_TABLE_GRID = 0.4   # Table interior grid
@@ -95,17 +95,29 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
     base = getSampleStyleSheet()
     return {
         # ── Front Matter & Cover ─────────────────────────────────────────────
+        "title_category": ParagraphStyle(
+            "TitleCategory", parent=base["BodyText"], fontName=FONT_SANS, fontSize=10.5,
+            leading=14.0, alignment=TA_CENTER, textColor=COLOR_TEXT_MUTED, spaceAfter=4,
+        ),
         "title": ParagraphStyle(
-            "BookTitle", parent=base["Title"], fontName=FONT_SANS_BOLD, fontSize=42,
-            leading=48, alignment=TA_CENTER, textColor=COLOR_BLACK, spaceAfter=12,
+            "BookTitle", parent=base["Title"], fontName=FONT_SANS_BOLD, fontSize=38,
+            leading=44, alignment=TA_CENTER, textColor=COLOR_BLACK, spaceAfter=8,
         ),
         "subtitle": ParagraphStyle(
-            "BookSubtitle", parent=base["BodyText"], fontName=FONT_SANS, fontSize=12.5,
-            leading=18, alignment=TA_CENTER, textColor=COLOR_TEXT_SECONDARY, spaceAfter=0,
+            "BookSubtitle", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=11.0,
+            leading=16.0, alignment=TA_CENTER, textColor=COLOR_TEXT_SECONDARY, spaceAfter=0,
         ),
         "author": ParagraphStyle(
-            "BookAuthor", parent=base["BodyText"], fontName=FONT_SANS, fontSize=11.5,
-            leading=16.0, alignment=TA_CENTER, textColor=COLOR_TEXT_MUTED,
+            "BookAuthor", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=13.0,
+            leading=17.0, alignment=TA_CENTER, textColor=COLOR_BLACK, spaceAfter=2,
+        ),
+        "author_desc": ParagraphStyle(
+            "BookAuthorDesc", parent=base["BodyText"], fontName=FONT_SANS, fontSize=9.5,
+            leading=13.0, alignment=TA_CENTER, textColor=COLOR_TEXT_MUTED, spaceAfter=0,
+        ),
+        "colophon": ParagraphStyle(
+            "BookColophon", parent=base["BodyText"], fontName=FONT_MONO, fontSize=8.5,
+            leading=12.0, alignment=TA_CENTER, textColor=COLOR_TEXT_MUTED,
         ),
 
         # ── Headings ─────────────────────────────────────────────────────────
@@ -167,19 +179,31 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
         # ── Table of Contents ─────────────────────────────────────────────────
         "toc_h1": ParagraphStyle(
             "TOCH1", parent=base["Heading1"], fontName=FONT_SANS_BOLD, fontSize=22,
-            leading=28, spaceBefore=0, spaceAfter=14, textColor=COLOR_BLACK,
+            leading=28, spaceBefore=0, spaceAfter=4, textColor=COLOR_BLACK,
+        ),
+        "toc_part": ParagraphStyle(
+            "TOCPart", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=8.5,
+            leading=10.5, textColor=COLOR_TEXT_PRIMARY,
+        ),
+        "toc_num": ParagraphStyle(
+            "TOCNum", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=8.0,
+            leading=10.0, textColor=COLOR_TEXT_SECONDARY,
+        ),
+        "toc_title": ParagraphStyle(
+            "TOCTitle", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=8.5,
+            leading=10.5, textColor=COLOR_TEXT_PRIMARY,
         ),
         "toc_entry": ParagraphStyle(
-            "TOCEntry", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=10.5,
-            leading=13.5, textColor=COLOR_TEXT_PRIMARY,
+            "TOCEntry", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=8.5,
+            leading=10.5, textColor=COLOR_TEXT_PRIMARY,
         ),
         "toc_entry_bold": ParagraphStyle(
-            "TOCEntryBold", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=10.5,
-            leading=13.5, textColor=COLOR_BLACK,
+            "TOCEntryBold", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=8.5,
+            leading=10.5, textColor=COLOR_BLACK,
         ),
         "toc_page": ParagraphStyle(
-            "TOCPage", parent=base["BodyText"], fontName=FONT_SANS, fontSize=10.5,
-            leading=13.5, alignment=TA_RIGHT, textColor=COLOR_TEXT_MUTED,
+            "TOCPage", parent=base["BodyText"], fontName=FONT_MONO, fontSize=8.5,
+            leading=10.5, alignment=TA_RIGHT, textColor=COLOR_TEXT_MUTED,
         ),
 
         # ── Error Atlas 2-column styles ───────────────────────────────────────

@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import cm
+from reportlab.lib.units import cm, mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
@@ -190,21 +190,27 @@ def styles(body: str, body_bold: str, heading: str, heading_bold: str,
 
 
 def cover(story: list, s: dict[str, ParagraphStyle]) -> None:
-    """Generate the official title page with geometric vector modular grid artwork.
-    Completely eliminates build metadata, fake publishing fields, and project slogans.
+    """Generate the official title page with pure editorial typography (Technical Minimalism).
+    Eliminates placeholder raster artwork; features balanced white space, hairlines, and author colophon.
     """
     story.extend([
-        Spacer(1, 2.2 * cm),
-        Paragraph("GOLANG", s["title"]),
+        Spacer(1, 2.5 * cm),
+        Paragraph("GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE", s["title_category"]),
         Spacer(1, 0.4 * cm),
+        Paragraph("GOLANG", s["title"]),
+        Spacer(1, 0.5 * cm),
         Paragraph(
             "Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
             s["subtitle"],
         ),
-        Spacer(1, 1.8 * cm),
-        build_cover_artwork(w=PRINTABLE_WIDTH, h=260),
-        Spacer(1, 2.6 * cm),
+        Spacer(1, 0.6 * cm),
+        HRFlowable(width="100%", thickness=0.6, color=COLOR_BLACK, spaceBefore=4, spaceAfter=18),
+        Spacer(1, 0.6 * cm),
         Paragraph("Đoàn Ngọc Hoàng Minh", s["author"]),
+        Spacer(1, 0.2 * cm),
+        Paragraph("Kỹ sư Phần mềm & Hệ thống Phân tán", s["author_desc"]),
+        Spacer(1, 9.5 * cm),
+        Paragraph("HÀ NỘI — 2026 // XUẤT BẢN KỸ NGHỆ", s["colophon"]),
         NextPageTemplate("book_verso"),
         PageBreak(),
     ])
@@ -826,36 +832,73 @@ def build_document(story: list, body: str, body_bold: str, heading: str,
     cover(story, s)
 
     # Professional Table of Contents (MỤC LỤC)
-    story.append(Spacer(1, 0.4 * cm))
+    story.append(Spacer(1, 0.3 * cm))
     story.append(Paragraph("MỤC LỤC", s["toc_h1"]))
-    story.append(Spacer(1, 0.4 * cm))
+    story.append(HRFlowable(width="100%", thickness=0.8, color=COLOR_BLACK, spaceBefore=2, spaceAfter=6))
 
     chapters, appendices = get_manuscript()
     titles = manuscript_titles(chapters, appendices)
 
+    def split_toc_item(title: str) -> tuple[str, str]:
+        if title.startswith("Chương "):
+            m = re.match(r"^Chương\s+(\d+)\s*[—–-]\s*(.+)$", title)
+            if m:
+                c_num = int(m.group(1))
+                return f"Chương {c_num:02d}", m.group(2).strip()
+        if title == "Trước khi viết dòng Go đầu tiên":
+            return "Dẫn nhập", title
+        if title == "Mở cửa vào Go":
+            return "Tổng quan", "Mở cửa vào Go: Cài đặt và Tư duy Thực chiến"
+        if title.startswith("BACK MATTER"):
+            return "Atlas", "Hồ sơ kiến trúc 50 thư viện DevOps & Cloud hàng đầu"
+        if title.startswith("PHỤ LỤC"):
+            return "Phụ lục A", "Atlas Lỗi Thực Chiến: Chẩn đoán & Khắc phục nhanh"
+        return "", title
+
+    part_headers = {
+        0: "PHẦN I: NỀN TẢNG CƠ HỌC & BỘ NHỚ GO",
+        7: "PHẦN II: TƯƠNG TRANH & ĐỘ ỔN ĐỊNH HỆ THỐNG",
+        14: "PHẦN III: DỊCH VỤ PHÂN TÁN & CƠ SỞ DỮ LIỆU",
+        22: "PHẦN IV: KUBERNETES OPERATOR & eBPF NÂNG CAO",
+        31: "BACK MATTER // TÀI LIỆU TRA CỨU",
+    }
+
     toc_data = []
-    for title in titles:
-        is_major = "BACK MATTER" in title or "PHỤ LỤC" in title
-        st = s["toc_entry_bold"] if is_major else s["toc_entry"]
+    toc_table_style = [
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#F0F0F0")),
+    ]
+
+    r_idx = 0
+    for idx, title in enumerate(titles):
+        if idx in part_headers:
+            p_hdr = Paragraph(part_headers[idx], s["toc_part"])
+            toc_data.append([p_hdr, "", ""])
+            toc_table_style.append(("SPAN", (0, r_idx), (2, r_idx)))
+            toc_table_style.append(("LINEBELOW", (0, r_idx), (2, r_idx), 0.5, colors.HexColor("#D0D0D0")))
+            toc_table_style.append(("TOPPADDING", (0, r_idx), (2, r_idx), 5.0))
+            toc_table_style.append(("BOTTOMPADDING", (0, r_idx), (2, r_idx), 1.5))
+            r_idx += 1
+
+        c1, c2 = split_toc_item(title)
         pg_str = str(toc_pages[title]) if toc_pages else ""
         toc_data.append([
-            Paragraph(title, st),
+            Paragraph(c1, s["toc_num"]),
+            Paragraph(c2, s["toc_title"]),
             Paragraph(pg_str, s["toc_page"]),
         ])
+        r_idx += 1
 
     toc_table = Table(
         toc_data,
-        colWidths=[PRINTABLE_WIDTH - 1.6 * cm, 1.6 * cm],
+        colWidths=[24 * mm, PRINTABLE_WIDTH - 36 * mm, 12 * mm],
         hAlign="LEFT",
     )
-    toc_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.3, COLOR_BORDER_SUBTLE),
-    ]))
+    toc_table.setStyle(TableStyle(toc_table_style))
     story.append(toc_table)
     story.append(PageBreak())
 
