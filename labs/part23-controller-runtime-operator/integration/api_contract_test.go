@@ -34,7 +34,9 @@ func TestRealAPIContract(t *testing.T) {
 			t.Skipf("NOT_RUN: missing asset %s in %s", name, assets)
 		}
 	}
-	e := &envtest.Environment{BinaryAssetsDirectory: assets,
+	// Do not let an inherited USE_EXISTING_CLUSTER=true redirect the test.
+	useExistingCluster := false
+	e := &envtest.Environment{BinaryAssetsDirectory: assets, UseExistingCluster: &useExistingCluster,
 		CRDDirectoryPaths: []string{filepath.Join("testdata")}, ErrorIfCRDPathMissing: true}
 	config, err := e.Start()
 	if err != nil {

@@ -352,7 +352,8 @@ func TestBoundedWorkloadObservation(t *testing.T) {
 	tel, _, _ := signals(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	r, err := New(ctx, 4, 16, 500*time.Millisecond, pool(s, tel), tel)
+	const attempts, workers, capacity = 64, 4, 16
+	r, err := New(ctx, workers, capacity, 500*time.Millisecond, pool(s, tel), tel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,7 +376,7 @@ func TestBoundedWorkloadObservation(t *testing.T) {
 	runtime.ReadMemStats(&before)
 	g0 := runtime.NumGoroutine()
 	start := time.Now()
-	for i := 0; i < 64; i++ {
+	for i := 0; i < attempts; i++ {
 		path := []string{"/ok", "/fail", "/timeout"}[i%3]
 		err := r.Submit(probe.Target{ID: fmt.Sprint(i), URL: s.URL + path})
 		if err != nil && !errors.Is(err, ErrFull) {
@@ -385,6 +386,35 @@ func TestBoundedWorkloadObservation(t *testing.T) {
 	r.CloseAdmission()
 	wait(t, consumed)
 	wait(t, r.Done())
+	stats := r.Stats()
+	// A safe test-only mutant corrupts a COPY after every goroutine has joined.
+	// It changes neither runner state nor the load/failure injection itself.
+	if os.Getenv("RELIABILITY_MUTANT") == "lost_completion_count" {
+		stats.Completed--
+	}
+	if stats.Accepted+stats.Rejected != attempts {
+		t.Fatalf("workload admission accounting: accepted+rejected=%d attempts=%d stats=%+v",
+			stats.Accepted+stats.Rejected, attempts, stats)
+	}
+	if stats.Completed+stats.Dropped != stats.Accepted {
+		t.Fatalf("workload completion accounting: completed+dropped=%d accepted=%d stats=%+v",
+			stats.Completed+stats.Dropped, stats.Accepted, stats)
+	}
+	if stats.Running != 0 || stats.Queue != 0 {
+		t.Fatalf("workload cleanup accounting: %+v", stats)
+	}
+	if stats.PeakRunning > workers || stats.PeakQueue > capacity {
+		t.Fatalf("workload capacity accounting: workers=%d capacity=%d stats=%+v", workers, capacity, stats)
+	}
+	// CloseAdmission drains normally: no cancellation, no dropped work/results.
+	// The consumer ranges to channel close and has joined before reading counts.
+	if stats.Dropped != 0 || len(latencies) != stats.Completed {
+		t.Fatalf("workload result handoff: received=%d completed=%d dropped=%d",
+			len(latencies), stats.Completed, stats.Dropped)
+	}
+	if _, open := <-r.Results(); open {
+		t.Fatal("workload result handoff: results still open after consumer joined")
+	}
 	elapsed := time.Since(start)
 	runtime.ReadMemStats(&after)
 	sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
