@@ -1,0 +1,743 @@
+
+[toolchain] cwd=.
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "version"]
+environment={}
+go version go1.27.1 windows/amd64
+exit_code=0 accepted=True
+
+[go_environment] cwd=.
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "env", "-json", "GOOS", "GOARCH", "GOVERSION", "CGO_ENABLED", "CC"]
+environment={}
+{
+	"CC": "gcc",
+	"CGO_ENABLED": "1",
+	"GOARCH": "amd64",
+	"GOOS": "windows",
+	"GOVERSION": "go1.27.1"
+}
+exit_code=0 accepted=True
+
+[labs/part11-request-path:test] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestFetchReadsLocalServerResponse
+--- PASS: TestFetchReadsLocalServerResponse (0.00s)
+=== RUN   TestFetchReturnsStatusError
+--- PASS: TestFetchReturnsStatusError (0.00s)
+=== RUN   TestTransportReusesIdleConnection
+--- PASS: TestTransportReusesIdleConnection (0.00s)
+=== RUN   TestTraceRecorderKeepsNamedStages
+--- PASS: TestTraceRecorderKeepsNamedStages (0.00s)
+=== RUN   TestTraceRecorderAcceptsConcurrentHooks
+--- PASS: TestTraceRecorderAcceptsConcurrentHooks (0.00s)
+PASS
+ok  	example.com/golang-master/part11-request-path/fixed	1.855s
+=== RUN   TestCertificateBoundaries
+=== RUN   TestCertificateBoundaries/untrusted_server_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "local-lab-CA")
+=== RUN   TestCertificateBoundaries/wrong_SAN
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": tls: failed to verify certificate: x509: certificate is valid for service.test, not wrong.test
+=== RUN   TestCertificateBoundaries/missing_client_cert
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": remote error: tls: certificate required
+=== RUN   TestCertificateBoundaries/untrusted_client_CA
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": remote error: tls: unknown certificate authority
+=== RUN   TestCertificateBoundaries/expired_client
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": remote error: tls: expired certificate
+=== RUN   TestCertificateBoundaries/wrong_client_EKU
+    identity_test.go:176: REAL_LOCAL_VERIFIED denied handshake: Post "https://127.0.0.1:58061/write": remote error: tls: bad certificate
+--- PASS: TestCertificateBoundaries (0.03s)
+    --- PASS: TestCertificateBoundaries/untrusted_server_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_SAN (0.00s)
+    --- PASS: TestCertificateBoundaries/missing_client_cert (0.00s)
+    --- PASS: TestCertificateBoundaries/untrusted_client_CA (0.00s)
+    --- PASS: TestCertificateBoundaries/expired_client (0.00s)
+    --- PASS: TestCertificateBoundaries/wrong_client_EKU (0.00s)
+=== RUN   TestAuthorizationContract
+    identity_test.go:208: valid mTLS handshake does not authorize /write; X-Role ignored
+--- PASS: TestAuthorizationContract (0.01s)
+=== RUN   TestPolicyFailClosedWithoutVerifiedChain
+--- PASS: TestPolicyFailClosedWithoutVerifiedChain (0.00s)
+PASS
+ok  	example.com/golang-master/part11-request-path/identity	1.901s
+exit_code=0 accepted=True
+
+[labs/part11-request-path:vet] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part11-request-path:race] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/part11-request-path/fixed	3.224s
+ok  	example.com/golang-master/part11-request-path/identity	3.318s
+exit_code=0 accepted=True
+
+[labs/part13-transaction-boundary:test] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestDisableCommitsCheckAndAuditEvent
+--- PASS: TestDisableCommitsCheckAndAuditEvent (0.00s)
+=== RUN   TestDisableRollsBackWhenAuditCannotBeWritten
+--- PASS: TestDisableRollsBackWhenAuditCannotBeWritten (0.00s)
+=== RUN   TestDisableDoesNotInventAnAuditEvent
+--- PASS: TestDisableDoesNotInventAnAuditEvent (0.00s)
+=== RUN   TestDisableRejectsNilDatabase
+--- PASS: TestDisableRejectsNilDatabase (0.00s)
+=== RUN   TestDisableRepeatedCallRecordsAnotherAuditEvent
+--- PASS: TestDisableRepeatedCallRecordsAnotherAuditEvent (0.00s)
+=== RUN   TestPreparedStatementInTransaction
+--- PASS: TestPreparedStatementInTransaction (0.00s)
+=== RUN   TestConnectionPoolStatsObservation
+--- PASS: TestConnectionPoolStatsObservation (0.00s)
+=== RUN   TestSchemaMigrationOrderingAndRollback
+--- PASS: TestSchemaMigrationOrderingAndRollback (0.00s)
+=== RUN   TestCacheAsideStaleReadOnInvalidationFailure
+--- PASS: TestCacheAsideStaleReadOnInvalidationFailure (0.00s)
+PASS
+ok  	example.com/golang-master/part13-transaction-boundary/fixed	1.188s
+=== RUN   TestCrashChild
+--- PASS: TestCrashChild (0.00s)
+=== RUN   TestRecoveryWindows
+=== RUN   TestRecoveryWindows/before_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=before_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_commit
+    store_test.go:112: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+=== RUN   TestRecoveryWindows/after_send
+    store_test.go:109: REAL_LOCAL_VERIFIED child action=apply checkpoint= exit=0
+    store_test.go:110: REAL_LOCAL_VERIFIED child action=deliver checkpoint=after_send exit=77
+    store_test.go:133: REAL_LOCAL_VERIFIED child action=deliver checkpoint= exit=0
+    store_test.go:141: reopened sender={Total:7 Pending:0 Completed:1 Operations:1 Received:0} receiver={Total:7 Pending:0 Completed:0 Operations:0 Received:1}
+--- PASS: TestRecoveryWindows (0.95s)
+    --- PASS: TestRecoveryWindows/before_commit (0.72s)
+    --- PASS: TestRecoveryWindows/after_commit (0.10s)
+    --- PASS: TestRecoveryWindows/after_send (0.13s)
+=== RUN   TestConcurrentIdentity
+--- PASS: TestConcurrentIdentity (0.02s)
+=== RUN   TestSendRetryAndReceiverConflict
+    store_test.go:205: send attempts=2 receiver effects=1
+--- PASS: TestSendRetryAndReceiverConflict (0.03s)
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+--- PASS: TestOutboxContract (0.05s)
+PASS
+ok  	example.com/golang-master/part13-transaction-boundary/outbox	2.247s
+exit_code=0 accepted=True
+
+[labs/part13-transaction-boundary:vet] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part13-transaction-boundary:race] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/part13-transaction-boundary/fixed	4.116s
+ok  	example.com/golang-master/part13-transaction-boundary/outbox	8.998s
+exit_code=0 accepted=True
+
+[projects/opsprobe:test] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestFailureInjections
+=== RUN   TestFailureInjections/Scenario1_HTTP_5xx
+=== RUN   TestFailureInjections/Scenario2_Timeout_DeadlineExceeded
+=== RUN   TestFailureInjections/Scenario3_Malformed_Target
+=== RUN   TestFailureInjections/Scenario4_Backpressure_Rejection
+=== RUN   TestFailureInjections/Scenario5_Transaction_Rollback
+=== RUN   TestFailureInjections/Scenario6_MidRun_Cancellation
+--- PASS: TestFailureInjections (0.17s)
+    --- PASS: TestFailureInjections/Scenario1_HTTP_5xx (0.00s)
+    --- PASS: TestFailureInjections/Scenario2_Timeout_DeadlineExceeded (0.15s)
+    --- PASS: TestFailureInjections/Scenario3_Malformed_Target (0.00s)
+    --- PASS: TestFailureInjections/Scenario4_Backpressure_Rejection (0.01s)
+    --- PASS: TestFailureInjections/Scenario5_Transaction_Rollback (0.00s)
+    --- PASS: TestFailureInjections/Scenario6_MidRun_Cancellation (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe	3.640s
+=== RUN   TestRun_OneshotURL_Success
+probe success: target=http://127.0.0.1:7027 status=200 duration=1.73ms reused_eligible=true
+--- PASS: TestRun_OneshotURL_Success (0.01s)
+=== RUN   TestRun_OneshotURL_Failure
+--- PASS: TestRun_OneshotURL_Failure (0.00s)
+=== RUN   TestRun_InvalidFlags
+flag provided but not defined: -invalid-flag-that-does-not-exist
+Usage of opsprobe:
+  -addr string
+        Dia chi TCP lang nghe cua HTTP server (mac dinh 127.0.0.1:8080 de tranh open exposure) (default "127.0.0.1:8080")
+  -concurrency int
+        So worker goroutine thuc thi probe dong thoi (default 4)
+  -db string
+        Duong dan tep SQLite luu tru (vd opsprobe.db hoac :memory:) (default "opsprobe.db")
+  -env string
+        Moi truong chay: development, staging, production (default "development")
+  -log-level string
+        Cap do log: debug, info, warn, error (default "info")
+  -max-active-runs int
+        So luot run dong thoi toi da truoc khi ap dung backpressure (default 10)
+  -oneshot-url string
+        Neu duoc chi dinh, chay kiem tra mot URL don le qua CLI roi thoat
+  -timeout duration
+        Timeout mac dinh cho moi luot probe target (0 < t <= 60s) (default 3s)
+  -trace-stdout
+        In OpenTelemetry traces truc tiep ra stdout de debug cuc bo
+--- PASS: TestRun_InvalidFlags (0.00s)
+=== RUN   TestRun_OneshotURL_WithTraceStdout
+probe success: target=http://127.0.0.1:7039 status=200 duration=0.54ms reused_eligible=true
+{"Name":"opsprobe.probe","SpanContext":{"TraceID":"4b7b4b1ae2f51c5e515d66f35e4841bc","SpanID":"3b0d7c845423c35d","TraceFlags":"01","TraceState":"","Remote":false},"Parent":{"TraceID":"00000000000000000000000000000000","SpanID":"0000000000000000","TraceFlags":"00","TraceState":"","Remote":false},"SpanKind":1,"StartTime":"0001-01-01T00:00:00Z","EndTime":"0001-01-01T00:00:00Z","Attributes":[{"Key":"target.id","Value":{"Type":"STRING","Value":"cli-target"}},{"Key":"target.url","Value":{"Type":"STRING","Value":"http://127.0.0.1:7039"}},{"Key":"outcome","Value":{"Type":"STRING","Value":"success"}},{"Key":"http.status_code","Value":{"Type":"INT64","Value":200}},{"Key":"reused_eligible","Value":{"Type":"BOOL","Value":true}}],"Events":null,"Links":null,"Status":{"Code":"Unset","Description":""},"DroppedAttributes":0,"DroppedEvents":0,"DroppedLinks":0,"ChildSpanCount":0,"Resource":[{"Key":"service.name","Value":{"Type":"STRING","Value":"unknown_service:opsprobe.test.exe"}},{"Key":"telemetry.sdk.language","Value":{"Type":"STRING","Value":"go"}},{"Key":"telemetry.sdk.name","Value":{"Type":"STRING","Value":"opentelemetry"}},{"Key":"telemetry.sdk.version","Value":{"Type":"STRING","Value":"1.46.0"}}],"InstrumentationScope":{"Name":"opsprobe","Version":"","SchemaURL":"","Attributes":null},"InstrumentationLibrary":{"Name":"opsprobe","Version":"","SchemaURL":"","Attributes":null}}
+--- PASS: TestRun_OneshotURL_WithTraceStdout (0.00s)
+=== RUN   TestRun_ConfigValidation
+--- PASS: TestRun_ConfigValidation (0.00s)
+=== RUN   TestRun_EnvVarParsingErrors
+--- PASS: TestRun_EnvVarParsingErrors (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/cmd/opsprobe	3.483s
+=== RUN   TestBoundedAdmission
+    runner_test.go:106: bounded stats={Accepted:4 Rejected:100 Completed:4 Dropped:0 Running:0 PeakRunning:2 Queue:0 PeakQueue:2}
+--- PASS: TestBoundedAdmission (0.01s)
+=== RUN   TestConsumerStopsContract
+    runner_test.go:144: consumer stopped: joined owned worker without draining results
+--- PASS: TestConsumerStopsContract (0.00s)
+=== RUN   TestLocalFaultsAndSignals
+=== RUN   TestLocalFaultsAndSignals/ok
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=ok outcome=success status=200 duration_ns=540500 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/slow
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=slow outcome=success status=200 duration_ns=539200 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/timeout
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=timeout outcome=timeout status=0 duration_ns=100492100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/5xx
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=5xx outcome=failure status=503 duration_ns=557100 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/truncated
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=truncated outcome=failure status=200 duration_ns=1123800 log+metric+span=present
+=== RUN   TestLocalFaultsAndSignals/cut
+    runner_test.go:240: REAL_LOCAL_VERIFIED mode=cut outcome=failure status=0 duration_ns=757600 log+metric+span=present
+--- PASS: TestLocalFaultsAndSignals (0.11s)
+    --- PASS: TestLocalFaultsAndSignals/ok (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/slow (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/timeout (0.10s)
+    --- PASS: TestLocalFaultsAndSignals/5xx (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/truncated (0.00s)
+    --- PASS: TestLocalFaultsAndSignals/cut (0.00s)
+=== RUN   TestCancelDoesNotProveDependencyStopped
+    runner_test.go:276: caller joined; dependency handler needed independent release
+--- PASS: TestCancelDoesNotProveDependencyStopped (0.00s)
+=== RUN   TestExpiredQueueBudgetDoesNotStartHTTP
+--- PASS: TestExpiredQueueBudgetDoesNotStartHTTP (0.00s)
+=== RUN   TestAlreadyCancelledAndInvalidConfiguration
+--- PASS: TestAlreadyCancelledAndInvalidConfiguration (0.00s)
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:336: optional 64-attempt load observation
+--- SKIP: TestBoundedWorkloadObservation (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/failurelab	2.801s
+=== RUN   TestIncident_ConnectionReuseProof
+    incident_test.go:42: Buggy: NewConns=20, ReusedConns=0
+    incident_test.go:43: Fixed: NewConns=1, ReusedConns=19
+--- PASS: TestIncident_ConnectionReuseProof (0.03s)
+=== RUN   TestIncident_BoundedDrainOversizedBody
+--- PASS: TestIncident_BoundedDrainOversizedBody (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/incident	1.941s
+=== RUN   TestAPI_CreateAndGetRun
+--- PASS: TestAPI_CreateAndGetRun (0.01s)
+=== RUN   TestAPI_GetRun_NotFound
+--- PASS: TestAPI_GetRun_NotFound (0.00s)
+=== RUN   TestAPI_ReadinessAndLiveness
+--- PASS: TestAPI_ReadinessAndLiveness (0.00s)
+=== RUN   TestAPI_Metrics
+--- PASS: TestAPI_Metrics (0.00s)
+=== RUN   TestAPI_Backpressure
+--- PASS: TestAPI_Backpressure (0.00s)
+=== RUN   TestAPI_MalformedInput
+--- PASS: TestAPI_MalformedInput (0.00s)
+=== RUN   TestAPI_TimeoutMsContract
+--- PASS: TestAPI_TimeoutMsContract (0.00s)
+=== RUN   TestAPI_Backpressure_NotConsumedOnMalformedRequest
+--- PASS: TestAPI_Backpressure_NotConsumedOnMalformedRequest (0.00s)
+=== RUN   TestAPI_CanceledRun_PersistedInStore
+--- PASS: TestAPI_CanceledRun_PersistedInStore (0.30s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/internal/httpapi	3.793s
+=== RUN   TestProbeSingle_Success
+--- PASS: TestProbeSingle_Success (0.00s)
+=== RUN   TestProbeSingle_BoundedDrainPolicy
+--- PASS: TestProbeSingle_BoundedDrainPolicy (0.00s)
+=== RUN   TestProbeSingle_SecurityValidation
+=== RUN   TestProbeSingle_SecurityValidation/empty_id
+=== RUN   TestProbeSingle_SecurityValidation/empty_url
+=== RUN   TestProbeSingle_SecurityValidation/unsupported_scheme
+=== RUN   TestProbeSingle_SecurityValidation/missing_host
+=== RUN   TestProbeSingle_SecurityValidation/userinfo_credential
+=== RUN   TestProbeSingle_SecurityValidation/unsupported_method_post
+=== RUN   TestProbeSingle_SecurityValidation/unsupported_method_delete
+=== RUN   TestProbeSingle_SecurityValidation/negative_timeout
+=== RUN   TestProbeSingle_SecurityValidation/excessive_timeout
+=== RUN   TestProbeSingle_SecurityValidation/invalid_expected_status
+--- PASS: TestProbeSingle_SecurityValidation (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/empty_id (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/empty_url (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/unsupported_scheme (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/missing_host (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/userinfo_credential (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/unsupported_method_post (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/unsupported_method_delete (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/negative_timeout (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/excessive_timeout (0.00s)
+    --- PASS: TestProbeSingle_SecurityValidation/invalid_expected_status (0.00s)
+=== RUN   TestPool_Execute_ObserverAndBoundedWorkers
+--- PASS: TestPool_Execute_ObserverAndBoundedWorkers (0.09s)
+=== RUN   TestPool_Execute_ChildSpans
+--- PASS: TestPool_Execute_ChildSpans (0.00s)
+=== RUN   TestProbeSingle_BodyStallTimeout
+--- PASS: TestProbeSingle_BodyStallTimeout (0.05s)
+=== RUN   TestProbeSingle_TraceparentPropagation
+--- PASS: TestProbeSingle_TraceparentPropagation (0.00s)
+=== RUN   TestProbeSingle_URLSanitizationAndSecretRedaction
+--- PASS: TestProbeSingle_URLSanitizationAndSecretRedaction (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/internal/probe	2.135s
+=== RUN   TestStore_RecordAndGetRun
+--- PASS: TestStore_RecordAndGetRun (0.00s)
+=== RUN   TestStore_DeterministicRollbackAfterPartialMutation
+--- PASS: TestStore_DeterministicRollbackAfterPartialMutation (0.00s)
+=== RUN   TestStore_GetRun_NotFound
+--- PASS: TestStore_GetRun_NotFound (0.00s)
+=== RUN   TestStore_Ping
+--- PASS: TestStore_Ping (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/internal/store	1.583s
+=== RUN   TestTelemetry_MetricsAndLogging
+--- PASS: TestTelemetry_MetricsAndLogging (0.00s)
+=== RUN   TestTelemetry_Spans
+--- PASS: TestTelemetry_Spans (0.00s)
+=== RUN   TestTelemetry_ActiveWorkerObserver
+--- PASS: TestTelemetry_ActiveWorkerObserver (0.00s)
+=== RUN   TestTelemetry_SecretRedactionInLogs
+--- PASS: TestTelemetry_SecretRedactionInLogs (0.00s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/internal/telemetry	1.955s
+exit_code=0 accepted=True
+
+[projects/opsprobe:vet] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[projects/opsprobe:race] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/projects/opsprobe	5.565s
+ok  	example.com/golang-master/projects/opsprobe/cmd/opsprobe	5.361s
+ok  	example.com/golang-master/projects/opsprobe/failurelab	3.802s
+ok  	example.com/golang-master/projects/opsprobe/incident	2.189s
+ok  	example.com/golang-master/projects/opsprobe/internal/httpapi	5.803s
+ok  	example.com/golang-master/projects/opsprobe/internal/probe	2.459s
+ok  	example.com/golang-master/projects/opsprobe/internal/store	2.828s
+ok  	example.com/golang-master/projects/opsprobe/internal/telemetry	2.503s
+exit_code=0 accepted=True
+
+[labs/part23-controller-runtime-operator:test] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+?   	example.com/golang-master/part23-controller-runtime-operator/api/v1alpha1	[no test files]
+=== RUN   TestReconcileCreateOwnedDeployment
+--- PASS: TestReconcileCreateOwnedDeployment (0.09s)
+=== RUN   TestReconcileDriftCorrection
+--- PASS: TestReconcileDriftCorrection (0.00s)
+=== RUN   TestReconcileFinalizerExecution
+--- PASS: TestReconcileFinalizerExecution (0.00s)
+=== RUN   TestReconcileDoesNotRemoveFinalizerWithoutCleaner
+--- PASS: TestReconcileDoesNotRemoveFinalizerWithoutCleaner (0.00s)
+=== RUN   TestReconcileStatusSubresource
+--- PASS: TestReconcileStatusSubresource (0.00s)
+=== RUN   TestNotFoundResourceNoOp
+--- PASS: TestNotFoundResourceNoOp (0.00s)
+PASS
+ok  	example.com/golang-master/part23-controller-runtime-operator/controllers	3.338s
+=== RUN   TestFakeDoesNotProveGeneration
+    fake_limit_test.go:28: MOCK_VERIFIED fake Update retains generation=1; this does not validate API-server generation semantics
+--- PASS: TestFakeDoesNotProveGeneration (0.09s)
+PASS
+ok  	example.com/golang-master/part23-controller-runtime-operator/integration	3.195s
+exit_code=0 accepted=True
+
+[labs/part23-controller-runtime-operator:vet] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part23-controller-runtime-operator:race] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+?   	example.com/golang-master/part23-controller-runtime-operator/api/v1alpha1	[no test files]
+ok  	example.com/golang-master/part23-controller-runtime-operator/controllers	6.018s
+ok  	example.com/golang-master/part23-controller-runtime-operator/integration	5.225s
+exit_code=0 accepted=True
+
+[labs/part16-real-signals:test] cwd=labs/part16-real-signals
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestListenAddress
+--- PASS: TestListenAddress (0.00s)
+PASS
+ok  	example.com/golang-master/part16-real-signals/cmd/probe-api	2.129s
+=== RUN   TestProbeEmitsBoundedMetricsAndParentChildTrace
+--- PASS: TestProbeEmitsBoundedMetricsAndParentChildTrace (0.00s)
+=== RUN   TestProbeFailureModesHaveDistinctOutcomes
+=== RUN   TestProbeFailureModesHaveDistinctOutcomes/fail
+=== RUN   TestProbeFailureModesHaveDistinctOutcomes/timeout
+=== RUN   TestProbeFailureModesHaveDistinctOutcomes/bad
+--- PASS: TestProbeFailureModesHaveDistinctOutcomes (0.02s)
+    --- PASS: TestProbeFailureModesHaveDistinctOutcomes/fail (0.00s)
+    --- PASS: TestProbeFailureModesHaveDistinctOutcomes/timeout (0.02s)
+    --- PASS: TestProbeFailureModesHaveDistinctOutcomes/bad (0.00s)
+PASS
+ok  	example.com/golang-master/part16-real-signals/probeapi	2.279s
+exit_code=0 accepted=True
+
+[labs/part16-real-signals:vet] cwd=labs/part16-real-signals
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part16-real-signals:race] cwd=labs/part16-real-signals
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/part16-real-signals/cmd/probe-api	3.928s
+ok  	example.com/golang-master/part16-real-signals/probeapi	4.091s
+exit_code=0 accepted=True
+
+[labs/part25-github-automation:test] cwd=labs/part25-github-automation
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestWebhookHMACVerification
+--- PASS: TestWebhookHMACVerification (0.00s)
+=== RUN   TestWebhookDeliveryIdempotency
+--- PASS: TestWebhookDeliveryIdempotency (0.00s)
+=== RUN   TestWebhookFailedBusinessHandlingCanRetry
+--- PASS: TestWebhookFailedBusinessHandlingCanRetry (0.00s)
+=== RUN   TestDeliveryLedgerAllowsRetryAfterFailedHandling
+--- PASS: TestDeliveryLedgerAllowsRetryAfterFailedHandling (0.00s)
+=== RUN   TestRateLimitParsingPrimaryAndSecondary
+--- PASS: TestRateLimitParsingPrimaryAndSecondary (0.00s)
+=== RUN   TestCalculateBackoffWithInjectedJitter
+--- PASS: TestCalculateBackoffWithInjectedJitter (0.00s)
+=== RUN   TestInMemGitCommitAndHead
+--- PASS: TestInMemGitCommitAndHead (0.00s)
+=== RUN   TestGitHubClientIntegrationWithMockServer
+--- PASS: TestGitHubClientIntegrationWithMockServer (0.00s)
+PASS
+ok  	example.com/golang-master/part25-github-automation	2.659s
+exit_code=0 accepted=True
+
+[labs/part25-github-automation:vet] cwd=labs/part25-github-automation
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part25-github-automation:race] cwd=labs/part25-github-automation
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/part25-github-automation	4.754s
+exit_code=0 accepted=True
+
+[labs/part28-mcp-ops-tools:test] cwd=labs/part28-mcp-ops-tools
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+=== RUN   TestMCPListTools
+--- PASS: TestMCPListTools (0.01s)
+=== RUN   TestMCPQueryHealthRealHTTP
+--- PASS: TestMCPQueryHealthRealHTTP (0.01s)
+=== RUN   TestMCPQueryHealthReportsServerErrorAsUnhealthy
+--- PASS: TestMCPQueryHealthReportsServerErrorAsUnhealthy (0.00s)
+=== RUN   TestMCPSSRFDeniedForUnapprovedTarget
+--- PASS: TestMCPSSRFDeniedForUnapprovedTarget (0.00s)
+=== RUN   TestMCPOperatorRestartSuccess
+--- PASS: TestMCPOperatorRestartSuccess (0.00s)
+=== RUN   TestMCPObserverMutatingActionDenied
+--- PASS: TestMCPObserverMutatingActionDenied (0.00s)
+=== RUN   TestMCPMissingOrInvalidTicketDenied
+--- PASS: TestMCPMissingOrInvalidTicketDenied (0.00s)
+=== RUN   TestRestartFailsClosedWithoutRequiredDependencies
+--- PASS: TestRestartFailsClosedWithoutRequiredDependencies (0.00s)
+=== RUN   TestApprovalTokenIsBoundAndOneTime
+--- PASS: TestApprovalTokenIsBoundAndOneTime (0.00s)
+PASS
+ok  	example.com/golang-master/part28-mcp-ops-tools	2.075s
+exit_code=0 accepted=True
+
+[labs/part28-mcp-ops-tools:vet] cwd=labs/part28-mcp-ops-tools
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part28-mcp-ops-tools:race] cwd=labs/part28-mcp-ops-tools
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+ok  	example.com/golang-master/part28-mcp-ops-tools	3.984s
+exit_code=0 accepted=True
+
+[labs/part10-resource-retention:test] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=1", "-timeout=120s", "-v", "./..."]
+environment={}
+?   	example.com/golang-master/part10-resource-retention/baseline	[no test files]
+=== RUN   TestRejectsUnsafeOptions
+--- PASS: TestRejectsUnsafeOptions (0.00s)
+=== RUN   TestAllFixturesWriteProfilesAndCleanUp
+go=go1.27.1 target=windows/amd64 mode=slice fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,389184,811008,8159232,7266304,403576
+1,1,2,403040,819200,8126464,5013504,2422768
+2,0,2,403016,827392,8126464,4399104,4673640
+go=go1.27.1 target=windows/amd64 mode=slice fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403016,827392,8126464,4366336,6992576
+1,1,2,403048,835584,8126464,4128768,9373080
+2,0,2,403032,827392,8126464,4145152,11786720
+go=go1.27.1 target=windows/amd64 mode=cache fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403088,827392,8126464,4325376,14217888
+1,1,2,403472,843776,8126464,4063232,16672944
+2,0,2,403144,827392,8126464,4341760,19134120
+go=go1.27.1 target=windows/amd64 mode=cache fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403256,843776,8126464,4030464,21606856
+1,1,2,403880,876544,8126464,4333568,24087464
+2,0,2,403608,851968,8126464,4300800,26589632
+go=go1.27.1 target=windows/amd64 mode=churn fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403608,851968,8126464,4308992,29107248
+1,0,2,403608,851968,8126464,4341760,31619216
+2,0,2,403608,851968,8126464,4038656,34136232
+go=go1.27.1 target=windows/amd64 mode=churn fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403608,843776,8126464,4071424,36660856
+1,0,2,403608,843776,8126464,4407296,39182888
+2,0,2,403608,843776,8126464,3809280,41706224
+go=go1.27.1 target=windows/amd64 mode=goroutine fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,403624,851968,8126464,4161536,44240656
+1,0,3,404696,868352,8093696,3899392,46805264
+2,0,2,404328,851968,12288000,7897088,49378240
+go=go1.27.1 target=windows/amd64 mode=goroutine fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,404216,851968,12288000,8355840,51962024
+1,0,2,405400,851968,12288000,8388608,54532528
+2,0,2,405032,851968,12288000,8470528,57106136
+go=go1.27.1 target=windows/amd64 mode=ticker fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,404920,851968,12288000,8011776,59688472
+1,0,3,405840,851968,12288000,8904704,62275336
+2,0,2,405064,860160,12288000,8036352,64886712
+go=go1.27.1 target=windows/amd64 mode=ticker fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,404952,851968,12288000,8265728,67503760
+1,0,2,406472,851968,12288000,8380416,70122992
+2,0,2,405992,851968,12288000,8167424,72734184
+go=go1.27.1 target=windows/amd64 mode=context fixed=false
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,405896,860160,12288000,8060928,75354184
+1,0,2,406552,860160,12288000,8093696,77981232
+2,0,2,406024,860160,12288000,7995392,80616736
+go=go1.27.1 target=windows/amd64 mode=context fixed=true
+cycles=1 items=1 bytes=16 limit=1 MemProfileRate=1
+cycle,entries,goroutines,HeapAlloc,HeapInuse,HeapSys,HeapReleased,TotalAlloc
+0,0,2,405912,860160,12288000,7954432,83274784
+1,0,2,406392,860160,12288000,8241152,85930664
+2,0,2,406136,860160,12288000,8208384,88590800
+--- PASS: TestAllFixturesWriteProfilesAndCleanUp (0.79s)
+PASS
+ok  	example.com/golang-master/part10-resource-retention/cmd/investigate	1.455s
+=== RUN   TestPrefixOwnership
+--- PASS: TestPrefixOwnership (0.00s)
+=== RUN   TestCacheBoundAndOwnership
+--- PASS: TestCacheBoundAndOwnership (0.00s)
+=== RUN   TestBaselineCacheKeepsEveryDistinctKey
+--- PASS: TestBaselineCacheKeepsEveryDistinctKey (0.00s)
+=== RUN   TestWaitHonorsCancellationAndInput
+--- PASS: TestWaitHonorsCancellationAndInput (0.00s)
+=== RUN   TestBaselineReceiveNeedsRescue
+--- PASS: TestBaselineReceiveNeedsRescue (0.00s)
+=== RUN   TestTickerStopIsNotWorkerShutdown
+--- PASS: TestTickerStopIsNotWorkerShutdown (0.00s)
+=== RUN   TestTickerLoopHonorsCancellation
+--- PASS: TestTickerLoopHonorsCancellation (0.00s)
+=== RUN   TestCancellationDoesNotKillNoncooperativeCallback
+--- PASS: TestCancellationDoesNotKillNoncooperativeCallback (0.00s)
+=== RUN   TestCooperativeCallbackFinishes
+--- PASS: TestCooperativeCallbackFinishes (0.00s)
+=== RUN   TestTimeoutResourceLifecycle
+--- PASS: TestTimeoutResourceLifecycle (0.00s)
+=== RUN   TestTimeoutErrorPathCancelsChild
+--- PASS: TestTimeoutErrorPathCancelsChild (0.00s)
+=== RUN   TestChildUsesEarlierParentDeadline
+--- PASS: TestChildUsesEarlierParentDeadline (0.00s)
+PASS
+ok  	example.com/golang-master/part10-resource-retention/fixed	0.672s
+exit_code=0 accepted=True
+
+[labs/part10-resource-retention:vet] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "vet", "-mod=readonly", "./..."]
+environment={}
+exit_code=0 accepted=True
+
+[labs/part10-resource-retention:race] cwd=labs/part10-resource-retention
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-race", "-count=1", "-timeout=120s", "./..."]
+environment={}
+?   	example.com/golang-master/part10-resource-retention/baseline	[no test files]
+ok  	example.com/golang-master/part10-resource-retention/cmd/investigate	3.429s
+ok  	example.com/golang-master/part10-resource-retention/fixed	1.966s
+exit_code=0 accepted=True
+
+[labs/part11-request-path:repeat] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "./identity"]
+environment={}
+ok  	example.com/golang-master/part11-request-path/identity	2.426s
+exit_code=0 accepted=True
+
+[labs/part13-transaction-boundary:repeat] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "./outbox"]
+environment={}
+ok  	example.com/golang-master/part13-transaction-boundary/outbox	13.335s
+exit_code=0 accepted=True
+
+[projects/opsprobe:repeat] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-count=20", "-timeout=120s", "./failurelab"]
+environment={}
+ok  	example.com/golang-master/projects/opsprobe/failurelab	5.021s
+exit_code=0 accepted=True
+
+[EXPECTED_FAILURE:split_commit] cwd=labs/part13-transaction-boundary
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-count=1", "-timeout=30s", "-run", "^TestOutboxContract$", "-v", "./outbox"]
+environment={"RELIABILITY_MUTANT": "split_commit"}
+=== RUN   TestOutboxContract
+    store_test.go:212: REAL_LOCAL_VERIFIED child action=apply checkpoint=after_commit exit=77
+    store_test.go:215: committed business requires pending event: {Total:7 Pending:0 Completed:0 Operations:1 Received:0}
+--- FAIL: TestOutboxContract (0.64s)
+FAIL
+FAIL	example.com/golang-master/part13-transaction-boundary/outbox	1.872s
+FAIL
+exit_code=1 accepted=True
+
+[EXPECTED_FAILURE:uncancellable_send] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-count=1", "-timeout=30s", "-run", "^TestConsumerStopsContract$", "-v", "./failurelab"]
+environment={"RELIABILITY_MUTANT": "uncancellable_send"}
+=== RUN   TestConsumerStopsContract
+    runner_test.go:142: contract: cancellation must release result handoff
+--- FAIL: TestConsumerStopsContract (1.01s)
+FAIL
+FAIL	example.com/golang-master/projects/opsprobe/failurelab	3.650s
+FAIL
+exit_code=1 accepted=True
+
+[EXPECTED_FAILURE:trust_equals_role] cwd=labs/part11-request-path
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-count=1", "-timeout=30s", "-run", "^TestAuthorizationContract$", "-v", "./identity"]
+environment={"RELIABILITY_MUTANT": "trust_equals_role"}
+=== RUN   TestAuthorizationContract
+    identity_test.go:205: authenticated caller "urn:go-book:reader" unauthorized: status=200 err=<nil> effects=1
+--- FAIL: TestAuthorizationContract (0.01s)
+FAIL
+FAIL	example.com/golang-master/part11-request-path/identity	1.914s
+FAIL
+exit_code=1 accepted=True
+
+[bounded_load] cwd=projects/opsprobe
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-count=1", "-timeout=30s", "-run", "^TestBoundedWorkloadObservation$", "-v", "./failurelab"]
+environment={"RUN_BOUNDED_LOAD": "1"}
+=== RUN   TestBoundedWorkloadObservation
+    runner_test.go:391: attempts=64 completed=20 elapsed=205.7433ms throughput=97.21/s p50_ns=949600 p95_ns=101531100 timeout_rate=0.3000 failure_rate=0.3500 rejection_rate=0.6875 outcomes=map[failure:7 success:7 timeout:6] stats={Accepted:20 Rejected:44 Completed:20 Dropped:0 Running:0 PeakRunning:4 Queue:0 PeakQueue:16} goroutines_before=10 after=11 heap_before=657944 after=1227616 total_alloc_delta=569672
+--- PASS: TestBoundedWorkloadObservation (0.21s)
+PASS
+ok  	example.com/golang-master/projects/opsprobe/failurelab	2.823s
+exit_code=0 accepted=True
+
+[real_api_prerequisite] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-tags", "integration", "-count=1", "-v", "./integration"]
+environment={}
+=== RUN   TestFakeDoesNotProveGeneration
+    fake_limit_test.go:28: MOCK_VERIFIED fake Update retains generation=1; this does not validate API-server generation semantics
+--- PASS: TestFakeDoesNotProveGeneration (0.09s)
+=== RUN   TestRealAPIContract
+    unavailable_test.go:8: NOT_RUN: pinned envtest requires Linux; run with Kubernetes 1.37.x assets in WSL/Linux
+--- SKIP: TestRealAPIContract (0.00s)
+PASS
+ok  	example.com/golang-master/part23-controller-runtime-operator/integration	3.616s
+exit_code=0 accepted=True
+
+[linux_integration_compile_ONLY] cwd=labs/part23-controller-runtime-operator
+command=["D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe", "test", "-mod=readonly", "-tags", "integration", "-c", "-o", "D:\\Golang\\.workspace\\reliability-envtest.test", "./integration"]
+environment={"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}
+exit_code=0 accepted=True
+
+[validate_main_manuscript_no_bullets] cwd=.
+command=["C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe", "D:\\Golang\\scripts\\validate_main_manuscript_no_bullets.py"]
+environment={}
+================================================================================
+ZERO-BULLET VALIDATOR REPORT (book/chapters/*.md)
+================================================================================
+[ZERO-BULLET-PASS] All chapter narrative prose is completely free of bullets.
+exit_code=0 accepted=True
+
+[validate_code_width] cwd=.
+command=["C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe", "D:\\Golang\\scripts\\validate_code_width.py"]
+environment={}
+[CODE-WIDTH-PASS] All code blocks within printable width limits.
+  - Usable width: 448.22 pt (~64 monospace chars)
+  - Overflowing lines: 0
+exit_code=0 accepted=True
+
+[validate_error_atlas] cwd=.
+command=["C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe", "D:\\Golang\\scripts\\validate_error_atlas.py"]
+environment={}
+[VALIDATOR-PASS] Error Atlas: structural validation passed!
+  - Số nhóm Taxonomy: 10 (A -> J)
+  - Tổng số entry: 85
+    * EXACT (compiler/runtime/library diagnostics): 45
+    * SENTINEL (standard & defined error values): 12
+    * STATUS (Kubernetes/runtime/CI status & reasons): 10
+    * FAMILY (diagnostic phenomena families): 18
+    * Nhóm A (Compiler & Type System): 14 entries (A01–A14)
+    * Nhóm B (Runtime & Panic): 11 entries (B01–B11)
+    * Nhóm C (Error Values & I/O): 8 entries (C01–C08)
+    * Nhóm D (Context & Cancellation): 4 entries (D01–D04)
+    * Nhóm E (Filesystem & Process): 7 entries (E01–E07)
+    * Nhóm F (Network / HTTP / TLS): 11 entries (F01–F11)
+    * Nhóm G (Database): 6 entries (G01–G06)
+    * Nhóm H (Concurrency): 5 entries (H01–H05)
+    * Nhóm I (Modules / Test / Toolchain): 8 entries (I01–I08)
+    * Nhóm J (Container / Kubernetes / CI-CD): 11 entries (J01–J11)
+  - Tổng số diagnostic patterns được cover: 89
+exit_code=0 accepted=True
+
+[validate_manuscript_diagrams] cwd=.
+command=["C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe", "D:\\Golang\\scripts\\validate_manuscript_diagrams.py"]
+environment={}
+CHARACTER_ART_DIAGRAMS=0
+exit_code=0 accepted=True
+
+[validate_diagram_encoding] cwd=.
+command=["C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe", "D:\\Golang\\scripts\\validate_diagram_encoding.py"]
+environment={}
+MOJIBAKE_HITS=0
+exit_code=0 accepted=True
+
+[git_diff_check] cwd=.
+command=["git", "diff", "--check"]
+environment={}
+warning: in the working copy of 'book/chapters/25-git-github-automation-event-driven.md', LF will be replaced by CRLF the next time Git touches it
+exit_code=0 accepted=True

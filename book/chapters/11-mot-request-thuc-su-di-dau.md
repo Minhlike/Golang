@@ -46,6 +46,26 @@ Một địa chỉ khả dụng chưa phải identity đã được xác thực.
 
 TCP, TLS và HTTP là các lớp khác nhau. Connection được tạo tới địa chỉ/port; TLS xác minh peer và thương lượng; HTTP chạy request/response bên trên. Với HTTP/2, nhiều request có thể cùng chia một connection. Vì thế “một request = một TCP connection” là mental model sai ngay từ đầu.
 
+## Chứng chỉ hợp lệ, vì sao thao tác vẫn phải bị từ chối?
+
+Một caller có client certificate do CA nội bộ ký và TLS handshake thành công. Nó gọi `POST /write` kèm `X-Role: admin`. Service có được thực hiện không? Nếu câu trả lời chỉ dựa vào “đã mTLS” thì ta vừa biến quyền được vào kênh truyền thành quyền làm mọi việc trong kênh ấy.
+
+Lab `labs/part11-request-path/identity` tạo CA, server certificate và client certificate mới trong runtime bằng `crypto/x509`. Listener chỉ ở loopback; không có private key ghi vào repository, không dùng trust store hệ điều hành và không bỏ qua verification. Client kết nối địa chỉ loopback nhưng đặt `ServerName=service.test`, đúng DNS SAN của server certificate. Địa chỉ để quay số và tên cần xác minh là hai input khác nhau; Common Name không thay SAN trong phép kiểm hostname này.
+
+Mở `TestCertificateBoundaries` và dự đoán từng denial trước khi chạy. Client phải từ chối chain không thuộc CA đã tin và SAN không khớp. Server dùng `RequireAndVerifyClientCert`, từ chối thiếu chứng chỉ, CA client lạ, chứng chỉ hết hạn và chứng chỉ có mục đích sử dụng không phù hợp. Test đi qua handshake TLS thật của thư viện chuẩn, rồi kiểm tra không có mutation. Nó không dùng một struct giả để tự gắn nhãn authenticated.
+
+~~~powershell
+cd labs/part11-request-path
+go test -count=1 -v ./identity
+go test -race ./identity
+~~~
+
+Sau handshake, `Authorize` chỉ lấy URI SAN từ leaf trong `VerifiedChains`, không lấy role từ header hoặc từ certificate chưa được xác minh. Policy của fixture cho `urn:go-book:reader` đọc `/read`; chỉ `urn:go-book:operator` được ghi `/write`. Certificate được CA tin ký nhưng mang identity lạ hoặc không có identity vẫn nhận 403. TLS không chọn policy này thay application. Chương 12 đặt nó trước handler có side effect; Chương 28 còn cần ràng buộc quyền với action, target và phê duyệt.
+
+**Tự phản nghiệm.** Bật `RELIABILITY_MUTANT=trust_equals_role` rồi chạy `TestAuthorizationContract`. Biến thể lỗi cấp mọi action cho bất kỳ verified chain nào; cùng test phải đỏ vì reader ghi được và bộ đếm mutation tăng. Không chữa bằng cách tắt certificate verification: điều đó phá thêm boundary danh tính, không giải quyết authorization.
+
+Lab chọn TLS 1.3 làm policy cục bộ, không gọi đây là yêu cầu của mọi deployment. Nó chưa kiểm tra rotation, revocation, proxy termination hay identity provider. mTLS là một lựa chọn khi có bài toán phân phối và quản lý certificate phù hợp; không phải điều kiện bắt buộc của mọi MCP transport.
+
 ## Deadline có phạm vi, không phải một con số trang trí
 
 `http.NewRequestWithContext` ràng context vào toàn bộ vòng đời outgoing request: lấy connection, gửi request, đọc header và đọc body response. Đó là deadline gần nhất với mục đích caller: caller mất kiên nhẫn thì cả request nên biết lý do dừng.
@@ -121,3 +141,4 @@ Khi nhìn một request chậm, đừng hỏi “API nào chậm?”. Hãy hỏi
 3. Go Team. Package `net/http`, phần Clients and Transports, `Request`, `Client` và `Transport`. pkg.go.dev/net/http
 4. Go Team. Package `net/http/httptrace`. pkg.go.dev/net/http/httptrace
 5. Go Team. Go 1.27 Release Notes, net/http: bounded drain khi đóng HTTP/1 response body. go.dev/doc/go1.27
+6. Go Team. `crypto/tls` và `crypto/x509`, Go 1.27.1: `RequireAndVerifyClientCert`, `VerifiedChains`, `ServerName`, `Certificate.Verify` và `VerifyHostname`. pkg.go.dev/crypto/tls@go1.27.1; pkg.go.dev/crypto/x509@go1.27.1

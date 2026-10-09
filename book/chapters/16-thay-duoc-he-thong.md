@@ -214,6 +214,14 @@ console exporter dành cho debugging local. Khi đưa trace sang collector hay
 backend, endpoint, sampling, retention, privacy và quyền truy cập là policy
 mới phải được thiết kế; không ghi secret vào attribute chỉ để trace dễ tìm hơn.
 
+## Có sample chưa có nghĩa tín hiệu đã trả lời sự cố
+
+Trong `part16-real-signals`, các mode local giữ instrumentation dễ quan sát. Giai đoạn tiếp theo ở `projects/opsprobe/failurelab` vẫn dùng `slog`, registry Prometheus riêng và console exporter OpenTelemetry, nhưng thay dependency giả bằng HTTP loopback có checkpoint. Mục đích không phải thêm dashboard: nó buộc ba tín hiệu nói về cùng một lượt probe khi timeout hoặc body bị cắt.
+
+Histogram `opsprobe_probe_duration_seconds` đo thời gian trong probe; `failurelab_job_seconds` đo từ admission tới probe completion, gồm queue delay nhưng không gồm chờ consumer lấy result. Gauge `failurelab_running` chỉ bao quanh probe đang chạy, còn `failurelab_queue_depth` là job chưa được worker nhận. Chúng không thay gauge worker sống của dự án. Worker chờ send có thể còn sống dù running bằng 0; chỉ join `Done` mới xác nhận nó đã thoát.
+
+Đọc Chương 20 để tự chọn bằng chứng phân biệt trước khi chạy. Test xác nhận có log/outcome, histogram sample và span, không xác nhận latency production hay một backend đã lưu trace bền vững. Khi chạy workload hữu hạn, ghi cả số bị từ chối: throughput trên việc được nhận mà bỏ mất rejection có thể làm một service đang shed phần lớn tải trông như khỏe. Không dùng target ID tùy ý làm metric label; lab giữ các outcome hữu hạn, còn ID nằm trong log/span theo policy dữ liệu của fixture.
+
 ## Khi dùng thư viện thật
 
 Khi requirement đã cần `/metrics`, histogram duration, exemplars, trace propagation, collector hoặc backend query, hãy dùng client library và semantic convention được duy trì thay vì tự phát minh wire format. Nhưng SDK không thể chọn SLI cho anh. Trước khi thêm một instrument, hãy viết câu hỏi vận hành, event boundary, unit, label cardinality, reset/restart behavior, ownership và action khi signal xấu. Nếu không trả lời được, thêm metric chỉ tạo thêm dữ liệu chứ không thêm khả năng thấy hệ thống.

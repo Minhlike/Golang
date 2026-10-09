@@ -135,6 +135,16 @@ func (r *WebhookReceiver) Process(
 
 ---
 
+### Ledger trong RAM không sống qua lần khởi động lại
+
+Giữ nguyên lab webhook ở trên để kiểm tra HMAC và cạnh tranh trong một process. Bây giờ thử đưa nó qua khe lỗi của Chương 13: handler đã tạo một thay đổi, nhưng process chết trước `Complete`. Sau restart, ledger RAM trống; delivery giống hệt có thể đi qua lần nữa. Đây không phải lỗi của mutex hay HMAC. Mutex bảo vệ state đang sống, còn chữ ký xác nhận payload; không thứ nào lưu nghĩa vụ nghiệp vụ sau khi process biến mất.
+
+Trong lab outbox của Chương 13, `credit-001` là operation identity nghiệp vụ, không tự lấy tên từ transport delivery ID. Khi nhận webhook, trước hết phải xác thực payload và ánh xạ nó sang operation mà application cho phép. Một delivery ID mới cho cùng operation không được tạo tác dụng phụ mới; ngược lại, hai operation khác nhau không được gộp chỉ vì tình cờ có cùng nội dung. Việc ánh xạ này là policy của bot, chưa được fixture GitHub cũ chứng minh.
+
+Hãy tự dựng bảng ba checkpoint trong `TestRecoveryWindows`, rồi chạy test. Ở checkpoint sau send, phía nhận đã commit mà phía gửi vẫn pending. Lần dispatch mới bắt buộc có khả năng gửi lặp. `TestSendRetryAndReceiverConflict` kiểm tra hai attempts và một hiệu ứng, đồng thời từ chối payload xung đột ở phía nhận. Bằng chứng này dùng hai database cục bộ và sender gọi receiver trực tiếp; nó không xác nhận GitHub cung cấp một idempotency contract tương đương cho mọi endpoint.
+
+Một bot thật cần chọn side effect có thể lặp an toàn, đọc lại trạng thái có identity ổn định hoặc dùng cơ chế idempotency của API thực tế. Nếu một request tạo comment đã timeout sau khi server xử lý, không được suy “thất bại nên cứ tạo lại”. Outbox giữ việc chưa được xác nhận, không biến network thành transaction. Policy retry còn cần budget, delay, giới hạn số lần và đường đối soát; lab này giữ retry do người vận hành/test gọi lại, không thêm vòng retry nền vô hạn.
+
 ## 4. Quản trị Rate Limit: Primary và Secondary
 
 Khi bot gọi GitHub API, rate limit là một budget cần quan sát. Nó không phải rủi ro production duy nhất hay luôn là nút thắt lớn nhất:

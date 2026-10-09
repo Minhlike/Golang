@@ -121,6 +121,12 @@ func CallerRoleFromContext(ctx context.Context) Role {
 }
 ~~~
 
+### Một danh tính thật không tự sinh ra quyền tool
+
+Test session của chương giữ nguyên mức `MOCK_VERIFIED` cho nguồn identity. Muốn nhìn thấy boundary mạng thật mà không kéo MCP vào mọi phép thử, chạy lab TLS `part11-request-path/identity` trước: reader có verified certificate vẫn bị từ chối mutation; header tự khai admin không đổi quyết định. Đó là bằng chứng handshake và policy HTTP cục bộ, chưa phải kiểm định authorization của Streamable HTTP MCP.
+
+Khi deployment dùng TLS termination ở proxy, handler có thể không còn `r.TLS.VerifiedChains` của client gốc. Không copy identity header từ Internet vào session context; phải xác định proxy nào được tin, bảo vệ đường proxy–service và kiểm tra cơ chế truyền identity của deployment. Stdio, OAuth hay mTLS có cách thiết lập caller khác nhau, nhưng cùng cần ánh xạ caller đã xác thực sang action/target được phép. Lab certificate không thay đổi policy MCP và không tuyên bố mọi MCP server cần mTLS.
+
 ### Tách bạch hai nhóm công cụ và Rào chắn Đột biến
 
 Policy của lab cho `observer` gọi `query_service_health` trên target đã đăng ký và cấm `restart_service`. Đó không phải quyền “tự do truy vấn” chung: hệ thống thật cần giới hạn dữ liệu, target, budget và identity. Vai trò `operator` vẫn phải qua `ChangeAuthorizer` rồi `ServiceActuator`; tên role không tự đủ để cho phép thay đổi.

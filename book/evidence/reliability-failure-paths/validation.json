@@ -1,0 +1,758 @@
+{
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "go": "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+  "started": "2026-10-09T07:55:01+0700",
+  "steps": [
+    {
+      "name": "toolchain",
+      "cwd": ".",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "version"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.063
+    },
+    {
+      "name": "go_environment",
+      "cwd": ".",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "env",
+        "-json",
+        "GOOS",
+        "GOARCH",
+        "GOVERSION",
+        "CGO_ENABLED",
+        "CC"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.047
+    },
+    {
+      "name": "labs/part11-request-path:test",
+      "cwd": "labs/part11-request-path",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 3.89
+    },
+    {
+      "name": "labs/part11-request-path:vet",
+      "cwd": "labs/part11-request-path",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.5
+    },
+    {
+      "name": "labs/part11-request-path:race",
+      "cwd": "labs/part11-request-path",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 7.906
+    },
+    {
+      "name": "labs/part13-transaction-boundary:test",
+      "cwd": "labs/part13-transaction-boundary",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 3.625
+    },
+    {
+      "name": "labs/part13-transaction-boundary:vet",
+      "cwd": "labs/part13-transaction-boundary",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.375
+    },
+    {
+      "name": "labs/part13-transaction-boundary:race",
+      "cwd": "labs/part13-transaction-boundary",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 14.313
+    },
+    {
+      "name": "projects/opsprobe:test",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 7.141
+    },
+    {
+      "name": "projects/opsprobe:vet",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.656
+    },
+    {
+      "name": "projects/opsprobe:race",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 14.172
+    },
+    {
+      "name": "labs/part23-controller-runtime-operator:test",
+      "cwd": "labs/part23-controller-runtime-operator",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 8.235
+    },
+    {
+      "name": "labs/part23-controller-runtime-operator:vet",
+      "cwd": "labs/part23-controller-runtime-operator",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 1.984
+    },
+    {
+      "name": "labs/part23-controller-runtime-operator:race",
+      "cwd": "labs/part23-controller-runtime-operator",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 16.734
+    },
+    {
+      "name": "labs/part16-real-signals:test",
+      "cwd": "labs/part16-real-signals",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 4.938
+    },
+    {
+      "name": "labs/part16-real-signals:vet",
+      "cwd": "labs/part16-real-signals",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.531
+    },
+    {
+      "name": "labs/part16-real-signals:race",
+      "cwd": "labs/part16-real-signals",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 9.828
+    },
+    {
+      "name": "labs/part25-github-automation:test",
+      "cwd": "labs/part25-github-automation",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 13.797
+    },
+    {
+      "name": "labs/part25-github-automation:vet",
+      "cwd": "labs/part25-github-automation",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 1.453
+    },
+    {
+      "name": "labs/part25-github-automation:race",
+      "cwd": "labs/part25-github-automation",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 13.172
+    },
+    {
+      "name": "labs/part28-mcp-ops-tools:test",
+      "cwd": "labs/part28-mcp-ops-tools",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 7.141
+    },
+    {
+      "name": "labs/part28-mcp-ops-tools:vet",
+      "cwd": "labs/part28-mcp-ops-tools",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.719
+    },
+    {
+      "name": "labs/part28-mcp-ops-tools:race",
+      "cwd": "labs/part28-mcp-ops-tools",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 9.64
+    },
+    {
+      "name": "labs/part10-resource-retention:test",
+      "cwd": "labs/part10-resource-retention",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=1",
+        "-timeout=120s",
+        "-v",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 2.688
+    },
+    {
+      "name": "labs/part10-resource-retention:vet",
+      "cwd": "labs/part10-resource-retention",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "vet",
+        "-mod=readonly",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.39
+    },
+    {
+      "name": "labs/part10-resource-retention:race",
+      "cwd": "labs/part10-resource-retention",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-race",
+        "-count=1",
+        "-timeout=120s",
+        "./..."
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 6.578
+    },
+    {
+      "name": "labs/part11-request-path:repeat",
+      "cwd": "labs/part11-request-path",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=20",
+        "-timeout=120s",
+        "./identity"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 4.407
+    },
+    {
+      "name": "labs/part13-transaction-boundary:repeat",
+      "cwd": "labs/part13-transaction-boundary",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=20",
+        "-timeout=120s",
+        "./outbox"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 19.984
+    },
+    {
+      "name": "projects/opsprobe:repeat",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-count=20",
+        "-timeout=120s",
+        "./failurelab"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 7.766
+    },
+    {
+      "name": "EXPECTED_FAILURE:split_commit",
+      "cwd": "labs/part13-transaction-boundary",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-count=1",
+        "-timeout=30s",
+        "-run",
+        "^TestOutboxContract$",
+        "-v",
+        "./outbox"
+      ],
+      "environment": {
+        "RELIABILITY_MUTANT": "split_commit"
+      },
+      "exit_code": 1,
+      "expected_exit": 1,
+      "expected_marker": "committed business requires pending event",
+      "accepted": true,
+      "elapsed_seconds": 3.203
+    },
+    {
+      "name": "EXPECTED_FAILURE:uncancellable_send",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-count=1",
+        "-timeout=30s",
+        "-run",
+        "^TestConsumerStopsContract$",
+        "-v",
+        "./failurelab"
+      ],
+      "environment": {
+        "RELIABILITY_MUTANT": "uncancellable_send"
+      },
+      "exit_code": 1,
+      "expected_exit": 1,
+      "expected_marker": "contract: cancellation must release result handoff",
+      "accepted": true,
+      "elapsed_seconds": 6.016
+    },
+    {
+      "name": "EXPECTED_FAILURE:trust_equals_role",
+      "cwd": "labs/part11-request-path",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-count=1",
+        "-timeout=30s",
+        "-run",
+        "^TestAuthorizationContract$",
+        "-v",
+        "./identity"
+      ],
+      "environment": {
+        "RELIABILITY_MUTANT": "trust_equals_role"
+      },
+      "exit_code": 1,
+      "expected_exit": 1,
+      "expected_marker": "authenticated caller",
+      "accepted": true,
+      "elapsed_seconds": 3.672
+    },
+    {
+      "name": "bounded_load",
+      "cwd": "projects/opsprobe",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-count=1",
+        "-timeout=30s",
+        "-run",
+        "^TestBoundedWorkloadObservation$",
+        "-v",
+        "./failurelab"
+      ],
+      "environment": {
+        "RUN_BOUNDED_LOAD": "1"
+      },
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 5.187
+    },
+    {
+      "name": "real_api_prerequisite",
+      "cwd": "labs/part23-controller-runtime-operator",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-tags",
+        "integration",
+        "-count=1",
+        "-v",
+        "./integration"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 8.797
+    },
+    {
+      "name": "linux_integration_compile_ONLY",
+      "cwd": "labs/part23-controller-runtime-operator",
+      "command": [
+        "D:\\Golang\\.tools\\go1.27.1\\bin\\go.exe",
+        "test",
+        "-mod=readonly",
+        "-tags",
+        "integration",
+        "-c",
+        "-o",
+        "D:\\Golang\\.workspace\\reliability-envtest.test",
+        "./integration"
+      ],
+      "environment": {
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "CGO_ENABLED": "0"
+      },
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 10.766
+    },
+    {
+      "name": "validate_main_manuscript_no_bullets",
+      "cwd": ".",
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "D:\\Golang\\scripts\\validate_main_manuscript_no_bullets.py"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.109
+    },
+    {
+      "name": "validate_code_width",
+      "cwd": ".",
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "D:\\Golang\\scripts\\validate_code_width.py"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.687
+    },
+    {
+      "name": "validate_error_atlas",
+      "cwd": ".",
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "D:\\Golang\\scripts\\validate_error_atlas.py"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.078
+    },
+    {
+      "name": "validate_manuscript_diagrams",
+      "cwd": ".",
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "D:\\Golang\\scripts\\validate_manuscript_diagrams.py"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.094
+    },
+    {
+      "name": "validate_diagram_encoding",
+      "cwd": ".",
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "D:\\Golang\\scripts\\validate_diagram_encoding.py"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.094
+    },
+    {
+      "name": "git_diff_check",
+      "cwd": ".",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "expected_exit": 0,
+      "expected_marker": null,
+      "accepted": true,
+      "elapsed_seconds": 0.062
+    }
+  ],
+  "real_api": "NOT_RUN",
+  "prerequisites": {
+    "docker": null,
+    "kubectl": null,
+    "kind": null,
+    "wsl": "C:\\Windows\\system32\\wsl.EXE"
+  },
+  "kubebuilder_assets": null,
+  "pdf_before_sha256": "f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09",
+  "pdf_sha256": "f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09",
+  "pdf_unchanged": true,
+  "scoped_checks_accepted": true,
+  "ended": "2026-10-09T07:58:43+0700"
+}

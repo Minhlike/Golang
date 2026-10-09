@@ -251,6 +251,46 @@ Trong fixture 20 request tuần tự tới server kiểm thử ở `incident/inc
 
 Kiểm thử `TestIncident_BoundedDrainOversizedBody` xác nhận rằng với body 32 KiB (vượt giới hạn 16 KiB), lab trả `reusedEligible == false` và đóng body. Bounded drain giới hạn lượng dữ liệu mà client chủ động đọc bỏ; nó không phải cơ chế chống tràn bộ đệm hay bảo đảm một kết nối được tái sử dụng.
 
+## Consumer đã rời đi, worker còn nợ ai kết quả?
+
+Các test trước bảo vệ một lô target đã biết. Bây giờ đổi câu hỏi: producer tiếp tục nhận việc trong khi dependency chậm, queue đầy, rồi consumer ngừng đọc. Thêm worker có thể làm dependency chịu tải hơn; thêm buffer chỉ kéo dài khoản nợ. Thực nghiệm `projects/opsprobe/failurelab` bọc `ProbeSingle` hiện có bằng một admission queue hữu hạn, không viết lại pool hay API production của dự án.
+
+Mở `TestBoundedAdmission` trước source. Fixture giữ hai request tại barrier của HTTP server cục bộ. Hai việc tiếp theo nằm trong queue; 100 lần nộp thêm phải nhận `ErrFull`, không tạo thêm goroutine. Release barrier rồi consume bốn kết quả: running và queue đều về 0, peak running không vượt 2. Các số này là contract capacity của fixture, không phải benchmark máy hay khuyến nghị “production nên chạy hai worker”.
+
+Sau đó chạy `TestConsumerStopsContract`. Probe hoàn tất, checkpoint ngay trước send xác nhận worker đang chuẩn bị bàn giao; consumer cố ý không đọc output. Cancel phải cho worker trả về và coordinator đóng `Done`. Bản lỗi bỏ nhánh cancellation ở send nên không thể join trong budget của test. Harness có đường cứu hộ riêng để thu hồi nó sau khi oracle bắt lỗi; bản lỗi không được để lại một goroutine bị kẹt trong chính suite.
+
+~~~powershell
+cd projects/opsprobe
+go test -count=1 -v ./failurelab
+$env:RELIABILITY_MUTANT='uncancellable_send'
+go test -count=1 -run TestConsumerStopsContract ./failurelab
+Remove-Item Env:RELIABILITY_MUTANT
+~~~
+
+Lệnh thứ hai phải đỏ. Trước khi mở lời giải, chỉ ra điểm block không còn receiver và vì sao context trên HTTP request không giải phóng điểm ấy. Đây là lần tích hợp contract send của Chương 9, không phải một dạng scheduler tuning.
+
+**Đáp án.** HTTP đã xong nên deadline ở `ProbeSingle` không còn quản lý worker. Worker còn chờ send kết quả; chỉ `select` nghe context của runner mới mở đường thoát. Caller phải cancel rồi join `Done` khi ngừng consume. Bản sửa không bảo đảm consumer xử lý mọi result sau cancellation; đó là policy bỏ những lần bàn giao chưa hoàn tất, cần chấp nhận trước khi dùng API streaming.
+
+### Lấy tín hiệu đủ sức phân biệt nguyên nhân
+
+`TestLocalFaultsAndSignals` lần lượt tiêm hold/release, deadline, 503, body bị cắt dù header 200, và kết nối đóng trước response. Hold/release là một response chậm được điều khiển bằng barrier, không dựa vào sleep để đoán server đã vào handler. Deadline là failure được chờ thật. Đối với mỗi case, test đọc outcome, một log tương ứng, histogram sample và span `opsprobe.probe` từ các thành phần telemetry sẵn có. Nó không gọi collector, Internet hay service production.
+
+@table Chọn phép đo phân biệt thay vì đổi cấu hình theo triệu chứng
+
+| Triệu chứng | Giả thuyết cạnh tranh | Bằng chứng cần ghép |
+| --- | --- | --- |
+| Latency cao | Dependency đang giữ response hay worker chờ được chạy? | Barrier server và span HTTP; dùng trace `net`/`sched` Chương 10 để kiểm tra wait/runnable. |
+| Queue đầy | Tải đến vượt năng lực xử lý hay worker không thể thoát? | Rejection/running/queue; ngừng nộp, cancel rồi join đúng worker. |
+| Caller đã timeout | Dependency dừng hay chỉ client thôi chờ? | `Done` phía client và tín hiệu kết thúc riêng của handler phía nhận. |
+| Heap tăng | Allocation tạm, backlog hợp lệ hay retention sai? | Workload và queue; profile sống sau quiescence của Chương 10, không chỉ một snapshot. |
+| Thời gian cao, CPU ít | Chờ I/O/đồng bộ hay chi phí CPU bị nhìn thiếu? | Trace wait cùng CPU profile của đúng workload; không gọi CPU thấp là bằng chứng tuyệt đối. |
+
+`TestCancelDoesNotProveDependencyStopped` giữ một handler cố ý không đọc context. Client cancel và join được runner, nhưng handler vẫn chưa kết thúc cho tới khi fixture release nó. Một timeout trả cho caller không phải acknowledgment rằng downstream đã hủy tác dụng phụ. Với operation có mutation, quay lại identity và cửa sổ gửi lặp ở Chương 13/25 trước khi thêm retry.
+
+Runner tính deadline từ lúc admission, nên thời gian trong queue nằm trong budget; timeout riêng của target có thể thu hẹp nó thêm. Nếu job tới worker khi budget đã hết, request không có thêm một budget mới để che latency chờ. Policy ở đây là load shedding ngay khi queue đầy, không retry. Queue chỉ giữ tối đa capacity target và worker cố định; caller vẫn phải giới hạn kích thước từng input ở boundary của ứng dụng thật.
+
+Phép chạy `RUN_BOUNDED_LOAD=1` gửi đúng 64 attempts trong tối đa 10 giây, với bốn worker và queue 16. Nó ghi throughput, p50/p95 thời lượng probe, outcome counts, peak running/queue, goroutine và heap snapshots. Histogram `failurelab_job_seconds` còn tính thời gian chờ queue; hai định nghĩa latency này không được trộn. Output thực tế và lệnh tái lập ở README/evidence của lab. So sánh throughput giữa các máy không phải oracle; heap chưa chuẩn hóa sau GC cũng không phải bằng chứng retention. Giữ lab memory của Chương 10 để kiểm tra giả thuyết ấy thay vì dựng thêm một detector leak theo con số tùy tiện.
+
 ## Đóng gói, điều phối và chuyển giao có trách nhiệm
 
 Để đưa `opsprobe` ra môi trường production, ta áp dụng toàn bộ các nguyên tắc đã học ở Chương 17 và 18:
