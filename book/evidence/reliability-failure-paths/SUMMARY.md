@@ -1,5 +1,99 @@
 # Reliability failure paths — nghiệm thu phạm vi nguồn và lab
 
+## Regression finalization — 2026-10-09
+
+STARTING_HEAD=00ba2f315f06a5d287e676ab214df40978f79e0c
+TESTED_HEAD=eb1714e7ba335d3f222932dea041467d1c8d5c4b
+BRANCH=content/reliability-failure-paths
+PDF_UNCHANGED=YES
+PDF_SHA256=f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09
+
+Đây là kết quả kiểm thử mới, không phải lần chạy lại quy trình xuất bản.
+36 command đạt điều kiện đã khai báo: 29 PASS, 5 EXPECTED_FAILURE,
+1 NOT_RUN (Windows integration stub), 1 COMPILE_ONLY (Linux cross-compile).
+Không tính SKIP hay mutant đỏ là test contract PASS. Test/vet/race đã chạy
+cho TLS/mTLS (part11), outbox (part13), opsprobe/failurelab, Operator fake
+(part23), resource retention (part10); không sửa resource retention lab.
+Identity, outbox, failurelab mỗi package lặp 20 lần. Workload được bật bằng
+RUN_BOUNDED_LOAD=1 trong 20 lần lặp failurelab và thêm 20 lần workload có race.
+
+Workload giữ measurement và fault injection hiện có. Sau join consumer và
+runner, kiểm tra accepted+rejected=64, completed+dropped=accepted,
+running=queue=0, peakRunning<=4, peakQueue<=16. Contract graceful drain yêu cầu
+dropped=0, số kết quả nhận bằng completed và channel results đã đóng. Mutant
+lost_completion_count chỉ giảm một đơn vị trên COPY của Stats sau join:
+exit 1 tại `workload completion accounting`, không gây leak hoặc sửa runner.
+Ba mutant cũ split_commit, uncancellable_send, trust_equals_role cũng exit 1
+đúng assertion. Không đặt ngưỡng latency/RSS hay yêu cầu thứ tự scheduler.
+
+### Evidence có thể tái tạo
+
+[validation.json](validation.json) schema 2 lưu chính xác bytes của output
+stdout/stderr đã hợp nhất trong `combined_output_base64`, cùng SHA-256;
+`combined_output_text` chỉ là bản decode UTF-8 với replacement nếu cần.
+[validation.log](validation.log) là transcript để đọc: expand tab, bỏ trailing
+whitespace và chuẩn hóa newline thành LF. Log này KHÔNG phải stdout nguyên byte.
+Hai artifact được sinh cùng một lượt; command, cwd, environment overrides,
+exit, marker, thời lượng và result label được lưu cho từng bước, kể cả lỗi.
+
+Ở 00ba2f3, validation.json được tạo trước lần bổ sung trường stdout vào harness;
+harness đã đổi nhưng artifact không được regenerate theo schema ấy. Vì vậy
+JSON đã commit không có stdout, dù verify.py cùng commit có dòng thêm trường.
+Không thể khôi phục bytes gốc từ transcript đã chuẩn hóa; lượt mới capture bytes
+thật, không tự điền output cũ. Mọi con số ở mục lịch sử bên dưới thuộc 00ba2f3,
+không phải timing của lượt mới. Log lịch sử đọc bằng
+`git show 00ba2f3:book/evidence/reliability-failure-paths/validation.log`.
+
+Harness kiểm tra ancestry và `git diff --check ba251160..TESTED_HEAD` với SHA
+đã resolve; không chỉ kiểm working tree sạch. Nó kiểm index bằng
+`git diff --cached --quiet`, chạy `--cached --check` nếu có staged changes;
+lượt này index rỗng nên staged check trong JSON là NOT_RUN. Staged evidence mới
+được kiểm riêng trước commit. Final commit range được kiểm riêng sau commit,
+gồm cả `00ba2f3..HEAD` và `ba251160..HEAD`. Fingerprint các input đã test và
+checksum PDF được ghi trước/sau lượt chạy. Commit sau TESTED_HEAD chỉ cập nhật
+evidence và README integration; không thay code đã test. Không yêu cầu artifact
+chứa SHA của chính commit evidence đang chứa nó.
+
+637 file ngoài phạm vi được đối chiếu SHA-256 với snapshot đầu lượt: 0 mismatch,
+bao gồm chapter, MASTER, PDF và WIP book/design, research. Main vẫn 1cc60d9;
+design/catalog-2026 vẫn 0737345. Không đổi dependency hay merge/build PDF.
+
+### Operator: API thật đã chạy, không suy rộng sang cluster đầy đủ
+
+REAL_API_STATUS=INTEGRATION_TESTED. Ubuntu-24.04/WSL chạy Kubernetes v1.37.0,
+etcd 3.7.0 từ [release controller-tools chính thức](https://github.com/kubernetes-sigs/controller-tools/releases/tag/envtest-v1.37.0).
+Archive Linux amd64 được đối chiếu SHA-512 với
+[manifest chính thức](https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/HEAD/envtest-releases.yaml);
+checksum archive và từng binary được lưu trong JSON. Harness re-extract archive
+đã xác minh trước khi chạy, không tin binary cũ nằm cạnh archive.
+
+Test tạo control plane riêng và cleanup Stop; create/root update không ghi
+status, status update giữ spec/generation, spec update tăng generation 1→2,
+observedGeneration vẫn 1 và stale resourceVersion bị conflict. Mutant
+root_status_write exit 1 tại `status writer contract`. API PASS có marker
+`INTEGRATION_TESTED owned real API`; Windows SKIP và cross-compile vẫn mang
+nhãn riêng, không được dùng để suy ra API PASS.
+
+Sửa ownership guard: envtest v0.25.1 đọc USE_EXISTING_CLUSTER khi pointer
+UseExistingCluster nil. Test nay đặt pointer false rõ ràng; harness còn xóa
+KUBECONFIG/TEST_ASSET_* và ép USE_EXISTING_CLUSTER=false khi chạy. Không dùng
+cluster/cloud hay kubeconfig của người dùng. Envtest không có scheduler,
+kubelet, GC controller hoặc external finalizer; các năng lực ấy chưa được test.
+
+Tái lập từ D:/Golang sau khi tải archive chính thức vào đường dẫn dưới:
+
+```powershell
+python book/evidence/reliability-failure-paths/verify.py `
+  --go D:/Golang/.tools/go1.27.1/bin/go.exe `
+  --wsl-distro Ubuntu-24.04 `
+  --envtest-archive D:/Golang/.tools/reliability-envtest-1.37.0/envtest-v1.37.0-linux-amd64.tar.gz
+```
+
+Không có blocker trong phạm vi regression finalization. Dừng tại đây để quyết
+định merge; không mở wave mới hoặc chứng nhận production/publication readiness.
+
+## Milestone gốc 00ba2f3 — hồ sơ lịch sử, không phải kết quả lượt mới
+
 BASELINE_HEAD=ba25116038d35d86ef138fbb089d9094a614ded8
 BRANCH=content/reliability-failure-paths
 CHAPTERS_CHANGED=11,13,16,20,23,25,28
@@ -14,10 +108,10 @@ main. Các chapter chỉ có insertion; không xóa hay thay đoạn memory leak
 trước sửa, gồm tracked file và WIP `book/design`, `research`: 0 mismatch.
 Source branch vẫn ba251160; main vẫn 1cc60d9; design vẫn 0737345.
 
-## Bằng chứng và lệnh kiểm định
+### Bằng chứng và lệnh kiểm định của milestone gốc
 
-[validation.json](validation.json) ghi command/cwd/environment/exit code và
-[validation.log](validation.log) giữ output thật. Go 1.27.1 windows/amd64,
+validation.json và validation.log ở commit 00ba2f3 ghi command/cwd/environment/
+exit code cùng transcript đã chuẩn hóa, không phải output nguyên byte. Go 1.27.1 windows/amd64,
 Windows 11 build 26200, CGO/race bằng GCC hiện có trên PATH. Không thêm hay đổi
 go.mod/go.sum; tất cả module tests dùng dependency đã pin. Harness ban đầu có
 lỗi tên thư mục part25; đã sửa và chạy lại toàn bộ harness, không lấy lần
@@ -48,7 +142,7 @@ Chốt cleanup: consumer goroutine của workload được join cả trên đư�
 không chỉ normal path. Trên source cuối, `RUN_BOUNDED_LOAD=1 go test -count=1
 -race -timeout=60s ./failurelab` chạy toàn package gồm load và exit 0 (4.859s);
 `go vet ./failurelab` exit 0. Những con số workload dưới đây vẫn trích từ lượt
-được lưu trong validation.log, không lấy timing của race làm benchmark.
+được lưu trong validation.log của 00ba2f3, không lấy timing của race làm benchmark.
 
 ## 1. Crash consistency và identity bền vững
 
@@ -89,7 +183,7 @@ Workload hữu hạn đã chạy: attempts=64, accepted/completed=20, rejected=4
 elapsed=205.7433ms, throughput=97.21/s, probe p50=949600ns,
 p95=101531100ns; timeout rate=0.30, failure rate=0.35 trên completed;
 rejection rate=0.6875 trên attempts. Peak running=4, peak queue=16,
-running/queue cuối=0, dropped=0. Đây là output của lượt trong validation.log,
+running/queue cuối=0, dropped=0. Đây là output của lượt trong validation.log ở 00ba2f3,
 không là threshold hay capacity production. Heap/goroutine snapshots không
 chuẩn hóa sau GC, không chứng minh retention, RSS hay scheduler pressure.
 

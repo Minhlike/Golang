@@ -37,12 +37,21 @@ Không có arbitrary sleep: mỗi write đã hoàn tất được đọc lại b
 
 ## Trạng thái kiểm chứng hiện tại
 
-`MOCK_VERIFIED`: fake generation test đã chạy. `NOT_RUN`: API server/etcd và
-mutant API thật chưa chạy vì Windows thiếu Linux envtest assets. Pinned
-controller-runtime có lỗi compile process helper khi import envtest trực tiếp
-trên Windows; integration implementation chỉ build trên Linux, Windows stub
-ghi SKIP/NOT_RUN minh bạch. Cross-compile Linux đã chạy thành công là
-**COMPILE_ONLY**, không gắn nhãn INTEGRATION_TESTED.
+`MOCK_VERIFIED`: fake generation test đã chạy. Lượt regression finalization
+2026-10-09 đã chạy API thật trên Ubuntu-24.04/WSL với assets Kubernetes v1.37.0
+Linux amd64 từ release controller-tools chính thức, đã đối chiếu SHA-512.
+`INTEGRATION_TESTED`: status/spec isolation, generation/observedGeneration và
+stale resourceVersion conflict đã qua assertions trên control plane riêng.
+Mutant `root_status_write` exit 1 đúng tại `status writer contract`:
+**EXPECTED_FAILURE**, không phải lỗi compile hoặc SKIP.
+
+Test đặt `UseExistingCluster=false` rõ ràng, không để biến môi trường kế thừa
+chuyển sang cluster đang có. Harness xóa KUBECONFIG/TEST_ASSET_* khi chạy.
+Pinned controller-runtime có lỗi compile process helper khi import envtest
+trên Windows; integration implementation chỉ build Linux. Windows stub vẫn
+SKIP/**NOT_RUN**, Linux cross-compile vẫn **COMPILE_ONLY**; hai kết quả ấy
+không tự chứng minh API PASS. Command đầy đủ và checksum nằm trong
+[SUMMARY mới](../../../book/evidence/reliability-failure-paths/SUMMARY.md).
 
 Không có kubelet, scheduler, GC controller hay external finalizer trong envtest.
 Do đó không suy Pod ready, child GC hay cloud cleanup từ suite này. Chương 17
