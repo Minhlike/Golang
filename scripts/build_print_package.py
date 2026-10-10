@@ -108,7 +108,8 @@ def process_interior():
         p.set_bleedbox(p.rect)
         p.set_trimbox(p.rect)
 
-    out_path = OUTPUT_DIR / "02_RUOT_SACH_GOLANG_493TRANG_A4.pdf"
+    total_pages = len(doc_out)
+    out_path = OUTPUT_DIR / f"02_RUOT_SACH_GOLANG_{total_pages}TRANG_A4.pdf"
     doc_out.save(out_path, deflate=True)
 
     doc_master.close()
@@ -119,7 +120,7 @@ def process_interior():
     shutil.copy2(out_path, MASTER_PDF_SRC)
 
     print(f"  -> Saved: {out_path}")
-    print(f"  -> Total pages: 493")
+    print(f"  -> Total pages: {total_pages}")
     print(f"  -> Updated: {MASTER_PDF_SRC}")
     return out_path
 
@@ -127,6 +128,9 @@ def process_interior():
 def generate_spec_sheet(cover_pdf: Path, interior_pdf: Path):
     """Generates the technical printing specification sheet for print technicians."""
     print("[3/4] Generating Print Specification Sheets...")
+    doc_int = fitz.open(interior_pdf)
+    num_pages = len(doc_int)
+    doc_int.close()
     spec_text = f"""================================================================================
 PHIẾU THÔNG SỐ KỸ THUẬT IN ẤN // PRINT PRODUCTION SPECIFICATION SHEET
 ẤN PHẨM: GOLANG — GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE
@@ -141,12 +145,12 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 --------------------------------------------------------------------------------
 1. TỆP 1: BÌA SÁCH TRẢI RỘNG (COVER WRAP)
 --------------------------------------------------------------------------------
-- Tên tệp: 01_BIA_TRAI_GOLANG_A4_GAY28MM.pdf
+- Tên tệp: {cover_pdf.name}
 - Khổ in thực tế (MediaBox / BleedBox): 454.0 x 303.0 mm
 - Khổ thành phẩm sau xén (TrimBox):    448.0 x 297.0 mm
 - Chi tiết cấu trúc bìa:
   + Bìa 4 (Mặt sau):       210.0 mm
-  + Gáy sách (Spine):      28.0 mm (Dành cho ruột 493 trang giấy 80gsm)
+  + Gáy sách (Spine):      28.0 mm (Dành cho ruột {num_pages} trang giấy 80gsm)
   + Bìa 1 (Mặt trước):     210.0 mm
   + Tràn lề (Bleed):       3.0 mm mỗi cạnh (trên, dưới, trái, phải)
 - Dấu định vị:             Đã có sẵn dấu chữ thập xén (Crop marks) & vạch nếp gấp gáy
@@ -158,13 +162,13 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 --------------------------------------------------------------------------------
 2. TỆP 2: RUỘT SÁCH (INTERIOR BOOK BLOCK)
 --------------------------------------------------------------------------------
-- Tên tệp: 02_RUOT_SACH_GOLANG_493TRANG_A4.pdf
+- Tên tệp: {interior_pdf.name}
 - Khổ thành phẩm (TrimBox / MediaBox): ISO A4 (210.0 x 297.0 mm)
-- Tổng số trang ruột:      ĐÚNG 493 TRANG (Không tính bìa ngoài)
+- Tổng số trang ruột:      ĐÚNG {num_pages} TRANG (Không tính bìa ngoài)
 - Cấu trúc trang:
   + Trang 1:               Trang Tiêu đề Kiến trúc (Architectural Title Page)
   + Trang 2:               Mục lục (Table of Contents)
-  + Trang 3 - 493:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Phụ lục Lỗi)
+  + Trang 3 - {num_pages}:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Phụ lục Lỗi)
 - Quy cách giấy đề xuất:   Giấy Woodfree / Bãi Bằng / Ford 80 gsm trắng tự nhiên
 - Chế bản & In ấn:         In 2 mặt đen trắng (1/1 Monochrome)
 - Đóng cuốn đề xuất:       Khâu chỉ dán keo nhiệt PUR (Smyth Sewn + PUR Softcover)

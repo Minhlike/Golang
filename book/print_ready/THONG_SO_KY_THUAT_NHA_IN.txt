@@ -17,7 +17,7 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 - Khổ thành phẩm sau xén (TrimBox):    448.0 x 297.0 mm
 - Chi tiết cấu trúc bìa:
   + Bìa 4 (Mặt sau):       210.0 mm
-  + Gáy sách (Spine):      28.0 mm (Dành cho ruột 493 trang giấy 80gsm)
+  + Gáy sách (Spine):      28.0 mm (Dành cho ruột 525 trang giấy 80gsm)
   + Bìa 1 (Mặt trước):     210.0 mm
   + Tràn lề (Bleed):       3.0 mm mỗi cạnh (trên, dưới, trái, phải)
 - Dấu định vị:             Đã có sẵn dấu chữ thập xén (Crop marks) & vạch nếp gấp gáy
@@ -29,13 +29,13 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 --------------------------------------------------------------------------------
 2. TỆP 2: RUỘT SÁCH (INTERIOR BOOK BLOCK)
 --------------------------------------------------------------------------------
-- Tên tệp: 02_RUOT_SACH_GOLANG_493TRANG_A4.pdf
+- Tên tệp: 02_RUOT_SACH_GOLANG_525TRANG_A4.pdf
 - Khổ thành phẩm (TrimBox / MediaBox): ISO A4 (210.0 x 297.0 mm)
-- Tổng số trang ruột:      ĐÚNG 493 TRANG (Không tính bìa ngoài)
+- Tổng số trang ruột:      ĐÚNG 525 TRANG (Không tính bìa ngoài)
 - Cấu trúc trang:
   + Trang 1:               Trang Tiêu đề Kiến trúc (Architectural Title Page)
   + Trang 2:               Mục lục (Table of Contents)
-  + Trang 3 - 493:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Phụ lục Lỗi)
+  + Trang 3 - 525:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Phụ lục Lỗi)
 - Quy cách giấy đề xuất:   Giấy Woodfree / Bãi Bằng / Ford 80 gsm trắng tự nhiên
 - Chế bản & In ấn:         In 2 mặt đen trắng (1/1 Monochrome)
 - Đóng cuốn đề xuất:       Khâu chỉ dán keo nhiệt PUR (Smyth Sewn + PUR Softcover)
@@ -45,8 +45,8 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 3. MÃ KIỂM TRA TỆP (CHECKSUMS)
 --------------------------------------------------------------------------------
 - SHA-256 (01_BIA_TRAI...):
-  dc354cfb241a0e4cb389928df177aa7fd39367cf5577db682511f94dea53e7dd
+  4f9cf400efdaf67570eb8baf1bd1768732c8af393ece81eb6ebc4db8215c1f96
 - SHA-256 (02_RUOT_SACH...):
-  08d7d1f91be69561deeb26f5f3b27f475238d080df8e808a61e2ccdb30f0474b
+  685b0b7a51ed9d3ab5a9b531f040a4ed24132d94142972811d3b47e52daeaa8f
 
 ================================================================================
