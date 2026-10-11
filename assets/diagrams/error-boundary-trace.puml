@@ -22,33 +22,14 @@ skinparam note {
 
 top to bottom direction
 
-package "1. Tầng Hạ tầng / Mạng: Nguyên nhân gốc (Root Cause)" as l1 {
-  rectangle "<b>io.ErrUnexpectedEOF</b>\n(Lỗi sentinel tầng thấp từ I/O / socket mạng)" as root_err
-}
+rectangle "<b>1. io.ErrUnexpectedEOF</b>\nSentinel của ví dụ" as root_err
+rectangle "<b>2. *ProbeFailure</b>\nService, Endpoint và Cause\nUnwrap() trả về Cause" as domain_err
+rectangle "<b>3. fmt.Errorf</b>\nprobe %q: %w\nĐối số: name, failed" as wrap_err
+rectangle "<b>4a. errors.Is</b>\nKhớp io.ErrUnexpectedEOF" as is_check
+rectangle "<b>4b. errors.As</b>\nLấy *ProbeFailure" as as_check
 
-package "2. Tầng Nghiệp vụ: Cấu trúc hóa lỗi (Domain Error)" as l2 {
-  rectangle "<b>ProbeFailure struct</b>\nService: \"billing\"\nEndpoint: Endpoint{Host: \"billing.internal\", Port: 8080}\nCause: io.ErrUnexpectedEOF\n--\n<i>Triển khai Unwrap() error trả về Cause</i>" as domain_err
-}
-
-package "3. Tầng Vận hành / Boundary: Bổ sung ngữ cảnh (Context Wrapping)" as l3 {
-  rectangle "<b>applyProbe Wrapper</b>\nfmt.Errorf(\"probe check failed: %w\", failure)\n--\n<i>Bọc thêm tên thao tác, bảo toàn chuỗi Unwrap qua %w</i>" as wrap_err
-}
-
-package "4. Tầng Bên gọi / Caller: Chẩn đoán & Phân loại lỗi" as l4 {
-  rectangle "<b>errors.Is(err, io.ErrUnexpectedEOF)</b>\nKhẳng định nguyên nhân gốc là mất kết nối đột ngột\n(Lần ngược chuỗi Unwrap tới tận gốc)" as is_check
-  rectangle "<b>errors.As(err, &target)</b>\nTrích xuất an toàn con trỏ *ProbeFailure\nĐọc target.Service và target.Endpoint có cấu trúc" as as_check
-}
-
-root_err -down-> domain_err : Được đóng gói vào trường Cause
-domain_err -down-> wrap_err : Bọc thêm tiền tố tác vụ bằng động từ %w
-wrap_err -down-> is_check : Khớp lỗi sentinel
-wrap_err -down-> as_check : Trích xuất metadata
-
-note right of l4
-  <b>Nguyên tắc Bảo toàn Chuỗi Lỗi trong Go:</b>
-  • Không bao giờ nuốt chửng lỗi gốc bằng chuỗi ký tự cụt ngủn.
-  • Động từ <b>%w</b> duy trì cây liên kết lỗi để kiểm tra có lập trình.
-  • <b>errors.Is</b> kiểm tra sự hiện diện của giá trị sentinel.
-  • <b>errors.As</b> trích xuất thông tin có cấu trúc mà không cần cắt chuỗi.
-end note
+root_err -down-> domain_err : Cause
+domain_err -down-> wrap_err : %w
+wrap_err -down-> is_check
+wrap_err -down-> as_check
 @enduml

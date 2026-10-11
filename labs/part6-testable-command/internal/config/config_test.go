@@ -20,6 +20,11 @@ func TestLoadTargetsUsesDefaultOrOverride(t *testing.T) {
 			found: true,
 			want:  Target{Name: "billing", Host: "payments.internal", Port: 9443},
 		},
+		{
+			name:  "empty present variable uses the default",
+			found: true,
+			want:  Target{Name: "billing", Host: "billing.internal", Port: 8443},
+		},
 	}
 
 	for _, tt := range tests {

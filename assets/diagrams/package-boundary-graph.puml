@@ -34,23 +34,23 @@ package "cmd/opsprobe (Gốc Lắp ghép / Composition Root)" as pkg_cmd {
 }
 
 package "internal/config (Ranh giới Cấu hình)" as pkg_config {
-  rectangle "<b>config.go</b>\n• Tách host:port bằng net.SplitHostPort\n• Kiểm tra tính hợp lệ phạm vi cổng 1–65535\n• Ranh giới <i>internal/</i> ngăn module ngoài import" as config_content
+  rectangle "<b>config.go</b>\n• Tách host:port bằng net.SplitHostPort\n• Kiểm tra tính hợp lệ phạm vi cổng 1–65535\n• <i>internal/</i>: kiểm tra prefix import path trong module mode" as config_content
 }
 
 package "probe (Nghiệp vụ Cốt lõi / Domain Package)" as pkg_probe {
-  rectangle "<b>probe.go / doc.go</b>\n• Khai báo Service, Endpoint, Result\n• Hàm Check(ctx, Service, runner) thuần túy\n• Hoàn toàn độc lập, không import config hay cmd" as probe_content
+  rectangle "<b>probe.go / doc.go</b>\n• Khai báo Service, Endpoint, Result\n• Check nhận runner, không nạp cấu hình\n• Không import config hay cmd" as probe_content
 }
 
 pkg_cmd -down-> pkg_config : <b>1. Nạp mục tiêu</b>\n(config.DefaultTargets / LoadTargets)
 pkg_cmd -down-> pkg_probe : <b>2. Thực thi kiểm tra</b>\n(probe.Check)
 
-pkg_config .[#94A3B8].> pkg_probe : <i>Không có quan hệ phụ thuộc lẫn nhau</i>
+pkg_config -[hidden]down-> pkg_probe
 
 note right of pkg_probe
-  <b>Nguyên tắc Đồ thị Phụ thuộc Một chiều (DAG):</b>
-  • Chiều phụ thuộc luôn hướng từ ứng dụng cụ thể về nghiệp vụ cốt lõi.
-  • Go compiler nghiêm cấm chu trình phụ thuộc (<i>import cycle not allowed</i>).
-  • Gói <b>probe</b> có thể tái sử dụng độc lập trong thư viện khác mà không kéo theo
-    cơ chế nạp cấu hình hay logic giao diện dòng lệnh của <b>cmd</b>.
+  <b>Đồ thị import của lab:</b>
+  Hai mũi tên là hai import thực.
+  probe không import config hay cmd.
+  config cũng không import probe.
+  Go từ chối chu trình import.
 end note
 @enduml

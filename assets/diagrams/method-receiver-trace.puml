@@ -22,8 +22,8 @@ skinparam note {
 
 left to right direction
 
-package "1. Ô nhớ Bên gọi (Caller Scope)" as caller_box {
-  object "<b>billing : Service</b>\n(Địa chỉ: 0x0040)" as billing {
+package "1. Biến bên gọi" as caller_box {
+  object "<b>billing : Service</b>" as billing {
     Name    = "billing"
     Port    = 8080
     Healthy = true
@@ -32,7 +32,7 @@ package "1. Ô nhớ Bên gọi (Caller Scope)" as caller_box {
 }
 
 package "2. Lời gọi Value Receiver" as val_box {
-  object "<b>billing.Summary()</b>\nReceiver: (s Service) tại 0x0080" as summary {
+  object "<b>billing.Summary()</b>\nReceiver: s Service" as summary {
     Name    = "billing" (copy)
     Port    = 8080 (copy)
     Healthy = true (copy)
@@ -41,26 +41,19 @@ package "2. Lời gọi Value Receiver" as val_box {
 }
 
 package "3. Lời gọi Pointer Receiver" as ptr_box {
-  object "<b>billing.Record(false)</b>\nReceiver: (s *Service) tại 0x00A0" as record {
-    s = 0x0040 (trỏ tới &billing)
+  object "<b>billing.Record(false)</b>\nReceiver: s *Service" as record {
+    s = &billing
   }
 }
 
-billing -down-> summary : billing.Summary()\nSao chép toàn bộ trường (Value Copy)\nChỉ đọc an toàn, không sửa được 0x0040
-billing -down-> record : billing.Record(false)\nTruyền địa chỉ (&billing = 0x0040)
-record .[#10B981]up.> billing : Giải tham chiếu (*s) trực tiếp sửa 0x0040:\nHealthy = false, Retries = 1
+billing -down-> summary : sao chép giá trị Service
+billing -down-> record : sao chép giá trị &billing
+record .up.> billing : (*s).Healthy = false\n(*s).Retries = 1
 
-note bottom of summary
-  <b>Value Receiver:</b>
-  • Nhận bản sao giá trị độc lập.
-  • Đảm bảo tính bất biến của caller.
-  • Thích hợp cho phép đọc hoặc biến đổi trả về bản mới.
-end note
-
-note bottom of record
-  <b>Pointer Receiver:</b>
-  • Nhận con trỏ tham chiếu ô nhớ gốc.
-  • Thay đổi lập tức phản ánh tại caller.
-  • Bắt buộc khi cần cập nhật trạng thái chung hoặc tránh copy lớn.
-end note
+legend bottom left
+  <b>Value receiver:</b> sao chép Service, không bảo đảm deep copy.
+  Gán field của s không gán field của billing; dữ liệu tham chiếu có thể dùng chung.
+  <b>Pointer receiver:</b> sao chép con trỏ; gán qua *s sửa biến đích.
+  Gán lại s chỉ đổi receiver cục bộ, không đổi con trỏ của caller.
+end legend
 @enduml

@@ -21,31 +21,30 @@ skinparam note {
   FontColor #000000
   FontSize 15
 }
-left to right direction
+top to bottom direction
 
-object "Biến: registry\n(Map Header Pointer)" as registry {
-  ptr = &hmap
+object "Biến: registry" as registry {
+  type = map[string]int
 }
 
 object "Biến: alias\n(alias := registry)" as alias {
-  ptr = &hmap
+  type = map[string]int
 }
 
-map "Cấu trúc Bảng băm dùng chung (hmap)" as hmap {
-  count => 1
-  buckets => &bucket_array
+map "Dữ liệu map dùng chung" as data {
   "billing" => 2
 }
 
-registry::ptr -right-> hmap : Tham chiếu cùng hmap
-alias::ptr -right-> hmap : Tham chiếu cùng hmap
+registry -[hidden]right-> alias
+registry -down-> data : truy cập phần tử
+alias -down-> data : truy cập cùng phần tử
 
-note bottom of alias
-  Map trong Go là một con trỏ trỏ tới struct hmap runtime.
-  Phép gán alias := registry chỉ sao chép địa chỉ con trỏ.
+note right of alias
+  alias := registry sao chép giá trị map.
+  Không sao chép dữ liệu phần tử.
 end note
 
-note bottom of hmap
+note bottom of data
   Cả hai biến đều thao tác trên cùng một bảng băm.
   Ghi dữ liệu qua alias lập tức phản ánh khi đọc từ registry.
 end note

@@ -29,11 +29,12 @@ skinparam note {
 
 left to right direction
 
-class "<b>renderSummary</b>\n(Bên tiêu dùng / Consumer)" as consumer <<func>> {
-  + renderSummary(src SummarySource): string
+class "<b>renderSummary</b>\n(Bên tiêu dùng)" as consumer <<func>> {
+  src: SummarySource
+  kết quả: string
 }
 
-interface "<b>SummarySource</b>\n<<interface>>\n(Hợp đồng giao ước tối thiểu)" as contract {
+interface "<b>SummarySource</b>" as contract {
   + Summary(): string
 }
 
@@ -43,26 +44,24 @@ class "<b>Service</b>\n(Đối tượng nghiệp vụ)" as service {
   + Healthy: bool
   --
   + Summary(): string
-  + Record(healthy bool)
 }
 
-class "<b>StaticTarget</b>\n(Cấu hình tĩnh)" as static {
-  + Host: string
-  + Port: int
+class "<b>StaticTarget</b>\n(Kiểu được định nghĩa)" as static {
+  kiểu nền: string
   --
   + Summary(): string
 }
 
-consumer ..> contract : <b><<use>></b>\nĐòi hỏi hợp đồng tối thiểu
+consumer ..> contract : phụ thuộc
 
-service ..|> contract : <b>Thỏa mãn ngầm định</b>\n(Cùng chữ ký Summary() string)
-static ..|> contract : <b>Thỏa mãn ngầm định</b>\n(Cùng chữ ký Summary() string)
+service ..|> contract : Summary() string
+static ..|> contract : Summary() string
 
 note bottom of contract
-  <b>Đặc trưng Duck Typing / Structural Typing trong Go:</b>
-  • Không cần từ khóa <i>implements</i> tường minh.
-  • Kiểu cụ thể tự động thỏa mãn interface nếu có đủ method set.
-  • Giao diện được thiết kế tại nơi tiêu dùng (consumer-driven),
-    giúp tách rời hoàn toàn mã hiển thị khỏi chi tiết cài đặt của Service.
+  <b>Thỏa mãn interface:</b>
+  Không khai báo implements.
+  Tập method phải đủ Summary().
+  Consumer chọn hợp đồng nhỏ.
+  Các kiểu không cần kế thừa nhau.
 end note
 @enduml

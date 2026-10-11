@@ -1,46 +1,23 @@
 @startuml
 !include publication-flow.iuml
+top to bottom direction
 
-start
+rectangle "1. Trước khi nhận phiên\nKiểm tra ctx.Err()\nMở session" as acquire
+rectangle "2. Sau khi mở thành công\nĐăng ký defer dọn phiên\nGọi run(ctx, endpoint, session)" as owned
+rectangle "3. Hàm thoát: defer gọi Close()\nrun lỗi: giữ lỗi chính\nrun thành công: trả lỗi Close hoặc nil" as cleanup
 
-:Bắt đầu hàm runWithSession(ctx);
+acquire -down-> owned : open không trả lỗi
+owned -down-> cleanup : run trả về
 
-if (ctx.Err() != nil?) then (Đã hủy / Timeout)
-  :Trả về lỗi ctx.Err();
-  note right
-    Thoát sớm;
-    không mở session;
-    không gọi Close().
-  end note
-  stop
-else (Hợp lệ)
-  :Thực hiện mở session;
-  if (Mở thành công?) then (Lỗi)
-    :Trả về lỗi mở session;
-    stop
-  else (Thành công)
-    :Đăng ký defer session.Close();
-    :Thực thi run(ctx, session);
-    
-    if (run() có lỗi?) then (Có lỗi)
-      :defer đóng session;
-      :Giữ nguyên lỗi chính của run();
-      note right
-        Lỗi Close() chỉ log;
-        không đè lỗi run().
-      end note
-      stop
-    else (Thành công)
-      :defer đóng session;
-      if (Close() lỗi?) then (Có lỗi)
-        :Trả về lỗi Close();
-        stop
-      else (Thành công)
-        :Trả về nil;
-        stop
-      endif
-    endif
-  endif
-endif
+note right of acquire
+  ctx đã hủy hoặc open lỗi:
+  trả lỗi trước khi nhận phiên;
+  không gọi Close().
+end note
 
+note right of cleanup
+  Lab không log lỗi Close.
+  Nếu run panic, defer vẫn chạy;
+  sơ đồ không thêm recover.
+end note
 @enduml

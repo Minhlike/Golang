@@ -16,27 +16,27 @@ skinparam note {
   FontColor #000000
   FontSize 15
 }
-left to right direction
+top to bottom direction
 
-object "Biến bên gọi: amount\n(Địa chỉ: 0x0040)" as amount {
+object "Biến bên gọi: amount" as amount {
   type = int
   value = 120 (ban đầu: 100)
 }
 
-object "Tham số hàm: balance\n(Địa chỉ: 0x0048)" as pointer {
+object "Tham số hàm: balance" as pointer {
   type = *int
-  value = 0x0040
+  value = &amount
 }
 
-pointer::value -right-> amount : Lưu địa chỉ ô nhớ (&amount)
+pointer -down-> amount : cùng biến đích
 
-note bottom of pointer
-  balance lưu giá trị con trỏ là địa chỉ 0x0040.
+note right of pointer
+  balance nhận bản sao của giá trị &amount.
   Toán tử *balance giải tham chiếu để truy cập ô nhớ đích.
 end note
 
-note bottom of amount
-  Phép toán *balance += 20 trực tiếp ghi vào ô nhớ 0x0040,
+note right of amount
+  Phép toán *balance += 20 ghi vào biến đích,
   làm thay đổi biến amount của bên gọi từ 100 thành 120.
 end note
 @enduml

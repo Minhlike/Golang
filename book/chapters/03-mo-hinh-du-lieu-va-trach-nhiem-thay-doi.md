@@ -64,7 +64,7 @@ fmt.Println(amount) // 120
 
 @figure Tham số `balance` trong hàm là giá trị con trỏ được truyền theo cơ chế sao chép giá trị. Thao tác `*balance` truy cập biến đích (*pointee*); sơ đồ cố ý không dùng địa chỉ số hay phân chia ngăn xếp/vùng nhớ heap để giữ đúng mô hình tinh thần ở tầng ngữ nghĩa.
 
-Phép toán lấy địa chỉ `&` không áp dụng được cho mọi biểu thức. Thông thường, toán hạng của `&` bắt buộc phải là đối tượng có thể lấy địa chỉ (*addressable*): biến số, phép giải tham chiếu con trỏ, chỉ mục của lát cắt, trường của một cấu trúc có thể lấy địa chỉ, hoặc chỉ mục của mảng có thể lấy địa chỉ là những trường hợp then chốt ở giai đoạn này. Đặc tả ngôn ngữ Go cung cấp một ngoại lệ thực tế: cho phép lấy địa chỉ của hằng cấu trúc phức hợp (*composite literal*), chẳng hạn `&Service{Name: "billing"}`. Không cần gượng ép gọi composite literal là “addressable” để áp dụng đúng quy tắc; hãy phân biệt rõ hai bản chất: `&x` thông thường đòi hỏi một ô nhớ có thể gán, còn hằng cấu trúc phức hợp có cơ chế đặc biệt cho phép cấp phát giá trị rồi trích xuất ngay địa chỉ của nó. Chỉ mục của bảng băm (*map index*) không thể lấy địa chỉ; chúng ta sẽ tìm hiểu lý do thực tiễn của giới hạn này khi đưa bảng băm vào mô hình dịch vụ.
+Phép lấy địa chỉ `&` không áp dụng được cho mọi biểu thức. Thông thường, toán hạng phải lấy được địa chỉ: một biến, biểu thức giải tham chiếu con trỏ, phần tử lát cắt, trường của struct lấy được địa chỉ hoặc phần tử mảng lấy được địa chỉ. Go có ngoại lệ cho biểu thức tạo giá trị phức hợp viết trực tiếp (*composite literal*), như `&Service{Name: "billing"}`. Đây không phải hằng số: biểu thức ấy tạo một biến mới chứa giá trị `Service` và trả con trỏ tới biến đó. Ta có thể sửa các trường qua con trỏ. Ngược lại, `&100` và `&services["billing"]` không hợp lệ. Khả năng gán và khả năng lấy địa chỉ không đồng nhất: phần tử map có thể là đích của phép gán nhưng không thể là toán hạng của `&`.
 
 ### Giá trị nil là thiếu biến đích, không phải “con trỏ rỗng vô hại”
 
@@ -101,7 +101,7 @@ billing := Service{
 }
 ~~~
 
-Cú pháp `type Service` khai báo một kiểu có tên; phần thân cấu trúc khai báo các trường và kiểu dữ liệu tương ứng của chúng. Hằng cấu trúc gán giá trị cho các trường được liệt kê. Trường `Retries` không xuất hiện trong hằng cấu trúc nên tự động nhận giá trị mặc định của kiểu `int` là `0`. Giá trị mặc định không thể thay thế cho khâu kiểm tra tính hợp lệ: một cấu trúc `Service{}` hợp lệ về mặt kiểu dữ liệu nhưng chưa chắc đã hợp lệ cho một dịch vụ thực tế. Trong nghiệp vụ này, cổng mạng `0` có thể mang ý nghĩa “chưa được cấu hình”.
+Cú pháp `type Service struct { ... }` định nghĩa kiểu `Service` với các trường đã nêu. Biểu thức `Service{...}` tạo một giá trị struct; trường `Retries` không được liệt kê nhận giá trị mặc định `0`. Go không cho khai báo một struct làm hằng bằng `const`. Giá trị mặc định cũng không thay thế kiểm tra tính hợp lệ: `Service{}` hợp lệ về kiểu nhưng chưa chắc hợp lệ cho dịch vụ thật. Trong nghiệp vụ này, cổng `0` có thể mang nghĩa “chưa được cấu hình”.
 
 Cấu trúc (*struct*) không phải là một lớp đối tượng thiếu phương thức. Trước hết, nó là một giá trị phức hợp gồm nhiều thành phần mang chung một ý nghĩa nghiệp vụ. Phép truy xuất trường chỉ đơn thuần đọc hoặc gán một phần giá trị bên trong cấu trúc:
 
@@ -147,6 +147,9 @@ Việc nesting không tự động làm thiết kế tốt hơn. Nó có ích kh
 Ta muốn `opsprobe` đánh dấu service không khỏe sau một lần probe thất bại. Phiên bản đầu tiên trông rất có lý:
 
 ~~~go
+// Ví dụ mới, không dùng billing đã tăng Retries ở trên.
+billing := Service{Name: "billing", Healthy: true}
+
 func markUnhealthy(service Service) {
 	service.Healthy = false
 	service.Retries++
@@ -272,9 +275,9 @@ services["billing"] = billing
 
 Lệnh `delete(services, "billing")` xóa một phần tử khỏi bảng băm; việc xóa một khóa không tồn tại hoàn toàn an toàn và không gây lỗi. Tuy nhiên, vòng lặp `for range` trên bảng băm không có thứ tự lặp cố định theo đặc tả ngôn ngữ. Nếu công cụ dòng lệnh cần xuất kết quả theo thứ tự ổn định, lập trình viên cần thu thập danh sách các khóa, sắp xếp chúng theo quy tắc định sẵn rồi mới in ra; tuyệt đối không xem thứ tự ngẫu nhiên trong một lần chạy là giao ước cố định của bảng băm.
 
-### Bảng băm sao chép giá trị tiêu đề, chia sẻ dữ liệu lưu trữ
+### Sao chép giá trị map, chia sẻ các phần tử
 
-Bảng băm không phải là con trỏ và ta không cần đi sâu vào cấu trúc bên trong của bảng băm để sử dụng nó một cách chuẩn xác. Phép gán và lời gọi hàm thực hiện sao chép giá trị tiêu đề của bảng băm. Khi hai giá trị tiêu đề cùng tham chiếu tới một vùng dữ liệu chung, thao tác ghi qua một biến sẽ lập tức phản ánh khi đọc qua biến còn lại:
+Ở tầng ngôn ngữ, `map[string]int` và `*int` là hai kiểu khác nhau. Phép gán và truyền đối số sao chép giá trị map; bản sao vẫn tham chiếu tới cùng dữ liệu map. Không cần giả định có một “tiêu đề map” với bố cục cố định để giải thích hành vi này. Trong đoạn chạy tuần tự dưới đây, cập nhật phần tử qua `alias` được đọc lại qua `registry`:
 
 ~~~go
 registry := map[string]int{"billing": 1}
@@ -286,7 +289,9 @@ fmt.Println(registry["billing"]) // 2
 
 ![Hai map value sau assignment: map value được copy, còn map data được cả hai value dùng để lookup và cập nhật.](../../assets/diagrams/map-sharing.png)
 
-@figure Phép gán sao chép giá trị tiêu đề bảng băm. Khi giá trị đó cùng tham chiếu tới một vùng dữ liệu nền tảng, việc biến đổi phần tử qua `alias` sẽ hiện diện khi đọc từ `registry`; hình vẽ là sơ đồ khái niệm, không mô tả chi tiết cài đặt bảng băm trong bộ nhớ.
+@figure Phép gán sao chép giá trị map, không sao chép các phần tử. Hai giá trị dùng chung dữ liệu map; hình không khẳng định bố cục triển khai trong bộ nhớ.
+
+Hãy phân biệt sửa phần tử với thay chính biến map. Nếu một hàm gán `registry = make(map[string]int)`, nó chỉ thay tham số cục bộ; biến map của bên gọi vẫn giữ giá trị cũ. Con trỏ cũng vậy: gán `p = &other` không đổi con trỏ của bên gọi, còn `*p = 7` sửa biến đích. Go vẫn truyền cả hai đối số theo giá trị, không tự tạo cơ chế truyền biến bằng tham chiếu. `TestPointerAndMapRebindingStayLocal` trong lab đặt hai thao tác cạnh nhau để anh kiểm chứng sự khác biệt.
 
 Một đặc điểm khiến bảng băm khác biệt với lát cắt và mảng khi cập nhật giá trị cấu trúc: phần tử truy xuất qua chỉ mục bảng băm (*map index*) không thể lấy địa chỉ ô nhớ (*not addressable*). Vì vậy đoạn mã sau sẽ không thể biên dịch:
 
@@ -349,7 +354,7 @@ Chính sách ấy dẫn tới những ca kiểm thử không cần đo RAM. Sau 
 
 Giới hạn từng phần tử (*entry*) riêng lẻ chưa phải giới hạn byte: hai phần tử mỗi cái hàng gigabyte vẫn quá lớn. Ngược lại, kiểm tra `len(value)` rồi lưu thẳng một lát cắt (*slice*) nhỏ cũng chưa đủ, vì nó có thể giữ mảng bên dưới (*backing array*) lớn như Chương 2. Bản sửa sao chép các byte thực sự được nhận; nhân bản chuỗi khóa (*key string*) để một chuỗi con nhỏ không vô tình giữ vùng lưu trữ (*storage*) của chuỗi lớn. Với chính sách bài thực hành, tổng độ dài tải trọng (*payload*) được bộ nhớ đệm giữ không vượt `maxEntries * maxValueBytes`; khóa và siêu dữ liệu (*metadata*) có chi phí riêng. Đây không phải mức trần RSS hay lời hứa rằng bộ cấp phát (*allocator*) trả bộ nhớ ngay sau khi thu hồi (*eviction*).
 
-Bảng ánh xạ (*map*) mất phần tử thì đường tham chiếu từ map tới giá trị cũ bị hủy bỏ; hiện tượng trùng tên (*alias*) ở nơi khác vẫn có thể giữ giá trị ấy. Các vị trí (*slot*) trong hàng đợi FIFO cũng phải giải phóng tham chiếu (*reference*) sau khi dịch chuyển, thay vì chỉ giảm độ dài (*length*) và để một chuỗi cũ nằm ở vùng dung lượng (*capacity*) chưa dùng. Bài thực hành có đúng một chủ sở hữu nên không cần khóa loại trừ tương hỗ (*mutex*); nếu cho nhiều luồng nhẹ (*goroutine*) gọi `Put`, ta phải thiết kế cơ chế đồng bộ hóa trước, không thể suy đoán map an toàn chỉ từ việc đã áp đặt giới hạn dung lượng (*capacity limit*).
+Khi map mất phần tử, đường tham chiếu từ map tới giá trị cũ bị bỏ; một tham chiếu khác tới cùng dữ liệu vẫn có thể giữ nó sống. Các ô trong hàng đợi FIFO cũng phải bỏ tham chiếu sau khi dịch chuyển, thay vì chỉ giảm độ dài rồi để chuỗi cũ ở phần dung lượng chưa dùng. Lab có đúng một chủ sở hữu nên không cần mutex; nếu nhiều goroutine gọi `Put`, ta phải thiết kế đồng bộ hóa trước. Giới hạn dung lượng không làm map an toàn khi truy cập đồng thời.
 
 Trong ca đo ở Chương 10, cùng chuỗi khóa mới làm phiên bản không giới hạn tăng từ hai lên tám phần tử, trong khi phiên bản sửa dừng lại ở hai. Bằng chứng kết thúc không phải “RAM trông đẹp hơn”, mà là giao ước (*contract*) hữu hạn được kiểm thử bảo toàn đúng đắn, cộng với hồ sơ phân tích (*profile*) xác nhận tải trọng bị loại bỏ không còn bị bộ nhớ đệm giữ lại. Nếu sản phẩm thật sự cần lưu tất cả khóa, hãy thay đổi yêu cầu và nơi lưu dữ liệu; đừng gọi việc mất lịch sử vì bị dọn dẹp (*eviction*) là một bản sửa thành công.
 
@@ -397,6 +402,8 @@ var alias PortAlias = raw
 ~~~
 
 `Port` và `Attempts` là hai kiểu được định nghĩa (*defined type*) khác nhau; việc có cùng kiểu nền tảng (*underlying type*) `uint16` không làm chúng có cùng danh tính (*identity*). Kiểu `PortAlias` lại là bí danh khác của chính `uint16`, không tạo ra một kiểu mới. Bí danh (*alias*) hữu ích khi tái cấu trúc giao diện lập trình (*API*) sang gói (*package*) khác mà vẫn giữ nguyên danh tính cho bên gọi (*caller*), nhưng không có tác dụng nếu mục tiêu là ngăn chặn nhầm lẫn giữa hai đại lượng nghiệp vụ. Đừng đồng nhất khả năng gán (*assignability*) với khả năng chuyển đổi (*convertibility*): chuyển đổi kiểu tường minh (*conversion*) có thể hợp lệ khi phép gán trực tiếp bị cấm; sự thỏa mãn giao diện (*interface satisfaction*) còn dựa trên tập phương thức (*method set*) chứ không chỉ hình thức biểu diễn bộ nhớ.
+
+Quy tắc không phải “khác tên thì luôn phải chuyển đổi”. Một giá trị có thể gán giữa hai kiểu có cùng kiểu nền nếu ít nhất một kiểu không có tên, chẳng hạn `type PortBox struct{ Port int }; var box PortBox; var plain struct{ Port int } = box`. Với hai kiểu được định nghĩa `Port` và `Attempts`, điều kiện ấy không thỏa. Hằng chưa định kiểu như `80` lại gán được cho `Port` khi biểu diễn được; đó là quy tắc về hằng, không phải Go tự đổi mọi biến số sang kiểu đích. Test biên dịch trong `part3-data-models` kiểm tra cả ví dụ được chấp nhận lẫn bị từ chối, bao gồm gọi method trên phần tử map và truyền `Service` vào `ProbeRecorder`.
 
 Chuyển đổi kiểu (*conversion*) không phải là kiểm tra tính hợp lệ (*validation*). Với biến `wide := uint32(65537)`, biểu thức `Port(wide)` cho giá trị 1 do quy tắc cắt ngắn số nguyên sang kiểu có kích thước hẹp hơn. Ngược lại, cú pháp `Port(65537)` với hằng số bị trình biên dịch từ chối vì giá trị vượt quá phạm vi biểu diễn của kiểu đích. Hàm khởi tạo (*constructor*) tiếp nhận dữ liệu từ bên ngoài bắt buộc phải kiểm tra phạm vi trước khi chuyển đổi kiểu nếu giao ước (*contract*) quy định cổng hợp lệ nằm trong khoảng 1–65535. Việc đặt tên kiểu giúp phát hiện nhầm lẫn vai trò; nó không tự động ngăn chặn giá trị khởi tạo mặc định (*zero value*) hoặc giá trị nằm ngoài miền nghiệp vụ.
 

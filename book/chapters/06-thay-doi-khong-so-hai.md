@@ -85,6 +85,9 @@ func TestRunMapsEnvironmentTargetToRunner(t *testing.T) {
 	}) {
 		t.Fatalf("runner endpoint = %+v", got)
 	}
+	if len(outcomes) != 1 {
+		t.Fatalf("outcomes = %+v", outcomes)
+	}
 	if outcomes[0].Err != nil ||
 		outcomes[0].Service != "billing" {
 		t.Fatalf("outcome = %+v", outcomes[0])
@@ -124,7 +127,7 @@ Hàm `Run` cần gọi `config.LoadTargets` đúng một lần trước vòng l�
 
 Ca kiểm thử đầu tiên của `Run` cố ý chỉ dùng một trường hợp ghi đè hợp lệ. Nó trả lời câu hỏi khi tái cấu trúc (*refactor*): điểm cuối (*endpoint*) có thực sự truyền tới runner hay không? Nhưng nếu cứ nhân bản kiểu kiểm thử đó cho từng dữ liệu đầu vào xấu, bộ kiểm thử sẽ dần biến thành một chuỗi dài các hàm gần như giống hệt nhau. Lúc ấy người đọc không còn nhìn thấy các quy tắc của cấu hình; họ chỉ thấy rất nhiều lần gọi lặp lại `LoadTargets`.
 
-Một người duyệt mã (*reviewer*) giàu kinh nghiệm sẽ đặt câu hỏi khác: bộ phân tích này có bao nhiêu chính sách độc lập? Với biến `OPS_PROBE_TARGET`, ta cần giữ ít nhất hai chính sách. Biến môi trường vắng mặt dùng giá trị mặc định (*default*) đã công bố. Biến môi trường có mặt phải là một chuỗi `host:port` hợp lệ, có máy chủ (*host*) và cổng (*port*) nằm trong phạm vi hợp lệ của giao thức TCP. Mỗi hàng trong bảng kiểm thử là một ví dụ minh họa cho một chính sách, không phải một dữ liệu ngẫu nhiên chỉ nhằm tăng độ bao phủ mã nguồn (*coverage*).
+Với `OPS_PROBE_TARGET`, chính sách của lab là: biến vắng mặt hoặc có chuỗi rỗng dùng cấu hình mặc định; chuỗi không rỗng phải tách được `host:port`, có host và port trong khoảng 1–65535. Một giá trị `found == true, raw == ""` không bị từ chối trong code hiện tại. Bảng kiểm thử phải có hàng riêng cho trường hợp đó, thay vì gọi mọi biến “có mặt” là một override hợp lệ. Những hàng khác nhau bảo vệ quyết định khác nhau, không chỉ làm tăng coverage.
 
 Đây là lúc kỹ thuật kiểm thử hướng bảng (*table-driven test*) phát huy giá trị. Không phải vì cộng đồng Go áp đặt một nghi thức cố định, mà vì bảng cấu trúc làm hiển lộ rõ ràng phần dữ liệu thay đổi và phần logic giữ nguyên. Các giá trị `raw`, `found` và `want` thay đổi theo từng ca kiểm thử; trong khi cách thức gọi bộ phân tích cú pháp (*parser*) và lời khẳng định kiểm thử (*assertion*) về một mục tiêu duy nhất được dùng chung:
 
@@ -171,6 +174,10 @@ tests := []struct {
 Điểm dễ bỏ sót không nằm ở vòng lặp `for`, mà ở lời khẳng định kiểm thử (*assertion*). Ca kiểm thử này chỉ bảo đảm rằng từng dữ liệu không hợp lệ đều bị từ chối; nó không bảo đảm nguyên văn thông điệp lỗi (*error message*). Thông điệp lỗi là chi tiết kỹ thuật có thể hiệu chỉnh để hỗ trợ tốt hơn cho người vận hành. Quy tắc “dữ liệu đầu vào này không được phép tạo ra mục tiêu” mới chính là giao ước cốt lõi. Nếu giao diện dòng lệnh (*CLI*) hoặc giao diện lập trình (*API*) cần phân loại lỗi tự động bằng chương trình, khi đó mới phát sinh lý do thiết kế kiểu lỗi chuyên biệt (*custom error type*) hoặc lỗi lính gác (*sentinel error*); không nên dùng phép so sánh chuỗi thô sơ để thay thế cho thiết kế kiến trúc chuẩn mực.
 
 Với phiên bản Go 1.27.1 này, biến vòng lặp khai báo bằng `:=` sở hữu một biến riêng biệt ở mỗi lần lặp (ngữ nghĩa bắt đầu từ Go 1.22), nên hàm bao đóng (*closure*) không còn vô tình giữ chung một biến `tt` như tập quán Go cũ. Tuy nhiên, một cạm bẫy con trỏ khác vẫn tồn tại: biểu thức `&tt` trỏ tới bản sao của lần lặp đó, chứ không phải phần tử thật trong lát cắt `tests`. Nếu mục tiêu là biến đổi trực tiếp phần tử gốc, hãy lặp lấy chỉ số rồi dùng `&tests[i]`. Ở đây hàm `t.Run` chạy tuần tự đồng bộ và hàm bao đóng chỉ đọc giá trị `tt`, nên con trỏ và vòng đời của goroutine đều không phải vấn đề mà chính sách bộ phân tích cần bận tâm.
+
+Quy tắc biến vòng lặp còn phụ thuộc phiên bản ngôn ngữ có hiệu lực của module hoặc tệp, không chỉ phiên bản toolchain được cài. Lab khai báo `go 1.27`, nên dùng ngữ nghĩa mới. Ngay cả với biến riêng mỗi vòng, `t.Parallel()` không nhân bản map, pointer hay phụ thuộc toàn cục mà các case cùng sử dụng. Chỉ bật nó khi từng case có dữ liệu và tài nguyên độc lập; `t.Setenv` không được dùng trong test parallel hoặc có tổ tiên parallel vì môi trường thuộc cả tiến trình.
+
+Có một điểm dễ làm test xanh giả: `t.Run` chỉ chờ tới khi subtest gọi `t.Parallel`, không đợi phần còn lại của subtest lúc ấy. Subtest parallel tiếp tục sau khi hàm cha trở về. Nếu cần kiểm tra tổng hợp sau tất cả case, hãy đặt chúng trong một nhóm `t.Run("group", ...)` rồi kiểm tra sau khi nhóm trả về; dùng `t.Cleanup` của nhóm để dọn tài nguyên, không dùng defer của cha làm tài nguyên biến mất trước lúc con chạy. Test `TestParallelSubtestsWaitForTheirGroup` ghi nhận thứ tự bằng primitive đồng bộ, không bằng sleep hay phỏng đoán scheduler.
 
 ### Bài thực hành: Ôn tập phân loại dữ liệu đầu vào
 
@@ -328,6 +335,8 @@ Một đề xuất nghe có vẻ hợp lý là “nếu `err == nil`, trường 
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
 Điều kiện `Name == "billing"` là giao ước tạm thời của mẫu kiểm thử nhỏ, chứ không phải đặc tính bất biến mà bộ phân tích cần duy trì khi mô hình dữ liệu đầu vào mở rộng. Đặc tính kiểm thử mờ nên đủ chặt chẽ để bắt lỗi mục tiêu không hợp lệ và đủ tinh gọn để không đóng băng một chi tiết thiết kế chưa từng được cam kết. Khi kiểm thử mờ phát hiện thất bại thực sự, trước hết hãy chuyển dữ liệu đầu vào đó thành một ca kiểm thử hồi quy (*regression test*) dễ đọc; tập dữ liệu sinh ra là bằng chứng, còn ca kiểm thử với tên gọi tường minh là lời giải thích cho những kỹ sư tiếp quản sau này.
+
+Một giới hạn khác nằm ngay trong property đang dùng: parser bỏ qua mọi override và luôn trả default vẫn thỏa host/port hợp lệ. Vì vậy, property này cần đi cùng bảng kiểm thử ánh xạ chính xác, không thay thế nó. Đối chứng âm trong evidence giữ nguyên fuzz target nhưng cố ý bỏ override: seed test vẫn xanh, còn case `maps a host and port from the override` đỏ. Đó là bằng chứng cụ thể về khoảng trống của test, không phải lý do thêm một assertion tùy tiện để khóa mọi thiết kế tương lai. Fake runner cũng chỉ chứng minh đối số và chính sách điều phối; nó không chứng minh DNS, kết nối hay dịch vụ thật đã hoạt động.
 
 ## Đo câu hỏi trước khi tối ưu câu trả lời
 

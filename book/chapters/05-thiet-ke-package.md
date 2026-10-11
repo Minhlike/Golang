@@ -14,7 +14,7 @@ Package `cmd/opsprobe` là điểm khởi đầu dòng lệnh (command entrypoin
 
 Package `probe` là thư viện có thể tái sử dụng (importable package): sở hữu mô hình nghiệp vụ cho một lần kiểm tra và hoàn toàn độc lập với thiết bị đầu ra.
 
-Package `internal/config` là chi tiết triển khai nội bộ của ứng dụng: quản lý cấu hình mặc định, với phạm vi import bị `go` command giới hạn theo cây thư mục cha của `internal`, không phải một quy tắc chung “cùng module”.
+Package `internal/config` là chi tiết triển khai nội bộ của ứng dụng: quản lý cấu hình mặc định, với phạm vi import được lệnh `go` kiểm tra theo ranh giới parent của `internal`, không phải một quy tắc chung “cùng module”. Phần dưới sẽ phân biệt đường dẫn import với đường dẫn thư mục theo chế độ build.
 
 ![Dependency đi một chiều: command phối hợp config nội bộ và package probe; probe không import ngược command hay config.](../../assets/diagrams/package-boundary-graph.png)
 
@@ -81,7 +81,9 @@ func DefaultTargets() []Target {
 }
 ~~~
 
-Package ở `internal` không phải “private bằng thỏa thuận”. Go chỉ cho code nằm trong cây thư mục của gói cha import nó. Vì `cmd/opsprobe` nằm dưới thư mục gốc module, vốn là thư mục cha của `internal`, nó hoàn toàn import được `internal/config`. Code nằm ngoài cây cha ấy bị lệnh `go` từ chối. Không nên dùng số lượng module làm phép thử: một kho mã nguồn nhiều module có thể vẫn có các package nằm trong cây được phép.
+`internal` được lệnh `go` kiểm tra, không chỉ là thỏa thuận đặt tên. Với lab dùng module, gói `example.com/golang-master/part5-package-design/internal/config` chỉ được import từ cây đường dẫn import có gốc `example.com/golang-master/part5-package-design`. Vì thế `cmd/opsprobe` hợp lệ. Đừng chỉ xét vị trí thư mục trên đĩa hoặc số lượng module: một module con mang path không liên quan vẫn có thể bị từ chối dù đặt ngay trong repo. Trong Go 1.27.1, `cmd/go/internal/load/pkg.go` dùng đường dẫn import cho package thuộc module; package ngoài module dùng cây thư mục tương ứng. Đây là hành vi toolchain, không phải quy tắc access modifier của Go Specification.
+
+`TestInternalBoundaryUsesModuleImportPaths` trong `labs/edition-contracts` dựng hai consumer với cùng mã import và cùng `replace` cục bộ. Consumer có path dưới cây được phép build được; consumer có path khác bị từ chối với `use of internal package ... not allowed`. Các thư mục vật lý đều nằm trong một thư mục tạm. Phép thử không biến `internal` thành ranh giới bảo mật trước người có quyền sửa source hay chạy chương trình; nó bảo vệ ranh giới import trong quy trình build.
 
 Đây không phải lý do để nhét mọi gói vào `internal` theo phản xạ. Với tệp nhị phân tự chứa, đó thường là giá trị mặc định (*default*) tốt vì không công bố giao diện lập trình (*API*) ra ngoài. Với `probe` trong bài thực hành này, chúng ta cố tình để gói này có thể nhập khẩu (*importable*) để ranh giới giữa thao tác nghiệp vụ (*domain operation*) và công cụ dòng lệnh (*CLI*) hiển lộ rõ ràng. Nếu sau này không còn bên tiêu dùng (*consumer*) nào bên ngoài ứng dụng, nó cũng có thể chuyển thành nội bộ (`internal`); vị trí phải dựa trên bên tiêu dùng thực tế, không theo cấu trúc thư mục hình thức.
 
@@ -209,6 +211,8 @@ Giá trị `Result{Service: service.Name}` là đủ cho nhánh thành công. Sa
 Một ranh giới gói được phân chia chuẩn mực vẫn có thể biên dịch với mã nguồn khác với dự tính của người lập trình. Gói (*package*) là đơn vị tổ chức mã nguồn; trong khi mô-đun (*module*) là tập hợp các gói đi kèm phiên bản và các yêu cầu phụ thuộc. Tệp `go.mod` xác lập đường dẫn mô-đun, phiên bản ngôn ngữ và các yêu cầu; tệp `go.sum` lưu bảng băm kiểm tra để xác minh tính toàn vẹn của mã phụ thuộc đã tải. Nó không phải tệp khóa phiên bản liệt kê cứng mọi phiên bản sẽ dùng trong mọi chế độ biên dịch.
 
 Go sử dụng thuật toán chọn phiên bản tối thiểu (*minimal version selection*) cho các yêu cầu trong đồ thị mô-đun: với mỗi đường dẫn mô-đun, Go chọn phiên bản cao nhất được yêu cầu trong đồ thị liên quan, chứ không tự ý tải bản mới nhất trên mạng Internet. Thuật ngữ “tối thiểu” ở đây chỉ tập hợp phiên bản thỏa mãn yêu cầu, không có nghĩa là chọn phiên bản thấp nhất trong mọi phụ thuộc. Chỉ thị `replace` có thể hoán đổi mã nguồn cục bộ hoặc chỉ định phiên bản; một bản biên dịch sử dụng chỉ thị thay thế cục bộ chỉ chứng minh mã nguồn trên máy đó. Chỉ thị thay thế trong các gói phụ thuộc không tự động trở thành chính sách của mô-đun chính tiêu dùng nó. Khi điều tra sự cố, hãy đọc kỹ kết quả `go list -m all`, `go mod graph` và `go env GOMOD GOWORK` trước khi kết luận kiểm thử đang chạy đúng phụ thuộc mong muốn.
+
+Thí nghiệm `TestMVSSelectsHighestRequiredVersion` trong `edition-contracts` đặt yêu cầu trực tiếp B ở `v1.0.0`, còn phụ thuộc C yêu cầu B ở `v1.2.0`. Trước khi chạy, hãy dự đoán `go list -m all` báo phiên bản B nào. Test dựng proxy tệp cục bộ với cả B `v1.3.0` nhưng không cho phép mạng: kết quả phải là `v1.2.0`, không phải phiên bản trực tiếp thấp hơn hay phiên bản có sẵn mới nhất. Đây là kiểm chứng lựa chọn phiên bản của toolchain, không chứng minh các phiên bản đó tương thích về API. Sau đó đổi yêu cầu của C và quan sát lựa chọn thay đổi; không cần sửa `go.sum` bằng tay để “ép” phiên bản.
 
 Không gian làm việc (*workspace*) bổ sung một lựa chọn cục bộ: tệp `go.work` có thể đưa nhiều mô-đun vào vai trò mô-đun chính để phát triển song song. Nó không hợp nhất chúng thành một mô-đun duy nhất để phát hành. Một dịch vụ trong không gian làm việc có thể dùng thư viện vừa sửa đổi trên máy, trong khi người dùng tải về vẫn nhận phiên bản đã phát hành chính thức. Vì vậy, việc kiểm tra ngoài không gian làm việc là một phép thử độc lập bắt buộc, không phải sự lặp lại thừa thãi:
 

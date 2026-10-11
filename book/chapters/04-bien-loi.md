@@ -58,7 +58,9 @@ if errors.Is(err, ErrUnknownService) {
 }
 ~~~
 
-Trong câu lệnh trên, bên gọi không cần quan tâm hiện có bao nhiêu lớp ngữ cảnh bao bọc bên ngoài lỗi lính canh. Hàm `errors.Is` sẽ tự động lần theo chuỗi bọc lỗi (*error chain*). Nếu đổi `%w` thành `%v`, thông báo hiển thị trước mắt có thể tương tự nhau nhưng định danh kiểu đã bị cắt đứt hoàn toàn; một điều kiện lỗi có thể phân loại theo chương trình đã vô tình bị thoái hóa thành chuỗi văn bản thuần túy chỉ dành cho mắt người đọc.
+Trong câu lệnh trên, `errors.Is` tìm qua các lớp bọc nên bên gọi không cần đếm chúng. Đổi `%w` thành `%v` trong chính `fmt.Errorf` này giữ phần mô tả nhưng bỏ đường mở gói tới `ErrUnknownService`; lỗi mới không còn nhận diện được sentinel ấy. Đây là mất liên kết với giá trị nguyên nhân, không phải một phép “xóa kiểu” chung cho mọi lỗi.
+
+Hai lần `errors.New("connection refused")` tạo hai giá trị lỗi khác nhau dù thông báo giống hệt. `errors.Is` mặc định so sánh giá trị khi kiểu của đích so sánh được; lỗi cũng có thể cung cấp method `Is(error) bool` để định nghĩa cách khớp. Nó không tự suy ra hai lỗi cùng nhóm từ câu chữ. Tương tự, `errors.As` không chỉ hỏi “kiểu có giống nhau không”: nó tìm lỗi gán được vào biến đích hoặc để method `As(any) bool` tùy biến việc khớp.
 
 ![Failure đi từ ProbeFunc qua ProbeFailure và lớp context của applyProbe; caller phân loại cấu hình thiếu bằng errors.Is hoặc lấy context probe bằng errors.As.](../../assets/diagrams/error-boundary-trace.png)
 
@@ -104,6 +106,10 @@ if errors.As(err, &failure) {
 ~~~
 
 Hàm `errors.As` không bao giờ kiểm tra “thông báo lỗi có chứa chuỗi máy chủ hay không”. Nó tìm kiếm một giá trị lỗi có thể gán được (*assignable*) vào kiểu đích mà bên gọi chỉ định. Đây chính là lý do các kiểu lỗi tùy biến nên lưu trữ dữ liệu nghiệp vụ có cấu trúc mà bên gọi thực sự cần đến, thay vì chỉ là một cấu trúc bọc lại một chuỗi văn bản vô hồn.
+
+`&failure` ở đây có kiểu `**ProbeFailure`: `As` cần địa chỉ của biến sẽ nhận con trỏ tìm được, không phải một đối tượng lỗi đã khởi tạo sẵn. Đích phải là con trỏ khác `nil` tới kiểu triển khai `error` hoặc tới một interface; truyền sai đích có thể gây `panic`. Nếu một API trả typed nil `(*ProbeFailure)(nil)` dưới kiểu `error`, lỗi interface vẫn khác `nil` như Chương 3; `As` có thể khớp và gán `failure == nil`. Test `TestErrorMatchingBoundaries` kiểm chứng điều đó. Hợp đồng của lab trả `nil` thật khi thành công, không dựa vào typed nil.
+
+Bọc lỗi còn là quyết định về API. Nếu package bọc một lỗi của database bằng `%w`, bên gọi có thể dùng `Is` hoặc `As` để phụ thuộc vào lỗi đó; thay database sau này có thể phá hợp đồng. Chỉ bọc khi muốn công khai khả năng nhận diện nguyên nhân. Nếu ranh giới cần che implementation, hãy trả lỗi thuộc miền nghiệp vụ và lưu chẩn đoán nội bộ ở nơi thích hợp, không để caller phải parse text. Khi dùng `errors.Join` hoặc nhiều `%w`, cấu trúc là cây lỗi: `Is` và `As` duyệt sâu theo thứ tự từ trước ra sau, còn `errors.Unwrap` chỉ xử lý method `Unwrap() error`, không mở nhánh `Unwrap() []error` của Join.
 
 ## Phân tích thất bại: trạng thái nào cần ghi nhận, lỗi nào cần trả về?
 
@@ -254,7 +260,11 @@ Lệnh `defer` được đăng ký ngay sau khi hàm `open` hoàn tất thành c
 
 ![Ba đường đi của một probe có cancellation và session: cancellation trước acquisition không tạo resource; mọi return sau acquisition đi qua Close trước khi error trở về caller.](../../assets/diagrams/cancellation-cleanup-trace.png)
 
-@figure Lệnh `defer` không phải là câu thần chú dọn dẹp cho toàn bộ chương trình. Nó ràng buộc việc thu hồi tài nguyên với đúng phạm vi khối lệnh (*scope*) đã tiếp nhận quyền sở hữu. Lỗi từ phương thức `Close` chỉ thay thế kết quả trả về khi hàm `run` chưa từng gặp thất bại, nhằm bảo toàn nguyên nhân gốc của sự cố.
+@figure `defer` đăng ký dọn dẹp khi hàm `runWithSession` thoát, không phải khi một khối `if` kết thúc. Lỗi `Close` chỉ thay kết quả khi thao tác chính chưa có lỗi.
+
+Điểm đăng ký và điểm thực thi khác nhau. Với `defer session.Close()`, receiver được tính ngay khi đăng ký; lời gọi chạy lúc hàm bao quanh kết thúc, theo thứ tự ngược với lúc đăng ký. Đặt defer trong vòng lặp không đóng tài nguyên ở cuối mỗi vòng: tất cả đợi tới cuối hàm. Nếu cần đóng từng phiên trước vòng kế tiếp, hãy đưa một lượt xử lý vào hàm riêng hoặc đóng tường minh. `TestDeferIsFunctionScopedAndCapturesArguments` truy vết cả khối lệnh và giá trị đối số để tách hai cơ chế này.
+
+Defer cũng chạy khi panic tháo dỡ stack của cùng goroutine, nhưng không phải cơ chế bảo đảm trước mọi kiểu kết thúc tiến trình: `os.Exit` không chạy defer, và hàm đang nghẽn chưa thoát thì defer chưa thực thi. Giao ước `open` trong ví dụ yêu cầu trả phiên hợp lệ khi `err == nil` và không chuyển quyền sở hữu phiên cho caller khi có lỗi. Nếu API mở tài nguyên cho phép trả cả tài nguyên lẫn lỗi, phải đọc hợp đồng riêng để biết ai dọn nó.
 
 Cần lưu ý một ranh giới kiến trúc khác: bên gọi khởi tạo đối tượng context dẫn xuất bắt buộc phải gọi hàm `cancel`, kể cả khi thời hạn deadline có thể tự động hết hạn. Trong các đoạn mã ngắn, mẫu thiết kế chuẩn tắc là khai báo `ctx, cancel := context.WithTimeout(parent, timeout)` và ngay lập tức tiếp nối bằng `defer cancel()`. Hàm `cancel` giải phóng các tài nguyên bên trong bộ định thời của context; trong khi `session.Close` giải phóng tài nguyên mạng mà hàm `runWithSession` đã chiếm dụng. Hai thao tác dọn dẹp này thuộc về hai chủ thể sở hữu hoàn toàn khác nhau.
 
@@ -274,6 +284,8 @@ Cách viết trên không thể thay thế cho câu lệnh `return error` chuẩ
 
 Cơ chế `panic` chỉ phù hợp với lỗi lập trình bất khả kháng, điều kiện bất biến nội bộ bị vi phạm nghiêm trọng, hoặc tại các ranh giới phục hồi chuyên biệt được thiết kế để cách ly mã nguồn không tin cậy. Hàm `recover` chỉ có vị trí hợp lý khi ranh giới đó có kế hoạch khôi phục trạng thái an toàn, ghi nhận nhật ký đầy đủ và sở hữu khế ước rõ ràng sau phục hồi. Công cụ `opsprobe` hiện tại không chứa ranh giới như vậy; để `panic` xuất hiện minh bạch trong kiểm thử sẽ trung thực hơn nhiều so với việc ngụy trang nó thành một lỗi thăm dò thông thường.
 
+Ở tầng ngôn ngữ, `recover` chỉ chặn panic khi được gọi trực tiếp từ hàm deferred đang xử lý panic trong cùng goroutine. Gọi nó qua một helper thông thường không chặn được; defer ở goroutine cha cũng không bắt panic của goroutine con. Khi phục hồi thành công, hàm đang có defer trở về caller, không tiếp tục ở câu lệnh ngay sau chỗ panic. Các test cleanup và recover của lab kiểm tra phạm vi này bằng panic có kiểm soát; không đổi panic thành kết quả probe thành công.
+
 ### Bài thực hành: Lần theo đường dọn dẹp tài nguyên
 
 Ngữ cảnh `ctx` bị hủy sau khi `open` trả về một phiên làm việc, còn `run` trả về `context.Canceled`. Hàm `Close` có được gọi không? Lỗi cuối cùng giữ định danh nào? Trạng thái `registry["billing"]` có nên thay đổi `Healthy` hay `Retries` không?
@@ -284,7 +296,7 @@ Hàm `Close` được gọi đúng một lần vì lệnh `defer` đã được 
 
 ## Kết chương: Mọi thất bại đều có đường lưu thông chuẩn tắc
 
-Một ranh giới lỗi chuẩn mực không bao giờ cố cào bằng mọi dạng thất bại. Lỗi lính canh `ErrUnknownService` cung cấp cho bên gọi một nhóm lỗi phân loại để xử lý cấu hình; kiểu `ProbeFailure` lưu giữ trọn vẹn ngữ cảnh của quan sát thực tế; cơ chế bọc lỗi bảo toàn định danh gốc; tín hiệu hủy bỏ đi qua `Context` mà không bị ghi nhận nhầm thành chỉ số sức khỏe; lệnh `defer` thu hồi chính xác tài nguyên mà phạm vi khối lệnh đã tiếp nhận quyền sở hữu. Còn `panic` vẫn là một tín hiệu cảnh báo riêng biệt, không phải lối đi tắt để thoái thác trách nhiệm thiết kế kết quả trả về.
+`ErrUnknownService` cho caller điều kiện để xử lý cấu hình; `ProbeFailure` giữ ngữ cảnh của quan sát; các lớp bọc công khai nguyên nhân theo hợp đồng. Chính sách cancellation của lab giữ nguyên sức khỏe khi quan sát bị hủy, còn defer dọn phiên khi hàm bao quanh thoát. Panic có phạm vi phục hồi riêng và không thay thế đường trả lỗi đã thiết kế.
 
 Công cụ `opsprobe` lúc này đã phân định minh bạch điều nó sở hữu, điều nó quan sát và trao toàn quyền quyết định cho bên gọi. Chương tiếp theo: ranh giới gói (*package boundary*), phạm vi xuất khẩu và nguyên lý khép kín phụ thuộc.
 
@@ -294,7 +306,7 @@ Công cụ `opsprobe` lúc này đã phân định minh bạch điều nó sở 
 | :--- | :--- |
 | Nhận diện định danh lỗi (Error Identity) | Bên gọi có cần rẽ nhánh quyết định theo từng loại lỗi cụ thể không? Nếu có, phải bảo toàn identity bằng sentinel error hoặc custom type có cấu trúc; cấm bắt caller parse chuỗi văn bản. |
 | Bản chất quan sát miền nghiệp vụ | Lỗi này có phản ánh trạng thái thực của dịch vụ đích không? Timeout hoặc cancellation từ Context của caller không tự động đồng nghĩa với việc endpoint bị unhealthy. |
-| Quyền sở hữu tài nguyên (Resource Ownership) | Tài nguyên được cấp phát ở đâu, và lệnh dọn dẹp qua defer có được đặt ngay sau đó không? Mỗi defer phải gắn trực tiếp với scope chịu trách nhiệm giải phóng. |
+| Quyền sở hữu tài nguyên | Hàm nào nhận quyền sở hữu? Defer đăng ký ở đâu và hàm đó thoát khi nào? Đừng nhầm kết thúc khối lệnh với thực thi dọn dẹp. |
 | Chính sách bảo toàn lỗi gốc (Primary Error Policy) | Nếu thao tác dọn dẹp trong defer cũng phát sinh lỗi, lỗi ban đầu có bị nuốt mất không? Cần bảo toàn lỗi gốc để không làm gián đoạn việc điều tra sự cố. |
 
 Khi bốn câu trả lời hiện ngay trong chữ ký hàm, chuỗi bọc lỗi, chuyển dịch trạng thái và kiểm thử tự động, người đọc sau không cần phỏng đoán lỗi có bị che lấp, số lần thử lại có bị tăng sai, hay tài nguyên hệ thống có bị rò rỉ hay không. Đó là sự chuẩn bị cần thiết trước khi tách mã nguồn thành các package độc lập.

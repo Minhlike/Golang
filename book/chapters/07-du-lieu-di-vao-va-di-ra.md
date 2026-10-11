@@ -29,6 +29,7 @@ Giao ước (*contract*) tối thiểu của `Read(p)` quy định: hàm trả v
 | --- | --- | --- |
 | `n > 0`, `err == nil` | Xử lý `p[:n]`, rồi đọc tiếp | Stream đang tiến lên nhưng chưa kết thúc. |
 | `n > 0`, `err == io.EOF` | Vẫn xử lý `p[:n]`, rồi kết thúc | Lượt cuối vừa có dữ liệu vừa báo hết stream. |
+| `n > 0`, error khác `nil` | Xử lý `p[:n]`, rồi trả hoặc phân loại lỗi | Dữ liệu có thể tới cùng lỗi khác EOF; không được bỏ phần đã đọc. |
 | `n == 0`, `err == io.EOF` | Kết thúc | Không còn byte để tiêu thụ. |
 | `n == 0`, error khác `nil` | Trả hoặc phân loại lỗi | Lượt này không trả byte và có lỗi. |
 | `n == 0`, `err == nil` | Không coi là EOF; tránh vòng busy-loop vô hạn | Không có tiến độ trong lượt này; contract không khuyến khích kết quả ấy với buffer không rỗng nhưng caller vẫn phải phân biệt nó. |
@@ -41,7 +42,7 @@ Giao ước (*contract*) tối thiểu của `Read(p)` quy định: hàm trả v
 
 Trước khi mở `bounded.go`, chỉ đọc hai test `TestReadBounded...`. Chúng đòi `ReadBounded` nhận tối đa `max` byte; input lớn hơn đúng một byte phải trả error mà caller nhận diện được bằng `errors.Is`. Hãy tự viết phần thân theo ba bước: bọc reader để chỉ cho phép tối đa `max + 1` byte, đọc phần đã bọc, rồi so độ dài với `max`. Byte thứ `max + 1` không phải dữ liệu cần giữ; nó là bằng chứng phân biệt tệp vừa chạm ngưỡng với tệp thật sự vượt ngưỡng.
 
-Lab đầy đủ còn từ chối `max < 0` và thêm ngữ cảnh cho error. Những chi tiết đó cần có trong code chạy thật, nhưng chúng không được che câu hỏi đang học: vì sao phải xin thêm đúng một byte.
+Lab từ chối `max < 0` và `max == math.MaxInt64` trước khi đọc: giá trị sau không cho phép tính `max + 1` trong `int64`. Không sửa tràn số bằng cách bỏ lớp giới hạn rồi gọi `io.ReadAll(r)` không giới hạn. Test dùng reader ghi nhận lời gọi để kiểm tra đầu vào bị từ chối mà chưa đọc; không cần tạo tệp khổng lồ. Giới hạn byte cũng không phải trần heap chính xác: buffer, parser và metadata có chi phí riêng.
 
 `io.LimitReader` chỉ giới hạn số byte mà reader bọc ngoài sẽ trả; nó không tự nói JSON có hợp lệ hay không, và cũng không làm input nhỏ trở nên đáng tin. Vì thế giới hạn byte là một chính sách tài nguyên riêng; `Decode` vẫn chịu trách nhiệm cho cấu trúc JSON và số tài liệu. Hai test ngắn bảo vệ hai câu hỏi khác nhau, không gộp chúng thành một assertion mơ hồ kiểu “cấu hình lỗi”.
 
@@ -92,7 +93,7 @@ Trước khi thực thi ca kiểm thử `TestJSONVersionBoundary` trong thư m�
 
 ## Đóng output cũng là một phần của result
 
-Khi đọc tệp, việc đặt `defer file.Close()` ngay sát điểm tiếp nhận tài nguyên (*acquisition*) giúp ngăn ngừa hiện tượng rò rỉ bộ mô tả tệp (*file descriptor*). Khi ghi tệp, phương thức `Close` còn là nơi vùng đệm được đẩy sạch dữ liệu (*flush*) xuống đĩa và các lỗi thất bại cuối cùng mới lộ diện. Nếu hàm xuất dữ liệu JSON chỉ trả về lỗi từ thao tác `Encode`, bên gọi có thể thông báo thành công quá sớm trước khi biết chắc chắn dữ liệu đầu ra đã được đồng bộ và đóng hoàn tất hay chưa.
+Khi đọc tệp, đăng ký `defer file.Close()` sau khi mở thành công giúp dọn file lúc hàm thoát. Khi ghi, phải quan sát cả lỗi ghi và lỗi đóng; nhưng `io.WriteCloser` không cam kết `Close` flush hay lưu dữ liệu bền vững xuống đĩa. Ý nghĩa ấy thuộc kiểu cụ thể. `bufio.Writer` không có `Close`: phải gọi và kiểm tra `Flush` trước khi đóng file bên dưới. `os.File.Close` không thay thế `File.Sync` nếu hợp đồng yêu cầu commit dữ liệu ổn định. Cả flush lẫn close thành công cũng không tự chứng minh cập nhật tệp là nguyên tử hoặc chống mọi sự cố mất điện.
 
 Mã nguồn đầy đủ mở tài nguyên rồi thiết lập `defer Close` ngay sau điểm tiếp nhận. Để làm nổi bật chính sách chọn lọc kết quả, phần lõi có thể biểu diễn tinh gọn như sau:
 
@@ -156,6 +157,10 @@ data, err := fs.ReadFile(files, "fixtures/message.txt")
 Các gói nhập khẩu của đoạn mã này bao gồm `embed` và `io/fs`; bản chạy được đặt tại `labs/edition-contracts`. Chỉ thị tiền biên dịch (*compiler directive*) bắt buộc phải đặt tại phạm vi gói (*package scope*) và gắn liền với biến dữ liệu phù hợp. Dữ liệu byte được đóng gói trực tiếp vào tệp nhị phân tại thời điểm biên dịch, không tự động cập nhật khi tệp bên ngoài thay đổi. Giao diện `embed.FS` chỉ cung cấp năng lực đọc dữ liệu, không phải là nơi lưu trữ khóa bí mật (*secret*) hoặc cấu hình cần điều chỉnh sau khi triển khai. Các byte dữ liệu được đóng gói hoàn toàn có thể bị trích xuất từ tệp nhị phân; việc biến mất tệp tin rời rạc trên đĩa không đồng nghĩa với an ninh bảo mật.
 
 Hàm `fs.ValidPath` không cho phép các thành phần đường dẫn `..` hoặc đường dẫn bắt đầu bằng dấu `/`; những tên như `a..b` vẫn có thể hợp lệ, còn `.` là trường hợp đặc biệt chỉ định thư mục gốc. Một đường dẫn hợp lệ không tự tạo ra vùng cách ly an toàn (*sandbox*). Hàm `os.DirFS` và `fs.Sub` không thể ngăn chặn các liên kết mềm bên dưới trỏ ra ngoài thư mục cơ sở. Nếu tiếp nhận tên tệp từ nguồn không tin cậy và đòi hỏi giới hạn truy cập nghiêm ngặt, hãy tham khảo giao ước của `os.Root` cùng các giới hạn theo hệ điều hành trong Go 1.27.1 thay vì tin tưởng mù quáng rằng hàm `Clean` chặn được mọi đường thoát. Quyền mở tệp và quyền phân tích cú pháp dữ liệu là hai ranh giới hoàn toàn độc lập.
+
+`os.OpenRoot(base)` mở một khả năng truy cập có gốc; các thao tác như `root.Open(name)` không cho tên hoặc symlink dẫn ra ngoài cây đó. Nó vẫn đi theo symlink hợp lệ bên trong, không phải cấm mọi symlink. Với Go 1.27.1 trên Windows và Linux, đây là primitive chống traversal, nhưng không phải sandbox tiến trình: không chặn mọi truy cập thiết bị, mount hay hard link có sẵn trong root. Tài liệu còn nêu ngoại lệ TOCTOU trên `GOOS=js`; không suy rộng bảo đảm Windows sang mọi nền tảng.
+
+Test `TestRealFilesystemRootConfinement` của lab tạo tệp và symlink trên filesystem thật trong thư mục tạm. Nó đối chiếu `DirFS` đọc được link ra ngoài với `Root` từ chối, đồng thời kiểm tra link nội bộ vẫn đọc được. Nếu hệ điều hành không cho tạo symlink, nhánh đó ghi SKIP với nguyên nhân, không chuyển thành PASS bằng `fstest.MapFS`. Test traversal `../outside.txt` chạy riêng dù thiếu quyền tạo link. Những phép thử này không mô phỏng kẻ tấn công đổi symlink đồng thời, nên chỉ là kiểm chứng các trường hợp đã chạy của API.
 
 ### Bài thực hành: Đọc tệp qua trừu tượng hóa fs.FS
 

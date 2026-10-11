@@ -16,31 +16,27 @@ skinparam note {
   FontColor #000000
   FontSize 15
 }
-left to right direction
+top to bottom direction
 
-package "Khung ngăn xếp bên gọi (Caller Frame)" as caller_frame {
-  object "Biến: balance\n(Địa chỉ: 0x0020)" as caller {
-    type = int
-    value = 100
-  }
+object "Biến bên gọi: balance" as caller {
+  type = int
+  value = 100
 }
 
-package "Khung ngăn xếp hàm được gọi (Callee Frame)" as callee_frame {
-  object "Tham số: x\n(Địa chỉ: 0x0080)" as param {
-    type = int
-    value = 120 (ban đầu: 100)
-  }
+object "Tham số: x" as param {
+  type = int
+  value = 120 (ban đầu: 100)
 }
 
-caller .right.> param : Truyền tham trị (Pass-by-value)\nSao chép byte giá trị 100
+caller -down-> param : addBonus(balance)\nsao chép giá trị 100
 
-note bottom of caller
-  Biến balance nằm tại ô nhớ riêng biệt 0x0020.
-  Giá trị của balance vẫn nguyên vẹn là 100.
+note right of caller
+  balance và x là hai biến riêng.
+  balance vẫn bằng 100.
 end note
 
-note bottom of param
-  Tham số x nằm tại ô nhớ độc lập 0x0080.
-  Phép tính x += 20 chỉ sửa đổi giá trị cục bộ.
+note right of param
+  x += 20 chỉ sửa tham số cục bộ.
+  Không giả định stack, heap hay địa chỉ vật lý.
 end note
 @enduml
