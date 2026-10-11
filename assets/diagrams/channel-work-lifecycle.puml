@@ -1,47 +1,22 @@
 @startuml
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam shadowing false
-skinparam queue {
-  BackgroundColor #F4F4F4
-  BorderColor #222222
-  FontColor #000000
-}
-skinparam rectangle {
-  BackgroundColor #FFFFFF
-  BorderColor #222222
-  FontColor #000000
-  RoundCorner 8
-}
-skinparam note {
-  BackgroundColor #FFFFFF
-  BorderColor #555555
-  FontColor #000000
-  FontSize 15
-}
-skinparam ArrowColor #222222
+!include publication-flow.iuml
 top to bottom direction
 
-rectangle "<b>Dispatcher Goroutine</b>\nĐộc quyền gửi vào jobs" as dispatcher
-queue "<b>jobs</b>: chan Job\n(do Dispatcher đóng)" as jobs
-rectangle "<b>Worker Pool Goroutines</b>\nNhận Job, gọi Work\nKhông đóng jobs" as workers
-rectangle "<b>Coordinator Goroutine</b>\nChờ WaitGroup xong\nĐóng results đúng một lần" as coordinator
-queue "<b>results</b>: chan Result\n(do Coordinator đóng)" as results
-rectangle "<b>Consumer Goroutine</b>\nrange results tới khi đóng" as consumer
+rectangle "<b>Dispatcher</b>\nGửi job; đóng jobs" as dispatcher
+rectangle "<b>jobs</b>\nchan Job" as jobs
+rectangle "<b>Workers</b>\nNhận job, gọi Work\nGửi result hoặc dừng vì ctx" as workers
+rectangle "<b>Coordinator</b>\nChờ dispatcher và workers\nĐóng results đúng một lần" as coordinator
+rectangle "<b>results</b>\nchan Result" as results
+rectangle "<b>Consumer</b>\nNhận tới khi đóng và cạn" as consumer
 
-dispatcher -down-> jobs : gửi Job hoặc dừng vì ctx
-jobs -down-> workers : phân phối Job
-workers -down-> coordinator : báo wg.Done()
-workers -down-> results : gửi Result hoặc dừng vì ctx
-coordinator -down-> results : close(results) sau khi mọi worker xong
-results -down-> consumer : nhận Result
-
-note right of results
-  <b>Quy tắc Ownership trong Go:</b>
-  • Chỉ bên gửi mới được quyền đóng channel.
-  • jobs được đóng bởi Dispatcher.
-  • results được đóng bởi Coordinator.
-  • Worker không bao giờ đóng channel đầu vào.
-end note
+dispatcher -down-> jobs
+jobs -down-> workers
+coordinator -down-> results
+results -down-> consumer
+dispatcher -[hidden]right-> coordinator
+jobs -[hidden]right-> results
+workers -[hidden]right-> consumer
+dispatcher -[dashed,norank]-> coordinator : dispatcherDone
+workers -[dashed,norank]-> coordinator : wg.Done()
+workers -[norank]-> results
 @enduml

@@ -284,7 +284,7 @@ fmt.Println(count) // 99
 
 Cú pháp `&count` tạo ra một con trỏ tham chiếu tới biến `count`, còn `*p` dùng để giải tham chiếu (*dereference*) và thao tác trực tiếp trên biến đó. Con trỏ sẽ được phân tích toàn diện trong chương riêng khi chúng ta thiết kế giao diện lập trình xoay quanh việc biến đổi trạng thái trực tiếp và xử lý giá trị `nil`. Trước khi đi tới đó, hãy ghi nhớ mô hình tư duy cốt lõi: luôn xác định rõ giá trị nào đang được sao chép, và giá trị đó có tham chiếu tới vùng nhớ hoặc biến nào khác hay không.
 
-Nếu câu trả lời là “không”, phép gán (*assignment*) sẽ thiết lập sự độc lập hoàn toàn như đối với kiểu `int` hay mảng thuần túy. Nếu câu trả lời là “có”, hiện tượng trùng tên bộ nhớ (*aliasing*) có thể là kỹ thuật tối ưu mạnh mẽ hoặc là mầm mống lỗi nghiêm trọng, hoàn toàn phụ thuộc vào việc bạn có định nghĩa rành mạch quyền sở hữu và quyền biến đổi trạng thái hay không.
+Nếu câu trả lời là “không”, vẫn cần xét các thành phần bên trong giá trị được sao chép: một mảng chứa slice hay con trỏ vẫn có thể chia sẻ dữ liệu được tham chiếu. Phép gán sao chép giá trị, không mặc nhiên sao chép sâu toàn bộ dữ liệu mà nó dẫn tới. Với `int` hoặc mảng chỉ chứa các giá trị như `int`, sửa bản sao không đổi bản gốc. Khi nhiều giá trị cùng dẫn tới dữ liệu có thể thay đổi, đó là chia sẻ vùng nhớ (*aliasing*); tính đúng đắn phụ thuộc vào quyền sở hữu và quyền thay đổi dữ liệu được quy định rõ ràng.
 
 ## Quyết định thiết kế tại ranh giới API
 

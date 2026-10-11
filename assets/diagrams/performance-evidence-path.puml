@@ -1,55 +1,16 @@
 @startuml
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 16
-skinparam shadowing false
-skinparam roundCorner 6
-skinparam arrowColor #222222
-skinparam arrowThickness 1.2
-
-skinparam rectangle {
-  BackgroundColor #FFFFFF
-  BorderColor #334155
-  FontColor #000000
-}
-
-skinparam note {
-  BackgroundColor #F8FAFC
-  BorderColor #64748B
-  FontColor #1E293B
-  FontSize 14
-}
-
+!include publication-flow.iuml
 top to bottom direction
 
-package "1. Quan sát Triệu chứng" as p1 {
-  rectangle "<b>Triệu chứng Thực tế (Production Symptom)</b>\n• Độ trễ P99 tăng đột biến\n• Tỷ lệ sử dụng CPU bão hòa\n• Bộ nhớ phình to (RSS/Heap chạm trần OOM)" as symptom
-}
+rectangle "<b>1. Triệu chứng</b>\nChậm hoặc giữ nhiều bộ nhớ" as symptom
+rectangle "<b>2. Giả thuyết + tải mẫu</b>\nĐặt câu hỏi có thể bác bỏ" as workload
+rectangle "<b>3. Phép đo phù hợp</b>\nBenchmark: thời gian / cấp phát\nProfiles: CPU / vị trí cấp phát\nTrace: trạng thái / khoảng chờ" as measure
+rectangle "<b>4. Một thay đổi nhỏ</b>\nĐối chiếu source và contract" as change
+rectangle "<b>Đo lại A/B</b>\nCùng workload và điều kiện\nKiểm tra đầu ra không đổi" as compare
 
-package "2. Lập Giả thuyết & Tải Mẫu" as p2 {
-  rectangle "<b>Tải Thử nghiệm Đại diện (Synthetic Workload)</b>\n• Mô phỏng phân phối yêu cầu thực tế\n• Cố định số lượng Goroutine và kích thước payload" as workload
-}
-
-package "3. Đo đạc & Hồ sơ hóa (Profiling)" as p3 {
-  rectangle "<b>Đo lường Mẫu chuẩn (Benchmark)</b>\n• Chạy testing.B: ns/op, B/op, allocs/op\n• Đối chiếu với baseline bằng công cụ benchstat" as bench
-  rectangle "<b>Thu thập Bằng chứng Hệ thống (pprof & Trace)</b>\n• CPU profile: xác định hàm tiêu tốn nhiều chu kỳ máy\n• Heap profile: phát sinh cấp phát bộ nhớ ngoài ý muốn\n• Execution Trace: nghẽn scheduler GMP và độ trễ GC" as profile
-}
-
-package "4. Tối ưu có Kiểm chứng" as p4 {
-  rectangle "<b>Can thiệp Vi mô (Surgical Optimization)</b>\n• Tiền cấp phát dung lượng lát cắt (pre-allocate)\n• Giảm thoát biến lên heap (escape analysis)\n• Giảm khóa tranh chấp (mutex contention)" as optimize
-}
-
-symptom -down-> workload : Đặt câu hỏi kỹ thuật cụ thể
-workload -down-> bench : Thiết lập kịch bản đo đạc
-bench -down-> profile : Thu thập mẫu dữ liệu khách quan
-profile -down-> optimize : Xác định chính xác điểm nghẽn
-
-optimize -up-> bench : <b>Vòng lặp Đối chiếu:</b>\nĐo lại cùng tải mẫu,\nkiểm thử tính đúng đắn bảo toàn 100%
-
-note right of profile
-  <b>Nguyên tắc Bằng chứng Hiệu năng:</b>
-  • Không tối ưu dựa trên trực giác hay tên hàm.
-  • Mọi can thiệp phải có bằng chứng từ pprof hoặc trace.
-  • Cải thiện thông lượng không được phá vỡ cam kết đúng đắn.
-end note
+symptom -down-> workload
+workload -down-> measure
+measure -down-> change : Thu hẹp giả thuyết
+change -down-> compare
+compare ..> measure : A/B không cải thiện
 @enduml

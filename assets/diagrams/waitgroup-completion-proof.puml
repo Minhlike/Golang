@@ -1,36 +1,24 @@
 @startuml
 !include publication-flow.iuml
 
-left to right direction
+top to bottom direction
 
-package "Worker Goroutines (N Luồng)" as workers_pkg {
-  rectangle "1. Ghi nhận dữ liệu\nLock registry.mu\nAppend report an toàn" as worker_write
-  rectangle "2. Mở khóa bộ nhớ\nUnlock registry.mu\n(Memory Barrier)" as worker_unlock
-  rectangle "3. Báo hoàn tất\nwg.Done()\nGiảm counter WaitGroup" as worker_done
+rectangle "<b>WORKER</b>\nRegistry.Add\nLock; append report" as write
+rectangle "Nhả registry.mu\nUnlock" as unlock
+rectangle "Báo hoàn tất\nwg.Done()" as done
+rectangle "<b>BÊN CHỜ</b>\nwg.Wait() trả về\nCounter đã về 0" as wait
+rectangle "Registry.Snapshot\nLock; copy reports" as snapshot
 
-  worker_write -down-> worker_unlock
-  worker_unlock -down-> worker_done
-}
+write -down-> unlock
+unlock -down-> done
+wait -down-> snapshot
+write -[hidden]right-> wait
+done -[dashed,norank]-> wait : Hoàn tất đợt việc
+unlock -[dashed,norank]-> snapshot : Unlock → Lock
 
-package "Rào chắn Đồng bộ hóa (Sync Barrier)" as barrier_pkg {
-  rectangle "<b>sync.WaitGroup</b>\n• Add(N) khởi tạo\n• Chặn luồng cho tới khi\n  Counter giảm về 0" as wg_barrier
-}
-
-package "Collector Goroutine (Bên Chờ)" as collector_pkg {
-  rectangle "4. Chờ rào chắn\nwg.Wait() bị chặn\n(Chờ Counter == 0)" as wait_call
-  rectangle "5. Giải phóng rào chắn\nwg.Wait() trả về\nHappens-Before được xác lập" as wait_return
-  rectangle "6. Đọc bản chụp an toàn\nLock registry.mu\nCopy toàn bộ reports" as snapshot_copy
-
-  wait_call -down-> wait_return
-  wait_return -down-> snapshot_copy
-}
-
-worker_done -right-> wg_barrier : Mọi luồng phát Done
-wg_barrier -right-> wait_return : Counter == 0 mở khóa
-
-note bottom of wait_return
-  <b>Khế ước Go Memory Model (Happens-Before):</b>
-  Lệnh gọi wg.Done() của tất cả các worker được bảo đảm hoàn tất
-  trước khi wg.Wait() trả về. Bên chờ an tâm đọc snapshot không bị data race.
+note bottom of done
+  Add(N) trước khi chạy.
+  Done đồng bộ trước Wait
+  mà nó giải phóng.
 end note
 @enduml

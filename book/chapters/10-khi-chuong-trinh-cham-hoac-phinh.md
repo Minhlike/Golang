@@ -6,7 +6,7 @@ Một chương trình bị phán xét là “chậm” hoặc “tốn bộ nh�
 
 Mô hình tư duy nền tảng của chương này xác lập: tối ưu hóa là việc kiểm chứng một giả thuyết khoa học dưới một khối lượng công việc (workload) mang tính đại diện; một phép đo chỉ trả lời câu hỏi mà nó được thiết kế để đo lường. Benchmark không bảo đảm một dịch vụ mạng sẽ phản hồi nhanh trong mọi tình huống thực tế. Bản ghi CPU profile không phản ánh việc bộ nhớ đang phình to. Dấu vết thực thi (Execution trace) không phải là bản chụp toàn cảnh ngữ nghĩa của mã nguồn. Mỗi công cụ là một dụng cụ đo lường chuyên biệt nhằm thu hẹp không gian suy đoán.
 
-Giả sử một tiến trình kiểm tra dịch vụ định kỳ (`opsprobe`) cần kết xuất báo cáo trạng thái cho hàng nghìn endpoint mạng. Khi chạy trên môi trường tích hợp liên tục (CI), thao tác này tiêu tốn nhiều giây và dung lượng vùng nhớ động (heap) tăng vọt. Thay vì phỏng đoán cảm tính, kỹ sư chuyển hóa vấn đề thành câu hỏi kỹ thuật có thể đo đạc: với một danh sách đầu vào xác định, hàm `Render` tiêu tốn bao nhiêu thời gian CPU và bao nhiêu lần cấp phát bộ nhớ; chu kỳ xử lý đắt đỏ tập trung ở đâu; và một thiết kế thay thế có bảo toàn từng byte đầu ra trong khi giảm thiểu chi phí tài nguyên hay không?
+Giả sử `opsprobe` phải dựng báo cáo cho hàng nghìn endpoint và thao tác này chậm trên CI. Câu hỏi đo được là: với cùng đầu vào, `Render` mất bao nhiêu thời gian trôi qua và cấp phát bao nhiêu; CPU profile tập trung ở đâu; bản thay thế có giữ từng byte output không? Thời gian benchmark và mẫu CPU trả lời hai câu hỏi khác nhau, không được gọi `ns/op` là thời gian CPU.
 
 ## Bản chất Chuỗi Tối ưu hóa: Từ Source đến Mã máy
 
@@ -18,13 +18,13 @@ Giả sử một tiến trình kiểm tra dịch vụ định kỳ (`opsprobe`) 
 | Mã máy của artifact | Instruction, thanh ghi và lời gọi còn lại sau build. | Objdump của đúng binary, không trộn với listing từ build khác. |
 | Runtime khi workload chạy | Allocation, GC, lập lịch và I/O tiêu tốn tài nguyên theo đường thực thi. | Benchmark, profile và trace, kèm môi trường và giới hạn phép đo. |
 
-Các bước phân tích này là mô hình tư duy để đặt câu hỏi kỹ thuật, không phải chuỗi đường ống cố định hay ngưỡng hành vi bất biến của ngôn ngữ. Việc nội suy hàm (*inlining*) có thể làm thay đổi hoàn toàn thông tin dòng dữ liệu mà phân tích thoát bộ nhớ (*escape analysis*) tiếp nhận; trình biên dịch cũng có thể quyết định bố trí một giá trị vào thanh ghi phần cứng, ngăn xếp (*stack*), vùng nhớ động (*heap*) hoặc tối ưu hóa loại bỏ hoàn toàn giá trị đó. Chỉ khi chi phí thực tế đã được đo đạc, thông tin kết xuất từ trình biên dịch và công cụ đo hồ sơ hiệu năng mới cho biết chính xác điều gì diễn ra trên phiên bản, kiến trúc phần cứng và khối lượng công việc cụ thể đang khảo sát.
+Các tầng này giúp đặt câu hỏi, không phải một pipeline cố định của ngôn ngữ. Inlining là đưa thân hàm vào nơi gọi, không phải “nội suy hàm”; nó có thể làm thay đổi thông tin mà escape analysis nhận được. Compiler có thể dùng thanh ghi, stack, heap hoặc loại bỏ giá trị. Diagnostic cho biết quyết định lúc biên dịch; phép đo cho biết chi phí lúc chạy trên đúng artifact và workload, không thay thế lẫn nhau.
 
 ## Phân tích Thoát Bộ nhớ: Ngăn xếp đối đầu Vùng nhớ Động
 
-Trình biên dịch Go áp dụng kỹ thuật phân tích thoát bộ nhớ (*escape analysis*) nhằm suy luận liệu một giá trị có cần tiếp tục tồn tại sau khi phạm vi khối lệnh (*scope*) mà trình biên dịch đang phân tích kết thúc hay không. Đây là quy tắc suy nghiệm nội bộ của quá trình biên dịch, không phải đặc tính cú pháp của một biến số hay lời cam kết rằng một dòng mã nguồn sẽ luôn cấp phát tại một vùng nhớ cố định.
+Escape analysis theo dõi dòng con trỏ và vòng đời vùng nhớ để tránh đặt dữ liệu trên stack khi tham chiếu tới nó có thể sống lâu hơn vùng lưu trữ ấy. Phạm vi tên biến trong khối lệnh không phải vòng đời của dữ liệu: một biến hết scope chưa có nghĩa vùng nhớ phải được chuyển lên heap; ngược lại, con trỏ tới dữ liệu trong frame đã kết thúc không được tồn tại nếu frame ấy bị thu hồi. Kích thước hoặc các giới hạn cấp phát trên stack cũng có thể khiến compiler chọn heap. Đây là quyết định của toolchain, không phải quy luật cú pháp. Mã nguồn `cmd/compile/internal/escape` của bản pin giải thích các ràng buộc này.
 
-Một giá trị không thoát (*does not escape*) có thể được lưu trữ trên ngăn xếp, trong thanh ghi CPU hoặc bị tối ưu hóa loại bỏ hoàn toàn; nó không mặc nhiên tạo ra một thao tác cấp phát đo đạc được. Ngược lại, việc trả về con trỏ, lưu giá trị vào biến toàn cục hoặc đóng gói vào một `interface` chỉ là các tín hiệu để trình biên dịch phân tích vòng đời tồn tại, không phải quy luật tất yếu dẫn đến việc cấp phát trên heap. Kết quả phân tích còn phụ thuộc sâu sắc vào cấu trúc thân hàm, mức độ nội suy, kiến trúc phần cứng và phiên bản trình biên dịch. Do đó, cờ `-gcflags=all=-m=2` là bằng chứng chẩn đoán cho một lần biên dịch cụ thể; trong khi chỉ số `allocs/op` từ bài đo chuẩn mới xác nhận giao ước đo đạc có làm phát sinh thao tác cấp phát quan sát được hay không.
+Một giá trị `does not escape` có thể nằm trên stack, trong thanh ghi hoặc bị loại bỏ; kết luận này không nói toàn hàm không cấp phát. Trả con trỏ, lưu vào biến toàn cục hay đóng gói vào interface là những đường mà compiler phải phân tích, không phải luật “cứ có pointer là heap”. Kết quả phụ thuộc thân hàm, inlining, kiến trúc và phiên bản. Diagnostic mô tả quyết định build; `allocs/op` mô tả cấp phát bình quân trên workload đã chạy.
 
 Chạy `go build -gcflags=all=-m=2 ./fixed` từ `labs/part10-measure-first` với Go 1.27.1. Trích đoạn dưới rút gọn prefix đường dẫn `fixed/`, lược dòng không liên quan và ngắt dòng cho vừa khung; không phải toàn bộ diagnostic:
 
@@ -62,7 +62,7 @@ strings/strings.go:987:27: Proved IsInBounds
 strings/strings.go:988:38: Proved IsSliceInBounds
 ~~~
 
-Các dòng thông báo tại `render.go` cho thấy trình biên dịch đã nhận diện biến quy nạp và thực hiện đảo chiều vòng lặp; các dòng tại `strings.go` xác nhận điều kiện biên đã được chứng minh an toàn trong thư viện chuẩn ở lượt dựng đó. Muốn kết luận một thao tác kiểm tra biên cụ thể của hàm `Render` đã được loại bỏ thành công, kỹ sư phải đối chiếu chính xác vị trí dòng lệnh trên mã nguồn với thông tin chẩn đoán và mã máy assembly tương ứng. Hãy giữ cho các bất biến logic rõ ràng, dễ bảo trì rồi đo đạc thực tế, tránh viết mã phức tạp gượng ép chỉ nhằm thỏa mãn một dạng thức tối ưu hóa cục bộ.
+Các dòng tại `render.go` nhận diện biến quy nạp và việc chuyển bộ đếm nội bộ sang đếm giảm. `downward_counting_loop.go` của Go 1.27.1 chỉ thực hiện bước này khi thân vòng lặp không phụ thuộc biến đếm đó; nó không đảo thứ tự các Reading trong output. Các dòng `strings.go` chứng minh điều kiện biên tại chính vị trí thư viện được nêu. Muốn kết luận một bounds check cụ thể của `Render` đã biến mất, phải đối chiếu vị trí source với diagnostic và assembly của cùng artifact; sự xuất hiện của `ssa/prove` không đủ. Giữ bất biến rõ ràng rồi đo, đừng làm source khó đọc để săn một thông báo compiler.
 
 ## Cơ chế Thu gom Rác và Đánh đổi Không gian - Thời gian
 
@@ -74,13 +74,15 @@ Môi trường thực thi phát sinh các điểm dừng tạm thời tại th�
 
 ### Green Tea GC là bối cảnh triển khai, không phải contract
 
+GC bắt đầu từ các gốc như stack goroutine và biến toàn cục rồi lần theo con trỏ tới đối tượng còn sống. Write barrier phối hợp việc cập nhật con trỏ với pha đánh dấu để GC không bỏ sót đối tượng cần giữ; nó không thay mutex hoặc công bố dữ liệu an toàn cho goroutine khác. Tăng goroutine hay cấu trúc nhiều con trỏ có thể tăng công việc quét, nhưng phải đo mới biết chi phí đáng kể ở workload nào. Thu hồi đối tượng không đồng nghĩa trả ngay từng byte về hệ điều hành.
+
 Phiên bản Go 1.27.1 tích hợp cơ chế Green Tea GC trong môi trường thực thi. Ý tưởng trọng tâm của thiết kế này là ưu tiên quản lý theo từng trang bộ nhớ hoặc khối liên tục (*page/span*) thay vì coi từng đối tượng đơn lẻ là đơn vị xử lý duy nhất, nhằm tối ưu hóa tính cục bộ truy cập bộ nhớ (*cache locality*). Đây là chi tiết hiện thực nội bộ có thể tiếp tục được tinh chỉnh giữa các phiên bản Go và không phải là thước đo bảo đảm hiệu năng cho một dịch vụ cụ thể. Khi chi phí thu gom rác xuất hiện trong hồ sơ hiệu năng, câu hỏi vận hành cốt lõi vẫn là: tốc độ cấp phát, dung lượng heap đang hoạt động, tập gốc tham chiếu (*root set*), mật độ con trỏ và độ trễ thực tế của khối lượng công việc đang ở mức nào? Hãy đo đạc thực nghiệm trước, rồi mới phân tích xem việc nâng cấp phiên bản Go, cắt giảm thao tác cấp phát hay tái cấu trúc dữ liệu có thực sự đem lại lợi ích.
 
 Hai biến số môi trường chi phối trực tiếp hành vi đánh đổi không gian và thời gian này:
 
 Tham số `GOGC`: Thiết lập điểm cân bằng trong bài toán đánh đổi giữa chi phí CPU và dung lượng bộ nhớ. Trong các phiên bản Go hiện đại, ngưỡng kích hoạt heap mục tiêu còn tính toán cả các gốc tham chiếu: ước lượng gần đúng theo công thức `live heap + (live heap + roots) * GOGC / 100`. Giá trị `GOGC=100` không đồng nghĩa tổng dung lượng heap luôn bằng chính xác hai lần lượng heap đang hoạt động. Việc tăng chỉ số này thường làm giảm tần suất kích hoạt chu kỳ thu gom rác nhưng lại gia tăng phụ phí tiêu hao bộ nhớ; đây là xu hướng định tính cần được kiểm chứng cụ thể trên khối lượng công việc thực tế.
 
-Tham số `GOMEMLIMIT`, được giới thiệu từ Go 1.19, là ngưỡng giới hạn mềm (*soft limit*) đối với tổng dung lượng bộ nhớ do môi trường thực thi quản lý, không chỉ riêng phần heap đang sống. Bộ thu gom rác có thể kích hoạt với tần suất dày đặc hơn khi mức tiêu thụ chạm ngưỡng giới hạn, nhưng môi trường thực thi vẫn cho phép vượt ngưỡng tạm thời để ngăn ngừa hiện tượng nghẽn đảo bộ nhớ (*thrashing*). Ngưỡng này không tương đương với trần bộ nhớ thực tế (RSS) hay giới hạn của nhóm điều khiển tiến trình (*cgroup*). Khi vận hành trong môi trường container, kỹ sư cần đo đạc cả phần bộ nhớ phát sinh ngoài phạm vi tính toán của môi trường thực thi và dự phòng một khoảng đệm an toàn (*headroom*) hợp lý thay vì áp dụng một tỷ lệ phần trăm chung chung. Giới hạn này không loại trừ triệt để nguy cơ tràn bộ nhớ hệ thống (OOM); một khối lượng công việc liên tục duy trì lượng dữ liệu sống vượt quá ngân sách bộ nhớ cho phép vẫn đòi hỏi phải tái thiết kế giao ước xử lý hoặc nâng cấp tài nguyên phần cứng.
+`GOMEMLIMIT`, từ Go 1.19, là giới hạn mềm cho đại lượng bộ nhớ runtime quản lý: `MemStats.Sys - MemStats.HeapReleased`, không chỉ live heap và không phải RSS hay trần cgroup. GC điều chỉnh mục tiêu và nhịp chạy để cố giữ giới hạn, nhưng có thể vượt nó nhằm tránh dành quá nhiều CPU cho GC. Không có cam kết chỉ vượt “tạm thời”: nếu dữ liệu cần giữ đã lớn hơn ngân sách, GC không thể thu hồi nó. Cần đo thêm bộ nhớ ngoài runtime, chừa khoảng dự phòng và sửa budget/workload; setting này không bảo đảm tránh OOM.
 
 ## Đo lường Hiệu năng: Benchmark là Hợp đồng Thực nghiệm
 
@@ -104,7 +106,7 @@ Lệnh thực thi đo đạc thống kê nhiều lần:
 go test -bench BenchmarkRender -benchmem -count=6 ./fixed
 ~~~
 
-Chỉ số `ns/op` phản ánh thời gian bình quân cho mỗi thao tác theo giao ước đo chuẩn. Chỉ số `B/op` và `allocs/op` là các thông số cấp phát bộ nhớ mà công cụ thực thi bài đo ghi nhận cho khối lượng công việc đó; chúng không phản ánh toàn bộ dung lượng bộ nhớ thực tế (RSS) hay mọi phụ phí của dịch vụ. Một kết quả đo lường đơn lẻ không đại diện cho chân lý phổ quát; việc chạy 6 lượt liên tiếp (`-count=6`) giúp kỹ sư nhận diện được độ biến thiên (nhiễu đo lường) trước khi đưa ra kết luận.
+`ns/op` là thời gian trôi qua mà timer benchmark ghi nhận chia cho số thao tác, không phải riêng thời gian CPU. `B/op` và `allocs/op` là các giá trị cấp phát bình quân runner ghi nhận, không phải live heap hay RSS; một số bình quân làm tròn không chứng minh mọi đường chạy đều không cấp phát. Sáu lượt giúp nhìn độ biến thiên, nhưng không loại bỏ tác động của warmup, tần số CPU hay công việc nền. Tách phép đo có profiling khỏi A/B thời gian để overhead của profiler không nghiêng về một phía.
 
 | Công cụ chẩn đoán | Câu hỏi kỹ thuật được giải đáp | Giới hạn phân tích |
 | :--- | :--- | :--- |
@@ -187,9 +189,9 @@ Một kết luận kỹ thuật có giá trị bảo vệ khoa học đòi hỏi
 
 ## Đối chiếu G/M/P với Execution Trace: Nhìn vào nhịp đập của Runtime
 
-Ở Chương 09, ta đã xây dựng mô hình tư duy về bộ điều phối của môi trường thực thi Go qua ba thực thể: Goroutine (G), luồng hệ điều hành (M), và bộ xử lý ảo (P). Ta đã biết P sở hữu hàng đợi cục bộ (`runq`), M gắn với P để thực thi mã máy của G, và runtime sử dụng các cơ chế trộm việc (`work-stealing`), cướp quyền (`preemption`) và chuyển giao P khi gọi syscall (`entersyscall`).
+Chương 09 giới thiệu G là goroutine, M là luồng hệ điều hành, P là tài nguyên để chạy Go gắn với `GOMAXPROCS`. Đọc `findRunnable` và `stealWork` trong `runtime/proc.go` của Go 1.27.1: việc sẵn sàng chạy có thể nằm trong hàng đợi cục bộ của P hoặc hàng đợi chung; một P thiếu việc có thể lấy việc từ P khác. Netpoll đưa công việc chờ mạng trở lại trạng thái có thể chạy. Preemption tạo cơ hội nhường thực thi, nhưng không cam kết một goroutine sẽ chạy trước hạn nghiệp vụ hay theo FIFO. Đây là implementation giúp giải thích trace, không phải phép chứng minh công bằng hoặc tính đúng đắn của chương trình. Chi tiết syscall được phân biệt ở dưới.
 
-Tuy nhiên, CPU profile thông qua `pprof` chỉ là một bản chụp lấy mẫu thống kê thời gian thực thi mã máy. Khi một dịch vụ phản hồi chậm chạp nhưng mức sử dụng CPU lại rất thấp, `pprof` trở nên bất lực: các goroutine không hề tiêu tốn CPU mà đang phải chờ đợi. Đây chính là ranh giới mà Dấu vết thực thi (Execution Trace) trở thành công cụ chẩn đoán quan trọng.
+CPU profile lấy mẫu thời gian CPU, nên không trực tiếp đo thời gian goroutine đã bị chặn. Không vì thế mà `pprof` “bất lực”: block/mutex profile có thể giúp điều tra một số khoảng chờ nếu được bật, còn trace đặt các chuyển trạng thái lên cùng dòng thời gian. CPU thấp chưa chứng minh mọi goroutine đều đang chờ hoặc xác định nguyên nhân dịch vụ chậm; phải chọn bằng chứng phù hợp.
 
 Bản chất của Execution Trace là ghi lại một tập rộng các sự kiện runtime phát sinh trong quá trình thực thi: thời điểm goroutine chuyển đổi trạng thái, thời điểm P được gắn kết hay tách rời khỏi M, các pha thu gom rác GC, và hoạt động của các điểm dừng đồng bộ hay lời gọi hệ thống. Trace không phải là một bản ghi toàn tri ghi lại mọi hành vi phần cứng. Trong mô hình trace của Go (đối chiếu `internal/trace.GoState`), runtime quản lý các trạng thái như `GoUndetermined`, `GoNotExist`, `GoRunnable`, `GoRunning`, `GoWaiting`, và `GoSyscall`. Để phục vụ việc phân tích triệu chứng vận hành, ta thường tập trung quan sát một tập con các trạng thái chủ đạo:
 
@@ -199,7 +201,7 @@ Hai là, `GoRunnable`: Goroutine đã sẵn sàng chạy (vừa được tạo r
 
 Ba là, `GoWaiting`: Goroutine chủ động nhường quyền thực thi và chờ đợi một điều kiện đồng bộ hóa: chờ kênh truyền, chờ khóa `sync.Mutex`, chờ `sync.WaitGroup`, hoặc chờ sự kiện mạng từ bộ thăm dò mạng (*network poller*). Khi chờ kênh hay khóa mutex, runtime chuyển trạng thái goroutine sang chờ trong bộ điều phối người dùng mà không nhất thiết phải kéo theo việc chuyển ngữ cảnh luồng hệ điều hành ngay lập tức.
 
-Bốn là, `GoSyscall`: Goroutine đang thực hiện một lời gọi hệ thống chặn (blocking syscall) ở tầng hệ điều hành. Cần phân biệt rõ `GoSyscall` với `GoWaiting`: ở `GoSyscall`, luồng M thực sự bị ràng buộc vào lời gọi của nhân hệ điều hành. Nếu thao tác bị kéo dài, runtime có thể tách P khỏi M (`handoffp`) để luồng khác tiếp tục phục vụ các goroutine đang chờ trong hàng đợi. Trong các pha GC dồn dập, nếu goroutine cấp phát bộ nhớ quá nhanh, runtime có thể yêu cầu goroutine đó tham gia hỗ trợ công việc đánh dấu (`GCMarkAssist`), tạo ra các khoảng gián đoạn có thể nhận diện trên dòng thời gian.
+Bốn là, `GoSyscall`: runtime đã chuyển G sang trạng thái gọi hệ thống; trạng thái này không tự chứng minh syscall đã chặn lâu. `entersyscall` cho phép P được thu hồi để M khác chạy Go, còn đường `entersyscallblock` dành cho lời gọi biết sẽ chặn có thể bàn giao P ngay. Với I/O mạng do netpoll hỗ trợ, G thường chờ theo mô hình `GoWaiting` mà không giữ riêng một M bị chặn cho cả thời gian chờ. Không phải mọi syscall hay mọi thiết bị đều đi qua netpoll. Mark assist là một hướng điều tra khác khi cấp phát tạo nợ đánh dấu; phải đọc sự kiện và stack thực tế thay vì suy nguyên nhân từ một tên trạng thái.
 
 Để phân tích định lượng các điểm nghẽn mà không suy diễn cảm tính từ một trạng thái đơn lẻ, công cụ `go tool trace` hỗ trợ trích xuất bốn hồ sơ pprof chuyên biệt từ dữ liệu trace: `sync` (độ trễ do rào cản đồng bộ như mutex, waitgroup, kênh truyền), `sched` (độ trễ điều phối từ lúc goroutine sẵn sàng đến lúc được chạy), `syscall` (độ trễ chặn tại các lời gọi hệ thống), và `net` (độ trễ chờ I/O mạng từ bộ thăm dò mạng).
 
@@ -222,13 +224,15 @@ go tool trace -pprof=syscall trace.out > syscall.pprof
 go tool pprof -top sync.pprof
 ~~~
 
-Dữ liệu thực tế quan sát được trong bộ tạo mẫu kiểm thử phản ánh đúng bản chất của bài toán: hồ sơ `sync.pprof` ghi nhận độ trễ tại `sync.(*WaitGroup).Wait` khi goroutine chính của bài kiểm thử chờ bốn worker hoàn thành đợt xử lý theo lô, cùng các điểm nhận dữ liệu từ kênh nội bộ của khung kiểm thử (`runtime.chanrecv1`). Hồ sơ `sched.pprof` ghi nhận độ trễ điều phối khi các worker goroutine được khởi tạo và chờ bộ xử lý P tiếp nhận. Hồ sơ `syscall.pprof` ghi nhận thời gian dừng ở tầng nhân khi thực hiện ghi dữ liệu trace ra tập tin.
+Các lệnh `>` ghi profile nhị phân ở trên yêu cầu PowerShell 7.4 trở lên hoặc shell chuyển hướng byte nguyên vẹn. Windows PowerShell cũ có thể chuyển output native thành text và làm hỏng profile; không dùng Out-File cho dữ liệu này. Khung kiểm chứng của lab ghi trực tiếp stdout bytes bằng subprocess.
+
+Lượt trace ngày 11/10/2026 trên Go 1.27.1 `windows/amd64` ghi nhận `sync.(*WaitGroup).Wait` và `runtime.chanrecv1` trong hồ sơ `sync`. Hồ sơ `sched` có stack đánh thức bên chờ qua `WaitGroup.Add/Done`, ngoài chi phí khởi động trace và khung test; không được gán toàn bộ cho worker mới tạo. Hồ sơ `syscall` có đường `syscall.WriteFile` từ bộ ghi trace và output test. Hồ sơ `net` không có sample vì fixture không chạy workload mạng. Đây là các khoảng chờ quan sát được của chính harness, không phải bằng chứng Render có lỗi CPU, I/O hoặc lập lịch trong production.
 
 Dấu vết thực thi không phải là bằng chứng xác nhận ngữ nghĩa đúng đắn của logic nguồn hay cam kết về độ trễ trên môi trường sản xuất. Trace là công cụ phân loại triệu chứng: khi gặp vấn đề về hiệu năng, các hồ sơ pprof trích xuất từ trace giúp kỹ sư định hướng bước can thiệp tiếp theo dựa trên dữ liệu đo đạc thực nghiệm thay vì phỏng đoán.
 
 ![Đường đi của bằng chứng hiệu năng](../../assets/diagrams/performance-evidence-path.png)
 
-@figure Chu trình điều tra hiệu năng hoàn chỉnh. Dữ liệu bắt đầu từ một bài toán đo lường có khối lượng công việc đại diện, kiểm chứng qua profiler, sau đó đối chiếu mã nguồn và tối ưu hóa có đo đạc đối chứng.
+@figure Từ triệu chứng đến giả thuyết có thể bác bỏ: chọn benchmark, profile hoặc trace theo câu hỏi, thay đổi nhỏ rồi đo lại A/B cùng workload. Kiểm tra đầu ra là một gate riêng, không phải chứng minh mọi hành vi đều đúng.
 
 ## Điển cứu thực tế: Phân tích bài toán nối chuỗi
 
@@ -251,11 +255,31 @@ Từ Go 1.20 và hoàn thiện ở các phiên bản gần đây, Go hỗ trợ 
 
 Trong quy trình biên dịch thông thường, compiler chỉ có cái nhìn tĩnh về mã nguồn, không biết nhánh rẽ nào trong câu lệnh `if` hay phương thức nào của `interface` được gọi thường xuyên nhất trong thực tế. Với PGO, kỹ sư thu thập một tệp CPU profile đại diện (`default.pgo`) từ hệ thống production đang chịu tải thực. Trình biên dịch nạp hồ sơ này vào pass phân tích để:
 
-Một là, hồ sơ hiệu năng giúp trình biên dịch nhận diện các cơ hội nội suy hàm (*inlining*) trên những đường dẫn thực thi trọng yếu (*hot path*). Các quy tắc suy nghiệm (*heuristics*), ngưỡng kích hoạt và kết quả thu được không phải là giao diện lập trình ổn định; kỹ sư cần kiểm tra thông tin chẩn đoán hoặc chạy lại bài đo chuẩn trên đúng phiên bản cụ thể thay vì mặc định rằng một hàm chắc chắn sẽ được nội suy.
+Một là, profile có thể giúp compiler ưu tiên inlining ở đường nóng. Ngưỡng và heuristic không phải API ổn định; cần diagnostic và benchmark của đúng bản build, không mặc định một hàm chắc chắn được inline.
 
 Hai là, profile có thể mở ra cơ hội devirtualization khi compiler chứng minh được điều kiện phù hợp. Đó là tối ưu hóa có thể có, không phải lời hứa rằng mọi interface call nóng sẽ thành lời gọi tĩnh hay luôn inline xuyên package.
 
 Tuy nhiên, kỹ thuật PGO chỉ thực sự đáng tin cậy khi hồ sơ hiệu năng phản ánh đúng khối lượng công việc đại diện của môi trường mục tiêu. Cần ưu tiên thu thập hồ sơ từ môi trường sản xuất; trong trường hợp bất khả thi, môi trường thử nghiệm (*staging*) hoặc các bài đo chuẩn có độ bao phủ đại diện cũng có thể được cân nhắc. Các bài đo vi mô (*microbenchmarks*) với phạm vi hẹp thường mô phỏng quá ít hành vi thực tế của chương trình để tạo ra một hồ sơ PGO chất lượng; hãy chỉ sử dụng chúng để kiểm chứng các giao ước nhỏ. Dù sử dụng nguồn dữ liệu nào, việc đo đạc lại kết quả kiểm chứng toàn trình (*end-to-end*) sau khi áp dụng tối ưu hóa vẫn là yêu cầu bắt buộc.
+
+### Thử A/B: profile có giúp chính workload này không?
+
+Để kiểm tra PGO bằng số liệu thay vì chỉ mô tả khả năng của nó, trong `labs/part10-measure-first` hãy chạy phép thử bằng Python standard library và đúng Go đã pin:
+
+~~~powershell
+python pgo_ab.py --go 'D:/Golang/.tools/go1.27.1/bin/go.exe' `
+  --out artifacts/pgo-ab-new
+~~~
+
+Đổi đường dẫn Go theo máy; thư mục output phải chưa tồn tại để không ghi đè evidence cũ. Đây là A/B **cùng source `fixed.Render`** khi tắt và bật PGO, không phải so hai thuật toán `baseline` và `fixed`. Script thu CPU profile ba giây bằng `-pgo=off` trên 1.000 Reading đã dựng ngoài vòng đo, build hai test binary với `-pgo=off` và `-pgo=<profile>`, rồi kiểm tra output cả hai. Profile chỉ đại diện cho bài toán Render này, không cho toàn bộ service. Lệnh compiler và SHA của source, profile, binary được lưu để xác định artifact thực sự đã dùng.
+
+Sau một lượt warmup mỗi phía không đưa vào thống kê, script chạy sáu cặp luân phiên thứ tự A/B, mỗi mẫu 400 ms, `GOMAXPROCS=2`. Khi đo A/B không bật profiler. Lượt thực chạy ngày 11/10/2026, Go 1.27.1 `windows/amd64`, ghi nhận:
+
+| Build cùng Render | Min–max ns/op, sáu mẫu | Median ns/op |
+| --- | --- | --- |
+| PGO tắt | 44,514–49,137 | 47,083 |
+| PGO dùng profile vừa thu | 42,463–50,011 | 46,737.5 |
+
+Hai khoảng chồng lấn; chênh lệch median nhỏ không đủ để nhận PGO là một cải thiện có ý nghĩa. Đây chỉ là thống kê mô tả, chưa có kiểm định ý nghĩa thống kê; máy vẫn có tải nền và chưa đo toàn service. Từng mẫu cùng raw stdout/stderr được giữ trong evidence của checkpoint, không thay bảng số liệu lịch sử phía trên. Phép thử có giá trị vì cho phép bác bỏ kỳ vọng “bật PGO là chắc chắn nhanh hơn”, chứ không vì buộc phải tạo một tỷ lệ tăng tốc đẹp.
 
 ## Kỷ luật Tối ưu hóa Kỹ thuật
 

@@ -4,7 +4,7 @@
 
 Mô hình tinh thần của chương này là một send trên channel là một lần bàn giao còn dang dở cho tới khi bên tiêu thụ nhận nó, bộ đệm lưu giữ nó, hoặc người gửi chọn dừng. Channel không biến công việc thành “song song an toàn” chỉ bằng một dấu `<-`. Nó buộc ta viết rõ ai còn nợ ai một giá trị, ai báo không còn giá trị nào nữa, và điều gì xảy ra khi người nhận không còn chờ.
 
-Hãy bắt đầu bằng một tiện ích có vẻ hợp lý. `firstSuccess` chạy nhiều probe, nhận kết quả đầu tiên rồi return:
+Hãy bắt đầu bằng một tiện ích có vẻ hợp lý. `firstResult` chạy nhiều probe, nhận kết quả đầu tiên rồi return. Tên này không hứa kết quả thành công: kết quả đến đầu tiên vẫn có thể chứa lỗi. Đoạn trích tập trung vào điểm gửi, chưa phải một hàm hoàn chỉnh:
 
 ~~~go
 results := make(chan Result)
@@ -33,7 +33,7 @@ Một worker gửi kết quả phải nhìn đồng thời hai khả năng: cons
 ~~~go
 select {
 case out <- result:
-	// Consumer đã nhận quyền sở hữu result.
+	// Giá trị đã được nhận hoặc nằm trong buffer.
 case <-ctx.Done():
 	// Không có lần bàn giao nào nữa.
 	// Worker được phép kết thúc.
@@ -58,11 +58,15 @@ Với kênh truyền không có bộ đệm, bên gửi và bên nhận bắt bu
 
 Đây là ngữ nghĩa của đặc tả ngôn ngữ, không phải mô hình lập lịch nội bộ: kênh truyền có bộ đệm chỉ điều chỉnh thời điểm các thao tác gửi hoặc nhận được phép tiếp tục tiến triển. Mô hình bộ nhớ Go còn cam kết thao tác gửi xảy ra trước thời điểm thao tác nhận tương ứng hoàn tất. Giao ước này bảo đảm chuyển giao an toàn một giá trị cùng toàn bộ các bước tính toán đã được chuẩn bị trước thao tác gửi; nó hoàn toàn không cho phép nhiều goroutine cùng đồng thời biến đổi trạng thái tùy tiện.
 
+Chiều ngược lại cần phân biệt buffer. Với kênh không đệm, lần nhận đồng bộ trước khi lần gửi tương ứng hoàn tất; bên gửi vì thế biết đã có người nhận, không biết người đó đã xử lý xong. Với capacity `C`, lần nhận thứ `k` đồng bộ trước khi lần gửi thứ `k+C` hoàn tất: muốn gửi thêm khi buffer đầy phải có chỗ được giải phóng. Lần gửi đầu vào kênh có đệm có thể hoàn tất trước bất kỳ lần nhận nào. Nếu cần chờ xử lý xong, hãy thiết kế tín hiệu xác nhận riêng.
+
+Các test `TestBufferedAdmissionIsNotCompletion`, `TestUnbufferedReceivePublishesBeforeSendReturns` và `TestFullBufferNeedsAReceive` trong lab buộc từng trạng thái bằng tín hiệu hoặc `testing/synctest`, không dự đoán lịch chạy. Dung lượng channel giới hạn số giá trị trong buffer, không giới hạn số goroutine đang chờ gửi hay tổng byte của dữ liệu được tham chiếu. Gửi một slice hay con trỏ vẫn sao chép giá trị dẫn tới dữ liệu chung; quyền thay đổi dữ liệu sau bàn giao là chính sách phải thiết kế, không phải phép sao chép sâu của channel.
+
 ## Close nói về người gửi, không nói “mọi thứ ổn”
 
-Lệnh `close(results)` chỉ phát đi thông báo rằng sẽ không còn thao tác gửi nào được thực hiện trên kênh `results` nữa. Nó không mang ý nghĩa bên tiêu thụ đã xử lý cạn kết quả, không tiêu diệt goroutine công nhân, và không làm biến mất các thao tác gửi đang bị phong tỏa. Các giá trị đã nằm trong bộ đệm vẫn được bên nhận tiếp nhận tuần tự; sau đó thao tác nhận sẽ trả về giá trị mặc định (*zero value*) kèm cờ `ok == false`. Vì vậy vòng lặp `for result := range results` là một giao ước sáng sủa: bên tiêu thụ tiếp tục đọc toàn bộ kết quả đã bàn giao, rồi tự động dừng lại khi chủ sở hữu kênh thực hiện đóng kênh.
+`close(results)` chấm dứt việc gửi, không chứng nhận mọi job thành công hay mọi kết quả đã được xử lý. Gửi vào channel đã đóng gây panic; đóng channel khi có bên đang chờ gửi cũng không phải đường hủy an toàn cho bên gửi đó. Giá trị đã nằm trong buffer vẫn được nhận trước, rồi phép nhận trả zero value với `ok == false`. Một giá trị zero đã được gửi hợp lệ vẫn có `ok == true`. `range` dừng sau khi channel đã đóng và buffer đã cạn. Việc đóng đồng bộ trước lần nhận trả zero value do channel đã đóng, không thay cho tín hiệu xác nhận xử lý xong từng kết quả.
 
-Chỉ chủ sở hữu (*owner*) của phía gửi mới có thẩm quyền đóng kênh. Trong một nhóm luồng công nhân (*worker pool*), không một công nhân nào có thể tự biết mình có phải là công nhân cuối cùng hay không; nếu để một công nhân hoàn thành trước tự ý `close(results)`, các công nhân khác cố gắng gửi kết quả tiếp theo sẽ kích hoạt lỗi hoảng loạn (`panic`). Hệ thống bắt buộc phải có một bộ điều phối (*coordinator*) độc lập nắm rõ thời điểm toàn bộ công nhân đã hoàn tất để đóng kênh đầu ra duy nhất một lần.
+Trong thiết kế này, quyền đóng thuộc bên điều phối việc gửi: dispatcher đóng đầu vào, coordinator chờ mọi worker rồi đóng đầu ra đúng một lần. Đây là quy ước sở hữu của chương trình, không phải quy tắc compiler rằng “chỉ sender được đóng”. Một biến `chan T` hoặc `chan<- T` vẫn cho phép gọi `close`; kiểu chỉ nhận thì không. Không để worker đầu tiên hoàn tất tự đóng đầu ra trong khi các worker khác còn có thể gửi.
 
 ![Lifecycle ownership của worker pool: dispatcher đóng jobs, coordinator đóng results sau tất cả worker, consumer chỉ nhận.](../../assets/diagrams/channel-work-lifecycle.png)
 
@@ -76,10 +80,10 @@ Mở `exercise/pool_test.go` trước. Test không cho sẵn hiện thực; nó 
 
 | Điều khoản hợp đồng | Mục tiêu kiểm chứng | Rủi ro hệ thống nếu vi phạm |
 | :--- | :--- | :--- |
-| Bảo toàn kết quả đơn trị | Mỗi job hoàn tất bình thường sinh ra đúng một `Result`. | Mất mát dữ liệu hoặc lặp kết quả xử lý. |
+| Bảo toàn kết quả khi không hủy | Nếu không hủy và consumer tiếp tục nhận, mỗi job tạo đúng một `Result`, kể cả khi Work trả lỗi. Khi hủy, kết quả chưa bàn giao có thể bị bỏ theo policy. | Mất kết quả hoặc lặp kết quả ngoài contract. |
 | Giới hạn tài nguyên song song | Số lượng lời gọi hàm `Work` thực thi đồng thời không bao giờ vượt quá ngưỡng `workers`. | Tràn bộ đệm, quá tải kết nối cơ sở dữ liệu hoặc cạn kiệt CPU. |
 | Cơ chế giải phóng khi hủy bỏ | Với `Work` của fixture có thể hoàn tất trả về, context bị hủy cho worker thoát lệnh gửi dù kết quả đầu ra không được đọc; tiến trình điều phối đóng kết quả đầu ra sau khi worker trả về. | Worker giữ một lần bàn giao không còn người nhận. Nếu `Work` không trả về, nhóm worker không có quyền cưỡng bức nó dừng. |
-| Chu kỳ đóng kênh duy nhất | Khi dispatcher hết job và toàn bộ worker đã thoát, kênh output đóng đúng một lần. | Panic do đóng kênh nhiều lần hoặc deadlock vòng lặp `for range`. |
+| Chu kỳ đóng kênh duy nhất | Coordinator chờ cả dispatcher lẫn worker kết thúc rồi đóng output đúng một lần. Hết output là mốc kết thúc đợt việc của lab, không chứng nhận mọi job thành công. | Panic do đóng nhiều lần hoặc goroutine con chưa được join. |
 
 Có một ranh giới nhỏ nhưng đáng lưu tâm ngay từ đầu: nếu `ctx` đã bị hủy trước khi bộ phân phối kịp bàn giao công việc, `Work` không được phép khởi chạy chỉ vì một worker vừa được tạo. Hủy bỏ tác vụ (*cancellation*) là chính sách dừng tiếp nhận công việc mới; việc đưa một `Job` vào `Work` với ngữ cảnh đã hết hạn chỉ tạo thêm một kết quả không còn bên tiếp nhận.
 
@@ -126,7 +130,7 @@ func dispatch(ctx context.Context, jobs []Job) <-chan Job
 func consume(in <-chan Job, out chan<- Result)
 ~~~
 
-`<-chan Job` quy định bên gọi chỉ được nhận dữ liệu; `chan<- Result` quy định bên gọi chỉ được gửi dữ liệu. Chiều của kênh (*direction*) không thay thế tài liệu quy định quyền sở hữu, hai hàm vẫn phải thỏa thuận bên nào có thẩm quyền đóng kênh, nhưng trình biên dịch đã ngăn chặn những nhầm lẫn trực tiếp. Bên tiếp nhận `in` không thể vô tình gửi dữ liệu; bên tiêu thụ kết quả đầu ra không thể thực thi `close` trên một kênh chỉ nhận (*receive-only channel*).
+Đây là chữ ký API, chưa có thân hàm để chạy riêng. Giá trị `dispatch` trả cho bên gọi chỉ cho phép nhận. Bên trong `consume`, tham số `in` chỉ cho phép nhận, còn `out` chỉ cho phép gửi và vẫn cho phép `close`; quyền này thuộc biểu thức trong hàm, không thu hẹp biến channel hai chiều mà bên gọi đang giữ. Direction ngăn một số thao tác sai kiểu, nhưng không chứng minh ai là chủ thể duy nhất được đóng channel.
 
 Khi đọc mã nguồn xử lý kênh, đừng bắt đầu bằng câu hỏi kênh này có bộ đệm (*buffered*) hay không. Hãy đặt câu hỏi theo thứ tự chặt chẽ hơn: giá trị nào đang được bàn giao, bên nào phải còn hoạt động để tiếp nhận giá trị đó, ai nắm quyền tuyên bố kết thúc việc gửi dữ liệu, và tín hiệu hủy bỏ tác vụ có mở đường thoát cho mọi điểm nghẽn chặn (*blocking*) hay không. Trả lời thỏa đáng bốn câu hỏi này trước khi lựa chọn dung lượng bộ đệm (*capacity*) thường ngăn chặn được hiện tượng rò rỉ, khóa chết (*deadlock*) và hàng đợi phình to vô hạn.
 
