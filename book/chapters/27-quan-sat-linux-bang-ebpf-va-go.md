@@ -48,7 +48,7 @@ Câu trả lời nằm ở bộ kiểm định nhân (`kernel verifier`). Trư�
 
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-Trình biên dịch C chỉ chịu trách nhiệm kiểm tra cú pháp và hệ thống kiểu ở tầng ngôn ngữ; nó không thể biết trước liệu tại thời điểm thực thi trong nhân, phần tử ứng với `key` có thực sự tồn tại trong bộ nhớ hay không. Hàm trợ giúp `bpf_map_lookup_elem` luôn có khả năng trả về con trỏ `NULL` nếu tra cứu thất bại. Trong không gian nhân Linux, việc giải tham chiếu con trỏ `NULL` tiềm ẩn nguy cơ nghiêm trọng đối với tính toàn vẹn của hệ thống: nó có thể gây ra kernel oops, làm đổ vỡ tiến trình liên quan, làm hỏng trạng thái nhân hoặc kích hoạt kernel `panic` tùy thuộc vào ngữ cảnh thực thi và cấu hình nhân.
+Với các khai báo kiểu và map phù hợp, đoạn C có thể biên dịch dù chưa kiểm tra kết quả tra cứu. Clang kiểm tra và tối ưu mã theo mô hình ngôn ngữ C; việc biên dịch thành công không cung cấp bằng chứng mà BPF verifier yêu cầu về con trỏ trả về từ helper. `bpf_map_lookup_elem` có thể trả `NULL` khi không tìm thấy phần tử. Verifier theo dõi kết quả này dưới dạng `PTR_TO_MAP_VALUE_OR_NULL`, chưa cho phép truy cập như một con trỏ map value chắc chắn hợp lệ.
 
 Do đó, bộ kiểm định nhân (`Kernel Verifier`) thực hiện phân tích đường đi trừu tượng và theo dõi trạng thái thanh ghi BPF chứa kết quả trả về dưới dạng con trỏ có thể mang giá trị `NULL`. Khi thanh ghi chưa được chứng minh an toàn, mọi chỉ thị đọc hoặc ghi bộ nhớ thông qua thanh ghi đó đều bị Verifier chặn đứng và từ chối nạp vì lỗi truy cập bộ nhớ không hợp lệ. Để vượt qua rào cản này, lập trình viên bắt buộc phải chèn một nhánh kiểm tra điều kiện tường minh ngay sau khi tra cứu:
 
@@ -361,25 +361,29 @@ func checkBasicRules(e *ExecEvent) *SecurityAlert {
 	fn := strings.ToLower(e.Filename)
 	comm := strings.ToLower(e.Comm)
 
-	// Luật 1: Thực thi từ thư mục tạm (/tmp, /dev/shm)
+	// Luật 1: Đường dẫn nằm dưới thư mục tạm.
 	if strings.HasPrefix(fn, "/tmp/") ||
-		strings.HasPrefix(fn, "/dev/shm/") {
+		strings.HasPrefix(fn, "/dev/shm/") ||
+		strings.HasPrefix(fn, "/var/tmp/") {
 		return &SecurityAlert{
 			Event:  e,
 			Rule:   "SEC01_EXEC_FROM_TEMP_DIRECTORY",
-			Reason: "process executed from writable temp path",
+			Reason: "process execution originated from " +
+				"world-writable temporary directory",
 		}
 	}
 
-	// Luật 2: Daemon web tự ý mở shell tương tác (RCE)
-	isShell := fn == "/bin/sh" || fn == "/bin/bash"
+	// Luật 2: Tên caller và đích khớp mẫu đáng điều tra.
+	isShell := fn == "/bin/sh" || fn == "/bin/bash" ||
+		fn == "/usr/bin/bash" || fn == "/bin/dash"
 	isWeb := comm == "nginx" || comm == "node" ||
-		comm == "python"
+		comm == "python" || comm == "redis-server"
 	if isShell && isWeb {
 		return &SecurityAlert{
 			Event:  e,
 			Rule:   "SEC02_SHELL_FROM_WEBSERVER",
-			Reason: "interactive shell spawned from web daemon",
+			Reason: "interactive shell spawned directly " +
+				"from web service daemon process",
 		}
 	}
 	return nil
@@ -400,17 +404,21 @@ func DetectSecurityAnomalies(e *ExecEvent) *SecurityAlert {
 	// Luật 3: Tiện ích dò quét mạng chạy với quyền root (UID 0)
 	fn := strings.ToLower(e.Filename)
 	isNet := strings.HasSuffix(fn, "/nc") ||
-		strings.HasSuffix(fn, "/ncat")
+		strings.HasSuffix(fn, "/ncat") ||
+		strings.HasSuffix(fn, "/nmap")
 	if isNet && e.UID == 0 {
 		return &SecurityAlert{
 			Event:  e,
 			Rule:   "SEC03_ROOT_NETWORK_RECON",
-			Reason: "network recon tool executed as root",
+			Reason: "network exploration utility " +
+				"executed with root privileges",
 		}
 	}
 	return nil
 }
 ~~~
+
+`checkBasicRules` là cách tách đoạn trích cho dễ đọc, không phải hàm có sẵn trong lab; hai đoạn trên giữ các đường dẫn và chuỗi `Reason` của `DetectSecurityAnomalies` thật. Dù tên thông báo có chữ “executed” hay “interactive”, dữ liệu hook chỉ cho biết một exec attempt. Lab không thu argv, không xác minh quyền ghi thực tế của thư mục, không chứng minh shell tương tác hay RCE. `Comm` là tên task có giới hạn và có thể thay đổi, không phải danh tính đã xác thực. Cảnh báo chỉ là đầu mối điều tra; đừng biến tên rule thành kết luận pháp chứng.
 
 ---
 
@@ -445,7 +453,7 @@ ok      part27-ebpf-observer   0.742s
 
 Bộ kiểm thử được phân loại ở cấp độ kiểm thử đơn vị kết hợp mô hình hóa. Biên dịch tệp đối tượng nhị phân là công đoạn đóng gói, đòi hỏi trình biên dịch và các tệp tiêu đề mà mã nguồn C sử dụng; công đoạn này không tự đòi hỏi đặc quyền nạp vào nhân hệ điều hành. Thao tác nạp và gắn điểm theo dõi đòi hỏi nhân Linux hỗ trợ điểm móc nối và đặc quyền phù hợp với phiên bản nhân, chủng loại chương trình cùng chính sách an ninh. Bài thực hành này chủ động bỏ qua bước nạp nhân thực tế khi chạy trên môi trường không hỗ trợ; việc thiếu tệp tiêu đề của nhân không phải là nguyên nhân phổ quát khiến tệp đối tượng đã biên dịch không thể nạp thành công.
 
-Sáu kịch bản kiểm thử thẩm định các khế ước kỹ thuật cục bộ: giải mã định dạng byte nhỏ (*little-endian*) theo bố cục 156 byte của bài thực hành; từ chối các khối dữ liệu bị cắt ngắn; điều phối luồng kênh; ngắt luồng đọc dữ liệu thông qua ngữ cảnh; áp dụng quy tắc suy nghiệm cảnh báo; và khởi tạo đặc tả bộ sưu tập từ thư viện với cấu trúc bộ đệm vòng và chương trình điểm theo dõi. Việc không phát hiện lỗi tương tranh hay tiến trình goroutine bị mắc kẹt trên các nhánh thực thi đã kiểm tra không phải là bằng chứng bao quát cho mọi lịch trình thực thi. Bộ kiểm thử cũng không chứng minh việc nạp hay gắn kết sẽ luôn thành công, thu thập đầy đủ mọi sự kiện hoặc độ trễ phụ trội là chấp nhận được trên môi trường vận hành thực tế; những yếu tố đó bắt buộc phải được kiểm chứng độc lập trên môi trường Linux mục tiêu.
+Các test gốc kiểm tra decoder little-endian của ABI 156 byte, record thiếu dữ liệu, channel, cancellation, heuristic và `CollectionSpec` mô hình. Test cancellation nay chờ reader báo đã vào `Read` rồi mới hủy context; nếu hủy trước khi đọc, test có thể xanh mà chưa thử khả năng giải phóng lệnh đọc bị chặn. `TestSecurityRulesMatchDocumentedFixtureScope` kiểm tra thêm các nhánh `/var/tmp`, `/usr/bin/bash`, `/bin/dash` và `nmap` để đoạn trích không vô tình thu hẹp source thật. Không phát hiện race trên các đường đã chạy không chứng minh mọi lịch trình đều đúng. Không test nào ở đây chứng minh ELF đã được nạp, hook đã gắn, mọi sự kiện được thu đủ hoặc overhead phù hợp production.
 
 ---
 
@@ -455,7 +463,7 @@ Sáu kịch bản kiểm thử thẩm định các khế ước kỹ thuật c�
 | :--- | :--- | :--- |
 | **Dùng stack vượt giới hạn của kernel/program type.** | Verifier có thể từ chối khi compiler hiện thực dữ liệu trên stack quá lớn; một khai báo bị tối ưu bỏ không tự tạo stack use. | Kiểm tra bytecode và verifier log; với event ring buffer của lab, reserve/submit tránh đặt toàn bộ event trên stack. |
 | **Lấy nhầm 32 bit thấp** của `bpf_get_current_pid_tgid()`. | Thu được Thread ID (TID) thay vì Process ID (PID), khiến log hiển thị PID sai lệch hoàn toàn. | Luôn dịch bit phải 32 bit: `(__u32)(pid_tgid >> 32)` để lấy đúng PID của tiến trình. |
-| **Xử lý sự kiện userspace quá chậm** trong vòng lặp đọc. | Tràn bộ đệm Ring Buffer trong kernel, khiến các sự kiện quan trọng bị âm thầm đánh rơi (dropped). | Sử dụng buffered channel và mô hình Worker Pool ở tầng Go để tiêu thụ sự kiện với tốc độ cao. |
+| **Userspace xử lý chậm hơn tốc độ tạo record.** | Ring buffer có thể hết chỗ, record bị mất. | Queue và worker có giới hạn chỉ hấp thụ tải trong một phạm vi; đo tốc độ, đếm mất record và chọn chính sách khi quá tải. Thêm buffer không bảo đảm hết mất dữ liệu. |
 | **Chạy ứng dụng thiếu quyền** Linux capabilities. | Load/attach có thể trả `EPERM`. | Quyền cần thiết phụ thuộc kernel version, cấu hình LSM và loại program; kiểm tra policy của node. Không copy một bộ capability như công thức chung. |
 
 ---
@@ -531,7 +539,7 @@ func ParseNULSeparatedArgs(raw []byte) []string {
 }
 ~~~
 
-Biến mảng tham số là mảng con trỏ tham chiếu tới các chuỗi ký tự ngôn ngữ C; định dạng truyền tải trên đường truyền bắt buộc phải ghi nhận số lượng đối số, độ dài dữ liệu thực tế đã sử dụng và cờ báo cắt ngắn, bên cạnh giới hạn thu thập tối đa. Bộ giải mã ở trên chỉ tiếp nhận các gói dữ liệu hợp lệ: mỗi đối số kết thúc bằng ký tự rỗng, tuyệt đối không truyền toàn bộ vùng đệm chứa khoảng đệm thừa. Chuỗi dữ liệu phân tách hai ký tự rỗng liên tiếp phải được phân giải thành hai đối số riêng biệt; việc tự ý loại bỏ các phần tử rỗng sẽ làm thất thoát đối số hợp lệ. Ký tự khoảng trắng cũng là dữ liệu hợp lệ, không được dùng để phân tách hay cắt tỉa chuỗi. Điểm móc nối hiện tại chỉ thu thập tên tệp; đây là hướng thiết kế mở rộng, không phải năng lực thu thập tham số sẵn có của bài thực hành.
+`argv` là mảng con trỏ tới các chuỗi C. Wire format phải ghi số đối số, số byte thực dùng, giới hạn thu thập và cờ cắt ngắn. Hàm trên giả định payload đã hợp lệ, mỗi đối số có byte NUL kết thúc và không kèm padding thừa. Chẳng hạn `a\x00\x00` biểu diễn hai đối số `"a"` và `""`; bỏ phần tử rỗng sẽ mất dữ liệu. Khoảng trắng cũng là dữ liệu, không dùng để split hay trim. Hook hiện tại chỉ lấy filename; lời giải decode không chứng minh kernel đã thu được argv.
 
 ---
 

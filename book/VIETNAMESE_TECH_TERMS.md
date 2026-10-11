@@ -48,7 +48,7 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **expression** | **biểu thức** | Cấu trúc tính toán sinh ra một giá trị cụ thể |
 | **statement** | **câu lệnh** | Đơn vị hành động làm thay đổi trạng thái chương trình |
 | **block** | **khối lệnh** | Đoạn mã nằm trong cặp dấu ngoặc nhọn `{}` |
-| **scope** | **phạm vi** / **phạm vi sống** | Vùng không gian trong mã mà một định danh có hiệu lực |
+| **scope** | **phạm vi định danh** | Vùng mã mà định danh có hiệu lực; không đồng nghĩa với lifetime (thời gian sống) của đối tượng được tham chiếu |
 | **shadowing** | **che khuất biến** | Biến ở scope con che khuất biến trùng tên ở scope cha |
 | **type inference** | **suy luận kiểu** | Compiler tự xác định kiểu dữ liệu dựa trên giá trị khởi tạo |
 | **type conversion** | **chuyển đổi kiểu** | Cú pháp tường minh `T(v)` đổi giá trị sang kiểu `T` |

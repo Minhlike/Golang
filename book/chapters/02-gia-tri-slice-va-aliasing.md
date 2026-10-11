@@ -24,7 +24,7 @@ Kết quả từ lab part2-values là:
 
 ## Một baseline để dự đoán
 
-Với một kiểu `int`, phép gán (*assignment*) tạo ra một giá trị độc lập. Cả `a` và `b` đều có giá trị riêng của chính chúng.
+Với kiểu `int`, phép gán tạo ra một giá trị độc lập. Cả `a` và `b` đều có giá trị riêng.
 
 ~~~go
 a := 10
@@ -34,7 +34,7 @@ b = 99
 fmt.Println(a, b) // 10 99
 ~~~
 
-Go đã sao chép giá trị (*value*) của `a` sang `b`. Sau đó `b` tiếp nhận giá trị mới; biến `a` không có lý do gì để biến đổi. Đây là quy tắc nền tảng: phép gán luôn sao chép giá trị (*pass-by-value*). Điều chúng ta cần làm rõ là một giá trị có thể bao hàm những gì bên trong.
+Go đã sao chép giá trị của `a` sang `b`. Sau đó `b` nhận giá trị mới; `a` không đổi. Phép gán sao chép giá trị; khi gọi hàm, đối số cũng được truyền theo giá trị. Cả hai quy tắc đều không hứa rằng mọi dữ liệu được tham chiếu bên trong giá trị ấy sẽ được sao chép. Ta cần biết chính xác giá trị đang chứa gì.
 
 Array giúp ta kiểm tra quy tắc ấy với nhiều phần tử. Độ dài là một phần của type, nên [3]int và [4]int là hai array type khác nhau. Khi array được gán, toàn bộ array value được copy.
 
@@ -61,9 +61,11 @@ b := a
 b[0] = 99
 ~~~
 
-Kiểu `[]int` không phải là một mảng bỏ quên độ dài. Nó là một kiểu lát cắt (*slice type*). Một giá trị lát cắt mô tả một phân đoạn liên tục của mảng bên dưới (*underlying array*).
+Kiểu `[]int` không phải là một mảng bỏ quên độ dài. Nó là kiểu slice: một giá trị slice mô tả một đoạn liên tục của mảng bên dưới.
 
-Trong mã nguồn thực thi (*runtime*) Go 1.27.1 (`src/runtime/slice.go`), mô hình tiêu đề lát cắt (*slice header / descriptor*) gồm con trỏ tham chiếu tới dữ liệu, độ dài `len int` và dung lượng `cap int`. Với kiến trúc amd64, ba trường này chiếm 24 byte. Đây là hình thức biểu diễn ở tầng hệ thống, không phải kích thước bắt buộc cho mọi kiến trúc phần cứng. Để dự đoán chính xác thao tác biến đổi dữ liệu, ta chỉ cần nắm rõ: lát cắt mở một cửa sổ nhìn vào mảng bên dưới và sở hữu độ dài cùng dung lượng độc lập.
+Runtime Go 1.27.1 biểu diễn slice bằng ba trường: con trỏ dữ liệu, `len int` và `cap int` (`src/runtime/slice.go`). Với toolchain này trên amd64, giá trị slice chiếm 24 byte; số đó không bao gồm mảng được tham chiếu. Đây là chi tiết triển khai, không phải cam kết bố cục bộ nhớ của đặc tả Go. Đặc tả bảo đảm slice chia sẻ mảng bên dưới và có độ dài, dung lượng riêng; ta không cần một kích thước header cố định để suy luận về aliasing.
+
+Chạy `TestSliceDescriptorImplementationMeasurement` trong `labs/part2-values` để đo bằng `unsafe.Sizeof` và ghi kèm Go version, hệ điều hành, kiến trúc. Thử nghiệm chỉ đo giá trị slice trên toolchain đang chạy, không đo toàn bộ bộ nhớ nó giữ sống và không chứng minh mọi compiler phải dùng cùng bố cục.
 
 Khi phép gán `b := a` diễn ra, ngôn ngữ thực hiện sao chép giá trị theo ngữ nghĩa (copy by value). Trong mô hình ba từ máy, các thành phần của descriptor được sao chép sang `b` với cùng con trỏ dữ liệu, cùng `len` và cùng `cap`. Trình tối ưu hóa có thể giữ các trường này trên thanh ghi mà không bắt buộc phải phát sinh một lệnh chép 24 byte vật lý ở bộ nhớ. Biến `b` sở hữu một bản sao giá trị riêng biệt về cửa sổ nhìn (`len` và `cap`), nhưng con trỏ bên trong vẫn dẫn về cùng mảng nền ban đầu.
 
@@ -170,14 +172,16 @@ Tham số `fields` tiếp nhận một giá trị lát cắt mới, nhưng tiêu
 func redactedCopy(fields []string) []string {
 	preview := make([]string, len(fields))
 	copy(preview, fields)
-	preview[0] = "***"
+	if len(preview) > 0 {
+		preview[0] = "***"
+	}
 	return preview
 }
 ~~~
 
-Hàm `copy` sao chép tối đa số phần tử vừa vặn với lát cắt đích và trả về số phần tử thực sự đã sao chép. Ở đây hàm `make` tạo ra mảng nền mới, do đó `preview` hoàn toàn độc lập ở tầng phần tử lát cắt. Đổi lấy tính độc lập là chi phí cấp phát bộ nhớ và thời gian sao chép; với vùng đệm lớn hoặc luồng xử lý cao điểm, đó là quyết định kỹ thuật cần có lý do rõ ràng. Với một bản xem trước cần an toàn tuyệt đối trước các thao tác biến đổi dữ liệu, đây là cách biểu đạt chính xác ý đồ kiến trúc.
+Hàm `copy` sao chép tối đa số phần tử vừa với đích và trả về số phần tử đã chép. Với `[]string` này, `make` tạo vùng chứa phần tử riêng; gán lại `preview[i]` không sửa `fields[i]`. Đầu vào `nil` hoặc rỗng trả về slice có độ dài 0; contract không yêu cầu giữ nguyên tính `nil`. Kiểm tra độ dài trước khi truy cập phần tử 0 tránh panic. Chi phí cấp phát và sao chép là cái giá của quyền sửa dữ liệu riêng, không phải lý do để bỏ contract.
 
-### Bài thực hành: Săn lỗi trùng tên bộ nhớ (*aliasing*) có kiểm chứng
+### Bài thực hành: Phát hiện việc sửa vùng nhớ dùng chung
 
 Mở thư mục `labs/part2-values` trong trình soạn thảo và chạy riêng ca kiểm thử `TestRedactedCopyDoesNotMutateInput` trước khi sửa mã nguồn. Sau đó tạm thay phần tạo `preview` bằng phép gán `preview := fields`. Đừng suy đoán cảm tính bằng mắt: hãy chạy lại kiểm thử để thấy công cụ báo lỗi dữ liệu đầu vào đã bị biến đổi ngoài ý muốn. Khôi phục lại mã nguồn, xóa phần thân của `redactedCopy`, rồi tự hoàn thiện lại hàm từ giao ước của ca kiểm thử mà không nhìn vào bản cài đặt cũ. Đây là bước thực hành nhỏ nhưng bắt buộc mô hình tư duy “sao chép giá trị lát cắt vẫn có thể chia sẻ vùng nhớ nền” phải trải qua một thất bại thực tế.
 
@@ -186,6 +190,23 @@ Mở thư mục `labs/part2-values` trong trình soạn thảo và chạy riêng
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
 Phép gán `preview := fields` chỉ sao chép tiêu đề lát cắt (*slice header / descriptor*), nên thao tác `preview[0]` vẫn chỉnh sửa phần tử chung với `requestFields`. Bản sửa đúng đắn bắt buộc phải khởi tạo một mảng nền mới, chẳng hạn kết hợp giữa `make` và `copy`. Ca kiểm thử phải duy trì đồng thời cả hai khẳng định kiểm thử: bản xem trước đã được che dấu thông tin và dữ liệu đầu vào không bị biến đổi; việc bỏ qua khẳng định thứ hai sẽ làm đánh mất hoàn toàn giao ước về quyền sở hữu dữ liệu.
+
+Đừng chỉ thử đầu vào có hai phần tử. `TestRedactedCopyEmptyInput` kiểm tra `nil` và slice rỗng; `TestRedactedCopyOwnsElements` sửa phần tử từ cả hai phía để kiểm tra tính độc lập. Một bản sửa chỉ che phần tử đầu nhưng làm mất phần còn lại cũng chưa đáp ứng contract.
+
+Một cách tránh copy dễ bị hiểu nhầm là giới hạn capacity. Hãy dự đoán hai dòng in sau trước khi chạy `TestCapacityLimitDoesNotIsolateExistingElements`:
+
+~~~go
+base := []int{10, 20, 30}
+view := base[:2:2]
+view[0] = 99
+fmt.Println(base) // [99 20 30]: phần tử cũ vẫn dùng chung
+
+grown := append(view, 40)
+grown[0] = 77
+fmt.Println(base) // [99 20 30]: append đã cần mảng mới
+~~~
+
+Giới hạn capacity ngăn lần `append` này ghi vào phần đuôi của `base`; nó không cô lập các phần tử đã nằm trong cửa sổ. Ngược lại, `copy` cô lập vùng chứa phần tử nhưng không sao chép đệ quy đối tượng được trỏ tới. `TestPointerElementsRemainSharedAfterCopy` chép một `[]*int`: sửa `*clone[0]` vẫn đổi số nguyên chung, còn gán một con trỏ khác vào `clone[0]` chỉ đổi phần tử của bản sao. Quyền sở hữu phải được xét ở đúng tầng dữ liệu, không suy ra từ chữ “copy”.
 
 ## Một cửa sổ nhỏ giữ cả căn phòng
 

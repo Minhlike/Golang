@@ -11,13 +11,13 @@ Các sự cố an ninh thực tế như SolarWinds, Codecov hay các cuộc tấ
 
 Ta cần kiểm tra ảnh container nào đã được xét, bằng chứng nào gắn nó với bộ dựng hoặc nguồn mã được phép, và phát hiện lỗ hổng nào phải chặn theo chính sách kiểm soát. Chữ ký và việc quét mã không chứng minh gói phát hành hoàn toàn sạch mã độc hay lỗ hổng; từng bộ kiểm chứng chỉ đưa ra kết luận trong phạm vi dữ liệu và gốc tin cậy của nó.
 
-Chương này hướng dẫn xây dựng cổng kiểm soát chuỗi cung ứng phần mềm bằng Go theo nguyên tắc đóng an toàn (*fail-closed*, tức từ chối mặc định khi thiếu chứng cứ), tích hợp kiểm chứng mã băm nội dung (*digest*) OCI, chữ ký số mật mã ECDSA, chứng thực nguồn gốc SLSA và phân tích khả năng vươn tới của lỗ hổng (`govulncheck`).
+Chương này dùng một cổng chính sách Go để học nguyên tắc fail-closed: từ chối khi không xác minh được bằng chứng mà chính sách yêu cầu. Lab kiểm tra định dạng digest, chữ ký ECDSA cục bộ và dữ liệu mẫu về xuất xứ, lỗ hổng. Nó không tích hợp xác minh Cosign, không chạy `govulncheck` và không chứng nhận một quy trình đạt SLSA Build L3. Cấp độ SLSA còn đòi bằng chứng về nền tảng dựng và cách bảo vệ provenance; một chuỗi `BuilderID` hay test xanh không đáp ứng những yêu cầu đó.
 
 ---
 
 ## 1. Mental Model: Chuỗi bảo chứng từ Mã nguồn đến Triển khai
 
-Mô hình dưới đây nối sáu chặng của một policy delivery. Mỗi mũi tên đòi bằng chứng riêng; đây không phải chuỗi tự bảo chứng:
+Sơ đồ là thiết kế tham chiếu gồm sáu chặng, không phải những tích hợp lab đã chạy. Chữ ký cần gắn với khóa và định danh đã xác thực; provenance cần gắn với artifact thực. Cổng phải đối chiếu bằng chứng với chính sách của mình, không chỉ kiểm tra có một tệp mang tên “attestation”:
 
 ![Chuỗi bằng chứng và cổng chính sách triển khai](../../assets/diagrams/supply-chain-policy-evidence.png)
 @figure Cổng chỉ xác minh các bằng chứng mà chính sách yêu cầu. Mã băm nội dung, chữ ký và dữ liệu xuất xứ có vai trò khác nhau; đủ bằng chứng theo chính sách không chứng minh gói phát hành sạch mọi lỗi hoặc lỗ hổng.
@@ -152,14 +152,13 @@ type VulnerabilityProvider interface {
 	) ([]Vulnerability, error)
 }
 
-// Vulnerability mô phỏng phát hiện với ngữ nghĩa
-// reachability của govulncheck và mức độ từ OSV.
+// Trong lab, đây là dữ liệu mẫu do test cung cấp.
 type Vulnerability struct {
 	ID        string `json:"id"`
 	Package   string `json:"package"`
 	Symbol    string `json:"symbol"`
-	Severity  string `json:"severity"` // Từ OSV
-	Reachable bool   `json:"reachable"` // Từ call-graph
+	Severity  string `json:"severity"`
+	Reachable bool   `json:"reachable"`
 }
 ~~~
 
@@ -210,14 +209,15 @@ func NewPolicyEngine(builders, issuers []string) *PolicyEngine {
 }
 ~~~
 
-### Kiểm tra tính bất biến của OCI Digest
+### Kiểm tra định dạng OCI digest
 
 ~~~go
-// VerifyDigest xác thực artifact dùng mã băm bất biến.
+// VerifyDigest chỉ kiểm tra định dạng chuỗi digest.
 func VerifyDigest(digest string) error {
 	if !digestRegex.MatchString(digest) {
 		return errors.New(
-			"invalid OCI digest: must be sha256:64hex",
+			"invalid or mutable OCI digest: " +
+				"must be sha256:64hex",
 		)
 	}
 	return nil
@@ -229,7 +229,7 @@ func VerifyDigest(digest string) error {
 Đọc đoạn sau như một mô hình dùng dữ liệu mẫu đã tin cậy, không phải bộ xác minh danh tính thực thụ. Khóa công khai do bên gọi cung cấp; `Issuer` chỉ là chuỗi do bên gọi tự khai báo chứ chưa được ràng buộc với khóa bằng chứng chỉ số. `Attestation` cũng là cấu trúc chưa được xác thực. Một người tự tạo khóa, ký mã băm rồi sao chép bên phát hành/bên tạo dựng nằm trong danh sách trắng vẫn được mô hình chấp nhận. `TestModelAllowsSelfAssertedIdentity` giữ phản ví dụ này để ngăn việc hiểu nhầm kết quả kiểm thử đạt thành bằng chứng an toàn GitHub OIDC hay SLSA. Khi đưa vào cổng kiểm soát thực tế, phải thay các thành phần này bằng quy trình xác minh gốc tin cậy, định danh và xuất xứ đầy đủ; một phép so sánh chuỗi đơn thuần không thể lấp đầy lỗ hổng bảo mật này.
 
 ~~~go
-func (e *PolicyEngine) VerifySignature(
+func (v *DefaultSignatureVerifier) VerifySignature(
 	digest string,
 	sig *SignatureVerification,
 ) error {
@@ -239,9 +239,9 @@ func (e *PolicyEngine) VerifySignature(
 		)
 	}
 
-	// 1. Kiểm tra OIDC Issuer có nằm trong danh sách tin cậy
+	// So nhãn issuer trong fixture, chưa xác thực danh tính.
 	trustedIssuer := false
-	for _, ti := range e.TrustedIssuers {
+	for _, ti := range v.TrustedIssuers {
 		if sig.Issuer == ti {
 			trustedIssuer = true
 			break
@@ -254,7 +254,7 @@ func (e *PolicyEngine) VerifySignature(
 		)
 	}
 
-	// 2. Kiểm tra chữ ký toán học ECDSA P-256
+	// Kiểm tra chữ ký bằng khóa được cung cấp.
 	hash := sha256.Sum256([]byte(digest))
 	if len(sig.Signature) == 0 {
 		return errors.New("empty signature payload")
@@ -265,7 +265,8 @@ func (e *PolicyEngine) VerifySignature(
 	)
 	if !valid {
 		return errors.New(
-			"signature verification failed: bad signature",
+			"signature verification failed: " +
+				"cryptographic signature mismatch",
 		)
 	}
 	return nil
@@ -274,132 +275,83 @@ func (e *PolicyEngine) VerifySignature(
 
 ### Thực thi đánh giá toàn diện (Fail-Closed Evaluation)
 
-Khâu thẩm định được chia thành các chốt chặn nối tiếp nhau. Đầu tiên là kiểm tra tính toàn vẹn của mã băm và chữ ký số:
+`PolicyEngine` gọi verifier đã cấu hình, không tự bỏ qua interface để kiểm tra lại một cách khác. Thiếu verifier là lỗi, không phải dấu hiệu được phép đi tiếp. Phương thức chữ ký trong source có dạng:
 
 ~~~go
-func (e *PolicyEngine) evaluateIntegrity(
+func (e *PolicyEngine) VerifySignature(
 	digest string,
 	sig *SignatureVerification,
-	res *EvaluationResult,
-) bool {
-	// Cửa 1: Khóa cứng tính bất biến OCI Digest
-	if err := VerifyDigest(digest); err != nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(res.Violations, err.Error())
-		return false // Dừng ngay lập tức (fail closed)
+) error {
+	if e.SigVerifier == nil {
+		return errors.New("no signature verifier configured")
 	}
-
-	// Cửa 2: Xác thực chữ ký số Cosign
-	if err := e.VerifySignature(digest, sig); err != nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(res.Violations, err.Error())
-	}
-	return true
+	return e.SigVerifier.VerifySignature(digest, sig)
 }
 ~~~
 
-Tiếp theo, mô hình chính sách kiểm tra các trường thông tin xuất xứ đã được cung cấp. Trong hệ thống thực tế, bộ kiểm chứng phải xác thực chứng cứ trước khi chuyển vào cổng kiểm soát:
+`VerifyProvenance` cũng ủy quyền và từ chối nếu chưa cấu hình verifier. `DefaultProvenanceVerifier` của lab chỉ so các trường fixture; các thông báo lỗi thật là `missing SLSA provenance attestation`, `provenance subject digest does not match artifact digest` và `untrusted builder identity: %s`. Không dịch các chuỗi này khi đối chiếu output.
+
+Hàm `Evaluate` dưới đây giữ đúng thứ tự và các nhánh trả về của `policy.go`. Hãy dự đoán: nếu chữ ký thất bại, provenance verifier có được gọi không? Tại sao một lần xác minh provenance thành công không thể bù cho chữ ký đã thất bại?
 
 ~~~go
-func (e *PolicyEngine) evaluateProvenance(
-	digest string,
+func (e *PolicyEngine) Evaluate(
+	artifactDigest string,
+	sig *SignatureVerification,
 	att *Attestation,
-	res *EvaluationResult,
-) {
-	// Cửa 3: Kiểm chứng xuất xứ SLSA và Builder ID
-	if att == nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			"missing chứng thực nguồn gốc `SLSA` attestation",
-		)
-		return
-	}
-
-	if att.SubjectDigest != digest {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			"provenance subject digest mismatch",
-		)
-	}
-
-	builderOK := false
-	for _, tb := range e.TrustedBuilders {
-		if att.BuilderID == tb {
-			builderOK = true
-			break
-		}
-	}
-	if !builderOK {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			fmt.Sprintf(
-				"untrusted builder: %s",
-				att.BuilderID,
-			),
-		)
-	}
-}
-~~~
-
-Cuối cùng là chốt chặn kiểm tra lỗ hổng bảo mật với ngữ nghĩa reachability của `govulncheck`:
-
-~~~go
-func (e *PolicyEngine) evaluateVulnerabilities(
 	vulns []Vulnerability,
-	res *EvaluationResult,
-) {
-	// Cửa 4: Kiểm soát lỗ hổng govulncheck
+) EvaluationResult {
+	res := EvaluationResult{Decision: DecisionAllow}
+	if err := VerifyDigest(artifactDigest); err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
+	err := e.VerifySignature(artifactDigest, sig)
+	if err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
+	err = e.VerifyProvenance(artifactDigest, att)
+	if err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
 	for _, v := range vulns {
 		isCrit := strings.EqualFold(v.Severity, "CRITICAL")
 		isHigh := strings.EqualFold(v.Severity, "HIGH")
 
 		if isCrit || isHigh {
 			if v.Reachable {
-				// Hàm lỗi trên đường thực thi: TỪ CHỐI
+				// Fixture reachable: từ chối.
 				res.Decision = DecisionDeny
 				res.Violations = append(
 					res.Violations,
 					fmt.Sprintf(
-						"reachable %s vuln %s (sym: %s)",
-						v.Severity, v.ID, v.Symbol,
+						"reachable %s vulnerability %s " +
+							"in %s (symbol: %s)",
+						v.Severity, v.ID, v.Package, v.Symbol,
 					),
 				)
 			} else {
-				// Hàm lỗi không được gọi: CẢNH BÁO
+				// Fixture không reachable: cảnh báo.
 				res.Warnings = append(
 					res.Warnings,
 					fmt.Sprintf(
-						"uncalled %s vuln %s: tolerated",
-						v.Severity, v.ID,
+						"uncalled %s vulnerability %s " +
+							"in %s: tolerated under policy",
+						v.Severity, v.ID, v.Package,
 					),
 				)
 			}
 		}
 	}
-}
-~~~
-
-Hàm `Evaluate` chính thức chỉ việc điều phối tuần tự 3 chốt chặn:
-
-~~~go
-func (e *PolicyEngine) Evaluate(
-	digest string,
-	sig *SignatureVerification,
-	att *Attestation,
-	vulns []Vulnerability,
-) EvaluationResult {
-	res := EvaluationResult{Decision: DecisionAllow}
-	if !e.evaluateIntegrity(digest, sig, &res) {
-		return res
-	}
-	e.evaluateProvenance(digest, att, &res)
-	e.evaluateVulnerabilities(vulns, &res)
 	return res
 }
 ~~~
+
+`TestPolicyGateStopsOnSignatureFailure` dùng verifier chữ ký trả lỗi và một provenance verifier ghi nhận việc được gọi. Test yêu cầu `DENY` và không được gọi verifier sau. Tạm bỏ `return res` ở nhánh lỗi chữ ký rồi chạy test: kết quả cuối có thể vẫn là `DENY`, nhưng contract dừng tuần tự đã bị phá. Chỉ assert quyết định cuối không bắt được lỗi đó.
 
 ---
 
@@ -411,7 +363,7 @@ Mã nguồn hoàn chỉnh của bài thực hành nằm tại thư mục `labs/p
 go test -v -race ./...
 ~~~
 
-Bộ kiểm thử thực hiện xác minh toàn bộ 7 kịch bản:
+Transcript lịch sử sau ghi tên bảy test gốc; thời lượng không phải số đo cho lần chạy hiện tại và không chứng minh Sigstore hay SLSA đã được kiểm chứng trực tiếp:
 
 ~~~
 === RUN   TestPolicyGateAllowedWithValidSignature
@@ -439,7 +391,7 @@ ok      part26-supply-chain-gate   2.128s
 | Input được model chấp nhận | ECDSA tự tạo trong test; chuỗi issuer/builder khớp; không truyền finding. Không gọi GitHub OIDC hay scanner. | **ALLOW** theo policy model |
 | Phản ví dụ tự khai danh tính (`TestModel...`) | Model chấp nhận key tự tạo và issuer/builder tự khai; chứng minh model chưa xác thực `OIDC` | **`ALLOW`** (nhấn mạnh ranh giới model) |
 | Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
-| Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
+| Lỗ hổng nghiêm trọng được fixture đánh dấu `Reachable = true` | Test cung cấp cờ này với tên `ssh.ParsePrivateKey`; không chạy scanner hay chứng minh ứng dụng gọi hàm | **`DENY`** theo policy model |
 | Finding không được fixture đánh dấu reachable (`Reachable = false`) | `http2.Server.ServeConn` là tên symbol minh họa, không phải bằng chứng quan sát mọi đường chạy | **`ALLOW`** (kèm cảnh báo trong `Warnings`, theo policy lab) |
 | Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 → **`DENY`** |
 | Dừng trước provenance sau lỗi chữ ký | Khi chữ ký sai, cổng dừng ngay tại Cửa 2 và không kiểm tra tiếp Cửa 3 | **`DENY`** (fail-closed tuần tự) |
@@ -460,10 +412,10 @@ ok      part26-supply-chain-gate   2.128s
 ## 9. Bài tập thực hành thiết kế Cổng bảo vệ
 
 ### Thử thách 1: Ghim Base Image chuẩn (Golden Image Pinning)
-Yêu cầu: Trong tệp Dockerfile nhiều tầng (multi-stage build), tầng thực thi cuối cùng thường bắt đầu bằng một ảnh cơ sở (`base image`, ví dụ `gcr.io/distroless/static-debian12`). Hãy viết một hàm Go nhận vào danh sách các ảnh cơ sở tin cậy (dưới dạng ánh xạ giữa tên image và mã băm sha256 cho phép) và kiểm tra xem một dòng `FROM <image>` trong Dockerfile có tuân thủ đúng mã băm đã được phê duyệt hay không.
+Yêu cầu: Viết hàm kiểm tra một tham chiếu ảnh đã được tách từ lệnh `FROM`, chẳng hạn `registry.example/base@sha256:...`. Chỉ chấp nhận repository có trong catalog và digest hợp lệ khớp giá trị đã duyệt. Test phải từ chối tag, digest sai định dạng, repository lạ và chuỗi có nhiều dấu `@`. Bài tập không yêu cầu viết parser Dockerfile: stage alias, `ARG`, `--platform` và ảnh `scratch` cần chính sách riêng khi tích hợp thực tế.
 
 ### Thử thách 2: Cơ chế Timeout Fail-Closed (Network Timeout Fallback)
-Yêu cầu: Khi cổng kiểm tra gọi sang máy chủ Rekor hoặc Fulcio qua mạng, nếu request bị timeout (quá 2 giây), hãy thiết kế một cấu trúc hàm sao cho: thay vì trả về lỗi chung không định danh, hàm phải trả về quyết định `DENY` kèm thông điệp đặc tả cơ chế: cổng kiểm soát chủ động từ chối theo nguyên tắc đóng an toàn (fail-closed) để bảo vệ cụm máy chủ.
+Yêu cầu: Nhận một callback xác minh có hỗ trợ context. Thiếu callback, context đã hủy, lỗi xác minh hoặc callback trả `nil` sau khi context bị hủy đều phải dẫn tới `DENY`. Đặt ngân sách 2 giây cho callback; không tuyên bố context có thể cưỡng chế dừng một hàm không hợp tác. Viết test bằng callback cục bộ trước; các test này không gọi Rekor hay Fulcio.
 
 ---
 
@@ -479,7 +431,7 @@ func VerifyBaseImage(
 	catalog GoldenCatalog,
 ) (bool, error) {
 	parts := strings.Split(imageRef, "@")
-	if len(parts) != 2 {
+	if len(parts) != 2 || parts[0] == "" {
 		return false, fmt.Errorf(
 			"image must be pinned with digest: repo@sha256:hex",
 		)
@@ -487,6 +439,9 @@ func VerifyBaseImage(
 
 	repo := parts[0]
 	digest := parts[1]
+	if err := VerifyDigest(digest); err != nil {
+		return false, err
+	}
 
 	expectedDigest, exists := catalog[repo]
 	if !exists {
@@ -513,27 +468,42 @@ func SafeRemoteVerify(
 	ctx context.Context,
 	verifyFunc func(context.Context) error,
 ) EvaluationResult {
-	// Giới hạn thời gian xác thực tối đa 2 giây
+	// Callback phải hợp tác với cancellation.
 	timeoutCtx, cancel := context.WithTimeout(
 		ctx, 2*time.Second,
 	)
 	defer cancel()
 
+	if verifyFunc == nil {
+		return deniedRemoteVerification(
+			fmt.Errorf("no remote verifier configured"),
+		)
+	}
+	if err := timeoutCtx.Err(); err != nil {
+		return deniedRemoteVerification(err)
+	}
 	err := verifyFunc(timeoutCtx)
+	if err == nil {
+		err = timeoutCtx.Err()
+	}
 	if err != nil {
-		// Nguyên tắc Fail-Closed: Bất kỳ sự cố mạng nào
-		// cũng dẫn đến quyết định TỪ CHỐI (DENY)
-		return EvaluationResult{
-			Decision: DecisionDeny,
-			Violations: []string{
-				fmt.Sprintf("fail-closed: aborted: %v", err),
-			},
-		}
+		return deniedRemoteVerification(err)
 	}
 
 	return EvaluationResult{Decision: DecisionAllow}
 }
+
+func deniedRemoteVerification(err error) EvaluationResult {
+	return EvaluationResult{
+		Decision: DecisionDeny,
+		Violations: []string{
+			fmt.Sprintf("fail-closed: aborted: %v", err),
+		},
+	}
+}
 ~~~
+
+Hai lời giải có source chạy được trong `contract_examples.go`. `TestBaseImageContract` kiểm tra cả catalog có digest sai; `TestRemoteVerificationRejectsNilAfterCancellation` cố tình cho callback trả `nil` sau cancellation để bắt đường cho phép sai. Không assert một thời lượng cố định và không dùng goroutine bỏ mặc callback để tạo ảo giác có thể cưỡng chế timeout. Context chỉ thông báo hạn chót; nếu callback không trả về, wrapper này cũng không trả về. Kiểm tra `Err()` sau callback loại kết quả thành công khi cancellation đã được quan sát tại điểm kiểm tra, không tạo một thao tác nguyên tử với mọi cancellation xảy ra về sau.
 
 Nguyên tắc đóng an toàn từ chối gói phát hành khi thiếu chứng cứ mà chính sách yêu cầu, kể cả lúc bộ kiểm chứng gặp sự cố gián đoạn dịch vụ. Cơ chế này không bảo đảm mọi gói phát hành được chấp nhận đều vô hại: gốc tin cậy, bên ký được phép, nội dung và chính quy tắc kiểm soát vẫn có thể sai sót hoặc bị xâm phạm. Tính an toàn và tính sẵn sàng của cổng kiểm soát là hai bài toán cần được kiểm chứng độc lập.
 

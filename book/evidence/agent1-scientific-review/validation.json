@@ -1,0 +1,1892 @@
+{
+  "started_at_utc": "2026-10-11T04:24:00.806866+00:00",
+  "finished_at_utc": "2026-10-11T04:25:56.501868+00:00",
+  "scope": "CHECKPOINT_CH02_CH16_CH26_CH27_NOT_WHOLE_BOOK_ACCEPTANCE",
+  "baseline_head": "5938862b864b51d755209031972a1bb07f5babf2",
+  "tested_head_before_checkpoint_commit": "5938862b864b51d755209031972a1bb07f5babf2",
+  "tested_worktree_diff": " assets/diagrams/supply-chain-policy-evidence.png   | Bin 345937 -> 238185 bytes\n assets/diagrams/supply-chain-policy-evidence.puml  |  52 +--\n assets/visual-manifest.json                        |  22 +-\n book/AGENT1_SCIENTIFIC_REVIEW.md                   | 117 +++++++\n book/VIETNAMESE_TECH_TERMS.md                      |   2 +-\n book/chapters/02-gia-tri-slice-va-aliasing.md      |  35 +-\n book/chapters/16-thay-duoc-he-thong.md             |  26 +-\n .../26-chuoi-cung-ung-co-the-kiem-chung.md         | 196 +++++------\n book/chapters/27-quan-sat-linux-bang-ebpf-va-go.md |  34 +-\n book/evidence/agent1-scientific-review/verify.py   | 369 +++++++++++++++++++++\n .../fixed/recorder_test.go                         |  33 ++\n labs/part16-real-signals/probeapi/server_test.go   |  15 +\n labs/part2-values/main.go                          |   4 +-\n labs/part2-values/main_test.go                     |  65 +++-\n labs/part26-supply-chain-gate/contract_examples.go |  58 ++++\n .../contract_examples_test.go                      |  81 +++++\n labs/part27-ebpf-observer/observer_test.go         |  42 ++-\n scripts/build_pdf.py                               |  22 +-\n scripts/test_review_heading_contract.py            |  92 +++++\n 19 files changed, 1058 insertions(+), 207 deletions(-)\n",
+  "source_hashes": {
+    "book\\chapters\\00-mo-cua-vao-go.md": "219e5fcaa898809df2e62512ad7e318fddd7d22b49dc1b2ed85b70c681787c7b",
+    "book\\chapters\\00-truoc-khi-viet-dong-go-dau-tien.md": "393712f0032616135eb18ba815b74c7f6b36e12574741fb5d2e834758125f814",
+    "book\\chapters\\01-doc-va-viet-mot-chuong-trinh-go.md": "6abfa7a711ba1b4f4522ca9cc0ef0ef9522f6170765028412a900baf8b77e641",
+    "book\\chapters\\02-gia-tri-slice-va-aliasing.md": "c71b3bde2b32fe663082b1ac348c9426520258a2f4b1d3dcdb719a1c90901720",
+    "book\\chapters\\03-mo-hinh-du-lieu-va-trach-nhiem-thay-doi.md": "efd9f4dc34d852417af3c273081667081cf78033ef6d474095c30a446cfdf53f",
+    "book\\chapters\\04-bien-loi.md": "deb4f5c62b284349febcbfeea68574b2f9cbb02ad8180ca9fcd29659e987a19a",
+    "book\\chapters\\05-thiet-ke-package.md": "21a53201fd7b5ce94f6edb92203db448622212de5f674cb17b9e3d9a5218e74f",
+    "book\\chapters\\06-thay-doi-khong-so-hai.md": "6c9cfe74f437db99779f2251eeba5c90d9e77f0399d0d5cc3fe0dbd7433e2ed6",
+    "book\\chapters\\07-du-lieu-di-vao-va-di-ra.md": "61da2f18292f6f0d0543e7b2596b4bd1f4571dcef16c0cfd8816fcc55118bdf9",
+    "book\\chapters\\08-mot-race-bat-dau-tu-dau.md": "abc9441dc291d0b9c62608f60aee662cd15b5f19f28f1390c2837eb962211e6c",
+    "book\\chapters\\09-dong-cong-viec-co-ap-suat.md": "d23fa95d2248e063d4e3e3e25dd5a87138f2bf2feb38c8b8b14fc1adf64ecd71",
+    "book\\chapters\\10-khi-chuong-trinh-cham-hoac-phinh.md": "5dcdd8a2564db4a65437e5d2d854a5416da33920cbd7feae21ff56f79e33f3c5",
+    "book\\chapters\\11-mot-request-thuc-su-di-dau.md": "f05ee901ce9f6a659a748aee104d47d5186a31adefb8191677fd87c7c2691cd7",
+    "book\\chapters\\12-mot-service-song-va-tat-the-nao.md": "c129fda74a16ce8b784a38babc8ea231a187324d6bcd018da0cff57cc953b719",
+    "book\\chapters\\13-mot-thay-doi-hoac-khong-co-gi.md": "3b4a4961507a31f83de98ecd789dfbe7229666cc63b3219ecde765342ae2cd18",
+    "book\\chapters\\14-khi-kieu-tro-thanh-du-lieu.md": "f4a6c25e749f9a444c8bf4cfba1142c1cecd442845dcc2fc7af0a583e75440db",
+    "book\\chapters\\15-tu-incident-den-cong-cu.md": "1364e28a7ebd3b6e8f5f1ea5c5b1902e9054b4ee792916ed3b33184b81ee73bd",
+    "book\\chapters\\16-thay-duoc-he-thong.md": "aef9a44d05e5989a44d75c1c02667a5d8653437dfb4e8ed71ce6083489049aa4",
+    "book\\chapters\\17-dong-goi-va-dieu-phoi.md": "afb07dabb6d2e565ec923cdfa38f5b7140cacae9e51d8dd74c69ec1179d9728d",
+    "book\\chapters\\18-dua-thay-doi-ra-production.md": "224114ef40f67f98b580dc176ac1b078ac1e60157142068709ec1c9a1bc50096",
+    "book\\chapters\\19-giu-type-information.md": "bd8159ced836ec56799f988eb490bd8464fcba2d760375e2f543e7ad844404ee",
+    "book\\chapters\\20-du-an-tong-ket-opsprobe.md": "6697dc7b88e098197c374d4f23071f0fefca9c117ed1e4aec1e9f0e56e9dddae",
+    "book\\chapters\\21-vong-lap-dieu-hoa-controller.md": "149a2af9371db75ded61f7be6fe6d3cfef7853808544c84170e5dfa091c72f62",
+    "book\\chapters\\22-tu-watch-den-controller-that.md": "ace0c9453444ae0779fee9828f76924c7c6b3243d564ee09f63926af87263823",
+    "book\\chapters\\23-tu-controller-den-operator.md": "3fdecd61409aab11533664b4528e71a110dbdf6a54359016a7a82aa0e70f10c8",
+    "book\\chapters\\24-tu-dong-hoa-aws-bang-go.md": "4e292c09691a71cc8a7be682b12202c93ef04de8c797347f51ee6f7bd2a60e2e",
+    "book\\chapters\\25-git-github-automation-event-driven.md": "413f049a03d6a2b2f0ed04ce1d760c27a552572b8fff0881cf245b974fc7ce5f",
+    "book\\chapters\\26-chuoi-cung-ung-co-the-kiem-chung.md": "3ad1b93581b0d33d60957dde3ecba4a4161fb91b546d2191f8fc5ae1b16c3d54",
+    "book\\chapters\\27-quan-sat-linux-bang-ebpf-va-go.md": "2813203332b76c9739b2263e5f00a452b040aceba468ac95eb5729ee26318d3c",
+    "book\\chapters\\28-mcp-va-aiops-an-toan-bang-go.md": "19d38f3c416c52b59b2eecf39b62754c77d63bb613761a7dd83b6f3c172359d2",
+    "book\\chapters\\29-ky-su-va-bang-chung-trong-ky-nguyen-agent.md": "72450816f620e2e101a09ba769b3133104c1e329fdd713b3d04b13b6c4b21484",
+    "labs\\part2-values\\main.go": "f3a8149b03f16044f3bd464bd681f614efd848ebb278655d07ba59c830d22373",
+    "labs\\part2-values\\main_test.go": "351a9222a11975d41604ff09ec954d28adbb27b59d340ebe8c1dcd3cf38a1bd1",
+    "labs\\part26-supply-chain-gate\\contract_examples.go": "7e9e0f38e07760422d28a07136211ebcb747d738a065b9e86bc75a2a9bf5fc5d",
+    "labs\\part26-supply-chain-gate\\contract_examples_test.go": "c083fbb2e889b5c7787f27c1e52c162a4d1c6fb4331112c2f4ebc7addcd2d0bb",
+    "labs\\part26-supply-chain-gate\\gate_test.go": "6e5ab0790913ef0de14e73f61098a9b46de605727cd0fa73a9d62da015854001",
+    "labs\\part26-supply-chain-gate\\policy.go": "434001f63681f0c6b5af3a34925753ce9be6c3f1c815fce82dece44be4a69b2f",
+    "labs\\part27-ebpf-observer\\event.go": "f77ced9911f9de7ce11d4a2723d323abf37ebd3e80ce57ecfaeab6157a036945",
+    "labs\\part27-ebpf-observer\\gen.go": "e2515fb19ee22ec0c6a67fef202ad952e8d3bace49147a2d7eacb24a815b7041",
+    "labs\\part27-ebpf-observer\\observer.go": "27da6c1a4545bb699082b8c6f5aa7d2448e6edfe5d9e9ec670128bd03dcb7cb0",
+    "labs\\part27-ebpf-observer\\observer_test.go": "4e92d2e835da800aed305b8015f95bd0bda78187b9843e0ed08e420bfd354c3b",
+    "labs\\part16-observability-evidence\\fixed\\recorder.go": "818c6caa1c99504ba2e6bad26d28d1ac7874efb650c331deaadb4e7f18f4524d",
+    "labs\\part16-observability-evidence\\fixed\\recorder_test.go": "18798c097879abcb991a087935b3c7c9dd2073e74e716c2a981c6173aba57458",
+    "labs\\part16-real-signals\\probeapi\\server.go": "f665e64f71ce6dc819526229823e65f31157f73a86f53ac46b1d218dc717856e",
+    "labs\\part16-real-signals\\probeapi\\server_test.go": "a9c80d1589be61280a8003ca4de8c5dc65ce8b3556562b2154d2de788d51ac51",
+    "book\\VIETNAMESE_TECH_TERMS.md": "013c48319b541f453f228775c41231eb7b19570fc19abd30ce35a67600cbce8b",
+    "scripts\\build_pdf.py": "f6f6a0c662a33a979b41fa4ee7656c9f110fdaa379eb7cf04832f69b01ede9f7",
+    "scripts\\test_review_heading_contract.py": "6d2447671206f5128fd06b7b520cc67124856cf5f0fbd9667f7db6d996245b6f",
+    "book\\evidence\\agent1-scientific-review\\verify.py": "c35ebc02d72eb5bc776f880804fdb72d114b886b0a8dd6c2ead9a958680d9115",
+    "assets\\diagrams\\supply-chain-policy-evidence.png": "a02b9719fd9b99d0975aeeebe87c285e9b5ed091c62b7cf5666ca45cb6333db8",
+    "assets\\diagrams\\supply-chain-policy-evidence.puml": "840f928e00c92ac62b79ec8f9945d1fe09240afebf72476e74248906623097bd",
+    "assets\\visual-manifest.json": "542ba014cfc7fe02b1d5a221a85e3fe1a4b4bfb14e7bf5317d4491fa50326955"
+  },
+  "results": [
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "version"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "go version go1.27.1 windows/amd64\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "e37270413fda49039b4f31dd90726df0e94c163cf9bca2f62fd40a47d12b5db1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "Z28gdmVyc2lvbiBnbzEuMjcuMSB3aW5kb3dzL2FtZDY0Cg==",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-run",
+        "^TestSliceDescriptorImplementationMeasurement$",
+        "-v"
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part2-values",
+      "exit_code": 0,
+      "stdout_utf8": "=== RUN   TestSliceDescriptorImplementationMeasurement\n    main_test.go:83: toolchain=go1.27.1 GOOS=windows GOARCH=amd64 slice=24 uintptr=8\n--- PASS: TestSliceDescriptorImplementationMeasurement (0.00s)\nPASS\nok  \texample.com/golang-master/part2-values\t0.744s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "aa263f3fcc795bda2b091f251d6db52dd4e58319b57ffcae84b5efe5acd560b7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09IFJVTiAgIFRlc3RTbGljZURlc2NyaXB0b3JJbXBsZW1lbnRhdGlvbk1lYXN1cmVtZW50CiAgICBtYWluX3Rlc3QuZ286ODM6IHRvb2xjaGFpbj1nbzEuMjcuMSBHT09TPXdpbmRvd3MgR09BUkNIPWFtZDY0IHNsaWNlPTI0IHVpbnRwdHI9OAotLS0gUEFTUzogVGVzdFNsaWNlRGVzY3JpcHRvckltcGxlbWVudGF0aW9uTWVhc3VyZW1lbnQgKDAuMDBzKQpQQVNTCm9rICAJZXhhbXBsZS5jb20vZ29sYW5nLW1hc3Rlci9wYXJ0Mi12YWx1ZXMJMC43NDRzCg==",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part2-values",
+      "exit_code": 0,
+      "stdout_utf8": "ok  \texample.com/golang-master/part2-values\t1.921s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "22be738b91192d9932b5e06e55f78defd254cbbf3b5f2af5b994273c1b51c36d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "b2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQyLXZhbHVlcwkxLjkyMXMK",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part2-values",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part16-observability-evidence",
+      "exit_code": 0,
+      "stdout_utf8": "?   \texample.com/golang-master/part16-observability-evidence/exercise\t[no test files]\nok  \texample.com/golang-master/part16-observability-evidence/fixed\t1.940s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "dea2fec747c6d5f7ab907e66b059a6c2b3fd4604f11429f24fec8c9e17fb9675",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PyAgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQxNi1vYnNlcnZhYmlsaXR5LWV2aWRlbmNlL2V4ZXJjaXNlCVtubyB0ZXN0IGZpbGVzXQpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcGFydDE2LW9ic2VydmFiaWxpdHktZXZpZGVuY2UvZml4ZWQJMS45NDBzCg==",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part16-observability-evidence",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part16-real-signals",
+      "exit_code": 0,
+      "stdout_utf8": "ok  \texample.com/golang-master/part16-real-signals/cmd/probe-api\t3.918s\nok  \texample.com/golang-master/part16-real-signals/probeapi\t4.116s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "f43fdca7ccc614f4834250f5d08c5e76e9e0a0410818a95c545a1d2c1baa8dec",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "b2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQxNi1yZWFsLXNpZ25hbHMvY21kL3Byb2JlLWFwaQkzLjkxOHMKb2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQxNi1yZWFsLXNpZ25hbHMvcHJvYmVhcGkJNC4xMTZzCg==",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part16-real-signals",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part26-supply-chain-gate",
+      "exit_code": 0,
+      "stdout_utf8": "ok  \texample.com/golang-master/part26-supply-chain-gate\t2.129s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "be3879e62e893503c06e83b787a07d7feaf0a746fd2862a84de42ce4ce448e53",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "b2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQyNi1zdXBwbHktY2hhaW4tZ2F0ZQkyLjEyOXMK",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part26-supply-chain-gate",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part27-ebpf-observer",
+      "exit_code": 0,
+      "stdout_utf8": "ok  \texample.com/golang-master/part27-ebpf-observer\t2.182s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "0b127daec4d0857e82fb11cd5c53f6ef6a4c84ce881a6233e3286bf081cfdb1e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "b2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQyNy1lYnBmLW9ic2VydmVyCTIuMTgycwo=",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part27-ebpf-observer",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part10-resource-retention",
+      "exit_code": 0,
+      "stdout_utf8": "?   \texample.com/golang-master/part10-resource-retention/baseline\t[no test files]\nok  \texample.com/golang-master/part10-resource-retention/cmd/investigate\t10.032s\nok  \texample.com/golang-master/part10-resource-retention/fixed\t1.968s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "a976e3217e788ee0d864d765b1d7e6909aed1e4769dbbe98e8b116db895ab8da",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PyAgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQxMC1yZXNvdXJjZS1yZXRlbnRpb24vYmFzZWxpbmUJW25vIHRlc3QgZmlsZXNdCm9rICAJZXhhbXBsZS5jb20vZ29sYW5nLW1hc3Rlci9wYXJ0MTAtcmVzb3VyY2UtcmV0ZW50aW9uL2NtZC9pbnZlc3RpZ2F0ZQkxMC4wMzJzCm9rICAJZXhhbXBsZS5jb20vZ29sYW5nLW1hc3Rlci9wYXJ0MTAtcmVzb3VyY2UtcmV0ZW50aW9uL2ZpeGVkCTEuOTY4cwo=",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\labs\\part10-resource-retention",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\projects\\opsprobe",
+      "exit_code": 0,
+      "stdout_utf8": "ok  \texample.com/golang-master/projects/opsprobe\t5.995s\nok  \texample.com/golang-master/projects/opsprobe/cmd/opsprobe\t5.455s\nok  \texample.com/golang-master/projects/opsprobe/failurelab\t3.607s\nok  \texample.com/golang-master/projects/opsprobe/incident\t2.271s\nok  \texample.com/golang-master/projects/opsprobe/internal/httpapi\t6.752s\nok  \texample.com/golang-master/projects/opsprobe/internal/probe\t2.757s\nok  \texample.com/golang-master/projects/opsprobe/internal/store\t3.037s\nok  \texample.com/golang-master/projects/opsprobe/internal/telemetry\t2.501s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "b69fba6846fb1344483054bb0a7f3060644f9f81a190349cf23fffa7591a016a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "b2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3Byb2plY3RzL29wc3Byb2JlCTUuOTk1cwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcHJvamVjdHMvb3BzcHJvYmUvY21kL29wc3Byb2JlCTUuNDU1cwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcHJvamVjdHMvb3BzcHJvYmUvZmFpbHVyZWxhYgkzLjYwN3MKb2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3Byb2plY3RzL29wc3Byb2JlL2luY2lkZW50CTIuMjcxcwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcHJvamVjdHMvb3BzcHJvYmUvaW50ZXJuYWwvaHR0cGFwaQk2Ljc1MnMKb2sgIAlleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3Byb2plY3RzL29wc3Byb2JlL2ludGVybmFsL3Byb2JlCTIuNzU3cwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcHJvamVjdHMvb3BzcHJvYmUvaW50ZXJuYWwvc3RvcmUJMy4wMzdzCm9rICAJZXhhbXBsZS5jb20vZ29sYW5nLW1hc3Rlci9wcm9qZWN0cy9vcHNwcm9iZS9pbnRlcm5hbC90ZWxlbWV0cnkJMi41MDFzCg==",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "vet",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\projects\\opsprobe",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "-v",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\tmp\\agent1-excerpt-tests\\tmprdcxp46a",
+      "exit_code": 0,
+      "stdout_utf8": "=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\n=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\n=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\nPASS\nok  \texample.com/golang-master/part26-supply-chain-gate\t2.128s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "c0792a2ec02306a37959060c9a3149dbe0f93228058657449337f489dd12392c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKUEFTUwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcGFydDI2LXN1cHBseS1jaGFpbi1nYXRlCTIuMTI4cwo=",
+      "stderr_base64": "",
+      "markdown_sha256": "3ad1b93581b0d33d60957dde3ecba4a4161fb91b546d2191f8fc5ae1b16c3d54",
+      "excerpt_sha256": "bf8fc1022147f04251e7ae1605f537dc01c5d75357d5e031b0934bc20b84512b",
+      "support_scope": "digestRegex; verifier structs; DefaultProvenanceVerifier; delegate VerifyProvenance; ComputeContentDigest",
+      "go_blocks": 8,
+      "implementation_origin": "MARKDOWN_GO_FENCES"
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-race",
+        "-count=3",
+        "-v",
+        "./..."
+      ],
+      "cwd": "D:\\Golang-agent1-review\\tmp\\agent1-excerpt-tests\\tmpjxkwrz3b",
+      "exit_code": 0,
+      "stdout_utf8": "=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\n=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\n=== RUN   TestBaseImageContract\n=== RUN   TestBaseImageContract/approved\n=== RUN   TestBaseImageContract/tag\n=== RUN   TestBaseImageContract/other_digest\n=== RUN   TestBaseImageContract/unknown_repository\n=== RUN   TestBaseImageContract/empty_repository\n=== RUN   TestBaseImageContract/multiple_separators\n--- PASS: TestBaseImageContract (0.00s)\n    --- PASS: TestBaseImageContract/approved (0.00s)\n    --- PASS: TestBaseImageContract/tag (0.00s)\n    --- PASS: TestBaseImageContract/other_digest (0.00s)\n    --- PASS: TestBaseImageContract/unknown_repository (0.00s)\n    --- PASS: TestBaseImageContract/empty_repository (0.00s)\n    --- PASS: TestBaseImageContract/multiple_separators (0.00s)\n=== RUN   TestRemoteVerificationContract\n--- PASS: TestRemoteVerificationContract (0.00s)\n=== RUN   TestRemoteVerificationRejectsAlreadyCancelledContext\n--- PASS: TestRemoteVerificationRejectsAlreadyCancelledContext (0.00s)\n=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n--- PASS: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\n=== RUN   TestPolicyGateAllowedWithValidSignature\n--- PASS: TestPolicyGateAllowedWithValidSignature (0.00s)\n=== RUN   TestModelAllowsSelfAssertedIdentity\n--- PASS: TestModelAllowsSelfAssertedIdentity (0.00s)\n=== RUN   TestPolicyGateDenyUnsignedImage\n--- PASS: TestPolicyGateDenyUnsignedImage (0.00s)\n=== RUN   TestPolicyGateDenyReachableVulnerability\n--- PASS: TestPolicyGateDenyReachableVulnerability (0.00s)\n=== RUN   TestPolicyGateAllowUncalledVulnerability\n--- PASS: TestPolicyGateAllowUncalledVulnerability (0.00s)\n=== RUN   TestPolicyGateFailClosedOnMutableTag\n--- PASS: TestPolicyGateFailClosedOnMutableTag (0.00s)\n=== RUN   TestPolicyGateStopsOnSignatureFailure\n--- PASS: TestPolicyGateStopsOnSignatureFailure (0.00s)\nPASS\nok  \texample.com/golang-master/part26-supply-chain-gate\t2.125s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "40d621907f5ce7456914fd3da0950b9c7acfcee108c907aa90aba86aec345a04",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RCYXNlSW1hZ2VDb250cmFjdAo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnCj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5Cj09PSBSVU4gICBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeQo9PT0gUlVOICAgVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMKLS0tIFBBU1M6IFRlc3RCYXNlSW1hZ2VDb250cmFjdCAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L2FwcHJvdmVkICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdGFnICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3Qvb3RoZXJfZGlnZXN0ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvdW5rbm93bl9yZXBvc2l0b3J5ICgwLjAwcykKICAgIC0tLSBQQVNTOiBUZXN0QmFzZUltYWdlQ29udHJhY3QvZW1wdHlfcmVwb3NpdG9yeSAoMC4wMHMpCiAgICAtLS0gUEFTUzogVGVzdEJhc2VJbWFnZUNvbnRyYWN0L211bHRpcGxlX3NlcGFyYXRvcnMgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvbkNvbnRyYWN0Ci0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uQ29udHJhY3QgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dAotLS0gUEFTUzogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNBbHJlYWR5Q2FuY2VsbGVkQ29udGV4dCAoMC4wMHMpCj09PSBSVU4gICBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uCi0tLSBQQVNTOiBUZXN0UmVtb3RlVmVyaWZpY2F0aW9uUmVqZWN0c05pbEFmdGVyQ2FuY2VsbGF0aW9uICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlQWxsb3dlZFdpdGhWYWxpZFNpZ25hdHVyZQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd2VkV2l0aFZhbGlkU2lnbmF0dXJlICgwLjAwcykKPT09IFJVTiAgIFRlc3RNb2RlbEFsbG93c1NlbGZBc3NlcnRlZElkZW50aXR5Ci0tLSBQQVNTOiBUZXN0TW9kZWxBbGxvd3NTZWxmQXNzZXJ0ZWRJZGVudGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZURlbnlVbnNpZ25lZEltYWdlICgwLjAwcykKPT09IFJVTiAgIFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRGVueVJlYWNoYWJsZVZ1bG5lcmFiaWxpdHkgKDAuMDBzKQo9PT0gUlVOICAgVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eQotLS0gUEFTUzogVGVzdFBvbGljeUdhdGVBbGxvd1VuY2FsbGVkVnVsbmVyYWJpbGl0eSAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZUZhaWxDbG9zZWRPbk11dGFibGVUYWcKLS0tIFBBU1M6IFRlc3RQb2xpY3lHYXRlRmFpbENsb3NlZE9uTXV0YWJsZVRhZyAoMC4wMHMpCj09PSBSVU4gICBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlCi0tLSBQQVNTOiBUZXN0UG9saWN5R2F0ZVN0b3BzT25TaWduYXR1cmVGYWlsdXJlICgwLjAwcykKUEFTUwpvayAgCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcGFydDI2LXN1cHBseS1jaGFpbi1nYXRlCTIuMTI1cwo=",
+      "stderr_base64": "",
+      "markdown_sha256": "3ad1b93581b0d33d60957dde3ecba4a4161fb91b546d2191f8fc5ae1b16c3d54",
+      "excerpt_sha256": "923c24c5894c71f8512571ec725668b63a17ed84fd417d3ff277195b3cab92b7",
+      "support_scope": "digestRegex; verifier structs; DefaultProvenanceVerifier; delegate VerifyProvenance; ComputeContentDigest",
+      "go_blocks": 8,
+      "implementation_origin": "ACTUAL_PDF_CODE_SPANS"
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-run",
+        "^TestRedactedCopyEmptyInput$",
+        "-v"
+      ],
+      "cwd": "D:\\Golang-agent1-review\\tmp\\agent1-excerpt-tests\\tmp1465qa9_",
+      "exit_code": 1,
+      "stdout_utf8": "=== RUN   TestRedactedCopyEmptyInput\n--- FAIL: TestRedactedCopyEmptyInput (0.00s)\npanic: runtime error: index out of range [0] with length 0 [recovered, repanicked]\n\ngoroutine 7 [running]:\ntesting.tRunner.func1.2({0x7ff7512f2510, 0xc2b4e0e01e0})\n\tD:/Golang/.tools/go1.27.1/src/testing/testing.go:2123 +0x239\ntesting.tRunner.func1()\n\tD:/Golang/.tools/go1.27.1/src/testing/testing.go:2126 +0x329\npanic({0x7ff7512f2510?, 0xc2b4e0e01e0?})\n\tD:/Golang/.tools/go1.27.1/src/runtime/panic.go:859 +0x125\nexample.com/golang-master/part2-values.redactedCopy(...)\n\tD:/Golang-agent1-review/tmp/agent1-excerpt-tests/tmp1465qa9_/main.go:8\nexample.com/golang-master/part2-values.TestRedactedCopyEmptyInput(0xc2b4e0ca400)\n\tD:/Golang-agent1-review/tmp/agent1-excerpt-tests/tmp1465qa9_/main_test.go:31 +0x11b\ntesting.tRunner(0xc2b4e0ca400, 0x7ff7512fde10)\n\tD:/Golang/.tools/go1.27.1/src/testing/testing.go:2193 +0xc3\ncreated by testing.(*T).Run in goroutine 1\n\tD:/Golang/.tools/go1.27.1/src/testing/testing.go:2258 +0x4b4\nexit status 2\nFAIL\texample.com/golang-master/part2-values\t0.775s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "f5429ea834498459d1ea421d0f1c095305a873c2e5fd25f9c8246d630ac9737b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09IFJVTiAgIFRlc3RSZWRhY3RlZENvcHlFbXB0eUlucHV0Ci0tLSBGQUlMOiBUZXN0UmVkYWN0ZWRDb3B5RW1wdHlJbnB1dCAoMC4wMHMpCnBhbmljOiBydW50aW1lIGVycm9yOiBpbmRleCBvdXQgb2YgcmFuZ2UgWzBdIHdpdGggbGVuZ3RoIDAgW3JlY292ZXJlZCwgcmVwYW5pY2tlZF0KCmdvcm91dGluZSA3IFtydW5uaW5nXToKdGVzdGluZy50UnVubmVyLmZ1bmMxLjIoezB4N2ZmNzUxMmYyNTEwLCAweGMyYjRlMGUwMWUwfSkKCUQ6L0dvbGFuZy8udG9vbHMvZ28xLjI3LjEvc3JjL3Rlc3RpbmcvdGVzdGluZy5nbzoyMTIzICsweDIzOQp0ZXN0aW5nLnRSdW5uZXIuZnVuYzEoKQoJRDovR29sYW5nLy50b29scy9nbzEuMjcuMS9zcmMvdGVzdGluZy90ZXN0aW5nLmdvOjIxMjYgKzB4MzI5CnBhbmljKHsweDdmZjc1MTJmMjUxMD8sIDB4YzJiNGUwZTAxZTA/fSkKCUQ6L0dvbGFuZy8udG9vbHMvZ28xLjI3LjEvc3JjL3J1bnRpbWUvcGFuaWMuZ286ODU5ICsweDEyNQpleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQyLXZhbHVlcy5yZWRhY3RlZENvcHkoLi4uKQoJRDovR29sYW5nLWFnZW50MS1yZXZpZXcvdG1wL2FnZW50MS1leGNlcnB0LXRlc3RzL3RtcDE0NjVxYTlfL21haW4uZ286OApleGFtcGxlLmNvbS9nb2xhbmctbWFzdGVyL3BhcnQyLXZhbHVlcy5UZXN0UmVkYWN0ZWRDb3B5RW1wdHlJbnB1dCgweGMyYjRlMGNhNDAwKQoJRDovR29sYW5nLWFnZW50MS1yZXZpZXcvdG1wL2FnZW50MS1leGNlcnB0LXRlc3RzL3RtcDE0NjVxYTlfL21haW5fdGVzdC5nbzozMSArMHgxMWIKdGVzdGluZy50UnVubmVyKDB4YzJiNGUwY2E0MDAsIDB4N2ZmNzUxMmZkZTEwKQoJRDovR29sYW5nLy50b29scy9nbzEuMjcuMS9zcmMvdGVzdGluZy90ZXN0aW5nLmdvOjIxOTMgKzB4YzMKY3JlYXRlZCBieSB0ZXN0aW5nLigqVCkuUnVuIGluIGdvcm91dGluZSAxCglEOi9Hb2xhbmcvLnRvb2xzL2dvMS4yNy4xL3NyYy90ZXN0aW5nL3Rlc3RpbmcuZ286MjI1OCArMHg0YjQKZXhpdCBzdGF0dXMgMgpGQUlMCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcGFydDItdmFsdWVzCTAuNzc1cwo=",
+      "stderr_base64": "",
+      "classification": "EXPECTED_FAILURE",
+      "negative_control": "baseline redactedCopy with new empty-input contract test",
+      "expected_exit_code": 1,
+      "failure_signature_present": true
+    },
+    {
+      "command": [
+        "D:/Golang/.tools/go1.27.1/bin/go.exe",
+        "test",
+        "-run",
+        "^TestRemoteVerificationRejectsNilAfterCancellation$",
+        "-v"
+      ],
+      "cwd": "D:\\Golang-agent1-review\\tmp\\agent1-excerpt-tests\\tmp793pxpr9",
+      "exit_code": 1,
+      "stdout_utf8": "=== RUN   TestRemoteVerificationRejectsNilAfterCancellation\n    contract_examples_test.go:79: cancellation was turned into allow: {Decision:ALLOW Violations:[] Warnings:[]}\n--- FAIL: TestRemoteVerificationRejectsNilAfterCancellation (0.00s)\nFAIL\nexit status 1\nFAIL\texample.com/golang-master/part26-supply-chain-gate\t0.900s\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "a3ed85a5a23f1cefb667f43db6359feb77a8d46e970965a9aafebcb0135aaa6f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09IFJVTiAgIFRlc3RSZW1vdGVWZXJpZmljYXRpb25SZWplY3RzTmlsQWZ0ZXJDYW5jZWxsYXRpb24KICAgIGNvbnRyYWN0X2V4YW1wbGVzX3Rlc3QuZ286Nzk6IGNhbmNlbGxhdGlvbiB3YXMgdHVybmVkIGludG8gYWxsb3c6IHtEZWNpc2lvbjpBTExPVyBWaW9sYXRpb25zOltdIFdhcm5pbmdzOltdfQotLS0gRkFJTDogVGVzdFJlbW90ZVZlcmlmaWNhdGlvblJlamVjdHNOaWxBZnRlckNhbmNlbGxhdGlvbiAoMC4wMHMpCkZBSUwKZXhpdCBzdGF0dXMgMQpGQUlMCWV4YW1wbGUuY29tL2dvbGFuZy1tYXN0ZXIvcGFydDI2LXN1cHBseS1jaGFpbi1nYXRlCTAuOTAwcwo=",
+      "stderr_base64": "",
+      "classification": "EXPECTED_FAILURE",
+      "negative_control": "remove post-callback cancellation check",
+      "expected_exit_code": 1,
+      "failure_signature_present": true
+    },
+    {
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-c",
+        "import inspect, sys, unittest\nsys.path.insert(0, 'D:\\\\Golang-agent1-review\\\\scripts')\nimport build_pdf, test_review_heading_contract\nsource = inspect.getsource(build_pdf.keep_headings_with_content)\nguard = \"                in {'H1', 'H2', 'H3', 'body-intro'}\"\nassert source.count(guard) == 1\nexec(source.replace(guard, \"                in {'H1', 'H2', 'H3'}\", 1), build_pdf.__dict__)\nunittest.main(module=test_review_heading_contract,\n    argv=['negative-control', 'AnswerHeadingContract.test_heading_moves_with_intro_and_code_not_a_nested_keep', '-v'])\n"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 1,
+      "stdout_utf8": "",
+      "stderr_utf8": "test_heading_moves_with_intro_and_code_not_a_nested_keep (test_review_heading_contract.AnswerHeadingContract.test_heading_moves_with_intro_and_code_not_a_nested_keep) ... FAIL\r\n\r\n======================================================================\r\nFAIL: test_heading_moves_with_intro_and_code_not_a_nested_keep (test_review_heading_contract.AnswerHeadingContract.test_heading_moves_with_intro_and_code_not_a_nested_keep)\r\n----------------------------------------------------------------------\r\nTraceback (most recent call last):\r\n  File \"D:\\Golang-agent1-review\\scripts\\test_review_heading_contract.py\", line 85, in test_heading_moves_with_intro_and_code_not_a_nested_keep\r\n    self.assertNotIn(\"HEADING_SENTINEL\", pages[0])\r\nAssertionError: 'HEADING_SENTINEL' unexpectedly found in 'HEADING_SENTINEL\\n'\r\n\r\n----------------------------------------------------------------------\r\nRan 1 test in 0.063s\r\n\r\nFAILED (failures=1)\r\n",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3cf02cb893fca8ea0e2bc70c345af1997f6b67caec24eacaa1e2429b187da41",
+      "stdout_base64": "",
+      "stderr_base64": "dGVzdF9oZWFkaW5nX21vdmVzX3dpdGhfaW50cm9fYW5kX2NvZGVfbm90X2FfbmVzdGVkX2tlZXAgKHRlc3RfcmV2aWV3X2hlYWRpbmdfY29udHJhY3QuQW5zd2VySGVhZGluZ0NvbnRyYWN0LnRlc3RfaGVhZGluZ19tb3Zlc193aXRoX2ludHJvX2FuZF9jb2RlX25vdF9hX25lc3RlZF9rZWVwKSAuLi4gRkFJTA0KDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQpGQUlMOiB0ZXN0X2hlYWRpbmdfbW92ZXNfd2l0aF9pbnRyb19hbmRfY29kZV9ub3RfYV9uZXN0ZWRfa2VlcCAodGVzdF9yZXZpZXdfaGVhZGluZ19jb250cmFjdC5BbnN3ZXJIZWFkaW5nQ29udHJhY3QudGVzdF9oZWFkaW5nX21vdmVzX3dpdGhfaW50cm9fYW5kX2NvZGVfbm90X2FfbmVzdGVkX2tlZXApDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQpUcmFjZWJhY2sgKG1vc3QgcmVjZW50IGNhbGwgbGFzdCk6DQogIEZpbGUgIkQ6XEdvbGFuZy1hZ2VudDEtcmV2aWV3XHNjcmlwdHNcdGVzdF9yZXZpZXdfaGVhZGluZ19jb250cmFjdC5weSIsIGxpbmUgODUsIGluIHRlc3RfaGVhZGluZ19tb3Zlc193aXRoX2ludHJvX2FuZF9jb2RlX25vdF9hX25lc3RlZF9rZWVwDQogICAgc2VsZi5hc3NlcnROb3RJbigiSEVBRElOR19TRU5USU5FTCIsIHBhZ2VzWzBdKQ0KQXNzZXJ0aW9uRXJyb3I6ICdIRUFESU5HX1NFTlRJTkVMJyB1bmV4cGVjdGVkbHkgZm91bmQgaW4gJ0hFQURJTkdfU0VOVElORUxcbicNCg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQ0KUmFuIDEgdGVzdCBpbiAwLjA2M3MNCg0KRkFJTEVEIChmYWlsdXJlcz0xKQ0K",
+      "classification": "EXPECTED_FAILURE",
+      "negative_control": "remove heading-intro flattening in isolated Python process",
+      "expected_exit_code": 1,
+      "failure_signature_present": true
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "5938862b864b51d755209031972a1bb07f5babf2"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "warning: in the working copy of 'book/AGENT1_SCIENTIFIC_REVIEW.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'book/evidence/agent1-scientific-review/verify.py', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/test_review_heading_contract.py', LF will be replaced by CRLF the next time Git touches it\n",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "c72a0bf9068f3703a884afc7d53de927102c2ecd0f3d0a384374fa32f4412364",
+      "stdout_base64": "",
+      "stderr_base64": "d2FybmluZzogaW4gdGhlIHdvcmtpbmcgY29weSBvZiAnYm9vay9BR0VOVDFfU0NJRU5USUZJQ19SRVZJRVcubWQnLCBMRiB3aWxsIGJlIHJlcGxhY2VkIGJ5IENSTEYgdGhlIG5leHQgdGltZSBHaXQgdG91Y2hlcyBpdAp3YXJuaW5nOiBpbiB0aGUgd29ya2luZyBjb3B5IG9mICdib29rL2V2aWRlbmNlL2FnZW50MS1zY2llbnRpZmljLXJldmlldy92ZXJpZnkucHknLCBMRiB3aWxsIGJlIHJlcGxhY2VkIGJ5IENSTEYgdGhlIG5leHQgdGltZSBHaXQgdG91Y2hlcyBpdAp3YXJuaW5nOiBpbiB0aGUgd29ya2luZyBjb3B5IG9mICdzY3JpcHRzL3Rlc3RfcmV2aWV3X2hlYWRpbmdfY29udHJhY3QucHknLCBMRiB3aWxsIGJlIHJlcGxhY2VkIGJ5IENSTEYgdGhlIG5leHQgdGltZSBHaXQgdG91Y2hlcyBpdAo="
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "scripts/validate_error_atlas.py"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "[VALIDATOR-PASS] Error Atlas: structural validation passed!\r\n  - Số nhóm Taxonomy: 10 (A -> J)\r\n  - Tổng số entry: 85\r\n    * EXACT (compiler/runtime/library diagnostics): 45\r\n    * SENTINEL (standard & defined error values): 12\r\n    * STATUS (Kubernetes/runtime/CI status & reasons): 10\r\n    * FAMILY (diagnostic phenomena families): 18\r\n    * Nhóm A (Compiler & Type System): 14 entries (A01–A14)\r\n    * Nhóm B (Runtime & Panic): 11 entries (B01–B11)\r\n    * Nhóm C (Error Values & I/O): 8 entries (C01–C08)\r\n    * Nhóm D (Context & Cancellation): 4 entries (D01–D04)\r\n    * Nhóm E (Filesystem & Process): 7 entries (E01–E07)\r\n    * Nhóm F (Network / HTTP / TLS): 11 entries (F01–F11)\r\n    * Nhóm G (Database): 6 entries (G01–G06)\r\n    * Nhóm H (Concurrency): 5 entries (H01–H05)\r\n    * Nhóm I (Modules / Test / Toolchain): 8 entries (I01–I08)\r\n    * Nhóm J (Container / Kubernetes / CI-CD): 11 entries (J01–J11)\r\n  - Tổng số diagnostic patterns được cover: 89\r\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "4b7dcd5a795a87ae841bc278458ea69a81720abd7bde223d7f96d3651263b833",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "W1ZBTElEQVRPUi1QQVNTXSBFcnJvciBBdGxhczogc3RydWN0dXJhbCB2YWxpZGF0aW9uIHBhc3NlZCENCiAgLSBT4buRIG5ow7NtIFRheG9ub215OiAxMCAoQSAtPiBKKQ0KICAtIFThu5VuZyBz4buRIGVudHJ5OiA4NQ0KICAgICogRVhBQ1QgKGNvbXBpbGVyL3J1bnRpbWUvbGlicmFyeSBkaWFnbm9zdGljcyk6IDQ1DQogICAgKiBTRU5USU5FTCAoc3RhbmRhcmQgJiBkZWZpbmVkIGVycm9yIHZhbHVlcyk6IDEyDQogICAgKiBTVEFUVVMgKEt1YmVybmV0ZXMvcnVudGltZS9DSSBzdGF0dXMgJiByZWFzb25zKTogMTANCiAgICAqIEZBTUlMWSAoZGlhZ25vc3RpYyBwaGVub21lbmEgZmFtaWxpZXMpOiAxOA0KICAgICogTmjDs20gQSAoQ29tcGlsZXIgJiBUeXBlIFN5c3RlbSk6IDE0IGVudHJpZXMgKEEwMeKAk0ExNCkNCiAgICAqIE5ow7NtIEIgKFJ1bnRpbWUgJiBQYW5pYyk6IDExIGVudHJpZXMgKEIwMeKAk0IxMSkNCiAgICAqIE5ow7NtIEMgKEVycm9yIFZhbHVlcyAmIEkvTyk6IDggZW50cmllcyAoQzAx4oCTQzA4KQ0KICAgICogTmjDs20gRCAoQ29udGV4dCAmIENhbmNlbGxhdGlvbik6IDQgZW50cmllcyAoRDAx4oCTRDA0KQ0KICAgICogTmjDs20gRSAoRmlsZXN5c3RlbSAmIFByb2Nlc3MpOiA3IGVudHJpZXMgKEUwMeKAk0UwNykNCiAgICAqIE5ow7NtIEYgKE5ldHdvcmsgLyBIVFRQIC8gVExTKTogMTEgZW50cmllcyAoRjAx4oCTRjExKQ0KICAgICogTmjDs20gRyAoRGF0YWJhc2UpOiA2IGVudHJpZXMgKEcwMeKAk0cwNikNCiAgICAqIE5ow7NtIEggKENvbmN1cnJlbmN5KTogNSBlbnRyaWVzIChIMDHigJNIMDUpDQogICAgKiBOaMOzbSBJIChNb2R1bGVzIC8gVGVzdCAvIFRvb2xjaGFpbik6IDggZW50cmllcyAoSTAx4oCTSTA4KQ0KICAgICogTmjDs20gSiAoQ29udGFpbmVyIC8gS3ViZXJuZXRlcyAvIENJLUNEKTogMTEgZW50cmllcyAoSjAx4oCTSjExKQ0KICAtIFThu5VuZyBz4buRIGRpYWdub3N0aWMgcGF0dGVybnMgxJHGsOG7o2MgY292ZXI6IDg5DQo=",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "scripts/validate_manuscript_diagrams.py"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "CHARACTER_ART_DIAGRAMS=0\r\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "05db3ddef6cff8586adf57d24401c3026c8e31ab6a622956b78dd5ea3a4e743a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "Q0hBUkFDVEVSX0FSVF9ESUFHUkFNUz0wDQo=",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "scripts/validate_main_manuscript_no_bullets.py"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "================================================================================\r\nZERO-BULLET VALIDATOR REPORT (book/chapters/*.md)\r\n================================================================================\r\n[ZERO-BULLET-PASS] All chapter narrative prose is completely free of bullets.\r\n",
+      "stderr_utf8": "",
+      "stdout_sha256": "fcad213fe62391e9b3a4814758e06db363d6ec85cf95f986390802361bb87a6d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_base64": "PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NClpFUk8tQlVMTEVUIFZBTElEQVRPUiBSRVBPUlQgKGJvb2svY2hhcHRlcnMvKi5tZCkNCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQpbWkVSTy1CVUxMRVQtUEFTU10gQWxsIGNoYXB0ZXIgbmFycmF0aXZlIHByb3NlIGlzIGNvbXBsZXRlbHkgZnJlZSBvZiBidWxsZXRzLg0K",
+      "stderr_base64": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\Acer\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "cwd": "D:\\Golang-agent1-review",
+      "exit_code": 0,
+      "stdout_utf8": "",
+      "stderr_utf8": "test_ascii_sequence_is_rejected_even_when_labelled_text (test_manuscript_diagrams.CharacterDiagramContract.test_ascii_sequence_is_rejected_even_when_labelled_text) ... ok\r\ntest_directory_tree_is_preserved (test_manuscript_diagrams.CharacterDiagramContract.test_directory_tree_is_preserved) ... ok\r\ntest_fence_inside_code_does_not_end_block (test_manuscript_diagrams.CharacterDiagramContract.test_fence_inside_code_does_not_end_block) ... ok\r\ntest_real_code_and_exact_output_are_preserved (test_manuscript_diagrams.CharacterDiagramContract.test_real_code_and_exact_output_are_preserved) ... ok\r\ntest_reported_credential_diagram_is_rejected (test_manuscript_diagrams.CharacterDiagramContract.test_reported_credential_diagram_is_rejected) ... ok\r\ntest_atlas_group_moves_with_first_entry (test_publication_contracts.PublicationContracts.test_atlas_group_moves_with_first_entry) ... ok\r\ntest_body_split_keeps_two_lines_on_both_pages (test_publication_contracts.PublicationContracts.test_body_split_keeps_two_lines_on_both_pages) ... ok\r\ntest_character_diagram_preflight_blocks_render_before_pdf_write (test_publication_contracts.PublicationContracts.test_character_diagram_preflight_blocks_render_before_pdf_write) ... ok\r\ntest_code_token_marker_does_not_collide_with_source_text (test_publication_contracts.PublicationContracts.test_code_token_marker_does_not_collide_with_source_text) ... ok\r\ntest_colon_code_intro_stays_with_example (test_publication_contracts.PublicationContracts.test_colon_code_intro_stays_with_example) ... ok\r\ntest_consecutive_headings_move_with_first_answer_box (test_publication_contracts.PublicationContracts.test_consecutive_headings_move_with_first_answer_box) ... ok\r\ntest_current_atlas_intro_fits_one_page_without_losing_last_row (test_publication_contracts.PublicationContracts.test_current_atlas_intro_fits_one_page_without_losing_last_row) ... ok\r\ntest_emphasis_can_contain_inline_code_without_delimiter_leak (test_publication_contracts.PublicationContracts.test_emphasis_can_contain_inline_code_without_delimiter_leak) ... ok\r\ntest_emphasis_does_not_leak_or_consume_code_asterisks (test_publication_contracts.PublicationContracts.test_emphasis_does_not_leak_or_consume_code_asterisks) ... ok\r\ntest_heading_merges_with_code_container_not_nested_keep (test_publication_contracts.PublicationContracts.test_heading_merges_with_code_container_not_nested_keep) ... ok\r\ntest_heading_spacing_keeps_real_follower (test_publication_contracts.PublicationContracts.test_heading_spacing_keeps_real_follower) ... ok\r\ntest_inline_command_can_wrap_at_spaces (test_publication_contracts.PublicationContracts.test_inline_command_can_wrap_at_spaces) ... ok\r\ntest_inline_preserves_escaping_and_plain_multiplication (test_publication_contracts.PublicationContracts.test_inline_preserves_escaping_and_plain_multiplication) ... ok\r\ntest_palette_is_neutral_rgb (test_publication_contracts.PublicationContracts.test_palette_is_neutral_rgb) ... ok\r\ntest_promotion_preserves_exact_previous_current (test_publication_contracts.PublicationContracts.test_promotion_preserves_exact_previous_current) ... ok\r\ntest_rendered_heading_moves_with_following_box (test_publication_contracts.PublicationContracts.test_rendered_heading_moves_with_following_box) ... ok\r\ntest_chapter_intro_moves_with_first_code_chunk (test_review_heading_contract.AnswerHeadingContract.test_chapter_intro_moves_with_first_code_chunk) ... ok\r\ntest_h4_is_a_separate_heading_not_joined_to_answer (test_review_heading_contract.AnswerHeadingContract.test_h4_is_a_separate_heading_not_joined_to_answer) ... ok\r\ntest_hashes_in_fenced_code_are_not_headings (test_review_heading_contract.AnswerHeadingContract.test_hashes_in_fenced_code_are_not_headings) ... ok\r\ntest_heading_moves_with_intro_and_code_not_a_nested_keep (test_review_heading_contract.AnswerHeadingContract.test_heading_moves_with_intro_and_code_not_a_nested_keep) ... ok\r\n\r\n----------------------------------------------------------------------\r\nRan 25 tests in 0.459s\r\n\r\nOK\r\n",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "79d8d05005d4b284da35a9b847a3525d1c39fef76160b6c6bd151e29882a97c7",
+      "stdout_base64": "",
+      "stderr_base64": "dGVzdF9hc2NpaV9zZXF1ZW5jZV9pc19yZWplY3RlZF9ldmVuX3doZW5fbGFiZWxsZWRfdGV4dCAodGVzdF9tYW51c2NyaXB0X2RpYWdyYW1zLkNoYXJhY3RlckRpYWdyYW1Db250cmFjdC50ZXN0X2FzY2lpX3NlcXVlbmNlX2lzX3JlamVjdGVkX2V2ZW5fd2hlbl9sYWJlbGxlZF90ZXh0KSAuLi4gb2sNCnRlc3RfZGlyZWN0b3J5X3RyZWVfaXNfcHJlc2VydmVkICh0ZXN0X21hbnVzY3JpcHRfZGlhZ3JhbXMuQ2hhcmFjdGVyRGlhZ3JhbUNvbnRyYWN0LnRlc3RfZGlyZWN0b3J5X3RyZWVfaXNfcHJlc2VydmVkKSAuLi4gb2sNCnRlc3RfZmVuY2VfaW5zaWRlX2NvZGVfZG9lc19ub3RfZW5kX2Jsb2NrICh0ZXN0X21hbnVzY3JpcHRfZGlhZ3JhbXMuQ2hhcmFjdGVyRGlhZ3JhbUNvbnRyYWN0LnRlc3RfZmVuY2VfaW5zaWRlX2NvZGVfZG9lc19ub3RfZW5kX2Jsb2NrKSAuLi4gb2sNCnRlc3RfcmVhbF9jb2RlX2FuZF9leGFjdF9vdXRwdXRfYXJlX3ByZXNlcnZlZCAodGVzdF9tYW51c2NyaXB0X2RpYWdyYW1zLkNoYXJhY3RlckRpYWdyYW1Db250cmFjdC50ZXN0X3JlYWxfY29kZV9hbmRfZXhhY3Rfb3V0cHV0X2FyZV9wcmVzZXJ2ZWQpIC4uLiBvaw0KdGVzdF9yZXBvcnRlZF9jcmVkZW50aWFsX2RpYWdyYW1faXNfcmVqZWN0ZWQgKHRlc3RfbWFudXNjcmlwdF9kaWFncmFtcy5DaGFyYWN0ZXJEaWFncmFtQ29udHJhY3QudGVzdF9yZXBvcnRlZF9jcmVkZW50aWFsX2RpYWdyYW1faXNfcmVqZWN0ZWQpIC4uLiBvaw0KdGVzdF9hdGxhc19ncm91cF9tb3Zlc193aXRoX2ZpcnN0X2VudHJ5ICh0ZXN0X3B1YmxpY2F0aW9uX2NvbnRyYWN0cy5QdWJsaWNhdGlvbkNvbnRyYWN0cy50ZXN0X2F0bGFzX2dyb3VwX21vdmVzX3dpdGhfZmlyc3RfZW50cnkpIC4uLiBvaw0KdGVzdF9ib2R5X3NwbGl0X2tlZXBzX3R3b19saW5lc19vbl9ib3RoX3BhZ2VzICh0ZXN0X3B1YmxpY2F0aW9uX2NvbnRyYWN0cy5QdWJsaWNhdGlvbkNvbnRyYWN0cy50ZXN0X2JvZHlfc3BsaXRfa2VlcHNfdHdvX2xpbmVzX29uX2JvdGhfcGFnZXMpIC4uLiBvaw0KdGVzdF9jaGFyYWN0ZXJfZGlhZ3JhbV9wcmVmbGlnaHRfYmxvY2tzX3JlbmRlcl9iZWZvcmVfcGRmX3dyaXRlICh0ZXN0X3B1YmxpY2F0aW9uX2NvbnRyYWN0cy5QdWJsaWNhdGlvbkNvbnRyYWN0cy50ZXN0X2NoYXJhY3Rlcl9kaWFncmFtX3ByZWZsaWdodF9ibG9ja3NfcmVuZGVyX2JlZm9yZV9wZGZfd3JpdGUpIC4uLiBvaw0KdGVzdF9jb2RlX3Rva2VuX21hcmtlcl9kb2VzX25vdF9jb2xsaWRlX3dpdGhfc291cmNlX3RleHQgKHRlc3RfcHVibGljYXRpb25fY29udHJhY3RzLlB1YmxpY2F0aW9uQ29udHJhY3RzLnRlc3RfY29kZV90b2tlbl9tYXJrZXJfZG9lc19ub3RfY29sbGlkZV93aXRoX3NvdXJjZV90ZXh0KSAuLi4gb2sNCnRlc3RfY29sb25fY29kZV9pbnRyb19zdGF5c193aXRoX2V4YW1wbGUgKHRlc3RfcHVibGljYXRpb25fY29udHJhY3RzLlB1YmxpY2F0aW9uQ29udHJhY3RzLnRlc3RfY29sb25fY29kZV9pbnRyb19zdGF5c193aXRoX2V4YW1wbGUpIC4uLiBvaw0KdGVzdF9jb25zZWN1dGl2ZV9oZWFkaW5nc19tb3ZlX3dpdGhfZmlyc3RfYW5zd2VyX2JveCAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9jb25zZWN1dGl2ZV9oZWFkaW5nc19tb3ZlX3dpdGhfZmlyc3RfYW5zd2VyX2JveCkgLi4uIG9rDQp0ZXN0X2N1cnJlbnRfYXRsYXNfaW50cm9fZml0c19vbmVfcGFnZV93aXRob3V0X2xvc2luZ19sYXN0X3JvdyAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9jdXJyZW50X2F0bGFzX2ludHJvX2ZpdHNfb25lX3BhZ2Vfd2l0aG91dF9sb3NpbmdfbGFzdF9yb3cpIC4uLiBvaw0KdGVzdF9lbXBoYXNpc19jYW5fY29udGFpbl9pbmxpbmVfY29kZV93aXRob3V0X2RlbGltaXRlcl9sZWFrICh0ZXN0X3B1YmxpY2F0aW9uX2NvbnRyYWN0cy5QdWJsaWNhdGlvbkNvbnRyYWN0cy50ZXN0X2VtcGhhc2lzX2Nhbl9jb250YWluX2lubGluZV9jb2RlX3dpdGhvdXRfZGVsaW1pdGVyX2xlYWspIC4uLiBvaw0KdGVzdF9lbXBoYXNpc19kb2VzX25vdF9sZWFrX29yX2NvbnN1bWVfY29kZV9hc3Rlcmlza3MgKHRlc3RfcHVibGljYXRpb25fY29udHJhY3RzLlB1YmxpY2F0aW9uQ29udHJhY3RzLnRlc3RfZW1waGFzaXNfZG9lc19ub3RfbGVha19vcl9jb25zdW1lX2NvZGVfYXN0ZXJpc2tzKSAuLi4gb2sNCnRlc3RfaGVhZGluZ19tZXJnZXNfd2l0aF9jb2RlX2NvbnRhaW5lcl9ub3RfbmVzdGVkX2tlZXAgKHRlc3RfcHVibGljYXRpb25fY29udHJhY3RzLlB1YmxpY2F0aW9uQ29udHJhY3RzLnRlc3RfaGVhZGluZ19tZXJnZXNfd2l0aF9jb2RlX2NvbnRhaW5lcl9ub3RfbmVzdGVkX2tlZXApIC4uLiBvaw0KdGVzdF9oZWFkaW5nX3NwYWNpbmdfa2VlcHNfcmVhbF9mb2xsb3dlciAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9oZWFkaW5nX3NwYWNpbmdfa2VlcHNfcmVhbF9mb2xsb3dlcikgLi4uIG9rDQp0ZXN0X2lubGluZV9jb21tYW5kX2Nhbl93cmFwX2F0X3NwYWNlcyAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9pbmxpbmVfY29tbWFuZF9jYW5fd3JhcF9hdF9zcGFjZXMpIC4uLiBvaw0KdGVzdF9pbmxpbmVfcHJlc2VydmVzX2VzY2FwaW5nX2FuZF9wbGFpbl9tdWx0aXBsaWNhdGlvbiAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9pbmxpbmVfcHJlc2VydmVzX2VzY2FwaW5nX2FuZF9wbGFpbl9tdWx0aXBsaWNhdGlvbikgLi4uIG9rDQp0ZXN0X3BhbGV0dGVfaXNfbmV1dHJhbF9yZ2IgKHRlc3RfcHVibGljYXRpb25fY29udHJhY3RzLlB1YmxpY2F0aW9uQ29udHJhY3RzLnRlc3RfcGFsZXR0ZV9pc19uZXV0cmFsX3JnYikgLi4uIG9rDQp0ZXN0X3Byb21vdGlvbl9wcmVzZXJ2ZXNfZXhhY3RfcHJldmlvdXNfY3VycmVudCAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9wcm9tb3Rpb25fcHJlc2VydmVzX2V4YWN0X3ByZXZpb3VzX2N1cnJlbnQpIC4uLiBvaw0KdGVzdF9yZW5kZXJlZF9oZWFkaW5nX21vdmVzX3dpdGhfZm9sbG93aW5nX2JveCAodGVzdF9wdWJsaWNhdGlvbl9jb250cmFjdHMuUHVibGljYXRpb25Db250cmFjdHMudGVzdF9yZW5kZXJlZF9oZWFkaW5nX21vdmVzX3dpdGhfZm9sbG93aW5nX2JveCkgLi4uIG9rDQp0ZXN0X2NoYXB0ZXJfaW50cm9fbW92ZXNfd2l0aF9maXJzdF9jb2RlX2NodW5rICh0ZXN0X3Jldmlld19oZWFkaW5nX2NvbnRyYWN0LkFuc3dlckhlYWRpbmdDb250cmFjdC50ZXN0X2NoYXB0ZXJfaW50cm9fbW92ZXNfd2l0aF9maXJzdF9jb2RlX2NodW5rKSAuLi4gb2sNCnRlc3RfaDRfaXNfYV9zZXBhcmF0ZV9oZWFkaW5nX25vdF9qb2luZWRfdG9fYW5zd2VyICh0ZXN0X3Jldmlld19oZWFkaW5nX2NvbnRyYWN0LkFuc3dlckhlYWRpbmdDb250cmFjdC50ZXN0X2g0X2lzX2Ffc2VwYXJhdGVfaGVhZGluZ19ub3Rfam9pbmVkX3RvX2Fuc3dlcikgLi4uIG9rDQp0ZXN0X2hhc2hlc19pbl9mZW5jZWRfY29kZV9hcmVfbm90X2hlYWRpbmdzICh0ZXN0X3Jldmlld19oZWFkaW5nX2NvbnRyYWN0LkFuc3dlckhlYWRpbmdDb250cmFjdC50ZXN0X2hhc2hlc19pbl9mZW5jZWRfY29kZV9hcmVfbm90X2hlYWRpbmdzKSAuLi4gb2sNCnRlc3RfaGVhZGluZ19tb3Zlc193aXRoX2ludHJvX2FuZF9jb2RlX25vdF9hX25lc3RlZF9rZWVwICh0ZXN0X3Jldmlld19oZWFkaW5nX2NvbnRyYWN0LkFuc3dlckhlYWRpbmdDb250cmFjdC50ZXN0X2hlYWRpbmdfbW92ZXNfd2l0aF9pbnRyb19hbmRfY29kZV9ub3RfYV9uZXN0ZWRfa2VlcCkgLi4uIG9rDQoNCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0NClJhbiAyNSB0ZXN0cyBpbiAwLjQ1OXMNCg0KT0sNCg=="
+    }
+  ],
+  "code_width_violations": [],
+  "artifacts": [
+    {
+      "label": "A",
+      "file": "book/publication/Golang_Master_baseline_f2211520.pdf",
+      "sha256": "f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09",
+      "pages": 493,
+      "bookmarks": [
+        [
+          1,
+          "MỤC LỤC",
+          2
+        ],
+        [
+          1,
+          "Trước khi viết dòng Go đầu tiên",
+          3
+        ],
+        [
+          1,
+          "Mở cửa vào Go",
+          8
+        ],
+        [
+          1,
+          "Chương 1 — Đọc và viết một chương trình Go",
+          14
+        ],
+        [
+          1,
+          "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu",
+          35
+        ],
+        [
+          1,
+          "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi",
+          45
+        ],
+        [
+          1,
+          "Chương 4 — Biên lỗi: để caller quyết định",
+          68
+        ],
+        [
+          1,
+          "Chương 5 — Package là ranh giới",
+          81
+        ],
+        [
+          1,
+          "Chương 6 — Thay đổi không sợ hãi",
+          94
+        ],
+        [
+          1,
+          "Chương 7 — Dữ liệu đi vào và đi ra",
+          114
+        ],
+        [
+          1,
+          "Chương 8 — Một race bắt đầu từ đâu",
+          124
+        ],
+        [
+          1,
+          "Chương 9 — Dòng công việc có áp suất",
+          132
+        ],
+        [
+          1,
+          "Chương 10 — Khi chương trình chậm hoặc phình",
+          140
+        ],
+        [
+          1,
+          "Chương 11 — Lần theo một request HTTP",
+          153
+        ],
+        [
+          1,
+          "Chương 12 — Một service sống và tắt thế nào",
+          160
+        ],
+        [
+          1,
+          "Chương 13 — Một thay đổi hoặc không có gì",
+          170
+        ],
+        [
+          1,
+          "Chương 14 — Khi kiểu trở thành dữ liệu",
+          186
+        ],
+        [
+          1,
+          "Chương 15 — Từ incident đến công cụ",
+          198
+        ],
+        [
+          1,
+          "Chương 16 — Thấy được hệ thống",
+          207
+        ],
+        [
+          1,
+          "Chương 17 — Đóng gói và điều phối",
+          218
+        ],
+        [
+          1,
+          "Chương 18 — Đưa thay đổi ra production",
+          236
+        ],
+        [
+          1,
+          "Chương 19 — Giữ type information khi abstraction lớn lên",
+          254
+        ],
+        [
+          1,
+          "Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành",
+          264
+        ],
+        [
+          1,
+          "Chương 21 — Vòng lặp điều hòa và Controller Pattern",
+          277
+        ],
+        [
+          1,
+          "Chương 22 — Từ watch đến một controller Kubernetes thật",
+          287
+        ],
+        [
+          1,
+          "Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên",
+          305
+        ],
+        [
+          1,
+          "Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn",
+          322
+        ],
+        [
+          1,
+          "Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa",
+          339
+        ],
+        [
+          1,
+          "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng",
+          355
+        ],
+        [
+          1,
+          "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go",
+          379
+        ],
+        [
+          1,
+          "Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền",
+          399
+        ],
+        [
+          1,
+          "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent",
+          419
+        ],
+        [
+          1,
+          "BACK MATTER — ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD",
+          429
+        ],
+        [
+          1,
+          "PHỤ LỤC A — ATLAS LỖI GO",
+          484
+        ]
+      ]
+    },
+    {
+      "label": "B",
+      "file": "book/print_ready/02_RUOT_SACH_GOLANG_525TRANG_A4.pdf",
+      "sha256": "685b0b7a51ed9d3ab5a9b531f040a4ed24132d94142972811d3b47e52daeaa8f",
+      "pages": 525,
+      "bookmarks": [
+        [
+          1,
+          "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG",
+          1
+        ],
+        [
+          1,
+          "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG",
+          1
+        ],
+        [
+          1,
+          "MỤC LỤC",
+          2
+        ],
+        [
+          1,
+          "Trước khi viết dòng Go đầu tiên",
+          3
+        ],
+        [
+          1,
+          "Mở cửa vào Go",
+          8
+        ],
+        [
+          1,
+          "Chương 1 — Đọc và viết một chương trình Go",
+          14
+        ],
+        [
+          1,
+          "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu",
+          35
+        ],
+        [
+          1,
+          "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi",
+          47
+        ],
+        [
+          1,
+          "Chương 4 — Biên lỗi: để caller quyết định",
+          72
+        ],
+        [
+          1,
+          "Chương 5 — Package là ranh giới",
+          85
+        ],
+        [
+          1,
+          "Chương 6 — Thay đổi không sợ hãi",
+          98
+        ],
+        [
+          1,
+          "Chương 7 — Dữ liệu đi vào và đi ra",
+          118
+        ],
+        [
+          1,
+          "Chương 8 — Một race bắt đầu từ đâu",
+          128
+        ],
+        [
+          1,
+          "Chương 9 — Dòng công việc có áp suất",
+          136
+        ],
+        [
+          1,
+          "Chương 10 — Khi chương trình chậm hoặc phình",
+          146
+        ],
+        [
+          1,
+          "Chương 11 — Lần theo một request HTTP",
+          163
+        ],
+        [
+          1,
+          "Chương 12 — Một service sống và tắt thế nào",
+          172
+        ],
+        [
+          1,
+          "Chương 13 — Một thay đổi hoặc không có gì",
+          185
+        ],
+        [
+          1,
+          "Chương 14 — Khi kiểu trở thành dữ liệu",
+          204
+        ],
+        [
+          1,
+          "Chương 15 — Từ incident đến công cụ",
+          216
+        ],
+        [
+          1,
+          "Chương 16 — Thấy được hệ thống",
+          225
+        ],
+        [
+          1,
+          "Chương 17 — Đóng gói và điều phối",
+          237
+        ],
+        [
+          1,
+          "Chương 18 — Đưa thay đổi ra production",
+          255
+        ],
+        [
+          1,
+          "Chương 19 — Giữ type information khi abstraction lớn lên",
+          273
+        ],
+        [
+          1,
+          "Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành",
+          284
+        ],
+        [
+          1,
+          "Chương 21 — Vòng lặp điều hòa và Controller Pattern",
+          300
+        ],
+        [
+          1,
+          "Chương 22 — Từ watch đến một controller Kubernetes thật",
+          312
+        ],
+        [
+          1,
+          "Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên",
+          330
+        ],
+        [
+          1,
+          "Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn",
+          350
+        ],
+        [
+          1,
+          "Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa",
+          367
+        ],
+        [
+          1,
+          "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng",
+          384
+        ],
+        [
+          1,
+          "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go",
+          408
+        ],
+        [
+          1,
+          "Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền",
+          430
+        ],
+        [
+          1,
+          "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent",
+          451
+        ],
+        [
+          1,
+          "BACK MATTER — ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD",
+          461
+        ],
+        [
+          1,
+          "PHỤ LỤC A — ATLAS LỖI GO",
+          516
+        ]
+      ]
+    },
+    {
+      "label": "C",
+      "file": "Golang_Master.pdf",
+      "sha256": "7dfedd9825d36ccfb57515311829bc163bb6eb746423487488419400c36d8b68",
+      "pages": 593,
+      "bookmarks": [
+        [
+          1,
+          "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG",
+          1
+        ],
+        [
+          1,
+          "MỤC LỤC",
+          2
+        ],
+        [
+          1,
+          "Trước khi viết dòng Go đầu tiên",
+          3
+        ],
+        [
+          1,
+          "Mở cửa vào Go",
+          9
+        ],
+        [
+          1,
+          "Chương 1 — Đọc và viết một chương trình Go",
+          15
+        ],
+        [
+          1,
+          "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu",
+          38
+        ],
+        [
+          1,
+          "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi",
+          52
+        ],
+        [
+          1,
+          "Chương 4 — Ranh giới xử lý lỗi: để bên gọi quyết định",
+          82
+        ],
+        [
+          1,
+          "Chương 5 — Package là ranh giới",
+          97
+        ],
+        [
+          1,
+          "Chương 6 — Thay đổi không sợ hãi",
+          112
+        ],
+        [
+          1,
+          "Chương 7 — Dữ liệu đi vào và đi ra",
+          137
+        ],
+        [
+          1,
+          "Chương 8 — Một race bắt đầu từ đâu",
+          150
+        ],
+        [
+          1,
+          "Chương 9 — Dòng công việc có áp suất",
+          160
+        ],
+        [
+          1,
+          "Chương 10 — Khi chương trình chậm hoặc phình",
+          172
+        ],
+        [
+          1,
+          "Chương 11 — Lần theo một yêu cầu HTTP",
+          194
+        ],
+        [
+          1,
+          "Chương 12 — Một service sống và tắt thế nào",
+          205
+        ],
+        [
+          1,
+          "Chương 13 — Một thay đổi hoặc không có gì",
+          221
+        ],
+        [
+          1,
+          "Chương 14 — Khi kiểu trở thành dữ liệu",
+          243
+        ],
+        [
+          1,
+          "Chương 15 — Từ incident đến công cụ",
+          258
+        ],
+        [
+          1,
+          "Chương 16 — Thấy được hệ thống",
+          269
+        ],
+        [
+          1,
+          "Chương 17 — Đóng gói và điều phối",
+          284
+        ],
+        [
+          1,
+          "Chương 18 — Đưa thay đổi ra production",
+          305
+        ],
+        [
+          1,
+          "Chương 19 — Giữ type information khi abstraction lớn lên",
+          326
+        ],
+        [
+          1,
+          "Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành",
+          338
+        ],
+        [
+          1,
+          "Chương 21 — Vòng lặp điều hòa và Controller Pattern",
+          356
+        ],
+        [
+          1,
+          "Chương 22 — Từ watch đến một controller Kubernetes thật",
+          368
+        ],
+        [
+          1,
+          "Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên",
+          388
+        ],
+        [
+          1,
+          "Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn",
+          409
+        ],
+        [
+          1,
+          "Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa",
+          426
+        ],
+        [
+          1,
+          "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng",
+          446
+        ],
+        [
+          1,
+          "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go",
+          470
+        ],
+        [
+          1,
+          "Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền",
+          492
+        ],
+        [
+          1,
+          "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent",
+          516
+        ],
+        [
+          1,
+          "BACK MATTER — ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD",
+          529
+        ],
+        [
+          1,
+          "PHỤ LỤC A — ATLAS LỖI GO",
+          584
+        ]
+      ]
+    },
+    {
+      "label": "candidate",
+      "file": "tmp/pdfs/Golang_Master.candidate.pdf",
+      "sha256": "de5c877c5bc88d2923f2103019bee26efe472935685c5d3483e91e784882e8e3",
+      "pages": 604,
+      "bookmarks": [
+        [
+          1,
+          "MỤC LỤC",
+          2
+        ],
+        [
+          1,
+          "Trước khi viết dòng Go đầu tiên",
+          3
+        ],
+        [
+          1,
+          "Mở cửa vào Go",
+          9
+        ],
+        [
+          1,
+          "Chương 1 — Đọc và viết một chương trình Go",
+          15
+        ],
+        [
+          1,
+          "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu",
+          38
+        ],
+        [
+          1,
+          "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi",
+          53
+        ],
+        [
+          1,
+          "Chương 4 — Ranh giới xử lý lỗi: để bên gọi quyết định",
+          84
+        ],
+        [
+          1,
+          "Chương 5 — Package là ranh giới",
+          102
+        ],
+        [
+          1,
+          "Chương 6 — Thay đổi không sợ hãi",
+          117
+        ],
+        [
+          1,
+          "Chương 7 — Dữ liệu đi vào và đi ra",
+          142
+        ],
+        [
+          1,
+          "Chương 8 — Một race bắt đầu từ đâu",
+          155
+        ],
+        [
+          1,
+          "Chương 9 — Dòng công việc có áp suất",
+          165
+        ],
+        [
+          1,
+          "Chương 10 — Khi chương trình chậm hoặc phình",
+          178
+        ],
+        [
+          1,
+          "Chương 11 — Lần theo một yêu cầu HTTP",
+          200
+        ],
+        [
+          1,
+          "Chương 12 — Một service sống và tắt thế nào",
+          211
+        ],
+        [
+          1,
+          "Chương 13 — Một thay đổi hoặc không có gì",
+          227
+        ],
+        [
+          1,
+          "Chương 14 — Khi kiểu trở thành dữ liệu",
+          249
+        ],
+        [
+          1,
+          "Chương 15 — Từ incident đến công cụ",
+          265
+        ],
+        [
+          1,
+          "Chương 16 — Thấy được hệ thống",
+          277
+        ],
+        [
+          1,
+          "Chương 17 — Đóng gói và điều phối",
+          293
+        ],
+        [
+          1,
+          "Chương 18 — Đưa thay đổi ra production",
+          314
+        ],
+        [
+          1,
+          "Chương 19 — Giữ type information khi abstraction lớn lên",
+          335
+        ],
+        [
+          1,
+          "Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành",
+          347
+        ],
+        [
+          1,
+          "Chương 21 — Vòng lặp điều hòa và Controller Pattern",
+          365
+        ],
+        [
+          1,
+          "Chương 22 — Từ watch đến một controller Kubernetes thật",
+          377
+        ],
+        [
+          1,
+          "Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên",
+          397
+        ],
+        [
+          1,
+          "Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn",
+          418
+        ],
+        [
+          1,
+          "Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa",
+          435
+        ],
+        [
+          1,
+          "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng",
+          455
+        ],
+        [
+          1,
+          "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go",
+          477
+        ],
+        [
+          1,
+          "Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền",
+          502
+        ],
+        [
+          1,
+          "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent",
+          527
+        ],
+        [
+          1,
+          "BACK MATTER — ATLAS MÃ NGUỒN 50 THƯ VIỆN GO DEVOPS & CLOUD",
+          540
+        ],
+        [
+          1,
+          "PHỤ LỤC A — ATLAS LỖI GO",
+          595
+        ]
+      ]
+    }
+  ],
+  "visual_status": "MANUAL_REVIEW_IN_REVIEWER_REPORT_NOT_AUTOMATIC_PASS",
+  "live_sigstore_slsa_govulncheck": "NOT_RUN",
+  "live_linux_bpf_compile_load_attach": "NOT_RUN",
+  "pdf_checkpoint": {
+    "candidate_sha256": "de5c877c5bc88d2923f2103019bee26efe472935685c5d3483e91e784882e8e3",
+    "pages": 604,
+    "bookmarks": [
+      {
+        "title": "Chương 1 — Đọc và viết một chương trình Go",
+        "page": 15,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu",
+        "page": 38,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 3 — Mô hình dữ liệu và trách nhiệm thay đổi",
+        "page": 53,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 4 — Ranh giới xử lý lỗi: để bên gọi quyết định",
+        "page": 84,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 5 — Package là ranh giới",
+        "page": 102,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 6 — Thay đổi không sợ hãi",
+        "page": 117,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 7 — Dữ liệu đi vào và đi ra",
+        "page": 142,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 8 — Một race bắt đầu từ đâu",
+        "page": 155,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 9 — Dòng công việc có áp suất",
+        "page": 165,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 10 — Khi chương trình chậm hoặc phình",
+        "page": 178,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 11 — Lần theo một yêu cầu HTTP",
+        "page": 200,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 12 — Một service sống và tắt thế nào",
+        "page": 211,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 13 — Một thay đổi hoặc không có gì",
+        "page": 227,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 14 — Khi kiểu trở thành dữ liệu",
+        "page": 249,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 15 — Từ incident đến công cụ",
+        "page": 265,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 16 — Thấy được hệ thống",
+        "page": 277,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 17 — Đóng gói và điều phối",
+        "page": 293,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 18 — Đưa thay đổi ra production",
+        "page": 314,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 19 — Giữ type information khi abstraction lớn lên",
+        "page": 335,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 20 — Dự án tổng kết: opsprobe từ mã nguồn đến vận hành",
+        "page": 347,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 21 — Vòng lặp điều hòa và Controller Pattern",
+        "page": 365,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 22 — Từ watch đến một controller Kubernetes thật",
+        "page": 377,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên",
+        "page": 397,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn",
+        "page": 418,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa",
+        "page": 435,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng",
+        "page": 455,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go",
+        "page": 477,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền",
+        "page": 502,
+        "heading_present": true
+      },
+      {
+        "title": "Chương 29 — Kỹ sư và bằng chứng trong kỷ nguyên Agent",
+        "page": 527,
+        "heading_present": true
+      }
+    ],
+    "toc": [
+      {
+        "number": 1,
+        "page": 15,
+        "heading_present": true
+      },
+      {
+        "number": 2,
+        "page": 38,
+        "heading_present": true
+      },
+      {
+        "number": 3,
+        "page": 53,
+        "heading_present": true
+      },
+      {
+        "number": 4,
+        "page": 84,
+        "heading_present": true
+      },
+      {
+        "number": 5,
+        "page": 102,
+        "heading_present": true
+      },
+      {
+        "number": 6,
+        "page": 117,
+        "heading_present": true
+      },
+      {
+        "number": 7,
+        "page": 142,
+        "heading_present": true
+      },
+      {
+        "number": 8,
+        "page": 155,
+        "heading_present": true
+      },
+      {
+        "number": 9,
+        "page": 165,
+        "heading_present": true
+      },
+      {
+        "number": 10,
+        "page": 178,
+        "heading_present": true
+      },
+      {
+        "number": 11,
+        "page": 200,
+        "heading_present": true
+      },
+      {
+        "number": 12,
+        "page": 211,
+        "heading_present": true
+      },
+      {
+        "number": 13,
+        "page": 227,
+        "heading_present": true
+      },
+      {
+        "number": 14,
+        "page": 249,
+        "heading_present": true
+      },
+      {
+        "number": 15,
+        "page": 265,
+        "heading_present": true
+      },
+      {
+        "number": 16,
+        "page": 277,
+        "heading_present": true
+      },
+      {
+        "number": 17,
+        "page": 293,
+        "heading_present": true
+      },
+      {
+        "number": 18,
+        "page": 314,
+        "heading_present": true
+      },
+      {
+        "number": 19,
+        "page": 335,
+        "heading_present": true
+      },
+      {
+        "number": 20,
+        "page": 347,
+        "heading_present": true
+      },
+      {
+        "number": 21,
+        "page": 365,
+        "heading_present": true
+      },
+      {
+        "number": 22,
+        "page": 377,
+        "heading_present": true
+      },
+      {
+        "number": 23,
+        "page": 397,
+        "heading_present": true
+      },
+      {
+        "number": 24,
+        "page": 418,
+        "heading_present": true
+      },
+      {
+        "number": 25,
+        "page": 435,
+        "heading_present": true
+      },
+      {
+        "number": 26,
+        "page": 455,
+        "heading_present": true
+      },
+      {
+        "number": 27,
+        "page": 477,
+        "heading_present": true
+      },
+      {
+        "number": 28,
+        "page": 502,
+        "heading_present": true
+      },
+      {
+        "number": 29,
+        "page": 527,
+        "heading_present": true
+      }
+    ],
+    "unchanged_chapter_text": [
+      {
+        "chapter": 1,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 3,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 4,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 5,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 6,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 7,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 8,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 9,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 10,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 11,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 12,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 13,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 14,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 15,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 17,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 18,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 19,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 20,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 21,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 22,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 23,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 24,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 25,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 28,
+        "normalized_text_equal": true
+      },
+      {
+        "chapter": 29,
+        "normalized_text_equal": true
+      }
+    ],
+    "changed_go_blocks": [
+      {
+        "chapter": 2,
+        "go_block": 1,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 2,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 3,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 4,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 5,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 6,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 7,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 8,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 9,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 10,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 11,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 12,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 13,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 14,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 2,
+        "go_block": 15,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 16,
+        "go_block": 1,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 16,
+        "go_block": 2,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 1,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 2,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 3,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 4,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 5,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 6,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 7,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 26,
+        "go_block": 8,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 1,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 2,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 3,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 4,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 5,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 6,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 7,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 8,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      },
+      {
+        "chapter": 27,
+        "go_block": 9,
+        "tokens_present_in_order": true,
+        "raw_string_contains_literal_tab": false
+      }
+    ],
+    "unchanged_front_chapters_and_atlases": [
+      {
+        "section": "Trước khi viết dòng Go đầu tiên",
+        "normalized_text_equal": true
+      },
+      {
+        "section": "Mở cửa vào Go",
+        "normalized_text_equal": true
+      },
+      {
+        "section": "BACK MATTER",
+        "normalized_text_equal": true
+      },
+      {
+        "section": "PHỤ LỤC A",
+        "normalized_text_equal": true
+      }
+    ],
+    "body_raster_image_occurrences": {
+      "baseline": 58,
+      "candidate": 58,
+      "unaffected_rgb_pixel_multiset_equal": true,
+      "approved_figure_rgb_pixels_match": true,
+      "repaired_asset": "assets/diagrams/supply-chain-policy-evidence.png",
+      "before_pixel_sha256": "73611be7cc37b0ef13ba0f3d825ebf366b27188c558da8807c3508ec3b53c2ef",
+      "after_pixel_sha256": "ba5f192cb7dc4af9b2602caf085edd2957c1ceaec28f63da285002eff4285306"
+    },
+    "literal_h4_markers_remaining": false,
+    "corrected_idempotency_present": true,
+    "removed_mistranslation_absent": true,
+    "latest_verifier_explanation_present": true,
+    "note": "Automated scoped content checks; visual review and unreviewed material remain in report. No publication acceptance."
+  }
+}

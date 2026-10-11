@@ -3,42 +3,18 @@
 
 top to bottom direction
 
-package "1. Kiểm soát Nguồn & Phụ thuộc (Source & Dependency Provenance)" as src_pkg {
-  rectangle "<b>01 · Mã nguồn Đã Xác thực</b>\nGit Commit SHA bất biến\nĐược ký khóa GPG/SSH" as source
-  rectangle "<b>02 · Đồ thị Phụ thuộc Khóa chặt</b>\ngo.mod & go.sum định danh băm h1:\nKiểm định lỗ hổng bằng govulncheck" as deps
+' Reference design, not a claim that the local fixture meets SLSA Build L3.
+' Vertical flow avoids the old raster being clipped at PlantUML's size limit.
+rectangle "<b>01 · Mã nguồn và phụ thuộc</b>\nKiểm chứng revision, module, checksum" as source
+rectangle "<b>02 · Môi trường build</b>\nTạo artifact và provenance\nMức cô lập cần bằng chứng riêng" as build
+rectangle "<b>03 · Ký và gắn bằng chứng</b>\nRàng buộc digest, khóa và định danh" as signing
+rectangle "<b>04 · Phát hành</b>\nArtifact theo digest + bundle đã ký" as artifact
+rectangle "<b>05 · Cổng chính sách</b>\nXác minh nội dung, signer, provenance" as gate
+rectangle "<b>06 · Quyết định</b>\nĐủ bằng chứng hợp lệ: ALLOW\nThiếu hoặc sai: DENY" as decision
 
-  source -right-> deps : Cung cấp cây mã
-}
-
-package "2. Môi trường Đóng gói Tin cậy (Hermetic Build & Keyless Signing)" as build_pkg {
-  rectangle "<b>03 · Isolated CI Runner</b>\nMôi trường build không ô nhiễm\nTạo cặp khóa tạm thời (Ephemeral Key)" as build
-  rectangle "<b>04 · Dịch vụ Sigstore (Fulcio & Rekor)</b>\n• Fulcio cấp chứng chỉ danh tính OIDC (10 phút)\n• Rekor ghi bằng chứng vào Transparency Log" as sigstore
-
-  build -right-> sigstore : Xin chứng nhận danh tính
-}
-
-package "3. Tạo phẩm Bất biến (Immutable Artifact)" as art_pkg {
-  rectangle "<b>05 · OCI Container Image</b>\nĐược ghim bằng Digest bất biến\nrepo/image@sha256:<64_hex_chars>" as artifact
-  rectangle "<b>06 · Attestation Bundle</b>\nSBOM (Syft) + Provenance (in-toto)\nChữ ký số đính kèm Cosign" as attestation
-
-  artifact -right-> attestation : Kèm theo bằng chứng
-}
-
-package "4. Cổng Kiểm soát Nhập cảnh (Admission Policy Gate)" as gate_pkg {
-  rectangle "<b>07 · Policy Gate (Kyverno / Cosign)</b>\nThực thi kiểm tra trước khi cấp phép chạy:\n1. Image phải được ghim bằng SHA-256 digest\n2. Chữ ký OIDC phải thuộc tổ chức được phê duyệt\n3. Bằng chứng Rekor log phải hợp lệ và tồn tại" as verify
-
-  rectangle "<b>Quyết định Cổng (Admission Verdict)</b>\n• ĐỦ BẰNG CHỨNG HỢP LỆ  ──► <b>ALLOW (Triển khai)</b>\n• THIẾU HOẶC SAI CHỮ KÝ ──► <b>DENY (Chặn đứng Fail-Closed)</b>" as verdict
-
-  verify -right-> verdict : Ra quyết định
-}
-
-deps -down-> build : Nạp mã & checksum
-sigstore -down-> artifact : Ký và gán nhãn digest
-attestation -down-> verify : Nạp bằng chứng kiểm định
-
-note bottom of gate_pkg
-  <b>Nguyên tắc Chuỗi Cung ứng An toàn (SLSA Level 3+):</b>
-  Tuyệt đối không cấp phép triển khai ảnh dựa trên Mutable Tag (như :latest).
-  Chính sách cửa vào luôn mặc định đóng (Fail-Closed) nếu thiếu bất kỳ bằng chứng nào.
-end note
+source -down-> build
+build -down-> signing
+signing -down-> artifact
+artifact -down-> gate
+gate -down-> decision
 @enduml

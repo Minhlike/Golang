@@ -2,15 +2,15 @@
 
 # Chương 16 — Thấy được hệ thống
 
-Sau Chương 15, công cụ `opsprobe` đã có thể tường thuật chuẩn xác một lượt thực thi: câu lệnh nào được gọi, mã thoát nào trả về, và thời hạn xử lý có bị cạn kiệt hay không. Nhưng một sự cố vận hành (*incident*) hiếm khi chỉ xoay quanh một lượt chạy đơn lẻ. Những câu hỏi như dịch vụ phụ thuộc có đang suy thoái dần từ sáng đến giờ hay không, lỗi phát sinh cục bộ tại một đích đến hay trên toàn bộ hệ thống, và yêu cầu xử lý chậm đã trải qua những chặng nào, đều đòi hỏi các góc nhìn hoàn toàn khác biệt. Nếu chỉ giữ lại một dòng nhật ký (*log*) cuối cùng, ta có chi tiết sự kiện nhưng đánh mất xu hướng biến thiên. Nếu chỉ theo dõi một biểu đồ tổng quan, ta nắm được xu hướng nhưng lại đánh mất nguyên nhân gốc của từng ca thất bại cụ thể.
+Sau Chương 15, `opsprobe` đã ghi nhận được một lượt thực thi: lệnh đã gọi, mã thoát và việc hết thời gian chờ. Nhưng điều tra sự cố thường cần nhiều hơn một lượt chạy. Dịch vụ phụ thuộc có chậm dần từ sáng? Lỗi tập trung ở một đích hay nhiều đích? Một yêu cầu chậm đã chờ ở đâu? Chỉ giữ dòng log cuối cùng thì mất xu hướng; chỉ giữ biểu đồ tổng hợp thì mất chi tiết để điều tra từng lần thất bại.
 
-Mô hình tư duy của chương là: năng lực quan sát tạo ra các phép chiếu có chủ đích từ hành vi hệ thống; mỗi phép chiếu giữ lại một loại bằng chứng và chấp nhận đánh đổi phần còn lại. Nhật ký vận hành (*logs*) lưu giữ định danh và chi tiết ngữ cảnh sự kiện. Chỉ số đo lường (*metrics*) tổng hợp nhiều sự kiện để phản ánh biến động theo chuỗi thời gian. Dấu vết thực thi (*traces*) bảo toàn mối quan hệ nhân quả của một lượt xử lý xuyên qua các ranh giới dịch vụ. Tín hiệu sức khỏe (*health*) giải đáp câu hỏi phạm vi hẹp về một thể hiện (*instance*) ngay tại thời điểm truy vấn. Không có một tín hiệu đơn lẻ nào là bản ghi trọn vẹn của toàn bộ hệ thống.
+Mô hình tư duy của chương là các phép chiếu: mỗi tín hiệu giữ lại một phần bằng chứng về hệ thống và bỏ qua phần khác. Log lưu chi tiết sự kiện; metric tổng hợp để thấy biến động theo thời gian; trace liên kết các chặng xử lý khi ngữ cảnh được truyền đúng; health check trả lời một câu hỏi hẹp tại thời điểm kiểm tra. Không tín hiệu nào tự ghi lại toàn bộ hệ thống.
 
 ## Một biểu đồ xanh vẫn có thể nói dối
 
-Giả sử bảng điều khiển (*dashboard*) ghi nhận `probe_success=1` sau lượt thăm dò (*probe*) mới nhất. Khi máy chủ đích gặp lỗi rồi phục hồi thành công trở lại, biểu đồ trực quan có thể chuyển sang màu xanh an toàn. Dẫu vậy, con số ấy hoàn toàn không thể hiện trong mười phút vừa qua đã phát sinh bao nhiêu lần thất bại, sự cố quá thời gian (*timeout*) có bị quy kết là lỗi hay không, hoặc tiến trình thăm dò có thực sự chạy lượt nào hay chưa. Đây không đơn thuần là việc thiết kế bảng điều khiển trực quan; đây là bài toán về ngữ nghĩa bản chất (*semantics*) của chuỗi dữ liệu đo lường.
+Giả sử dashboard hiển thị `probe_success=1` sau lần thăm dò gần nhất. Một lần thành công sau sự cố có thể làm biểu đồ xanh trở lại, nhưng không cho biết mười phút trước có bao nhiêu lần thất bại. Nó cũng không nói timeout được tính thế nào, hay giá trị còn sót lại từ một tiến trình đã ngừng thăm dò. Ta phải xác định ý nghĩa dữ liệu trước khi chọn cách vẽ.
 
-Một bộ đếm (*counter*) chỉ mang ý nghĩa chuẩn xác khi ta hiểu tường tận sự kiện (*event*) nào kích hoạt gia tăng giá trị. Với bộ thăm dò thu nhỏ trong bài học này, chính sách (*policy*) được thiết lập rõ ràng: mỗi lượt thăm dò hoàn tất tạo ra đúng một kết quả duy nhất thuộc tập hữu hạn gồm `success`, `failure`, hoặc `timeout`. Chỉ số đo lường mức độ khả dụng (Availability SLI) của bài thực hành được tính bằng tỷ lệ số lần `success` chia cho toàn bộ kết quả đã hoàn tất. Vì lẽ đó, kết quả quá thời hạn phải nằm trong mẫu số và không được phép làm triệt tiêu mẫu số (*denominator*). Đây là chính sách đo lường độ khả dụng của bộ thăm dò, không phải định nghĩa khuôn mẫu bất biến cho mọi hệ thống sản phẩm.
+Một bộ đếm chỉ có nghĩa khi biết sự kiện nào làm nó tăng. Trong lab, mỗi lượt thăm dò hoàn tất nhận đúng một kết quả: `success`, `failure` hoặc `timeout`. SLI khả dụng được chọn là số lượt `success` chia cho tổng số lượt hoàn tất. Timeout tăng mẫu số nhưng không tăng tử số. Đây là chính sách của phép thăm dò này, không phải định nghĩa khả dụng áp dụng cho mọi sản phẩm.
 
 ~~~text
 availability = successes / completed probes
@@ -32,7 +32,7 @@ Nếu chưa có lượt thăm dò nào hoàn tất, phép chia tỷ lệ hoàn t
 | “Lần chạy này chờ ở boundary nào?” | Trace của một execution | Tần suất của mọi execution nếu trace bị sample. |
 | “Có nên đưa traffic vào instance này ngay bây giờ?” | Readiness | SLO của một giờ vừa qua. |
 
-Nhật ký (*log*) không phải là chỉ số đo lường (*metric*) đi kèm một chuỗi ký tự dài hơn. Một sự kiện nhật ký có thể chứa đựng đích đến đã khử dữ liệu nhạy cảm (*redaction*), mã thoát (*exit code*), thời lượng thực thi (*duration*), mã yêu cầu hoặc định danh dấu vết nhằm giúp kỹ sư truy vết chính xác một lượt xử lý cụ thể. Ngược lại, chỉ số đo lường không được phép tùy tiện đưa đường dẫn URL đầy đủ, mã định danh người dùng, thông điệp lỗi thô, mã dấu vết hay đích đến biến thiên vô hạn vào làm nhãn mặc định: mỗi tổ hợp nhãn cấu thành một chuỗi thời gian (*time series*) riêng biệt, do đó số lượng chiều nhãn (*cardinality*) bùng nổ không giới hạn sẽ biến chi phí lưu trữ và thời gian truy vấn thành một sự cố vận hành nghiêm trọng mới.
+Log có thể lưu đích đến đã che dữ liệu nhạy cảm, mã thoát, thời lượng và request ID để điều tra một lượt cụ thể. Không nên đưa nguyên URL, user ID, thông điệp lỗi thô hay trace ID vào nhãn metric mặc định. Mỗi tổ hợp giá trị nhãn tạo một chuỗi thời gian riêng. Cardinality là số chuỗi phân biệt, không chỉ là số tên nhãn: một nhãn `request_id` cũng có thể sinh hàng triệu chuỗi. Chi phí lưu trữ và truy vấn có thể trở thành sự cố mới.
 
 Dấu vết thực thi (*trace*) cũng không đơn thuần là dòng nhật ký gắn thêm mũi tên điều hướng. Nó khắc họa chuẩn xác mối quan hệ nhân quả giữa các tác vụ trong cùng một lượt xử lý; cơ chế truyền ngữ cảnh (*context propagation*) là mắt xích gắn kết các phân đoạn (*span*) xuyên qua ranh giới giao thức HTTP, hàng đợi thông điệp (*queue*) hoặc tiến trình con khi hệ thống được cài đặt cơ chế giám sát thích hợp. Chương 11 đã sử dụng `httptrace` để quan sát một ứng dụng máy khách cục bộ, nhưng kỹ thuật đó không tự động trở thành hệ thống truy vết phân tán (*distributed tracing*). Phần này tập trung chuẩn hóa ngữ nghĩa để khi áp dụng OpenTelemetry trong thực tế, ta nắm rõ một thuộc tính (*attribute*), phân đoạn thực thi (*span*) hay quyết định chọn mẫu (*sampling*) đang trực tiếp phục vụ câu hỏi kỹ thuật nào.
 
@@ -106,7 +106,15 @@ Khóa đồng bộ `sync.Mutex` ở đây không phải là nỗ lực tự vi�
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 Lỗi quá thời gian (*timeout*) chỉ chứng minh bên gọi không nhận được phản hồi trong ngân sách thời gian đã định, hoàn toàn không đủ căn cứ để suy diễn dịch vụ đích đã sập hoàn toàn. Trong thực tế, dịch vụ đích có thể vẫn đang chạy nhưng bị nghẽn hàng đợi xử lý, hoặc phản hồi đã được gửi đi nhưng bị chậm trễ trên đường truyền mạng, thậm chí một tác vụ ghi dữ liệu đã được xác nhận thành công ở hệ thống phía sau trước khi bên gọi cạn kiệt thời gian chờ.
 
-Theo giao ước SLI cụ thể được lựa chọn trong bài thực hành này, sự cố quá thời gian được tính vào mẫu số thất bại bởi vì dưới góc nhìn của bên gọi, lượt thăm dò đó đã không thu được kết quả hợp lệ trong khung thời gian cam kết. Tuy nhiên, đây là một lựa chọn thiết kế chính sách, không phải quy luật bất biến cho mọi hệ thống. Một số dịch vụ có thể tách riêng chỉ số quá thời hạn thành một chỉ số SLI độc lập về độ trễ, phân loại theo tác vụ lũy thừa bất biến (*idempotent*), hoặc ghi nhận nhãn riêng `outcome="timeout"` để đội ngũ trực vận hành không đánh đồng nghẽn mạng với sự cố sập ứng dụng. Khi sản phẩm thay đổi chính sách phân loại, tên gọi chỉ số, công thức SLI và ngưỡng cảnh báo đều phải được cập nhật đồng bộ.
+Theo contract của lab, timeout tăng `Completed` và `TimedOut`, không tăng `Succeeded`: mẫu số là mọi lượt hoàn tất, không phải chỉ các lượt thất bại. Nhãn `outcome="timeout"` giữ nguyên nhân quan sát để điều tra; nó không biến timeout thành thành công. Sản phẩm có thể chọn một SLI khác, nhưng phải công bố rõ đối tượng, công thức và cửa sổ đo.
+
+Tính lũy đẳng (*idempotency*) trả lời câu hỏi khác: lặp lại thao tác có làm thay đổi tác động dự kiến so với thực hiện một lần không? Nó giúp thiết kế retry, không chứng minh lần gọi hết hạn đã thành công hay thất bại ở phía máy chủ. Chương 13 đã xét trường hợp ghi dữ liệu xong nhưng mất phản hồi; ở đây ta chỉ biết kết quả mà bên thăm dò quan sát được.
+
+> **Dừng để dự đoán:** Bộ đếm đã ghi 1.000 lượt thành công. Mười lượt tiếp theo đều timeout. Tỷ lệ từ lúc khởi động và tỷ lệ trong mười lượt mới nhất là bao nhiêu?
+
+`SuccessRatio()` trên snapshot mới trả về `1000/1010`, xấp xỉ 99,01%; trong cửa sổ mười lượt mới, tỷ lệ là `0/10 = 0%`. Không phép tính nào sai, nhưng chúng trả lời hai câu hỏi khác nhau. `TestLifetimeRatioCanHideRecentOutage` tái hiện sự khác biệt này mà không cần máy chủ thật hay chờ thời gian thực.
+
+Hai snapshot của cùng một recorder chưa reset cho phép tính chênh lệch `Succeeded` và `Completed`. Khi tiến trình khởi động lại, bộ đếm có thể giảm; trừ trực tiếp hai số `uint64` khi đó có thể tràn vòng và sinh số rất lớn. Một khoảng mất dữ liệu còn có thể làm cửa sổ không đủ độ bao phủ. Hệ thống thu thập phải xử lý reset, thời gian và dữ liệu thiếu; ví dụ Prometheus `increase()` xử lý reset và ngoại suy theo cửa sổ, nên kết quả không nhất thiết là số nguyên hay một bản đếm sự kiện chính xác từng lần. Lab snapshot không hiện thực những cơ chế đó.
 
 ## SLO không phải một alert thật to
 
@@ -170,9 +178,9 @@ Các trạng thái `ok` và `slow` đều được ghi nhận là `success`; vi�
 
 | Instrument | Event boundary | Tập dữ liệu cố ý giữ hẹp | Điều không được suy ra |
 | --- | --- | --- | --- |
-| `probe_requests_total` | Handler hoàn tất. | `outcome`: `success`, `failure`, `timeout`. | Counter không giữ request nào fail. |
-| `probe_request_duration_seconds` | Cùng handler. | Cùng label; bucket 5–250 ms. | Bucket không phải SLO hay percentile chính xác. |
-| JSON log | Cùng handler. | mode, outcome, HTTP status, duration. | Một log không là rate theo thời gian. |
+| `probe_requests_total` | Dependency trả kết quả, trước khi ghi HTTP response. | `outcome`: `success`, `failure`, `timeout`. | Không chứng minh client nhận được response. |
+| `probe_request_duration_seconds` | Từ đầu handler đến sau dependency, trước ghi response. | Cùng label; bucket 5–250 ms. | Không đo toàn bộ thời gian phía client; bucket không là SLO. |
+| JSON log | Sau dependency, trước ghi response. | mode, outcome, HTTP status dự định gửi, duration. | Không xác nhận response đã được bàn giao thành công. |
 | Hai spans | Request và dependency. | mode/outcome; error status khi fail. | Một trace không là thống kê cho mọi request. |
 
 Việc lựa chọn các khoảng phân loại (*bucket*) cho biểu đồ tần suất là một quyết định đo lường có tính toán. Bài thực hành chọn các mốc 5, 10, 25, 50, 100 và 250 ms nhằm phân biệt rõ ràng trường hợp quá thời gian 20 ms với trường hợp chậm 40 ms trên máy tính cá nhân; cấu hình này không được sao chép nguyên xi thành ngưỡng đo lường thực tế. Nếu cần trả lời câu hỏi về độ trễ ở ngưỡng 2 giây, việc đặt mốc tối đa 250 ms sẽ làm mất hoàn toàn độ phân giải dữ liệu cần thiết. Nếu đưa từng đường dẫn định tuyến, URL thô, định danh người dùng, mã dấu vết hay thông báo lỗi vào làm nhãn, một chỉ số tổng hợp sẽ bị biến thành kho lưu trữ sự kiện vô tận. Bài tập chỉ gán kết quả `outcome` vào nhãn; tham số `mode` ít mang giá trị trong ngữ cảnh này và không cần thiết cho câu hỏi vận hành được đặt ra.

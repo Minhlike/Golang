@@ -464,7 +464,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         flush_image()
         if line.startswith(("```", "~~~")):
-            flush_paragraph()
+            flush_paragraph(before_code=not in_code)
             if in_code:
                 add_code_block()
             in_code = not in_code
@@ -518,17 +518,16 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         if not line.strip():
             following = next((candidate for candidate in lines[line_index + 1:] if candidate.strip()), '')
-            flush_paragraph(before_code=(
-                chapter.name == 'devops-library-atlas.md'
-                and following.startswith(('```', '~~~'))
-            ))
+            flush_paragraph(before_code=following.startswith(('```', '~~~')))
             continue
-        heading = re.match(r"^(#{1,3})\s+(.+)$", line)
+        heading = re.match(r"^(#{1,4})\s+(.+)$", line)
         if heading:
             flush_paragraph()
             in_references = False
             level = len(heading.group(1))
-            story.append(Paragraph(inline(heading.group(2), mono), s[f"h{level}"]))
+            # H4 answer labels use the existing minor-heading style. Retain
+            # the structural boundary without introducing a new design system.
+            story.append(Paragraph(inline(heading.group(2), mono), s[f"h{min(level, 3)}"]))
             if level == 1:
                 # Chapter opener: thin rule below title + generous whitespace
                 story.append(HRFlowable(width="100%", thickness=LINE_WEIGHT_RULE,
@@ -742,10 +741,13 @@ def keep_headings_with_content(story: list) -> list:
             index += 1
             continue
         end = index + 1
-        while end < len(story) and getattr(getattr(item, 'style', None), 'name', '') != 'body-intro' and (
+        while end < len(story) and (
             isinstance(story[end], (Spacer, HRFlowable))
-            or getattr(getattr(story[end], 'style', None), 'name', '')
-            in {'H1', 'H2', 'H3'}
+            or (
+                getattr(getattr(item, 'style', None), 'name', '') != 'body-intro'
+                and getattr(getattr(story[end], 'style', None), 'name', '')
+                in {'H1', 'H2', 'H3', 'body-intro'}
+            )
         ):
             end += 1
         prefix = story[index:end]
