@@ -25,6 +25,8 @@ Gói `os/exec` cố ý không tự động kích hoạt vỏ lệnh hệ thống
 
 Trong chương này, bên gọi chỉ định tệp thực thi trực tiếp từ mã nguồn hoặc thông qua danh sách trắng cho phép (*allowlist*). Giá trị `target` chỉ đơn thuần là một đối số tham số. Đây không phải lời giải vạn năng cho mọi bộ điều phối công cụ, nhưng là ranh giới chuẩn xác cho yêu cầu hiện tại: người dùng không được phép truyền nguyên một chuỗi dòng lệnh tùy ý qua cờ cấu hình rồi buộc chương trình phải tự suy đoán ý nghĩa cú pháp.
 
+Tách đối số ngăn việc shell diễn giải `;`, `*` hay `$HOME`, nhưng chương trình đích vẫn có thể hiểu đầu vào như một cờ, biểu thức hoặc đường dẫn nguy hiểm. Bên gọi phải kiểm tra theo hợp đồng của chính công cụ; `--` chỉ kết thúc cờ nếu công cụ hỗ trợ. Tên không chứa dấu phân cách đường dẫn còn được tìm qua cơ chế `LookPath`; kết quả phụ thuộc môi trường. `exec.ErrDot` chặn trường hợp tìm ra executable tương đối với thư mục hiện tại, không xác minh danh tính hay tính tin cậy của mọi executable trong PATH. Công cụ đã chọn trước nên dùng đường dẫn và quyền truy cập được kiểm soát.
+
 ## Bốn kết cục, không phải một `error`
 
 Bộ chạy lệnh có thể trả về lỗi `error`, nhưng bên gọi bắt buộc phải phân biệt được dạng thất bại cụ thể. Thành công trọn vẹn là khi tiến trình được khởi chạy và kết thúc với mã trạng thái bằng 0. Một câu lệnh được kích hoạt thành công nhưng kết thúc với mã thoát 7 lại là một kết cục hoàn toàn khác: luồng lỗi chuẩn `stderr` của nó có thể chứa đựng chính xác manh mối chẩn đoán sự cố. Quá hạn thời gian chờ (*deadline exceeded*) là kết cục thứ ba. Không tìm thấy tệp thực thi hoặc không đủ quyền khởi chạy là kết cục thứ tư, thường xuất phát từ sai sót cấu hình môi trường trước khi quá trình chẩn đoán kịp bắt đầu.
@@ -120,28 +122,35 @@ Sau khi process đã trả, phần còn lại dựng `Result` kể cả khi có 
 }
 ~~~
 
-Sau khi lệnh `Run` hoàn tất, đối tượng `ProcessState` chỉ tồn tại nếu tiến trình đã thực sự khởi chạy và kết thúc; giá trị `-1` là lính canh (*sentinel*) đại diện cho trường hợp không có mã trạng thái thoát. Cuối cùng, bộ chạy câu lệnh kiểm tra trạng thái của ngữ cảnh trước khi phân loại lỗi `ExitError`: nếu thời hạn của chính bộ chạy đã cạn kiệt, đó là chính sách thất bại ưu tiên cao hơn việc tiến trình có kịp trả về mã trạng thái nào trong lúc bị cưỡng chế dừng hay không.
+`ProcessState` được điền khi tiến trình đã khởi chạy và được chờ kết thúc. Runner khởi tạo `ExitCode=-1` khi chưa có trạng thái ấy, nhưng `ProcessState.ExitCode()` cũng có thể trả `-1` nếu tiến trình kết thúc bởi signal trên hệ điều hành hỗ trợ. Trước bước chạy, lỗi đặc tả trả `Result{}` với mã zero; vì vậy chỉ một số `ExitCode` không chứng minh tiến trình đã chạy hay thành công. Hãy xét cả `error` và hợp đồng của runner.
+
+Runner ưu tiên `runCtx.Err()` ở thời điểm thu kết quả. Đây là chính sách phân loại, không phải bằng chứng context đã gây ra mọi mã thoát. Nếu context bị hủy sát lúc tiến trình kết thúc, lỗi context có thể được ưu tiên và `*exec.ExitError` không còn nằm trong error trả về. Cờ `TimedOut` chỉ chỉ ra `DeadlineExceeded`, không chỉ mọi lần hủy. Muốn phân biệt thêm nguyên nhân, cần hợp đồng kết quả khác; helper hiện tại không suy ra nhân quả từ thứ tự quan sát.
 
 Giải pháp này chỉ phù hợp với dữ liệu đầu ra dung lượng nhỏ, được giới hạn theo hợp đồng của công cụ đang chạy. Cấu trúc `bytes.Buffer` không phải chính sách tiếp nhận đầu ra phù hợp cho một tiến trình có thể in dữ liệu vô tận. Một công cụ môi trường thực tế bắt buộc phải chọn một trong ba chiến lược rõ ràng: truyền dòng dữ liệu có cơ chế tạo áp lực ngược (*backpressure*), thu thập có giới hạn trần và đánh dấu cắt ngắn rõ ràng, hoặc lưu trữ dữ liệu đầu ra thành tệp tạo tác (*artifact*). Tuyệt đối không âm thầm sử dụng bộ đệm vô hạn trong bộ nhớ rồi ngộ nhận đó là năng lực quan sát hệ thống.
 
 ## Cancel process không đồng nghĩa dọn cả cây process
 
-Đây là điểm rất dễ áp dụng sai trực giác từ Chương 12. Phương thức `CommandContext` mặc định chỉ kích hoạt tín hiệu cưỡng chế dừng cho chính tiến trình lệnh trực tiếp khi ngữ cảnh kết thúc. Một câu lệnh có thể sinh ra các tiến trình con khác, để các tiến trình đó giữ mở đường ống truyền dữ liệu, hoặc yêu cầu một giao thức dừng duyên dáng chuyên biệt. Gói `os/exec` cung cấp thêm thuộc tính `WaitDelay` để giới hạn thời gian chờ trong trường hợp tiến trình con không chịu kết thúc hoặc các luồng vào ra không đóng; tuy nhiên các khái niệm như nhóm tiến trình (*process group*), đối tượng công việc (*job object* trên Windows), chuỗi tín hiệu và phương thức dọn dẹp chi tiết là chính sách phụ thuộc sâu vào hệ điều hành.
+`CommandContext` mặc định gọi `Process.Kill` cho tiến trình trực tiếp khi context kết thúc; việc khởi chạy có thể chưa xảy ra nếu context đã hủy. Nó không dọn cả cây tiến trình. Tiến trình hậu duệ có thể giữ mở pipe dù tiến trình trực tiếp đã thoát. `WaitDelay` bắt đầu đếm từ khi context kết thúc hoặc `Wait` quan sát tiến trình thoát, tùy điều kiện nào đến trước; khi hết khoảng chờ nó có thể kill tiến trình trực tiếp còn sống và đóng các pipe do `Cmd` quản lý. Đây không phải thời lượng tối đa kể từ `Start`, cũng không làm một `Read`/`Write` tùy ý đang block tự kết thúc. Nếu tiến trình thoát thành công nhưng pipe phải đóng bởi `WaitDelay` và không có lần gọi `Cancel`, `Wait` trả `exec.ErrWaitDelay`. Nhóm tiến trình và Windows job object cần chính sách hệ điều hành riêng.
 
-Vì vậy bài thực hành không đưa ra cam kết rằng việc hủy bỏ đồng nghĩa với việc toàn bộ tiến trình con đều biến mất. Đối với tiến trình phụ trợ trong bài kiểm thử, vốn không sinh tiến trình hậu duệ và không giữ mở đường ống sau khi bị hủy, kịch bản kiểm thử xác nhận hàm `Run` trả về quyền điều khiển ngay khi hết thời hạn và gán nhãn kết quả chính xác. Đối với các công cụ có tiến trình con giữ mở đường ống dữ liệu, hàm `Run` vẫn có thể bị chặn chờ luồng vào ra dù tiến trình chính đã bị dừng; khi đó kỹ sư bắt buộc phải thiết kế `WaitDelay` cùng cơ chế dọn dẹp phù hợp. Nếu sau này ứng dụng tích hợp công cụ sinh cây tiến trình công nhân (*worker tree*), yêu cầu thiết kế mới phải xác định rõ hệ điều hành mục tiêu và vòng đời mong muốn trước khi can thiệp vào `SysProcAttr` hay nhóm tiến trình.
+Test deadline hiện có kiểm lỗi và cờ timeout, không chứng minh tiến trình đã khởi chạy trước hạn: 30ms có thể hết ngay trong giai đoạn start. Test `TestRunCancelsAnAlreadyStartedChild` bổ sung điểm bắt tay qua TCP loopback; chỉ hủy sau khi helper báo đã chạy và đang chờ. Fixture chờ runner trả về, kiểm kết nối đã đóng và join goroutine do test sở hữu. Nó kiểm tiến trình trực tiếp trên môi trường chạy test, không đo latency cố định, không chứng minh cây hậu duệ được dọn. Runner vẫn để `WaitDelay=0`, nên các công cụ giữ pipe mở có thể khiến `Run` chờ lâu hơn ngân sách context. Đó là giới hạn cần giải quyết trước khi dùng cho loại công cụ ấy.
 
 ## Từ runner sang CLI có thể kể lại
 
 Giao diện dòng lệnh (*CLI*) là ranh giới tiếp xúc trực tiếp với con người. Mã nguồn không nên nhồi nhét việc phân tích cờ cấu hình, kiểm tra hợp lệ mục tiêu, khởi tạo tiến trình con, định dạng dữ liệu và ghi nhật ký vào trong một hàm `main` kéo dài. Kiểu `flag.FlagSet` là đủ cho câu lệnh đầu tiên: phân tích cờ `-target` và `-timeout`, kiểm tra mục tiêu theo đúng hợp đồng của công cụ thăm dò, rồi kích hoạt bộ chạy với tệp thực thi đã định. Khi hàm `Run` hoàn tất, giao diện có thể in báo cáo trực quan cho người dùng; nhật ký có cấu trúc chỉ ghi nhận các trường dữ liệu cần thiết phục vụ việc tái dựng lượt chạy.
 
 ~~~go
-logger.Info(
-	"diagnostic completed",
-	"tool", result.Command[0],
-	"exit_code", result.ExitCode,
-	"timed_out", result.TimedOut,
-)
+if !errors.Is(err, ErrInvalidSpec) {
+	logger.Info(
+		"diagnostic returned",
+		"tool", spec.Name,
+		"exit_code", result.ExitCode,
+		"timed_out", result.TimedOut,
+		"ok", err == nil,
+	)
+}
 ~~~
+
+Đoạn ghi nhận dùng `spec.Name` đã được chọn trước, không truy cập `result.Command[0]`: lỗi đặc tả trả slice rỗng và truy cập ấy sẽ panic. Nhãn “returned” cùng trường `ok` cũng tránh gọi mọi lượt chạy là hoàn tất thành công; không ghi toàn bộ error hay đối số vì chúng có thể chứa dữ liệu nhạy cảm.
 
 Tuyệt đối không ghi nhật ký các thông tin mã thông báo bảo mật (*token*), tiêu đề ủy quyền (*authorization header*), toàn bộ biến môi trường hay chuỗi dòng lệnh thô chứa mật khẩu bí mật. Gói `slog` không tự động che giấu dữ liệu nhạy cảm; chính ranh giới thiết kế phải chọn lọc trường nào được phép lưu vào nhật ký. Chương 16 sẽ nâng tầm một lượt chẩn đoán đơn lẻ thành các tín hiệu quan sát toàn diện qua trạng thái sức khỏe, chỉ số đo lường, dấu vết thực thi và mục tiêu mức dịch vụ (*SLO*). Tại mốc này, điều cốt lõi là báo cáo không được đánh tráo giữa ba trạng thái: câu lệnh không thể khởi động, câu lệnh thực thi thất bại, và câu lệnh bị chủ động ngắt do cạn kiệt ngân sách thời gian.
 

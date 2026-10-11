@@ -2,7 +2,7 @@
 
 # Chương 14 — Khi kiểu trở thành dữ liệu
 
-Một hàm nhận tham số `any` thường tạo ra hai phản ứng trái ngược. Có người thấy nó dễ dãi rồi bắt đầu đưa mọi thứ vào; có người lại thấy nó tiềm ẩn rủi ro rồi cấm đoán hoàn toàn. Cả hai phản ứng đều bỏ qua câu hỏi cốt lõi: khi trình biên dịch không còn nắm rõ kiểu dữ liệu cụ thể tại vị trí gọi hàm, đoạn mã nào sẽ chịu trách nhiệm kiểm tra hình thái của giá trị, và đoạn mã nào được trao quyền thay đổi giá trị đó?
+Một hàm nhận `any` có thể tiếp nhận nhiều kiểu cụ thể, nhưng chữ ký ấy không cho phần thân hàm biết đích có phải con trỏ tới cấu trúc cấu hình hay không. Trình biên dịch vẫn kiểm tra biểu thức ở nơi gọi; điều còn thiếu là hợp đồng hẹp hơn bên trong hàm. Đoạn mã nào sẽ kiểm tra hình thái của giá trị, và đoạn mã nào được trao quyền thay đổi giá trị đó?
 
 Hãy xét một bộ tải cấu hình nhỏ. Ứng dụng `opsprobe` có thể tiếp nhận giá trị từ các biến môi trường, nhưng mô-đun đọc môi trường không nên phụ thuộc hay biết trước mọi cấu trúc cấu hình của từng lệnh con sau này. Bộ tải tiếp nhận một đích đến (*destination*) cùng một bảng ánh xạ các giá trị đã đọc; đối tượng đích quyết định trường dữ liệu nào được phép nhận giá trị. Nếu bên gọi truyền `Config{}` theo dạng giá trị thay vì con trỏ `&Config{}`, bộ tải không được phép âm thầm tạo bản sao rồi khiến bên gọi ngộ nhận cấu hình đã được áp dụng. Nếu một trường có gắn thẻ dữ liệu (*struct tag*) nhưng kiểu dữ liệu không phải `string`, bộ tải không được tùy tiện suy đoán cách phân tích cú pháp.
 
@@ -30,7 +30,7 @@ Trong mã nguồn của Go 1.27.1, cấu trúc `reflect.Value` hiện chứa cá
 ~~~go
 type Value struct {
 	typ_ *abi.Type
-	ptr_ unsafe.Pointer
+	ptr unsafe.Pointer
 	flag
 }
 ~~~
@@ -38,6 +38,8 @@ type Value struct {
 Cờ nội bộ hiện lưu giữ thông tin về danh mục loại kiểu `Kind`, trạng thái chỉ đọc và khả năng định vị địa chỉ bộ nhớ (*addressability*). Ở tầng giao diện lập trình, điều cần ghi nhớ rất rõ ràng: hàm `reflect.ValueOf(config)` tiếp nhận một bản sao giá trị nên không cho phép ghi đè ngược lại vào biến của bên gọi; phương thức `CanSet()` vì thế trả về `false`.
 
 Ngược lại, biểu thức `reflect.ValueOf(&config).Elem()` quan sát biến gốc thông qua con trỏ. Đối với trường cấu trúc, phương thức `CanSet()` còn phụ thuộc vào việc trường đó có thể chỉnh sửa theo quy tắc hiển thị công khai (*exported*) hay không. Đây là chốt chặn phòng vệ cấp giao diện cần sử dụng thay vì suy diễn từ các cờ bit nội bộ.
+
+`CanAddr` và `CanSet` trả lời hai câu hỏi khác nhau. Một trường không công khai lấy từ `reflect.ValueOf(&config).Elem()` có thể có địa chỉ nhưng vẫn không được gán hoặc lấy ra qua `Interface`. Ngược lại, việc sao chép giá trị vào interface không sao chép sâu dữ liệu mà giá trị ấy tham chiếu: `reflect.ValueOf(slice).CanSet()` là `false`, nhưng phần tử của slice vẫn có thể được gán qua `Index`. Trực giác đúng là xét quyền của từng `Value`, không suy rằng mọi dữ liệu nằm sau `any` đều là bản sao độc lập.
 
 Lời gọi `ApplyEnv(nil, nil)` còn tiềm ẩn một cạm bẫy khác. Biểu thức `reflect.ValueOf(nil)` trả về giá trị rỗng của `reflect.Value`, có loại kiểu `Kind()` là `Invalid`; nhiều thao tác tiếp theo trên một giá trị không hợp lệ sẽ gây sập tiến trình (`panic`). Do đó, ranh giới xử lý bắt buộc phải kiểm tra phương thức `IsValid()` trước khi thực hiện các phép toán phụ thuộc hình thái. Đây là chốt chặn phòng vệ cho một giá trị thời gian chạy thực sự không tồn tại, không phải trường hợp con trỏ `nil` thông thường.
 
@@ -103,7 +105,7 @@ func schemaError(field, rule string) error {
 }
 ~~~
 
-Hàm `ApplyEnv` vận hành qua hai giai đoạn riêng biệt. Giai đoạn A chỉ đọc siêu dữ liệu và thu thập các phép gán hợp lệ; giai đoạn B mới thực thi việc gán giá trị vào trường đích. Nhờ đó, một trường hợp lệ đứng trước một trường vi phạm lược đồ sẽ không thể để lại đối tượng đích ở trạng thái nửa mới nửa cũ dang dở. Đây là cùng một nguyên tắc quản lý trạng thái khi gặp lỗi đã được nêu ở Chương 13, nhưng áp dụng tại ranh giới thời gian chạy thay vì giao dịch cơ sở dữ liệu: một khi hợp đồng có thể ngăn chặn trạng thái phân mảnh, lỗi trả về phải đưa bên gọi về nguyên trạng thái ban đầu.
+`ApplyEnv` đọc lược đồ và thu thập phép gán trước, sau đó mới ghi vào đích. Trường hợp lệ đứng trước trường sai vì thế không bị cập nhật nếu hàm trả lỗi lược đồ. Cam kết này chỉ dành cho lỗi mà helper kiểm tra; các lệnh gán vẫn diễn ra tuần tự, không phải giao dịch nguyên tử đối với người đọc đồng thời. Bên gọi phải sở hữu đích và giữ map đầu vào ổn định trong lượt gọi, hoặc thiết kế đồng bộ riêng theo Ch08. Reflection không tự thêm khóa hay rollback khi chương trình bị dừng.
 
 ~~~go
 func ApplyEnv(dst any, values map[string]string) error {
@@ -151,6 +153,8 @@ func ApplyEnv(dst any, values map[string]string) error {
 ~~~
 
 Đối tượng `Type` giải đáp câu hỏi về phần khai báo: trường thứ `i` có tên là gì, mang thẻ dữ liệu nào, có được công khai hay không, và thuộc chính xác kiểu dữ liệu nào. Phương thức `Kind` chỉ phản ánh danh mục loại kiểu nền tảng tại thời gian chạy; vì một kiểu định danh như `type Token string` vẫn có `Kind() == reflect.String`, nó không đủ chặt chẽ cho một hợp đồng chỉ chấp nhận kiểu nguyên thủy `string`. Lời gọi `TypeFor[string]()` cung cấp định danh chính xác của kiểu dữ liệu cần tiếp nhận. Đối tượng `Value` giải đáp câu hỏi về thể hiện thực tế: giá trị hiện tại là gì và có quyền gán giá trị hay không. Quy tắc nhất quán là: đọc siêu dữ liệu từ `Type`, và đọc hoặc biến đổi dữ liệu thực thông qua `Value`.
+
+Helper kiểm tra mọi trường có thẻ tham gia, kể cả khi map không chứa giá trị cho trường ấy. Nó chỉ duyệt trường trực tiếp, không tự đi sâu vào cấu trúc nhúng. Alias như `type Token = string` vẫn là chính kiểu `string` và được chấp nhận, khác với định nghĩa `type Token string`. Các thẻ phải có định dạng chuẩn: `StructTag.Lookup` không là bộ kiểm tra cú pháp, và tài liệu không quy định kết quả cho thẻ sai định dạng. Chạy `go vet` để tìm lỗi thẻ khai báo; đừng đọc cam kết “lỗi lược đồ” của helper thành cam kết phát hiện mọi lỗi văn bản trong tag.
 
 > **Dừng để dự đoán:** Nếu caller gọi `cfg := Config{}` rồi thực hiện `ApplyEnv(cfg, values)` bằng giá trị thay vì truyền con trỏ `&cfg`, liệu hàm có thể cập nhật các trường cấu hình không? Vì sao implementation của `ApplyEnv` chặn lỗi ngay từ guard kiểm tra con trỏ ở đầu hàm thay vì duyệt qua từng field rồi kiểm tra `CanSet()`?
 
@@ -224,7 +228,7 @@ Thứ ba, với pattern chuyển pointer qua `uintptr` để cộng offset rồi
 p = unsafe.Pointer(uintptr(p) + offset)
 ~~~
 
-Mẫu chuyển đổi trong cùng một biểu thức còn đòi hỏi con trỏ phải nằm trọn trong cùng đối tượng đã được cấp phát và trỏ tới vùng dữ liệu hợp lệ theo hợp đồng của `unsafe`; nó không cho phép tính toán ra một địa chỉ tùy tiện ngoài biên. Việc tách địa chỉ qua biến trung gian `uintptr` không thể được hợp thức hóa chỉ bằng hàm `runtime.KeepAlive`. Các mô tả cơ chế và ví dụ tại đây được kiểm chứng thực nghiệm trên Go 1.27.1; chỉ những mẫu chuyển đổi được gói công bố chính thức mới là chuẩn mực mà bên gọi được phép dựa vào.
+Mẫu chuyển đổi trong cùng một biểu thức còn đòi hỏi kết quả ở trong đối tượng đã cấp phát; không được tính con trỏ tới ngay sau phần tử cuối theo quy ước đôi khi dùng trong C. `runtime.KeepAlive` không hợp thức hóa việc tách địa chỉ qua biến trung gian `uintptr`. Quy tắc chuyển đổi dựa trên tài liệu `unsafe`; phần heap không di dời và sao chép stack được đối chiếu source Go1.27.1 Windows/amd64. Ví dụ sai ở trên dùng để đọc và phản biện, không chạy nó rồi coi việc chưa crash là bằng chứng an toàn.
 
 Trong thư viện Go 1.27.1, các kiểu `reflect.StringHeader` và `reflect.SliceHeader` đã bị đánh dấu lỗi thời (*deprecated*); tài liệu chính thức cảnh báo rằng trường `Data uintptr` không đủ năng lực giữ dữ liệu sống và cách biểu diễn này không an toàn cũng như không mang tính khả chuyển (*portable*). Khi thực sự cần thao tác tại ranh giới tầng thấp, hãy tuân thủ hợp đồng của các hàm hỗ trợ trong gói `unsafe` thay vì tự ý định nghĩa cấu trúc đầu mục; các hàm hỗ trợ này vẫn yêu cầu tuân thủ nghiêm ngặt các quy tắc về vòng đời và quyền biến đổi dữ liệu:
 
@@ -239,8 +243,10 @@ str := unsafe.String(ptr, len(s))
 slicePtr := unsafe.SliceData(buf)
 
 // Tạo slice từ con trỏ và độ dài
-slice := unsafe.Slice(slicePtr, count)
+slice := unsafe.Slice(slicePtr, len(buf))
 ~~~
+
+Với chuỗi rỗng, `StringData` trả con trỏ không được quy định, có thể là `nil`; không được giải tham chiếu. `SliceData(nil)` trả `nil`, nhưng slice khác `nil` có capacity bằng 0 trả con trỏ khác `nil` tới địa chỉ không được quy định. Dùng độ dài 0 với `unsafe.String` hoặc `unsafe.Slice` không cấp quyền đọc byte ở con trỏ ấy. Ví dụ giữ `len(buf)` để không dựng một vùng nhìn vượt khỏi dữ liệu đã có; phép dựng slice này chia sẻ mảng nền, không sao chép. Kiểm thử `TestUnsafeHelpersEmptyAndSharedStorage` chỉ chạy các trường hợp hợp lệ đó, không thử đọc địa chỉ tùy ý.
 
 Cần bảo đảm tuyệt đối hợp đồng về vòng đời và quyền sửa đổi dữ liệu: con trỏ Go hợp lệ được bộ thu gom rác chủ động theo dõi, khác hoàn toàn với một địa chỉ đã bị biến thành số nguyên vô hồn. Hàm `unsafe.String` không cho phép chỉnh sửa mảng byte nền tảng trong khi chuỗi ký tự vẫn đang được sử dụng. Hàm `runtime.KeepAlive` phát huy tác dụng tại các ranh giới như tài nguyên gắn bộ dọn dẹp (*finalizer*) mà hệ điều hành chỉ còn quản lý qua bộ mô tả tệp; nó không hợp thức hóa các phép chuyển đổi nằm ngoài quy chuẩn của `unsafe`, không khóa cố định vùng nhớ (*pinning*), và không thể khôi phục một địa chỉ số nguyên đã lỗi thời.
 

@@ -1,6 +1,36 @@
-# Independent scientific review — checkpoints 1–4
+# Independent scientific review — checkpoints 1–5
 
-Trạng thái: **CHECKPOINT, chưa nghiệm thu toàn sách**. Checkpoint 1 giữ nguyên bằng chứng Ch02/16/26/27; checkpoint 2 tiếp tục Ch03–Ch07; checkpoint 3 tiếp tục Ch08–Ch10 và đóng duy nhất đoạn R33 ở Ch02; checkpoint 4 tiếp tục Ch11–Ch13. Mười lăm manuscript đã được đọc; các kết luận chỉ áp dụng cho chủ đề, source và test được chỉ rõ, không phải mọi claim hay mọi trang. Những chương khác và hai Atlas chưa được review khoa học thủ công. Không merge hoặc promotion Master.
+Trạng thái: **REVIEW_IN_PROGRESS, chưa nghiệm thu toàn sách**. Checkpoint 1 giữ nguyên bằng chứng Ch02/16/26/27; checkpoint 2 tiếp tục Ch03–Ch07; checkpoint 3 tiếp tục Ch08–Ch10 và đóng duy nhất đoạn R33 ở Ch02; checkpoint 4 tiếp tục Ch11–Ch13; checkpoint 5 tiếp tục Ch14–Ch15. Mười bảy manuscript đã được đọc; các kết luận chỉ áp dụng cho chủ đề, source và test được chỉ rõ, không phải mọi claim hay mọi trang. Những chương khác và hai Atlas chưa được review khoa học thủ công. Theo chỉ thị tiếp nối, các mốc là lưu trữ nội bộ, không phải điểm dừng trả lượt. Không merge hoặc promotion Master.
+
+## Checkpoint 5
+
+Mốc nội bộ Ch14–15; STARTING_HEAD `6db2c4a886c1fe90a83ef64b242ec5ddbb5fe15b`. Không mở đợt thiết kế, không sửa implementation lab để hợp thức hóa prose. Các chỉ thị dừng tại checkpoint trước là lịch sử; chỉ thị mới yêu cầu tiếp tục toàn bộ các chương còn lại.
+
+| ID / mức / phân loại | Vị trí source | Cũ → mới và bằng chứng |
+| --- | --- | --- |
+| R70 / P2 / INHERITED_DEFECT | Ch14:33 | Field nội bộ `ptr_` → `ptr`; declaration in sách đối chiếu đúng ba field với `reflect/value.go` Go1.27.1. Không coi representation nội bộ là public API. |
+| R71 / P3 / CONTENT_GAIN | Ch14:5,42 | Phân biệt contract hẹp trong hàm nhận any với type checking ở nơi gọi; CanAddr khác CanSet/CanInterface, interface copy không copy sâu slice. Test mới kiểm unexported field, alias phần tử, invalid nil và typed nil. |
+| R72 / P3 / CONTENT_GAIN | Ch14:108 | Hai giai đoạn ApplyEnv bảo toàn đích khi trả lỗi validation, không tạo atomic view cho concurrent readers hay rollback khi crash; owner phải giữ map/đích ổn định. Không quy ví dụ error all-or-nothing cũ thành một claim concurrency sai vốn không có. |
+| R73 / P3 / CONTENT_GAIN | Ch14:157 | Alias string được chấp nhận, named string bị từ chối; kiểm schema ngay cả khi input thiếu. StructTag.Lookup không là syntax validator, malformed tag có kết quả không quy định. Test alias/schema và negative control exact-type→Kind. |
+| R74 / P2 / AGENT2_REGRESSION | Ch14:231,246,249 | C gọi mọi mô tả cơ chế là thực nghiệm đã kiểm chứng, trong khi B chỉ nêu bối cảnh version → tách docs/source inspection/test hợp lệ. Không chạy unsafe sai rồi dùng việc chưa crash làm bằng chứng. Slice view dùng len(buf); kiểm empty helpers và shared backing storage. |
+| R75 / P3 / CONTENT_GAIN | Ch15:28 | Argv tách riêng không qua shell nhưng không chặn option injection hay xác minh executable identity. Test child thật giữ nguyên spaces/metacharacters/--/empty arg; ErrDot có phạm vi hẹp. |
+| R76 / P2 / INHERITED_DEFECT | Ch15:142,153 | Result.Command[0] có thể panic khi invalid spec → guard ErrInvalidSpec và dùng tên đã chọn; log returned/ok, không ghi stderr/error đầy đủ. Logger snippet thực từ Markdown và PDF được chạy với invalid spec và child thất bại. |
+| R77 / P2 / AGENT2_REGRESSION | incident-command-lifecycle.puml; Ch15:24 | C thêm Spec.Target, Result.OutputLatencyErr, streaming/safe buffer và dọn toàn bộ PID/socket không tồn tại trong lab → đúng field Spec/Result, bytes.Buffer, policy ưu tiên context và Kill tiến trình trực tiếp. B không có những field hay bảo đảm cleanup đó. |
+| R78 / P3 / CONTENT_GAIN | Ch15:125,127 | ExitCode đơn lẻ không chứng minh đã start/success; invalid spec trả zero Result, missing executable trả -1. Context priority là classification policy, không chứng minh nhân quả; signal-specific runtime NOT_RUN trên Windows. |
+| R79 / P2 / AGENT2_REGRESSION | Ch15:133,135 | C thêm bảo đảm trả ngay khi deadline hết → không suy latency từ test30ms có thể hết hạn trước start. Test mới bắt tay TCP trước cancel, join runner và kiểm connection đóng. WaitDelay không là budget kể từ Start, không preempt arbitrary Read/Write, default0 còn có thể chờ pipe hậu duệ. |
+| R80 / P2 / EDITORIAL_IMPROVEMENT | Candidate trung gian trang272 | Sơ đồ sửa trong chính lượt này chạm giới hạn4096px khiến note bị cắt; reject SHA `9a351e31310479737a3178858908c13d1d16e7a7b15a7173168fc5e0a27edc71`, rút dòng note và render với limit8192. Xem lại actual final page272; không quy lỗi này cho Agent2. |
+
+Nguồn chính thức đã đọc: [reflect](https://pkg.go.dev/reflect), [unsafe](https://pkg.go.dev/unsafe), [os/exec](https://pkg.go.dev/os/exec), [cmd/cgo](https://pkg.go.dev/cmd/cgo). API docs có thể thuộc patch mới; implementation và test pin Go1.27.1 Windows/amd64. Evidence lưu checksum14 source toolchain được đối chiếu. Heap không di dời và copying stack là implementation, không phải language guarantee.
+
+Thêm sáu test functions (ngoài child helper) trong hai boundary_contract_test.go, đã gofmt. Reflection, incident-command, edition-contracts/interop và resource-retention chạy race/count3 và vet; hai fixture từ Markdown và hai fixture từ actual PDF chạy race/count3. Cgo CString/strlen/free thật chạy cục bộ, không chỉ compile. Existing named-string test bắt mutant exact-type→Kind trong thư mục tạm, EXPECTED_FAILURE đúng signature; không tự nhận mutant chứng minh một assertion mới. Không assert latency/RSS/scheduler, không chạy process groups, Windows job object hay Linux signals.
+
+`validation.json/checkpoint5`: 25 active command records, 24 exit0 và một EXPECTED_FAILURE exit1; raw stdout/stderr base64 và SHA riêng với UTF-8 view. Mọi value checkpoint1–4 giữ nguyên khi đối chiếu starting commit. Candidate/fidelity intermediate lưu tách riêng. Một lỗi kiểm tra fidelity ban đầu do bỏ mọi dòng numeric-only đã nhận diện: ô bảng0 là content thật. Gate sửa để chỉ bỏ footer theo geometry, không làm mất chữ số trong body; không coi lỗi harness này là lỗi sách.
+
+Candidate cuối của mốc này: **609 trang**, SHA `c860f5ca012f0132da65a2b2d05404db1f814f45e25379309cce6851ed89c73c`. Đã mở riêng **31 trang: 2,253–282**, Poppler144dpi/original resolution, của đúng SHA này. Không chuyển visual acceptance từ hai candidate trung gian. Code/bảng/hình không thấy clipping/tofu; folio ngoài lề chẵn/trái và lẻ/phải trong phạm vi. Hình272 đủ note/connector và đọc được trong trang thực. Một vấn đề bố trí nhẹ P3 chưa sửa: caption Bảng13 đầu trang257 tách khỏi bảng trang256; không tuyên bố caption-orphan toàn sách PASS. Một số trang thưa do giữ nguyên block, không giảm font hay sửa renderer để lấp trang.
+
+PDF gates: **31 unchanged sections** (27 chương đánh số, hai Ch00, hai Atlas) giữ text chuẩn hóa so checkpoint4; **143 prose/heading/caption/table cells** có mặt; **16 fences** khớp nonblank characters và expanded indentation. Không hứa tabs/blank lines/raw-byte fidelity. 29TOC entries/29bookmarks khớp actual headings; đúng một raster hình sửa, các body raster khác giữ multiset pixels. Code-width0; Atlas, zero-bullet, diagram encoding/semantics/character-art và metadata gates đạt. Không suy các gate này thành full visual/pixel-grayscale/printable-frame QA.
+
+R70–R80: **11 nhóm, sáu P2 và năm P3**; gồm ba AGENT2_REGRESSION, hai INHERITED_DEFECT, năm CONTENT_GAIN và một EDITORIAL_IMPROVEMENT. Caption separation P3 được ghi riêng là còn tồn tại, không cộng vào nhóm đã sửa. Không thấy P0/P1 trong phạm vi trực tiếp, không kết luận zero P0/P1 toàn sách. **14 chapter manuscripts và hai Atlas** còn chưa review thủ công; **578 trang** candidate này chưa mở. Master/rollback/MASTER/renderer/shared style/main/worktreeAgent2 giữ nguyên. **FINAL_STATUS=REVIEW_IN_PROGRESS**; commit nội bộ rồi tiếp tục, không merge/promotion.
 
 ## Baseline và phạm vi bảo toàn
 
@@ -37,8 +67,8 @@ Cột A→B dưới đây là source tại hai commit đã nêu. `IDENTICAL_SOUR
 | Ch11 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở chặng bắt buộc/socket reuse; INHERITED_DEFECT ở Fetch contract | Đã đối chiếu net/http và implementation Go1.27.1, chạy HTTP cục bộ/TLS và body ownership; xem R56–R58 |
 | Ch12 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở shutdown diagram/zero timeout; INHERITED_DEFECT ở strict schema và excerpt | Request lifecycle khác shutdown budget; callback khác join; JSON policy được test; xem R59–R62/R66 |
 | Ch13 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở transaction diagram; INHERITED_DEFECT ở atomic reader view/Prepare/DDL | Commit error không tự rollback driver, isolation unsupported trả lỗi; SQLite/outbox/migration cục bộ được chạy; xem R63–R65/R67 |
-| Ch14 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch15 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
+| Ch14 | IDENTICAL_SOURCE | INHERITED_DEFECT ở field nội bộ; AGENT2_REGRESSION ở nhãn kiểm chứng thực nghiệm; CONTENT_GAIN ở quyền reflection/schema/unsafe | Đối chiếu source Go1.27.1, test alias, quyền gán, dữ liệu chia sẻ và cgo thật; không chạy conversion sai để chứng minh an toàn; xem R70–R74 |
+| Ch15 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở hình và bảo đảm trả ngay; INHERITED_DEFECT ở logging; CONTENT_GAIN ở argv/result/context policy | Test child thật bắt tay trước cancel; excerpt từ Markdown/PDF chạy race; không chứng minh cleanup hậu duệ hay deadline cứng; xem R75–R79 |
 | Ch16 | IDENTICAL_SOURCE | EDITORIAL_REWRITE phần signals; CONTENT_REGRESSION ở dịch idempotent và cardinality | Đã kiểm chứng recorder, window, instrumentation boundary và quan hệ span |
 | Ch17 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
 | Ch18 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
