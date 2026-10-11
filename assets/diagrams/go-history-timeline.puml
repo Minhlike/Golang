@@ -1,40 +1,66 @@
 @startuml
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
-  FontColor #000000
-}
+skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
-  FontColor #000000
-  RoundCorner 6
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
+
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor #777777
+  FontColor #1E293B
+  FontStyle bold
 }
-skinparam arrowColor #000000
-skinparam ArrowThickness 1.2
-skinparam nodesep 55
-skinparam ranksep 38
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
+}
+
 top to bottom direction
 
-rectangle "2007\nMục tiêu được phác thảo\nTên Go được đề xuất" as y2007
-rectangle "2008\nTrình biên dịch thử nghiệm\nBộ tiền xử lý GCC và bộ công cụ" as y2008
-rectangle "2009\nMở mã nguồn chính thức\nNgày 10 tháng 11" as y2009
-rectangle "2012\nGo 1 phát hành\nCam kết tương thích dài hạn" as y2012
-rectangle "2015\nGo 1.5 tự thân\nToolchain/runtime thuần Go\nBộ gom rác GC đồng thời" as y2015
-rectangle "2018\nGo 1.11\nKhởi đầu quản lý Go Modules" as y2018
-rectangle "2022\nGo 1.18\nTham số kiểu (Generics)" as y2022
-rectangle "2026\nGo 1.27\nPhương thức tổng quát (Generic methods)" as y2026
+package "1. Khởi nguyên & Định hình (2007–2009)" as era1 {
+  rectangle "<b>2007 — Ý tưởng ban đầu</b>\nPhác thảo mục tiêu trên bảng trắng Google\nPike đề xuất tên ngôn ngữ Go" as y2007
+  rectangle "<b>2008 — Trình biên dịch thử nghiệm</b>\nThompson tạo compiler thử nghiệm sinh mã C\nIan Lance Taylor phát triển GCC frontend\nRuss Cox gia nhập định hình thư viện chuẩn" as y2008
+  rectangle "<b>2009 — Công bố mã nguồn mở</b>\nChính thức ra mắt cộng đồng (10/11/2009)\nBắt đầu chu kỳ thử nghiệm và phản biện mở" as y2009
+  y2007 -down-> y2008
+  y2008 -down-> y2009
+}
 
-y2007 --> y2008
-y2008 --> y2009
-y2009 --> y2012
-y2012 -right-> y2015
-y2015 --> y2018
-y2018 --> y2022
-y2022 --> y2026
+package "2. Cam kết Ổn định & Tự thân (2012–2015)" as era2 {
+  rectangle "<b>2012 — Go 1 & Compatibility Promise</b>\nPhát hành ngày 28/03/2012\nCam kết tương thích ngược dài hạn" as y2012
+  rectangle "<b>2015 — Go 1.5 Tự thân (Self-hosting)</b>\nToolchain và Runtime chuyển hoàn toàn sang Go\nBộ thu gom rác GC đồng thời độ trễ thấp\nGOMAXPROCS mặc định theo số CPU" as y2015
+  y2012 -down-> y2015
+}
+
+package "3. Chuẩn hóa Phụ thuộc (2018)" as era3 {
+  rectangle "<b>2018 — Go 1.11 & Go Modules</b>\nQuản lý phiên bản tích hợp trực tiếp toolchain\nThay thế quy ước GOPATH bằng go.mod" as y2018
+}
+
+package "4. Hệ thống Kiểu Hiện đại (2022–2026)" as era4 {
+  rectangle "<b>2022 — Go 1.18 Tham số kiểu (Generics)</b>\nĐưa Type Parameters và Type Sets vào ngôn ngữ\nBảo toàn an toàn kiểu tĩnh ở thời điểm biên dịch" as y2022
+  rectangle "<b>2026 — Go 1.27 Phương thức tổng quát</b>\nHoàn thiện Generic Methods trên kiểu tham số\nGiữ trọn vẹn triết lý đơn giản và hiệu năng cao" as y2026
+  y2022 -down-> y2026
+}
+
+era1 -down-> era2 : Ổn định hóa nền tảng
+era2 -down-> era3 : Tích hợp quản lý phụ thuộc
+era3 -down-> era4 : Tiến hóa hệ thống kiểu có kiểm chứng
+
+note right of era2
+  <b>Quy tắc Bất biến Văn hóa:</b>
+  Mọi tính năng mới phải sống bền bỉ
+  cùng hệ sinh thái qua hàng thập kỷ,
+  không bao giờ phá vỡ mã nguồn Go 1.
+end note
 @enduml

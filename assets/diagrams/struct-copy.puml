@@ -5,24 +5,43 @@ skinparam dpi 300
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F5F5F5
+skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "billing: Service\nName: billing\nPort: 8080\nHealthy: true\nRetries: 1" as original
-rectangle "candidate: Service\nName: billing\nPort: 8080\nHealthy: false\nRetries: 1" as copy
-original --> copy : candidate := billing\nsao chép toàn bộ các trường
-note bottom of original : billing.Healthy vẫn giữ true
-note bottom of copy : candidate.Healthy đổi thành false
+
+object "billing: Service" as original {
+  Name = "billing"
+  Port = 8080
+  Healthy = true
+  Retries = 1
+}
+
+object "candidate: Service\n(sau candidate.Healthy = false)" as copy {
+  Name = "billing"
+  Port = 8080
+  Healthy = false
+  Retries = 1
+}
+
+original .right.> copy : candidate := billing\nsao chép trường theo giá trị (Shallow Copy)
+
+note bottom of original
+  Struct billing giữ nguyên toàn bộ trạng thái ban đầu.
+  Trường Healthy vẫn là true.
+end note
+
+note bottom of copy
+  candidate là một thể hiện struct độc lập trên bộ nhớ.
+  Gán candidate.Healthy = false không ảnh hưởng tới billing.
+end note
 @enduml

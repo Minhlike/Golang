@@ -20,11 +20,11 @@ Kết quả từ lab part2-values là:
 [99 20 30]
 ~~~
 
-Đừng ghi nhớ riêng một câu “slice nguy hiểm”. Thay vào đó, ta sẽ lần ngược từ kết quả: Go đã copy cái gì khi chạy b := a, và dữ liệu nào không được copy?
+Đừng ghi nhớ riêng một câu “slice nguy hiểm”. Thay vào đó, ta sẽ lần ngược từ kết quả: Go đã copy cái gì khi chạy `b := a`, và dữ liệu nào không được copy?
 
 ## Một baseline để dự đoán
 
-Với một int, assignment tạo ra một giá trị độc lập. Cả a và b đều có giá trị riêng của chính chúng.
+Với một kiểu `int`, phép gán (*assignment*) tạo ra một giá trị độc lập. Cả `a` và `b` đều có giá trị riêng của chính chúng.
 
 ~~~go
 a := 10
@@ -34,7 +34,7 @@ b = 99
 fmt.Println(a, b) // 10 99
 ~~~
 
-Go đã copy value của a vào b. Sau đó b nhận value mới; a không có lý do gì để đổi. Đây là quy tắc nền: assignment copy value. Điều còn thiếu là một value có thể chứa gì.
+Go đã sao chép giá trị (*value*) của `a` sang `b`. Sau đó `b` tiếp nhận giá trị mới; biến `a` không có lý do gì để biến đổi. Đây là quy tắc nền tảng: phép gán luôn sao chép giá trị (*pass-by-value*). Điều chúng ta cần làm rõ là một giá trị có thể bao hàm những gì bên trong.
 
 Array giúp ta kiểm tra quy tắc ấy với nhiều phần tử. Độ dài là một phần của type, nên [3]int và [4]int là hai array type khác nhau. Khi array được gán, toàn bộ array value được copy.
 
@@ -49,7 +49,7 @@ fmt.Println(b) // [99 20 30]
 
 ![Hai array value sau assignment: phần tử được copy vào vùng dữ liệu riêng.](../../assets/diagrams/array-copy.png)
 
-@figure Assignment của array copy các phần tử. Việc thay b[0] chỉ chạm vào array b.
+@figure Phép gán của mảng sao chép toàn bộ các phần tử. Việc thay đổi b[0] chỉ tác động vào mảng b riêng biệt.
 
 Đến đây, trực giác “copy nghĩa là độc lập” vẫn đúng. Sự thay đổi xuất hiện chỉ khi ta bỏ một ký tự trong type: [3]int trở thành []int.
 
@@ -61,15 +61,15 @@ b := a
 b[0] = 99
 ~~~
 
-[]int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của underlying array. 
+Kiểu `[]int` không phải là một mảng bỏ quên độ dài. Nó là một kiểu lát cắt (*slice type*). Một giá trị lát cắt mô tả một phân đoạn liên tục của mảng bên dưới (*underlying array*).
 
-Trong source runtime Go 1.27.1 (`src/runtime/slice.go`), mô hình descriptor gồm con trỏ tới dữ liệu, `len int` và `cap int`. Với target amd64 đang dùng, ba trường này tương ứng 24 byte. Đây là biểu diễn đã pin, không phải kích thước mà specification bắt mọi implementation phải giữ. Để dự đoán mutation ở đây, chỉ cần biết slice nhìn vào array nền và có length, capacity riêng.
+Trong mã nguồn thực thi (*runtime*) Go 1.27.1 (`src/runtime/slice.go`), mô hình tiêu đề lát cắt (*slice header / descriptor*) gồm con trỏ tham chiếu tới dữ liệu, độ dài `len int` và dung lượng `cap int`. Với kiến trúc amd64, ba trường này chiếm 24 byte. Đây là hình thức biểu diễn ở tầng hệ thống, không phải kích thước bắt buộc cho mọi kiến trúc phần cứng. Để dự đoán chính xác thao tác biến đổi dữ liệu, ta chỉ cần nắm rõ: lát cắt mở một cửa sổ nhìn vào mảng bên dưới và sở hữu độ dài cùng dung lượng độc lập.
 
 Khi phép gán `b := a` diễn ra, ngôn ngữ thực hiện sao chép giá trị theo ngữ nghĩa (copy by value). Trong mô hình ba từ máy, các thành phần của descriptor được sao chép sang `b` với cùng con trỏ dữ liệu, cùng `len` và cùng `cap`. Trình tối ưu hóa có thể giữ các trường này trên thanh ghi mà không bắt buộc phải phát sinh một lệnh chép 24 byte vật lý ở bộ nhớ. Biến `b` sở hữu một bản sao giá trị riêng biệt về cửa sổ nhìn (`len` và `cap`), nhưng con trỏ bên trong vẫn dẫn về cùng mảng nền ban đầu.
 
 ![Hai slice value sau assignment: descriptor được copy, backing storage được chia sẻ.](../../assets/diagrams/slice-sharing.png)
 
-@figure b := a copy slice value, gồm cửa sổ nhìn vào dữ liệu, len và cap. Cả hai descriptor vẫn dẫn tới cùng underlying array, nên b[0] thay đổi phần tử mà a cũng nhìn thấy.
+@figure Phép gán `b := a` sao chép giá trị lát cắt, bao gồm con trỏ dữ liệu, `len` và `cap`. Cả hai tiêu đề vẫn trỏ tới cùng mảng bên dưới, nên `b[0]` làm thay đổi phần tử mà `a` cũng quan sát được.
 
 Vì vậy hai câu sau cùng đúng, và không mâu thuẫn:
 
@@ -99,7 +99,7 @@ x bắt đầu ở phần tử 20 của base và kết thúc trước 40. Vì th
 
 ![Một slice window: vùng thấy được là len; phần còn có thể mở rộng là capacity.](../../assets/diagrams/slice-window.png)
 
-@figure x nhìn thấy hai phần tử đầu của cửa sổ. cap(x) không nói x đang có bốn phần tử; nó nói x có thể được reslice hoặc append trong phạm vi backing array hiện tại.
+@figure `x` nhìn thấy hai phần tử đầu của cửa sổ. `cap(x)` không biểu thị `x` đang có bốn phần tử; nó chỉ ra rằng `x` có thể được cắt lát lại (`reslice`) hoặc nối thêm (`append`) trong phạm vi mảng bên dưới (*backing array*) hiện tại.
 
 Hãy tự dự đoán trước khi chạy:
 
@@ -118,7 +118,7 @@ Kết quả là [1 99 3 4], [1 99], [99 3]. a[1] và b[0] đều chỉ vào ph�
 
 ## append là một phép thử về capacity
 
-append trả về slice kết quả. Go specification phân biệt hai trường hợp: nếu capacity hiện tại đủ cho các phần tử được thêm, append dùng lại underlying array; nếu không đủ, append cấp underlying array mới đủ lớn cho kết quả. Vì slice trả về có thể đổi độ dài hoặc mảng nền, dạng thông thường là `s = append(s, value)`. Quy tắc dùng lại mảng nền là ngữ nghĩa của ngôn ngữ; cách chọn capacity mới khi phải tăng mảng là chi tiết triển khai.
+Hàm `append` trả về lát cắt kết quả. Đặc tả Go phân biệt hai trường hợp: nếu dung lượng (*capacity*) hiện tại đủ chỗ cho các phần tử được thêm vào, `append` sẽ tái sử dụng mảng bên dưới (*underlying array*); nếu không đủ chỗ, `append` sẽ cấp phát một mảng bên dưới mới đủ lớn cho kết quả. Vì lát cắt trả về có thể thay đổi độ dài hoặc trỏ sang mảng nền mới, cách viết thông thường luôn là `s = append(s, value)`. Quy tắc tái sử dụng mảng nền là ngữ nghĩa cốt lõi của ngôn ngữ; trong khi cách thức tính toán dung lượng mới khi phải mở rộng mảng là chi tiết triển khai nội bộ.
 
 ~~~go
 s := make([]int, 2, 4)
@@ -132,7 +132,7 @@ fmt.Println(old) // [99 20]
 fmt.Println(s)   // [99 20 30]
 ~~~
 
-Ở đây `s` còn capacity. `old` và `s` có length khác nhau, nhưng vẫn cùng nhìn hai element đầu của backing array. Không dùng chuỗi capacity tình cờ đo được để thiết kế ownership. Trong Go 1.27.1, `nextslicecap` ở `runtime/slice.go` chọn capacity mới theo cả length cần có và capacity cũ; nếu length mới vượt hai lần capacity cũ, nó có thể chọn thẳng length mới. Đường thông thường tăng gấp đôi dưới ngưỡng 256, rồi chuyển dần về mức tăng nhỏ hơn; `growslice` còn tính kích thước element và làm tròn allocation. Đây là thuật toán triển khai, không phải luật để dự đoán mọi lần `append` hay kết luận dữ liệu nhất thiết nằm trên heap.
+Ở đây `s` vẫn còn dung lượng dự phòng. Hai biến `old` và `s` có độ dài khác nhau, nhưng vẫn cùng trỏ vào hai phần tử đầu tiên của mảng nền (*backing array*). Không bao giờ dựa vào chuỗi dung lượng tình cờ đo được để thiết kế quyền sở hữu. Trong Go 1.27.1, hàm `nextslicecap` tại `runtime/slice.go` tính toán dung lượng mới dựa trên cả độ dài cần có và dung lượng cũ; nếu độ dài mới vượt quá hai lần dung lượng cũ, nó có thể chọn thẳng độ dài mới. Nhánh thông thường sẽ tăng gấp đôi khi dưới ngưỡng 256 phần tử, rồi chuyển dần về mức tăng thoải hơn; hàm `growslice` còn tính toán kích thước phần tử và làm tròn kích thước cấp phát bộ nhớ. Đây là thuật toán triển khai, không phải quy tắc bất biến để dự đoán mọi lời gọi `append` hay vội vã kết luận dữ liệu nhất thiết phải nằm trên heap.
 
 Để chủ động phòng vệ, Go cung cấp cú pháp lát cắt ba chỉ số đầy đủ `s[low:high:max]` (Full Slice Expression). Cú pháp này giới hạn sức chứa của lát cắt mới ở mức `max - low`. Khi ta đặt `max = high` (như `s[:n:n]`), capacity của lát cắt mới bị giới hạn đúng bằng độ dài nhìn thấy; thao tác `append` thêm phần tử vào lát cắt này sẽ không thể dùng tiếp phần capacity nằm ngoài phạm vi quan sát của lát cắt cũ, loại bỏ nguy cơ vô tình ghi đè lên các phần tử phía sau của mảng nền chung:
 
@@ -148,7 +148,7 @@ fmt.Println(grown) // [99 20 30]
 
 ![Hai kết quả của append: còn capacity thì có thể chia sẻ; hết capacity thì resulting slice đi tới storage mới.](../../assets/diagrams/append-storage.png)
 
-@figure Hình mô tả hai semantics mà code phải chịu được. Đừng suy luận allocation từ một capacity tình cờ; nếu code cần một kết quả riêng, hãy tạo bản copy có chủ ý.
+@figure Hình mô tả hai nhánh ngữ nghĩa mà mã nguồn phải đáp ứng. Đừng suy đoán việc cấp phát bộ nhớ từ một dung lượng tình cờ; nếu mã nguồn đòi hỏi một kết quả độc lập, hãy chủ động sao chép dữ liệu.
 
 ## Một aliasing bug có người dùng thật
 
@@ -164,7 +164,7 @@ redactPreview(requestFields)
 fmt.Println(requestFields) // [*** region]
 ~~~
 
-Parameter fields nhận một slice value mới, nhưng descriptor ấy vẫn reference storage của requestFields. Việc đổi element là mutation shared storage. Nếu mục tiêu thật sự là tạo preview độc lập, copy phần tử sang một slice mới trước:
+Tham số `fields` tiếp nhận một giá trị lát cắt mới, nhưng tiêu đề lát cắt ấy vẫn tham chiếu tới vùng nhớ của `requestFields`. Việc sửa đổi phần tử là thao tác làm biến đổi vùng lưu trữ dùng chung. Nếu mục tiêu thực sự là tạo ra bản xem trước độc lập, hãy sao chép các phần tử sang một lát cắt mới trước khi chỉnh sửa:
 
 ~~~go
 func redactedCopy(fields []string) []string {
@@ -175,17 +175,23 @@ func redactedCopy(fields []string) []string {
 }
 ~~~
 
-copy sao chép tối đa số phần tử vừa với destination và trả về số phần tử đã copy. Ở đây make tạo backing array mới, nên preview độc lập ở tầng slice elements. Đổi lấy independence là allocation và chi phí copy; với buffer lớn hoặc đường xử lý nóng, đó là một quyết định cần có lý do. Với một preview cần an toàn khỏi mutation, nó diễn đạt đúng intent.
+Hàm `copy` sao chép tối đa số phần tử vừa vặn với lát cắt đích và trả về số phần tử thực sự đã sao chép. Ở đây hàm `make` tạo ra mảng nền mới, do đó `preview` hoàn toàn độc lập ở tầng phần tử lát cắt. Đổi lấy tính độc lập là chi phí cấp phát bộ nhớ và thời gian sao chép; với vùng đệm lớn hoặc luồng xử lý cao điểm, đó là quyết định kỹ thuật cần có lý do rõ ràng. Với một bản xem trước cần an toàn tuyệt đối trước các thao tác biến đổi dữ liệu, đây là cách biểu đạt chính xác ý đồ kiến trúc.
 
-**Thực hành - bug hunt có kiểm chứng.** Mở `labs/part2-values` trong VS Code và chạy riêng `TestRedactedCopyDoesNotMutateInput` trước khi sửa source. Sau đó thay phần tạo `preview` bằng `preview := fields`. Đừng đoán bằng mắt: chạy lại test để thấy nó báo input đã bị mutate. Khôi phục code, xóa thân `redactedCopy`, rồi tự viết lại từ contract của test mà không nhìn implementation cũ. Đây là một bước nhỏ, nhưng nó buộc mental model “copy slice value vẫn có thể chia sẻ storage” đi qua một failure thật.
+### Bài thực hành: Săn lỗi trùng tên bộ nhớ (*aliasing*) có kiểm chứng
+
+Mở thư mục `labs/part2-values` trong trình soạn thảo và chạy riêng ca kiểm thử `TestRedactedCopyDoesNotMutateInput` trước khi sửa mã nguồn. Sau đó tạm thay phần tạo `preview` bằng phép gán `preview := fields`. Đừng suy đoán cảm tính bằng mắt: hãy chạy lại kiểm thử để thấy công cụ báo lỗi dữ liệu đầu vào đã bị biến đổi ngoài ý muốn. Khôi phục lại mã nguồn, xóa phần thân của `redactedCopy`, rồi tự hoàn thiện lại hàm từ giao ước của ca kiểm thử mà không nhìn vào bản cài đặt cũ. Đây là bước thực hành nhỏ nhưng bắt buộc mô hình tư duy “sao chép giá trị lát cắt vẫn có thể chia sẻ vùng nhớ nền” phải trải qua một thất bại thực tế.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** `preview := fields` chỉ copy slice descriptor, nên `preview[0]` vẫn sửa phần tử chung với `requestFields`. Bản đúng cần một backing array mới, chẳng hạn `make` rồi `copy`. Test phải giữ cả hai assertion: preview bị redacted và input không đổi; bỏ assertion thứ hai là bỏ mất contract ownership.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Phép gán `preview := fields` chỉ sao chép tiêu đề lát cắt (*slice header / descriptor*), nên thao tác `preview[0]` vẫn chỉnh sửa phần tử chung với `requestFields`. Bản sửa đúng đắn bắt buộc phải khởi tạo một mảng nền mới, chẳng hạn kết hợp giữa `make` và `copy`. Ca kiểm thử phải duy trì đồng thời cả hai khẳng định kiểm thử: bản xem trước đã được che dấu thông tin và dữ liệu đầu vào không bị biến đổi; việc bỏ qua khẳng định thứ hai sẽ làm đánh mất hoàn toàn giao ước về quyền sở hữu dữ liệu.
 
 ## Một cửa sổ nhỏ giữ cả căn phòng
 
-Độc lập khi sửa dữ liệu chưa phải câu hỏi cuối cùng về ownership. Giả sử service nhận một buffer lớn, lấy 16 byte đầu làm mã nhận diện rồi giữ mã ấy trong lịch sử. Buffer không còn cần cho nghiệp vụ. Anh dự đoán: giới hạn cả length lẫn capacity xuống 16 có cho phép GC thu hồi phần còn lại không?
+Tính độc lập khi chỉnh sửa dữ liệu chưa phải là câu hỏi cuối cùng về quyền sở hữu (*ownership*). Giả sử dịch vụ nhận một vùng đệm (*buffer*) lớn 4 MB, trích xuất 16 byte đầu làm mã định danh rồi lưu giữ trong nhật ký vận hành. Vùng đệm gốc không còn cần cho nghiệp vụ nữa.
+
+> **Dừng để dự đoán:** Liệu thao tác giới hạn cả chiều dài (*length*) lẫn dung lượng (*capacity*) xuống 16 có giúp bộ thu gom rác (*garbage collector - GC*) giải phóng phần vùng nhớ còn lại không?
 
 ~~~go
 buf := make([]byte, 4<<20)
@@ -193,11 +199,11 @@ preview := buf[:16:16]
 fmt.Println(len(preview), cap(preview)) // 16 16
 ~~~
 
-Hãy phân biệt ba câu hỏi. `len` cho biết bao nhiêu phần tử đang nằm trong cửa sổ; `cap` giới hạn cửa sổ có thể mở rộng tới đâu bằng reslice hoặc dùng lại storage khi append. Còn GC phải hỏi object nào vẫn được tham chiếu. `preview` vẫn dẫn tới underlying array của `buf`. Đối với allocation lớn trong thí nghiệm này, còn giữ cửa sổ là còn giữ object ấy, không phải chỉ 16 byte đầu. Biểu thức ba index thay quyền mở rộng, không chuyển quyền sở hữu sang một allocation độc lập.
+Cần phân biệt rõ ba câu hỏi kỹ thuật. Độ dài `len` cho biết số lượng phần tử hiện hữu trong góc nhìn; dung lượng `cap` giới hạn phạm vi góc nhìn có thể mở rộng thông qua thao tác cắt lại lát cắt (*reslice*) hoặc tái sử dụng vùng lưu trữ khi gọi `append`. Trong khi đó, bộ thu gom rác GC chỉ quan tâm đối tượng nào trên bộ nhớ heap còn vết tham chiếu. Lát cắt `preview` vẫn tham chiếu tới toàn bộ mảng nền (*underlying array*) của `buf`. Đối với vùng nhớ được cấp phát lớn trong thí nghiệm này, việc còn giữ góc nhìn đồng nghĩa với việc giữ lại toàn bộ khối bộ nhớ gốc, chứ không riêng 16 byte đầu. Biểu thức cắt ba chỉ số (*full slice expression*) chỉ khống chế quyền mở rộng dung lượng, hoàn toàn không chuyển quyền sở hữu sang một vùng cấp phát độc lập.
 
-Ngay cả khi đặt `buf = nil`, nếu chương trình vẫn sử dụng `preview`, đường tham chiếu tới array còn tồn tại. Ngược lại, biến còn nằm trong phạm vi từ vựng không bảo đảm compiler coi nó còn sống đến cuối scope. Khi đo, ta cần giữ kết quả thực sự được dùng; lab ở Chương 10 dùng `runtime.KeepAlive` để bảo vệ ý đồ của thí nghiệm. Không suy ra số byte heap chính xác chỉ từ cú pháp `make`: vị trí cấp phát và cách tối ưu là chuyện phải quan sát trên đúng toolchain.
+Ngay cả khi gán `buf = nil`, chừng nào chương trình còn sử dụng `preview`, nhánh tham chiếu tới mảng nền vẫn tồn tại nguyên vẹn. Ngược lại, việc một biến còn nằm trong phạm vi từ vựng (*lexical scope*) cũng không đảm bảo trình biên dịch (*compiler*) coi nó còn sống đến cuối khối lệnh. Khi đo đạc, chúng ta cần bảo đảm kết quả thực sự được sử dụng; bài thực hành ở Chương 10 dùng `runtime.KeepAlive` để bảo vệ mục đích thí nghiệm. Đừng suy diễn số byte heap chỉ dựa trên cú pháp `make`: vị trí cấp phát bộ nhớ và khả năng tối ưu hóa của trình biên dịch luôn đòi hỏi quan sát trên chính bộ công cụ (*toolchain*) thực tế.
 
-Anh hãy mở `labs/part10-resource-retention/baseline/retention.go`, đọc `Prefix`, nhưng chưa đọc bản sửa. Viết test với hai yêu cầu: sửa prefix không đổi input, và prefix không dùng chung byte đầu với input khi độ dài khác zero. Bản ba index sẽ thất bại ở cả hai yêu cầu dù `cap(prefix) == len(prefix)`. Test ấy kiểm chứng sharing; profile sau nhiều chu kỳ mới cho thấy hệ quả về lượng bộ nhớ giữ lại.
+Hãy mở `labs/part10-resource-retention/baseline/retention.go`, đọc hàm `Prefix`, nhưng chưa xem bản sửa lỗi. Viết ca kiểm thử với hai ràng buộc: chỉnh sửa tiền tố không được làm đổi dữ liệu đầu vào (*input*), và tiền tố không được dùng chung byte đầu với dữ liệu gốc khi độ dài khác 0. Cách cắt ba chỉ số sẽ thất bại trước cả hai yêu cầu dù `cap(prefix) == len(prefix)`. Ca kiểm thử này chứng minh hiện tượng chia sẻ bộ nhớ; chỉ có hồ sơ định lượng tài nguyên (*memory profile*) sau nhiều chu kỳ chạy mới phơi bày toàn bộ hệ quả rò rỉ dung lượng.
 
 Nếu contract là trả về dữ liệu độc lập, lời giải trực tiếp đã nằm trong thao tác copy mà ta vừa học:
 
@@ -209,15 +215,15 @@ func Prefix(buf []byte, n int) []byte {
 }
 ~~~
 
-Tiền điều kiện ở đây là `0 <= n && n <= len(buf)`. Với prefix 16 byte, ta giữ 16 phần tử byte trong storage riêng thay vì kéo dài tuổi thọ của toàn bộ buffer đầu vào. Đây là copy các byte, không phải lời hứa giải phóng tức thì buffer cũ: nếu một alias khác còn giữ buffer, nó vẫn sống; nếu không, GC còn cần chạy. Chi phí cấp phát cũng đổi, nên chỉ copy ở boundary thật sự cần sở hữu độc lập, không rải copy để che mọi vấn đề.
+Tiền điều kiện ở đây là `0 <= n && n <= len(buf)`. Với tiền tố 16 byte, hàm giữ 16 phần tử byte trong vùng lưu trữ riêng biệt thay vì kéo dài tuổi thọ của toàn bộ vùng đệm đầu vào. Đây là hành vi sao chép các byte dữ liệu, không phải lời hứa giải phóng tức thì vùng nhớ cũ: nếu một biệt danh (*alias*) khác vẫn giữ tham chiếu tới vùng đệm, mảng nền đó vẫn tồn tại cho tới khi GC hoạt động. Chi phí cấp phát bộ nhớ cũng thay đổi tương ứng, do đó chỉ nên sao chép tại các ranh giới kiến trúc thật sự đòi hỏi quyền sở hữu độc lập, tránh sao chép tùy tiện để che giấu các khiếm khuyết thiết kế.
 
-`bytes.Clone(buf[:n])` cũng phù hợp khi API làm việc với byte slice. `slices.Clone` dùng được với slice tổng quát nhưng là shallow copy: clone một `[]*Record` tạo storage mới cho các pointer, không clone những `Record` mà chúng trỏ tới. Hai hàm có contract về bản sao; không dùng capacity quan sát được của chúng làm bằng chứng về kích thước allocation. Bản `make` và `copy` trong lab cố ý đơn giản để ta kiểm tra ownership mà không phải học thêm generic API ở đây.
+Hàm `bytes.Clone(buf[:n])` là lựa chọn chuẩn tắc khi giao diện làm việc với lát cắt byte. Trong khi đó, `slices.Clone` áp dụng cho lát cắt tổng quát nhưng là thao tác sao chép nông (*shallow copy*): việc nhân bản một `[]*Record` chỉ tạo vùng nhớ mới cho danh sách con trỏ (*pointers*), chứ không hề sao chép các cấu trúc `Record` mà con trỏ tham chiếu tới. Cả hai hàm đều có giao ước rõ ràng về bản sao; không nên dùng dung lượng quan sát được làm bằng chứng cho kích thước cấp phát thực tế. Cách viết kết hợp `make` và `copy` trong bài thực hành giữ cho mô hình tư duy tập trung vào quyền sở hữu mà không bị phân tâm bởi cú pháp tổng quát (*generics*).
 
-Một view lớn sống lâu có thể hoàn toàn hợp lệ nếu caller vẫn cần toàn bộ dữ liệu. Trường hợp đáng sửa là tuổi thọ thực tế vượt nhu cầu của API: nghiệp vụ chỉ giữ một mã nhỏ nhưng implementation vô tình giữ cả buffer. Ta gọi đó là giữ bộ nhớ ngoài ý muốn, *memory retention*. GC không bị hỏng; contract về dữ liệu cần sống bao lâu đang bị implementation làm rộng hơn.
+Một góc nhìn (*view*) lớn có vòng đời dài hoàn toàn hợp lệ nếu bên gọi (*caller*) thực sự cần toàn bộ dữ liệu. Tình huống lỗi nguy hiểm là khi vòng đời thực tế vượt xa nhu cầu nghiệp vụ: hệ thống chỉ cần lưu một chuỗi mã ngắn nhưng bản hiện thực lại vô tình giữ trọn cả vùng đệm megabyte. Hiện tượng này được gọi là lưu giữ bộ nhớ ngoài ý muốn (*memory retention*). Bộ thu gom rác GC không gặp lỗi; chính giao ước về thời gian tồn tại của dữ liệu đã bị bản hiện thực nới rộng ngoài tầm kiểm soát.
 
-## String: bytes trước, text sau
+## Chuỗi ký tự: byte trước, văn bản sau (*string*)
 
-String cũng là value, nhưng nó có luật riêng: string là immutable sequence of bytes. len đếm byte; index trả về byte. Text thường là UTF-8, song Go không yêu cầu mọi string phải chứa UTF-8 hợp lệ.
+Kiểu chuỗi (*string*) trong Go cũng là một giá trị, nhưng tuân theo quy tắc đặc thù: chuỗi là một chuỗi byte bất biến (*immutable sequence of bytes*). Hàm `len` đếm số lượng byte; chỉ số truy cập trả về giá trị từng byte. Văn bản thông thường được mã hóa bằng chuẩn UTF-8, song Go không bắt buộc mọi chuỗi đều phải chứa dữ liệu UTF-8 hợp lệ.
 
 ~~~go
 text := "Việt"
@@ -238,15 +244,15 @@ Lab chạy đoạn này với kết quả:
 5 116
 ~~~
 
-V và i mỗi chiếm một byte. ệ được mã hóa bằng ba byte UTF-8, vì vậy rune tiếp theo bắt đầu ở byte index 5. range trên string decode UTF-8: giá trị thứ hai là rune, thường dùng để biểu diễn Unicode code point. byte là alias của uint8; rune là alias của int32. Code point vẫn không đồng nghĩa với “một ký tự người dùng nhìn thấy”: một grapheme có thể gồm nhiều code point. Ta chưa cần giải quyết segmentation ở đây; chỉ cần không nhầm len với số ký tự hiển thị.
+Hai ký tự `V` và `i` mỗi ký tự chiếm đúng 1 byte. Ký tự `ệ` được mã hóa bằng 3 byte UTF-8, do đó điểm mã tiếp theo bắt đầu tại chỉ số byte 5. Vòng lặp `range` duyệt chuỗi sẽ giải mã UTF-8: giá trị thứ hai nhận được là một `rune`, dùng để biểu diễn một điểm mã Unicode (*code point*). Trong Go, `byte` là biệt danh kiểu của `uint8`, còn `rune` là biệt danh của `int32`. Cần lưu ý một điểm mã vẫn không đồng nghĩa với “một ký tự đồ họa hiển thị trước mắt người dùng”: một cụm ký tự hiển thị (*grapheme cluster*) có thể kết hợp từ nhiều điểm mã. Chúng ta chưa cần xử lý phân đoạn văn bản phức tạp ở đây; điều tối quan trọng là không đánh đồng hàm `len` với số lượng ký tự hiển thị.
 
-String không cho phép gán trực tiếp `text[0] = 'v'`. Với thao tác theo byte trong ví dụ này, chuyển sang `[]byte`, sửa slice rồi tạo string kết quả là một cách rõ ràng. Đó không phải con đường duy nhất tạo text mới: thao tác theo điểm mã có thể dùng rune, còn ghép chuỗi có thể dùng builder. Chọn đơn vị dữ liệu trước khi chọn công cụ sửa nó.
+Chuỗi ký tự không cho phép thao tác gán trực tiếp như `text[0] = 'v'`. Với các thao tác theo byte, chuyển đổi chuỗi sang `[]byte`, biến đổi nội dung lát cắt rồi khởi tạo chuỗi mới là cách tiếp cận tường minh. Đây không phải con đường duy nhất: biến đổi theo điểm mã có thể dùng `[]rune`, còn nối ghép chuỗi tuần tự nên dùng `strings.Builder`. Hãy xác định đúng đơn vị dữ liệu trước khi lựa chọn công cụ biến đổi.
 
-Conversion giữa string và byte slice phải giữ semantics của giá trị: sửa byte slice tạo từ string không được làm đổi string gốc; string tạo từ slice giữ giá trị dù slice về sau bị sửa. Specification không bắt một lần cấp phát hay physical copy ở mọi biểu thức. Compiler có thể bỏ allocation/copy khi chứng minh behavior quan sát không đổi. Nếu cần biết một biểu thức có allocate không, đo và xem output compiler của đúng version thay vì suy ra từ syntax.
+Thao tác chuyển đổi kiểu (*conversion*) giữa chuỗi và lát cắt byte phải bảo toàn trọn vẹn ngữ nghĩa giá trị (*value semantics*): biến đổi lát cắt byte tạo ra từ chuỗi không được phép làm thay đổi chuỗi ban đầu; ngược lại, chuỗi sinh ra từ lát cắt phải bất biến dù lát cắt sau đó tiếp tục bị sửa đổi. Đặc tả ngôn ngữ Go không bắt buộc mọi phép chuyển đổi đều phải kích hoạt một lần sao chép vật lý. Trình biên dịch có thể lược bỏ cấp phát bộ nhớ khi chứng minh được hành vi quan sát bên ngoài không thay đổi. Khi muốn khẳng định một biểu thức có tiêu tốn bộ nhớ heap hay không, hãy đo lường và kiểm tra chỉ dẫn tối ưu của trình biên dịch trên đúng phiên bản đang dùng thay vì suy đoán cảm tính từ cú pháp.
 
-## Pointer là câu hỏi khác
+## Con trỏ là một bài toán khác (*pointer*)
 
-Sau slice, pointer dễ bị giải thích sai như “slice nhưng rõ hơn”. Pointer là một value trực tiếp reference một variable khác; slice là một descriptor cho segment của underlying array. Chúng có thể cùng dẫn tới sharing, nhưng chúng trả lời hai câu hỏi khác nhau.
+Sau lát cắt, con trỏ (*pointer*) thường bị ngộ nhận như một dạng “lát cắt tường minh hơn”. Con trỏ là một giá trị tham chiếu trực tiếp tới một biến khác (*variable*); trong khi lát cắt là một tiêu đề mô tả một phân đoạn trên mảng nền. Cả hai đều có thể dẫn tới hành vi chia sẻ dữ liệu, nhưng phục vụ hai bài toán kiến trúc hoàn toàn khác nhau.
 
 ~~~go
 count := 10
@@ -255,15 +261,15 @@ p := &count
 fmt.Println(count) // 99
 ~~~
 
-Ở đây &count tạo pointer tới variable count, còn *p truy cập variable đó. Pointer sẽ có chương riêng khi ta cần thiết kế API quanh mutation trực tiếp và nil. Trước khi đến đó, hãy giữ model vừa xây: luôn hỏi value nào được copy, và value ấy có reference tới storage hay variable nào không.
+Cú pháp `&count` tạo ra một con trỏ tham chiếu tới biến `count`, còn `*p` dùng để giải tham chiếu (*dereference*) và thao tác trực tiếp trên biến đó. Con trỏ sẽ được phân tích toàn diện trong chương riêng khi chúng ta thiết kế giao diện lập trình xoay quanh việc biến đổi trạng thái trực tiếp và xử lý giá trị `nil`. Trước khi đi tới đó, hãy ghi nhớ mô hình tư duy cốt lõi: luôn xác định rõ giá trị nào đang được sao chép, và giá trị đó có tham chiếu tới vùng nhớ hoặc biến nào khác hay không.
 
-Nếu câu trả lời là “không”, assignment thường tạo independence như int và array. Nếu câu trả lời là “có”, aliasing có thể là công cụ tốt hoặc một bug - tùy việc bạn có làm rõ ownership và mutation hay không.
+Nếu câu trả lời là “không”, phép gán (*assignment*) sẽ thiết lập sự độc lập hoàn toàn như đối với kiểu `int` hay mảng thuần túy. Nếu câu trả lời là “có”, hiện tượng trùng tên bộ nhớ (*aliasing*) có thể là kỹ thuật tối ưu mạnh mẽ hoặc là mầm mống lỗi nghiêm trọng, hoàn toàn phụ thuộc vào việc bạn có định nghĩa rành mạch quyền sở hữu và quyền biến đổi trạng thái hay không.
 
-## Một quyết định ở ranh giới API
+## Quyết định thiết kế tại ranh giới API
 
-Khi một hàm nhận hoặc trả về slice, câu hỏi thiết kế không phải là “Go có copy không?” mà là: **ai được phép sửa storage này, và trong khoảng thời gian nào?** Một hàm lọc dữ liệu có thể trả về một view để tránh allocation; khi đó caller cần biết view ấy còn dùng chung buffer. Một hàm dựng response hoặc preview thường nên trả về dữ liệu độc lập, vì caller không có lý do để đoán một thay đổi sau đó sẽ đi ngược vào input.
+Khi một hàm tiếp nhận hoặc trả về lát cắt, câu hỏi thiết kế không phải là “Go có sao chép hay không?” mà là: thực thể nào được quyền thay đổi vùng lưu trữ này, và trong khoảng thời gian nào? Một hàm lọc dữ liệu có thể trả về một góc nhìn (*view*) để triệt tiêu chi phí cấp phát bộ nhớ; khi đó bên gọi (*caller*) phải được thông báo rằng góc nhìn này vẫn dùng chung vùng đệm dữ liệu. Một hàm tạo phản hồi (*response*) hoặc bản xem trước (*preview*) cần trả về một khối dữ liệu độc lập, bởi bên gọi không có lý do để dự đoán một thay đổi tiếp theo lại làm biến dạng dữ liệu đầu vào.
 
-Không có đáp án mặc định miễn phí. Copy tốn allocation và thời gian; chia sẻ tiết kiệm chúng nhưng làm contract về ownership quan trọng hơn. Trước khi tối ưu, hãy viết test cho hành vi mutation mà API hứa. Sau đó, khi đọc một bug khó hiểu, lần theo ba bước: value nào được gán, value đó reference storage nào, và ai còn có thể chạm storage ấy. Đó là cách biến “slice lạ quá” thành một cuộc điều tra có thể kiểm chứng.
+Không có lựa chọn nào là miễn phí. Thao tác sao chép tiêu tốn tài nguyên cấp phát bộ nhớ và thời gian tính toán; chia sẻ vùng nhớ tiết kiệm chi phí nhưng đòi hỏi khế ước về quyền sở hữu phải nghiêm ngặt. Trước khi tối ưu hóa, hãy thiết lập ca kiểm thử khẳng định rõ hành vi biến đổi dữ liệu mà giao diện API cam kết. Sau đó, khi điều tra một lỗi bất thường, hãy tuần tự lần theo ba câu hỏi: giá trị nào được gán, giá trị đó tham chiếu tới vùng lưu trữ nào, và những luồng thực thi nào còn có thể chạm tới vùng nhớ ấy. Đó là phương pháp biến hiện tượng “lát cắt khó lường” thành một quy trình điều tra kỹ thuật có thể kiểm chứng được.
 
 @references
 1. Go Team. Go Specification, Slice types và Full slice expressions. go.dev/ref/spec#Slice_types; go.dev/ref/spec#Full_slice_expressions

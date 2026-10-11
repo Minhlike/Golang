@@ -2,26 +2,26 @@
 
 # Chương 16 — Thấy được hệ thống
 
-Sau Chương 15, `opsprobe` có thể kể lại một lần chạy: command nào được gọi, exit code nào quay về, deadline có hết không. Nhưng một incident hiếm khi chỉ hỏi về một lần chạy. “Từ 9 giờ đến giờ dependency có đang tệ dần không?”, “lỗi nằm ở một target hay mọi target?”, “request chậm đi qua những bước nào?” là những câu hỏi khác hẳn. Nếu chỉ giữ một dòng log cuối cùng, ta có chi tiết mà không có xu hướng. Nếu chỉ giữ một biểu đồ tổng, ta có xu hướng mà mất câu chuyện của lần fail cụ thể.
+Sau Chương 15, công cụ `opsprobe` đã có thể tường thuật chuẩn xác một lượt thực thi: câu lệnh nào được gọi, mã thoát nào trả về, và thời hạn xử lý có bị cạn kiệt hay không. Nhưng một sự cố vận hành (*incident*) hiếm khi chỉ xoay quanh một lượt chạy đơn lẻ. Những câu hỏi như dịch vụ phụ thuộc có đang suy thoái dần từ sáng đến giờ hay không, lỗi phát sinh cục bộ tại một đích đến hay trên toàn bộ hệ thống, và yêu cầu xử lý chậm đã trải qua những chặng nào, đều đòi hỏi các góc nhìn hoàn toàn khác biệt. Nếu chỉ giữ lại một dòng nhật ký (*log*) cuối cùng, ta có chi tiết sự kiện nhưng đánh mất xu hướng biến thiên. Nếu chỉ theo dõi một biểu đồ tổng quan, ta nắm được xu hướng nhưng lại đánh mất nguyên nhân gốc của từng ca thất bại cụ thể.
 
-Mental model của chương là: **observability tạo ra các phép chiếu có chủ đích từ hành vi hệ thống; mỗi phép chiếu giữ lại một loại bằng chứng và đánh đổi phần còn lại.** Log giữ identity và chi tiết event. Metric aggregate nhiều event để trả lời câu hỏi theo thời gian. Trace giữ đường đi nhân quả của một lần làm việc qua boundary. Health trả lời một câu hỏi hẹp về instance ngay lúc bị hỏi. Không có signal nào là “bản ghi đầy đủ của hệ thống”.
+Mô hình tư duy của chương là: năng lực quan sát tạo ra các phép chiếu có chủ đích từ hành vi hệ thống; mỗi phép chiếu giữ lại một loại bằng chứng và chấp nhận đánh đổi phần còn lại. Nhật ký vận hành (*logs*) lưu giữ định danh và chi tiết ngữ cảnh sự kiện. Chỉ số đo lường (*metrics*) tổng hợp nhiều sự kiện để phản ánh biến động theo chuỗi thời gian. Dấu vết thực thi (*traces*) bảo toàn mối quan hệ nhân quả của một lượt xử lý xuyên qua các ranh giới dịch vụ. Tín hiệu sức khỏe (*health*) giải đáp câu hỏi phạm vi hẹp về một thể hiện (*instance*) ngay tại thời điểm truy vấn. Không có một tín hiệu đơn lẻ nào là bản ghi trọn vẹn của toàn bộ hệ thống.
 
 ## Một biểu đồ xanh vẫn có thể nói dối
 
-Giả sử một dashboard ghi `probe_success=1` sau lần probe mới nhất. Khi target fail rồi success trở lại, biểu đồ có thể xanh. Nhưng nó không nói trong mười phút vừa rồi có bao nhiêu lần fail, timeout có bị tính là failure không, hay probe có hề chạy lần nào chưa. Đó không phải vấn đề chọn dashboard đẹp; đó là vấn đề semantic của số liệu.
+Giả sử bảng điều khiển (*dashboard*) ghi nhận `probe_success=1` sau lượt thăm dò (*probe*) mới nhất. Khi máy chủ đích gặp lỗi rồi phục hồi thành công trở lại, biểu đồ trực quan có thể chuyển sang màu xanh an toàn. Dẫu vậy, con số ấy hoàn toàn không thể hiện trong mười phút vừa qua đã phát sinh bao nhiêu lần thất bại, sự cố quá thời gian (*timeout*) có bị quy kết là lỗi hay không, hoặc tiến trình thăm dò có thực sự chạy lượt nào hay chưa. Đây không đơn thuần là việc thiết kế bảng điều khiển trực quan; đây là bài toán về ngữ nghĩa bản chất (*semantics*) của chuỗi dữ liệu đo lường.
 
-Một counter có ý nghĩa khi ta biết rõ event nào làm nó tăng. Với probe nhỏ ở đây, policy được chọn là: mỗi lần probe hoàn tất tạo đúng một outcome thuộc tập hữu hạn `success`, `failure`, hoặc `timeout`. Availability SLI của lab là số `success` chia cho tất cả outcome đã hoàn tất. Vì thế timeout nằm ở mẫu số và không được làm biến mất denominator. Đây là một policy của probe availability, không phải định nghĩa phổ quát cho mọi product.
+Một bộ đếm (*counter*) chỉ mang ý nghĩa chuẩn xác khi ta hiểu tường tận sự kiện (*event*) nào kích hoạt gia tăng giá trị. Với bộ thăm dò thu nhỏ trong bài học này, chính sách (*policy*) được thiết lập rõ ràng: mỗi lượt thăm dò hoàn tất tạo ra đúng một kết quả duy nhất thuộc tập hữu hạn gồm `success`, `failure`, hoặc `timeout`. Chỉ số đo lường mức độ khả dụng (Availability SLI) của bài thực hành được tính bằng tỷ lệ số lần `success` chia cho toàn bộ kết quả đã hoàn tất. Vì lẽ đó, kết quả quá thời hạn phải nằm trong mẫu số và không được phép làm triệt tiêu mẫu số (*denominator*). Đây là chính sách đo lường độ khả dụng của bộ thăm dò, không phải định nghĩa khuôn mẫu bất biến cho mọi hệ thống sản phẩm.
 
 ~~~text
 availability = successes / completed probes
 ~~~
 
-Nếu chưa có probe hoàn tất, phép chia không có nghĩa. Đừng trả `1.0` để làm dashboard xanh khi hệ thống chưa có dữ liệu. API lab trả thêm một boolean để caller phân biệt “0% thành công” với “chưa có sample”. Một SLI chỉ là cách đo đã định nghĩa; SLO mới là mục tiêu và time window mà team cam kết cho SLI đó. Câu “99.9%” không có ý nghĩa vận hành trước khi ta biết đo cái gì, trong khoảng nào, và action nào sẽ xảy ra khi tiêu error budget.
+Nếu chưa có lượt thăm dò nào hoàn tất, phép chia tỷ lệ hoàn toàn vô nghĩa về mặt toán học. Tuyệt đối không tự ý trả về `1.0` chỉ để nhuộm xanh bảng điều khiển khi hệ thống hoàn toàn chưa thu thập được dữ liệu. Giao diện lập trình của bài thực hành cung cấp thêm một giá trị logic kiểu boolean nhằm giúp bên gọi (*caller*) phân biệt rạch ròi giữa trạng thái “0% thành công” với trạng thái “chưa có mẫu thu thập (*sample*)”. Một chỉ số mức độ dịch vụ (SLI) chỉ đơn thuần là quy ước đo lường đã định hình; mục tiêu mức độ dịch vụ (SLO) mới chính là đích ngắm và khoảng thời gian quan sát (*time window*) mà đội ngũ kỹ thuật cam kết gắn liền với chỉ số đó. Con số “99.9%” sẽ không có giá trị vận hành thực tế chừng nào ta chưa xác định rõ đo lường đối tượng nào, trong khung thời gian bao lâu, và biện pháp can thiệp nào sẽ được kích hoạt khi làm cạn kiệt ngân sách lỗi (*error budget*).
 
 ## Bốn câu hỏi, bốn loại bằng chứng
 
 ![Các phép chiếu observability](../../assets/diagrams/observability-projections.png)
-@figure Các signal trả lời các câu khác nhau. Diagram là mental model, không phải kiến trúc bắt buộc hay pipeline OpenTelemetry hoàn chỉnh.
+@figure Các tín hiệu đo lường giải đáp những câu hỏi kỹ thuật khác nhau. Sơ đồ là mô hình tư duy định hướng, không phải cấu trúc bắt buộc hay đường ống OpenTelemetry hoàn chỉnh.
 
 @table Chọn signal từ câu hỏi trước
 
@@ -32,15 +32,15 @@ Nếu chưa có probe hoàn tất, phép chia không có nghĩa. Đừng trả `
 | “Lần chạy này chờ ở boundary nào?” | Trace của một execution | Tần suất của mọi execution nếu trace bị sample. |
 | “Có nên đưa traffic vào instance này ngay bây giờ?” | Readiness | SLO của một giờ vừa qua. |
 
-Log không phải metric với string dài hơn. Một log event có thể chứa target đã được redaction, exit code, duration, request ID hay trace ID để người điều tra tìm một execution cụ thể. Metric không nên lấy URL đầy đủ, user ID, raw error, trace ID hay một target biến đổi tùy ý làm label mặc định: mỗi tổ hợp label là một time series khác, nên cardinality không giới hạn biến chi phí và thời gian truy vấn thành một incident mới.
+Nhật ký (*log*) không phải là chỉ số đo lường (*metric*) đi kèm một chuỗi ký tự dài hơn. Một sự kiện nhật ký có thể chứa đựng đích đến đã khử dữ liệu nhạy cảm (*redaction*), mã thoát (*exit code*), thời lượng thực thi (*duration*), mã yêu cầu hoặc định danh dấu vết nhằm giúp kỹ sư truy vết chính xác một lượt xử lý cụ thể. Ngược lại, chỉ số đo lường không được phép tùy tiện đưa đường dẫn URL đầy đủ, mã định danh người dùng, thông điệp lỗi thô, mã dấu vết hay đích đến biến thiên vô hạn vào làm nhãn mặc định: mỗi tổ hợp nhãn cấu thành một chuỗi thời gian (*time series*) riêng biệt, do đó số lượng chiều nhãn (*cardinality*) bùng nổ không giới hạn sẽ biến chi phí lưu trữ và thời gian truy vấn thành một sự cố vận hành nghiêm trọng mới.
 
-Trace cũng không phải log có mũi tên. Nó biểu diễn quan hệ giữa các operation trong một execution; context propagation là thứ nối các span qua HTTP, queue hay subprocess boundary khi hệ thống đã có instrumentation phù hợp. Chương 11 đã dùng `httptrace` để quan sát một client cục bộ, nhưng nó không tự biến thành distributed tracing. Chương này chỉ chuẩn bị semantic để khi dùng OpenTelemetry sau này, ta biết một attribute, span hay sampling decision đang phục vụ câu hỏi nào.
+Dấu vết thực thi (*trace*) cũng không đơn thuần là dòng nhật ký gắn thêm mũi tên điều hướng. Nó khắc họa chuẩn xác mối quan hệ nhân quả giữa các tác vụ trong cùng một lượt xử lý; cơ chế truyền ngữ cảnh (*context propagation*) là mắt xích gắn kết các phân đoạn (*span*) xuyên qua ranh giới giao thức HTTP, hàng đợi thông điệp (*queue*) hoặc tiến trình con khi hệ thống được cài đặt cơ chế giám sát thích hợp. Chương 11 đã sử dụng `httptrace` để quan sát một ứng dụng máy khách cục bộ, nhưng kỹ thuật đó không tự động trở thành hệ thống truy vết phân tán (*distributed tracing*). Phần này tập trung chuẩn hóa ngữ nghĩa để khi áp dụng OpenTelemetry trong thực tế, ta nắm rõ một thuộc tính (*attribute*), phân đoạn thực thi (*span*) hay quyết định chọn mẫu (*sampling*) đang trực tiếp phục vụ câu hỏi kỹ thuật nào.
 
-Health là signal dễ bị lạm dụng nhất. Liveness thường trả lời process còn có thể chạy để supervisor không cần restart mù quáng; readiness trả lời instance có nên nhận traffic không. Cả hai là contract cho control plane ở hiện tại. Một `/readyz` trả `200` bây giờ không chứng minh availability 24 giờ trước, cũng không nên gọi một dependency xa cho mọi liveness probe chỉ để endpoint trông “thông minh”. Dependency nào thuộc readiness là một policy dựa trên khả năng phục vụ thực tế, không phải một checklist copy từ framework.
+Tín hiệu kiểm tra sức khỏe (*health check*) là kênh thông tin dễ bị lạm dụng sai lệch nhất. Tín hiệu sống (*liveness*) trả lời việc tiến trình có còn năng lực tiếp tục hoạt động hay không để hệ thống giám sát (*supervisor*) không khởi động lại mù quáng; tín hiệu sẵn sàng (*readiness*) giải đáp xem thể hiện tiến trình hiện tại có nên đón nhận lưu lượng truy cập hay không. Cả hai đều là giao ước tức thời phục vụ mặt phẳng điều khiển (*control plane*) ở thời điểm hiện tại. Một điểm cuối `/readyz` phản hồi mã `200` ở thời khắc này không thể chứng minh độ khả dụng trong 24 giờ đã qua, và ta cũng không được phép kích hoạt một dịch vụ phụ thuộc ở xa trong mọi lượt thăm dò liveness chỉ để khiến điểm cuối có vẻ tinh vi. Việc xác định dịch vụ phụ thuộc nào thuộc phạm vi kiểm tra readiness là một chính sách dựa trên năng lực phục vụ thực tế, không phải bảng danh mục sao chép máy móc từ các bộ khung mẫu (*framework*).
 
 ## Gắn metric vào outcome, không gắn vào cảm giác
 
-Minimal reproducer dưới đây không export Prometheus format và không thay collector. Nó là core semantic mà exporter sau này có thể đọc: outcome là closed set, snapshot là bản copy nhất quán, và SLI không có giá trị khi chưa có sample. Việc giữ lab trong standard library giúp mình kiểm tra contract trước khi thảo luận SDK hoặc backend.
+Đoạn mã mô phỏng thu nhỏ dưới đây không xuất định dạng Prometheus và không nhằm thay thế hệ thống thu thập (*collector*). Nó gói gọn ngữ nghĩa cốt lõi mà các bộ trích xuất dữ liệu sau này có thể đọc: kết quả là một tập đóng cố định, ảnh chụp trạng thái (*snapshot*) là bản sao chép nhất quán, và chỉ số SLI không mang giá trị khi chưa thu thập mẫu đo. Việc giữ bài thực hành hoàn toàn trong thư viện chuẩn giúp ta kiểm chứng chặt chẽ các ràng buộc hợp đồng trước khi thảo luận về bộ thư viện phát triển (SDK) hoặc hạ tầng lưu trữ phía sau.
 
 ~~~go
 type Outcome string
@@ -66,7 +66,7 @@ func (s Snapshot) SuccessRatio() (float64, bool) {
 }
 ~~~
 
-`Completed` không phải field thừa. Nó là denominator được ghi độc lập để invariant có thể kiểm tra: `Completed == Succeeded + Failed + TimedOut`. Trong lab, một call `Observe` thành công tăng đúng hai thứ: `Completed` và bucket outcome tương ứng. Unknown outcome phải return error trước khi mutate; nếu code nhận raw string tùy ý rồi tạo bucket mới, closed set biến thành cardinality leak ngay tại source.
+Trường dữ liệu `Completed` không phải là chi tiết dư thừa. Nó là mẫu số được lưu trữ độc lập để kiểm chứng tính bất biến toán học: `Completed == Succeeded + Failed + TimedOut`. Trong bài thực hành, một lệnh gọi `Observe` thành công sẽ gia tăng chính xác hai giá trị: trường `Completed` và nhóm kết quả tương ứng. Một kết quả không xác định bắt buộc phải trả về lỗi trước khi thực hiện biến đổi trạng thái; nếu mã nguồn chấp nhận chuỗi ký tự thô tùy ý rồi tự tạo nhóm mới, tập đóng sẽ lập tức biến thành lỗi rò rỉ bùng nổ số lượng nhãn (*cardinality leak*) ngay tại nguồn phát sinh dữ liệu.
 
 ~~~go
 type Recorder struct {
@@ -99,26 +99,26 @@ func (r *Recorder) Snapshot() Snapshot {
 }
 ~~~
 
-Mutex ở đây không phải “metrics library tự viết”. Nó chỉ giữ invariant của một teaching recorder khi nhiều worker từ Chương 9 cùng báo outcome. `Snapshot` trả value copy, vì caller không được sửa state nội bộ để làm counter quay ngược. Nếu exporter sau này đọc snapshot định kỳ, nó vẫn phải có contract riêng về reset khi process restart, timestamp, cumulative counter hay delta. Bản ghi in-memory này không có retention, không có window và không phải evidence lịch sử sau khi process chết.
+Khóa đồng bộ `sync.Mutex` ở đây không phải là nỗ lực tự viết lại một thư viện số liệu đo lường. Cơ chế này đơn thuần bảo toàn tính bất biến của bộ ghi nhận mẫu khi nhiều luồng thực thi đồng thời từ Chương 9 cùng thông báo kết quả. Phương thức `Snapshot` trả về bản sao giá trị độc lập, bởi bên gọi tuyệt đối không được phép chỉnh sửa trạng thái nội bộ làm bộ đếm bị đảo ngược giá trị. Nếu bộ xuất dữ liệu sau này đọc ảnh chụp trạng thái theo chu kỳ, nó vẫn phải tuân thủ giao ước riêng về hành vi tái lập khi tiến trình khởi động lại, mốc thời gian, bộ đếm tích lũy hoặc giá trị vi phân chênh lệch. Bản ghi trong bộ nhớ tạm thời này không có chính sách lưu trữ dài hạn (*retention*), không hỗ trợ cửa sổ trượt và không thể xem là bằng chứng lịch sử sau khi tiến trình kết thúc.
 
-> **Dừng để dự đoán.** Một probe kết thúc với lỗi `context.DeadlineExceeded` (timeout). Sự kiện này có đồng nghĩa với việc máy chủ đích đã sập hoàn toàn không? Trong SLI đo độ khả dụng, kết quả timeout được phân loại vào đâu?
+> **Dừng để dự đoán:** Một probe kết thúc với lỗi `context.DeadlineExceeded` (timeout). Sự kiện này có đồng nghĩa với việc máy chủ đích đã sập hoàn toàn không? Trong SLI đo độ khả dụng, kết quả timeout được phân loại vào đâu?
 
-#### Đáp án — chỉ đọc sau khi đã tự làm
-Lỗi timeout chỉ chứng minh caller không nhận được phản hồi trong ngân sách thời gian đã định, hoàn toàn không đủ để suy ra dịch vụ đích đã chết. Trong thực tế, dịch vụ đích có thể vẫn đang chạy nhưng bị nghẽn hàng đợi xử lý, hoặc phản hồi đã được gửi đi nhưng bị chậm trễ trên mạng, thậm chí một tác vụ ghi dữ liệu đã được commit thành công ở phía sau trước khi caller hết giờ chờ.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+Lỗi quá thời gian (*timeout*) chỉ chứng minh bên gọi không nhận được phản hồi trong ngân sách thời gian đã định, hoàn toàn không đủ căn cứ để suy diễn dịch vụ đích đã sập hoàn toàn. Trong thực tế, dịch vụ đích có thể vẫn đang chạy nhưng bị nghẽn hàng đợi xử lý, hoặc phản hồi đã được gửi đi nhưng bị chậm trễ trên đường truyền mạng, thậm chí một tác vụ ghi dữ liệu đã được xác nhận thành công ở hệ thống phía sau trước khi bên gọi cạn kiệt thời gian chờ.
 
-Theo hợp đồng SLI cụ thể được chọn trong lab này, timeout được tính vào mẫu số thất bại (denominator failure) bởi vì dưới góc nhìn của caller, lượt probe đó đã không thu được kết quả hợp lệ trong khung thời gian cam kết. Tuy nhiên, đây là một lựa chọn thiết kế chính sách, không phải quy luật bất biến cho mọi hệ thống. Một số dịch vụ có thể tách timeout thành SLI riêng về độ trễ, phân loại theo tác vụ idempotent, hoặc ghi nhận nhãn riêng `outcome="timeout"` để đội ngũ trực vận hành không đánh đồng nghẽn mạng với sự cố sập ứng dụng. Khi sản phẩm thay đổi chính sách phân loại, tên metric, công thức SLI và ngưỡng cảnh báo đều phải được cập nhật đồng bộ.
+Theo giao ước SLI cụ thể được lựa chọn trong bài thực hành này, sự cố quá thời gian được tính vào mẫu số thất bại bởi vì dưới góc nhìn của bên gọi, lượt thăm dò đó đã không thu được kết quả hợp lệ trong khung thời gian cam kết. Tuy nhiên, đây là một lựa chọn thiết kế chính sách, không phải quy luật bất biến cho mọi hệ thống. Một số dịch vụ có thể tách riêng chỉ số quá thời hạn thành một chỉ số SLI độc lập về độ trễ, phân loại theo tác vụ lũy thừa bất biến (*idempotent*), hoặc ghi nhận nhãn riêng `outcome="timeout"` để đội ngũ trực vận hành không đánh đồng nghẽn mạng với sự cố sập ứng dụng. Khi sản phẩm thay đổi chính sách phân loại, tên gọi chỉ số, công thức SLI và ngưỡng cảnh báo đều phải được cập nhật đồng bộ.
 
 ## SLO không phải một alert thật to
 
-Một SLO đặt expectation có thể đo; alert là policy buộc con người chú ý khi rủi ro với expectation ấy đủ lớn. Không nên alert cho mỗi `failure` event: một target test bị tắt có thể tạo noise, còn một error rate thấp nhưng tăng nhanh trên traffic thật có thể đáng điều tra. Khi có SLI, window và objective, team mới có thể chọn alert dựa trên tốc độ tiêu error budget và runbook phù hợp.
+Một cam kết SLO thiết lập kỳ vọng dịch vụ có thể đo lường định lượng; trong khi cảnh báo (*alert*) là chính sách vận hành buộc kỹ sư phải can thiệp khi rủi ro đe dọa kỳ vọng đó vượt qua ngưỡng an toàn. Ta không nên kích hoạt cảnh báo cho từng sự kiện `failure` đơn lẻ: một máy chủ kiểm thử bị tắt có thể sinh ra tín hiệu nhiễu vô hại, trong khi một tỷ lệ lỗi ban đầu còn thấp nhưng tăng trưởng đột biến trên lưu lượng thực tế lại là tín hiệu khẩn cấp cần khoanh vùng. Khi đã xác lập đầy đủ chỉ số SLI, khung thời gian quan sát và mục tiêu cam kết, đội ngũ mới có thể cấu hình cảnh báo chuẩn xác dựa trên tốc độ tiêu hao ngân sách lỗi và tài liệu quy trình xử lý (*runbook*) tương ứng.
 
-Điều này cũng giải thích vì sao `Completed=0` không được gọi là 100% availability. Không có sample thì không thể suy ra rate; trạng thái hợp lý có thể là `unknown`, dashboard annotation, hoặc alert về telemetry gap tùy policy. Đừng sửa bằng cách chia cho `max(1, completed)`: công thức sẽ chạy, nhưng evidence đã bị thay đổi.
+Điều này cũng lý giải vì sao trạng thái `Completed=0` không được phép quy kết thành mức độ khả dụng 100%. Khi hoàn toàn thiếu vắng mẫu đo, ta không thể suy diễn ra tỷ lệ phần trăm; trạng thái phản ánh trung thực có thể là `unknown`, một chú thích trên bảng điều khiển, hoặc một cảnh báo về sự gián đoạn dữ liệu đo từ xa (*telemetry gap*) tùy theo chính sách quy định. Tuyệt đối không chữa cháy bằng cách chia cho `max(1, completed)`: câu lệnh toán học sẽ vượt qua bước biên dịch, nhưng tính toàn vẹn của bằng chứng đã bị bóp méo.
 
-Một alert tốt dẫn tới thao tác tiếp theo. Nó nên chỉ ra service/target, SLI bị ảnh hưởng, time window, owner và nơi xem detail an toàn. Metric đưa người điều tra tới cohort đang xấu; log hay trace giúp trả lời “cái gì khác thường trong cohort đó?”. Đó là một vòng điều tra, không phải bốn sản phẩm quan sát được đặt cạnh nhau.
+Một cảnh báo chất lượng phải dẫn dắt trực tiếp tới hành động ứng phó cụ thể. Thông báo cần chỉ rõ định danh dịch vụ hoặc máy chủ đích, chỉ số SLI chịu ảnh hưởng, khung thời gian xảy ra sự cố, đội ngũ sở hữu chịu trách nhiệm và địa chỉ tra cứu chi tiết một cách an toàn. Chỉ số đo lường khoanh vùng kỹ sư điều tra tới nhóm đối tượng (*cohort*) đang suy thoái; nhật ký hoặc dấu vết thực thi sẽ trả lời câu hỏi “điều gì bất thường đang diễn ra bên trong nhóm đối tượng đó?”. Đó là một quy trình điều tra thống nhất và tuần tự, không phải phép ghép nối rời rạc bốn công cụ quan sát đặt cạnh nhau.
 
-## Thực hành: giữ mẫu số và ranh giới nhãn quan sát
+### Bài thực hành: Giữ mẫu số và ranh giới nhãn quan sát
 
-Mở `labs/part16-observability-evidence/exercise/recorder_test.go` trước. Bài không yêu cầu cài Prometheus, OpenTelemetry hay dashboard. Test bắt contract nhỏ nhưng hay bị làm sai: no data không được giả là 100%; unknown outcome không được làm state thay đổi; và nhiều goroutine ghi outcome không làm vỡ tổng số. Đây là nơi race detector từ Chương 8 trở thành một phần của observability correctness, không phải chỉ là một lệnh “chạy cho yên tâm”.
+Mở tệp `labs/part16-observability-evidence/exercise/recorder_test.go` trước tiên. Bài tập không yêu cầu cài đặt Prometheus, OpenTelemetry hay dựng bảng điều khiển phức tạp. Bộ kiểm thử ràng buộc các giao ước thiết kế tinh gọn nhưng thường bị vi phạm: tình trạng thiếu dữ liệu không được ngụy tạo thành 100%; kết quả không xác định không được làm biến đổi trạng thái nội bộ; và nhiều luồng đồng thời ghi nhận kết quả không được làm xáo trộn tổng số tích lũy. Đây là điểm mà công cụ dò điều kiện chạy đua từ Chương 8 gắn liền trực tiếp với tính đúng đắn của dữ liệu giám sát, không đơn thuần là một câu lệnh kiểm tra hình thức.
 
 ~~~powershell
 cd labs/part16-observability-evidence
@@ -129,32 +129,22 @@ go vet ./fixed
 go test -race ./fixed
 ~~~
 
-Contract cố ý không nhận `target string`, URL hay error text. Những dữ liệu đó thuộc log/trace hoặc một data model khác có retention và redaction. `Recorder` chỉ giữ một metric aggregate bounded. Khi tests xanh, hãy nhìn `fixed/` và giải thích vì sao `Snapshot` trả struct value thay vì `*Snapshot`, và vì sao một `sync.Mutex` chung là đủ cho correctness trước khi có lý do đo contention.
+Giao ước thiết kế chủ ý không tiếp nhận `target string`, đường dẫn URL hay nội dung thông điệp lỗi. Những dữ liệu đó thuộc về nhật ký vận hành, dấu vết thực thi hoặc một mô hình dữ liệu riêng biệt có chính sách lưu trữ và khử thông tin nhạy cảm. Bộ ghi nhận `Recorder` chỉ lưu giữ chỉ số tổng hợp có giới hạn chiều nhãn. Khi các ca kiểm thử đạt kết quả tốt, hãy đối chiếu với thư mục `fixed/` và giải thích vì sao phương thức `Snapshot` trả về giá trị cấu trúc thay vì con trỏ `*Snapshot`, cũng như lý do vì sao một khóa `sync.Mutex` dùng chung là hoàn toàn đầy đủ cho tính đúng đắn trước khi phát sinh nhu cầu đo lường tranh chấp tài nguyên.
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Khai báo `Outcome` là closed set rồi `switch` trước khi tăng `Completed`. Đặt lock bao quanh cả validation và mutation để invalid outcome không thể race với snapshot hay tạo half-update. `SuccessRatio` trả `(float64, bool)`; boolean false là semantic cho no data, không phải error transport. Bản fixed ưu tiên một invariant dễ kiểm chứng hơn một API nhìn “linh hoạt”.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Khai báo kiểu `Outcome` là một tập đóng rồi dùng `switch` kiểm tra trước khi tăng biến đếm `Completed`. Đặt khóa đồng bộ bao quanh cả bước xác thực lẫn thao tác biến đổi dữ liệu để kết quả không hợp lệ không thể chạy đua với hàm chụp nhanh (*snapshot*) hoặc tạo ra trạng thái cập nhật dở dang. Phương thức `SuccessRatio` trả về `(float64, bool)`; giá trị boolean `false` mang ngữ nghĩa không có dữ liệu, không phải là cơ chế truyền tải lỗi. Bản sửa đổi ưu tiên một bất biến dễ kiểm chứng hơn là một API có vẻ “linh hoạt”.
 
 ## Giai đoạn hai: ba tín hiệu đi qua một service thật
 
-Recorder vừa rồi cố ý không biết Prometheus hay OpenTelemetry. Bây giờ, khi
-câu hỏi đã rõ, ta nối nó với tool thật mà không xây một platform quan sát khổng
-lồ. `labs/part16-real-signals` là một HTTP service nhỏ. Một request vào
-`/probe` tạo một server span `probe.request`; việc giả lập dependency tạo child
-span `probe.dependency`; kết quả cuối cùng được ghi thành JSON log, Prometheus
-counter và histogram. Console exporter in trace ra stdout để thấy quan hệ
-parent-child ngay trên máy local.
+Bộ ghi nhận vừa rồi chủ ý không phụ thuộc vào Prometheus hay OpenTelemetry. Khi câu hỏi nghiệp vụ đã rõ ràng, ta liên kết nó với các công cụ giám sát thực tế mà không cần xây dựng một nền tảng quan sát đồ sộ. Thư mục `labs/part16-real-signals` chứa một dịch vụ HTTP thu nhỏ. Một yêu cầu gửi tới điểm cuối `/probe` sẽ khởi tạo một phân đoạn máy chủ `probe.request`; tác vụ mô phỏng dịch vụ phụ thuộc tạo ra phân đoạn con `probe.dependency`; kết quả sau cùng được lưu thành nhật ký định dạng JSON, bộ đếm Prometheus và biểu đồ tần suất (*histogram*). Bộ xuất dữ liệu ra màn hình dòng lệnh in dấu vết thực thi ra cổng xuất chuẩn để người lập trình quan sát trực tiếp quan hệ cha con ngay trên môi trường phát triển cục bộ.
 
 ![Các đường ghi nhận kết quả của một request probe](../../assets/diagrams/probe-observation-path.png)
-@figure Cùng request cung cấp dữ liệu cho log, trace, counter và histogram. Các đường ghi nhận thể hiện những góc nhìn khác nhau, không phải log sinh counter hay trace sinh histogram.
+@figure Cùng một yêu cầu cung cấp dữ liệu cho nhật ký, dấu vết thực thi, bộ đếm và biểu đồ tần suất. Các đường ghi nhận thể hiện những góc nhìn khác nhau, không phải nhật ký sinh ra bộ đếm hay dấu vết sinh ra biểu đồ tần suất.
 
-Đây là một evidence path, không phải ba cách đặt tên cho cùng một dòng. Counter
-trả lời *bao nhiêu lần đã hoàn tất theo outcome*. Histogram trả lời *duration
-phân bố thế nào so với bucket đã chọn*. Trace giữ quan hệ của **một** request
-với dependency nó gọi. Log giữ status và duration của event để người điều tra
-không phải suy từ aggregate về một request cụ thể.
+Đây là một lộ trình thu thập bằng chứng độc lập, không phải ba cách gọi tên khác nhau cho cùng một dòng dữ liệu. Bộ đếm trả lời câu hỏi *bao nhiêu lần đã hoàn tất theo từng nhóm kết quả*. Biểu đồ tần suất trả lời câu hỏi *thời lượng thực thi phân bố ra sao so với các khoảng phân chia (*bucket*) đã ấn định*. Dấu vết thực thi bảo toàn mối quan hệ của **một** yêu cầu cụ thể với các dịch vụ phụ thuộc mà nó triệu gọi. Nhật ký lưu giữ mã trạng thái và thời lượng của từng sự kiện để kỹ sư không phải suy diễn ngược từ dữ liệu tổng hợp về một yêu cầu riêng lẻ.
 
-Mở `labs/part16-real-signals/README.md`, đọc nhiệm vụ tự điều tra, rồi chạy
-service. Console trace và JSON log được tách stdout/stderr có chủ ý: đừng parse
-output trace như log application trong production.
+Mở tệp `labs/part16-real-signals/README.md`, theo dõi nhiệm vụ tự điều tra, rồi khởi chạy dịch vụ. Dấu vết trên giao diện dòng lệnh và nhật ký JSON được phân tách có chủ đích giữa hai luồng xuất chuẩn (*stdout*) và xuất lỗi (*stderr*): tuyệt đối không bóc tách dữ liệu dấu vết thực thi như thể nhật ký ứng dụng trong môi trường vận hành thực tế.
 
 ~~~powershell
 cd labs/part16-real-signals
@@ -164,8 +154,7 @@ go test -race ./...
 go run ./cmd/probe-api
 ~~~
 
-Ở terminal khác, chạy từng failure mode. `curl.exe -i` giữ nguyên HTTP status
-thay vì để shell biến response 503/504 thành lỗi khó đọc.
+Tại một cửa sổ dòng lệnh khác, lần lượt thực thi từng kịch bản lỗi (*failure mode*). Lệnh `curl.exe -i` giữ nguyên vẹn mã trạng thái HTTP thay vì để hệ vỏ biến đổi các phản hồi 503 hoặc 504 thành thông báo lỗi khó theo dõi.
 
 ~~~powershell
 curl.exe -i http://localhost:8080/probe?mode=ok
@@ -175,13 +164,7 @@ curl.exe -i http://localhost:8080/probe?mode=timeout
 curl.exe -s http://localhost:8080/metrics
 ~~~
 
-`ok` và `slow` đều là `success`; chậm không tự động đồng nghĩa với failure.
-`fail` là dependency trả lỗi ngay và service trả `503`. `timeout` là caller hết
-20 ms ngân sách trước dependency giả lập hoàn tất và service trả `504`. Đây là
-failure injection có boundary cụ thể, không phải latency ngẫu nhiên. So sánh
-JSON log, counter, histogram và trace trước khi mở source: evidence nào phân
-biệt `fail` với `timeout` nhanh nhất? evidence nào cho thấy `slow` vẫn thành
-công nhưng đã đi qua bucket khác?
+Các trạng thái `ok` và `slow` đều được ghi nhận là `success`; việc xử lý chậm chạp không đồng nghĩa với thất bại. Trạng thái `fail` xuất hiện khi dịch vụ phụ thuộc phản hồi lỗi lập tức và dịch vụ trả về mã `503`. Trạng thái `timeout` phản ánh trường hợp bên gọi cạn kiệt ngân sách 20 ms trước khi dịch vụ phụ thuộc mô phỏng kịp hoàn tất, khiến dịch vụ trả về mã `504`. Đây là cơ chế tiêm lỗi có ranh giới xác định, không phải độ trễ ngẫu nhiên không kiểm soát. Hãy so sánh nhật ký JSON, bộ đếm, biểu đồ tần suất và dấu vết thực thi trước khi mở mã nguồn: bằng chứng nào giúp phân biệt `fail` với `timeout` nhanh nhất? bằng chứng nào chứng minh `slow` vẫn thành công nhưng đã rơi vào khoảng phân loại thời gian khác?
 
 @table Instrument của lab và contract của nó
 
@@ -192,41 +175,25 @@ công nhưng đã đi qua bucket khác?
 | JSON log | Cùng handler. | mode, outcome, HTTP status, duration. | Một log không là rate theo thời gian. |
 | Hai spans | Request và dependency. | mode/outcome; error status khi fail. | Một trace không là thống kê cho mọi request. |
 
-Histogram bucket là một quyết định đo lường. Lab chọn 5, 10, 25, 50, 100 và
-250 ms để phân biệt timeout 20 ms với slow 40 ms trên laptop; nó không được
-chép thành threshold production. Muốn trả lời câu hỏi latency ở 2 giây, bucket
-cao nhất 250 ms đã làm mất độ phân giải cần thiết. Muốn để mỗi route, raw URL,
-user ID, trace ID hay error message làm label thì một metric aggregate lại bị
-đẩy thành kho event vô hạn. Lab chỉ đặt `outcome` vào label; `mode` có ít giá trị
-ở đây, nhưng vẫn không cần để trả lời câu hỏi vận hành đã chọn.
+Việc lựa chọn các khoảng phân loại (*bucket*) cho biểu đồ tần suất là một quyết định đo lường có tính toán. Bài thực hành chọn các mốc 5, 10, 25, 50, 100 và 250 ms nhằm phân biệt rõ ràng trường hợp quá thời gian 20 ms với trường hợp chậm 40 ms trên máy tính cá nhân; cấu hình này không được sao chép nguyên xi thành ngưỡng đo lường thực tế. Nếu cần trả lời câu hỏi về độ trễ ở ngưỡng 2 giây, việc đặt mốc tối đa 250 ms sẽ làm mất hoàn toàn độ phân giải dữ liệu cần thiết. Nếu đưa từng đường dẫn định tuyến, URL thô, định danh người dùng, mã dấu vết hay thông báo lỗi vào làm nhãn, một chỉ số tổng hợp sẽ bị biến thành kho lưu trữ sự kiện vô tận. Bài tập chỉ gán kết quả `outcome` vào nhãn; tham số `mode` ít mang giá trị trong ngữ cảnh này và không cần thiết cho câu hỏi vận hành được đặt ra.
 
-**Dừng để dự đoán.** Sau khi chạy `ok`, `slow`, `fail`, `timeout` một lần,
-counter `success` là bao nhiêu? Restart process rồi scrape lại `/metrics`: vì
-sao con số reset không chứng minh probe cũ chưa từng diễn ra? Prometheus server
-lưu sample theo thời gian là boundary khác với client process đang export số
-cumulative hiện tại.
+> **Dừng để dự đoán:** Sau khi chạy `ok`, `slow`, `fail`, `timeout` một lần, bộ đếm `success` sẽ mang giá trị bao nhiêu? Khởi động lại tiến trình rồi thu thập lại `/metrics`: vì sao việc các con số bị đặt lại từ đầu không chứng minh rằng những lượt probe cũ chưa từng diễn ra? Máy chủ Prometheus lưu trữ mẫu theo chuỗi thời gian là một ranh giới độc lập với tiến trình ứng dụng đang xuất dữ liệu tích lũy hiện thời.
 
-Test của lab không giả vờ thay local collector hay dashboard. Nó kiểm tra ba
-contract có thể kiểm tra tự động: metric chỉ có label bounded, JSON log có
-`outcome`, và child span thực sự có parent là request span. Source dùng
-Prometheus Go client để tạo exposition `/metrics`, và OpenTelemetry Go SDK với
-console exporter dành cho debugging local. Khi đưa trace sang collector hay
-backend, endpoint, sampling, retention, privacy và quyền truy cập là policy
-mới phải được thiết kế; không ghi secret vào attribute chỉ để trace dễ tìm hơn.
+Bộ kiểm thử của bài học không nhằm thay thế bộ thu thập cục bộ hay bảng điều khiển hiển thị. Nó xác thực ba giao ước kỹ thuật có thể tự động hóa: chỉ số đo lường chỉ chứa các nhãn có giới hạn chiều, nhật ký JSON ghi nhận trường `outcome`, và phân đoạn con thực sự nhận phân đoạn yêu cầu làm nút cha. Mã nguồn sử dụng thư viện Go client của Prometheus để xuất dữ liệu tại `/metrics`, cùng bộ phát triển OpenTelemetry Go SDK kèm bộ xuất dữ liệu dòng lệnh để phục vụ gỡ lỗi cục bộ. Khi chuyển dấu vết sang hệ thống thu thập tập trung hoặc dịch vụ lưu trữ chuyên dụng, các yếu tố về điểm cuối, tỷ lệ chọn mẫu, thời hạn lưu trữ, bảo mật quyền riêng tư và quyền truy cập là những chính sách mới cần được thiết kế; tuyệt đối không ghi dữ liệu bí mật vào thuộc tính chỉ để phục vụ tìm kiếm tiện lợi.
 
 ## Có sample chưa có nghĩa tín hiệu đã trả lời sự cố
 
-Trong `part16-real-signals`, các mode local giữ instrumentation dễ quan sát. Giai đoạn tiếp theo ở `projects/opsprobe/failurelab` vẫn dùng `slog`, registry Prometheus riêng và console exporter OpenTelemetry, nhưng thay dependency giả bằng HTTP loopback có checkpoint. Mục đích không phải thêm dashboard: nó buộc ba tín hiệu nói về cùng một lượt probe khi timeout hoặc body bị cắt.
+Trong thư mục `part16-real-signals`, các chế độ cục bộ giúp việc thiết lập đo lường được trực quan và sáng tỏ. Giai đoạn tiếp theo tại `projects/opsprobe/failurelab` tiếp tục vận hành với `slog`, một vùng đăng ký Prometheus riêng biệt và bộ xuất dữ liệu dòng lệnh OpenTelemetry, nhưng thay thế dịch vụ phụ thuộc giả lập bằng kết nối mạng nội bộ HTTP có điểm kiểm tra (*checkpoint*). Mục đích không phải là dựng thêm bảng điều khiển: cấu trúc này buộc cả ba tín hiệu đo lường phải phản ánh thống nhất về cùng một lượt thăm dò khi phát sinh sự cố quá thời gian hoặc phần thân phản hồi bị ngắt quãng.
 
-Histogram `opsprobe_probe_duration_seconds` đo thời gian trong probe; `failurelab_job_seconds` đo từ admission tới probe completion, gồm queue delay nhưng không gồm chờ consumer lấy result. Gauge `failurelab_running` chỉ bao quanh probe đang chạy, còn `failurelab_queue_depth` là job chưa được worker nhận. Chúng không thay gauge worker sống của dự án. Worker chờ send có thể còn sống dù running bằng 0; chỉ join `Done` mới xác nhận nó đã thoát.
+Biểu đồ tần suất `opsprobe_probe_duration_seconds` đo lường thời gian thực thi nội tại của lượt thăm dò; chỉ số `failurelab_job_seconds` đo từ lúc tiếp nhận yêu cầu cho tới khi hoàn tất thăm dò, bao gồm cả thời gian chờ trong hàng đợi nhưng không tính thời gian chờ tiến trình tiêu thụ lấy kết quả. Thước đo biến thiên `failurelab_running` chỉ bao quát các lượt thăm dò đang trong tiến trình xử lý, trong khi `failurelab_queue_depth` phản ánh số công việc chưa được công nhân (*worker*) tiếp nhận. Các chỉ số này không thể thay thế thước đo số lượng tiến trình công nhân còn sống của toàn dự án. Một luồng công nhân đang chờ gửi dữ liệu vẫn có thể duy trì hoạt động ngay cả khi chỉ số đang chạy bằng 0; chỉ khi ghi nhận kênh `Done` đóng lại mới xác nhận luồng đã thực sự kết thúc.
 
-Đọc Chương 20 để tự chọn bằng chứng phân biệt trước khi chạy. Test xác nhận có log/outcome, histogram sample và span, không xác nhận latency production hay một backend đã lưu trace bền vững. Khi chạy workload hữu hạn, ghi cả số bị từ chối: throughput trên việc được nhận mà bỏ mất rejection có thể làm một service đang shed phần lớn tải trông như khỏe. Không dùng target ID tùy ý làm metric label; lab giữ các outcome hữu hạn, còn ID nằm trong log/span theo policy dữ liệu của fixture.
+Hãy đọc Chương 20 để chủ động lựa chọn bằng chứng phân biệt trước khi thực thi. Bộ kiểm thử xác thực sự hiện diện của nhật ký kèm kết quả, mẫu đo biểu đồ tần suất và phân đoạn dấu vết, chứ không cam đoan về độ trễ môi trường vận hành thực tế hay một hạ tầng lưu trữ dấu vết bền vững. Khi thực hiện khối lượng công việc có giới hạn, hãy ghi nhận cả số lượng yêu cầu bị từ chối: thông lượng chỉ tính trên các yêu cầu được tiếp nhận mà bỏ qua lượng từ chối có thể khiến một dịch vụ đang chủ động cắt tải trông có vẻ rất khỏe mạnh. Không sử dụng mã định danh máy chủ đích tùy tiện làm nhãn đo lường; bài thực hành giữ nguyên tập kết quả hữu hạn, còn định danh cụ thể được lưu giữ trong nhật ký và phân đoạn dấu vết theo đúng chính sách dữ liệu đã định trước.
 
 ## Khi dùng thư viện thật
 
-Khi requirement đã cần `/metrics`, histogram duration, exemplars, trace propagation, collector hoặc backend query, hãy dùng client library và semantic convention được duy trì thay vì tự phát minh wire format. Nhưng SDK không thể chọn SLI cho anh. Trước khi thêm một instrument, hãy viết câu hỏi vận hành, event boundary, unit, label cardinality, reset/restart behavior, ownership và action khi signal xấu. Nếu không trả lời được, thêm metric chỉ tạo thêm dữ liệu chứ không thêm khả năng thấy hệ thống.
+Khi yêu cầu kỹ thuật đòi hỏi điểm cuối `/metrics`, biểu đồ tần suất đo thời lượng, mẫu điểm nổi bật (*exemplars*), lan truyền ngữ cảnh dấu vết, bộ thu thập hoặc truy vấn hạ tầng lưu trữ, hãy sử dụng thư viện máy khách chuẩn mực và quy ước ngữ nghĩa được duy trì ổn định thay vì tự sáng chế định dạng truyền tải trên đường truyền. Tuy nhiên, bộ công cụ phát triển phần mềm không thể lựa chọn chỉ số SLI thay cho đội ngũ kỹ thuật. Trước khi bổ sung một công cụ đo lường, hãy xác định rõ câu hỏi vận hành cần giải đáp, ranh giới phát sinh sự kiện, đơn vị đo, số lượng chiều nhãn, hành vi khi khởi động lại, đội ngũ sở hữu và hành động can thiệp khi tín hiệu suy thoái. Nếu chưa trả lời được những câu hỏi then chốt đó, việc bổ sung thêm chỉ số đo lường chỉ tạo thêm rác dữ liệu chứ không giúp cải thiện khả năng quan sát hệ thống.
 
-Điểm dừng của chương là một thay đổi trong cách nhìn: outcome của Chương 15 không còn là một `Result` bị in ra rồi quên. Nó có thể thành evidence theo thời gian, nhưng chỉ sau khi ta nói thật outcome nào được đếm, signal nào giữ chi tiết, và inference nào số liệu chưa đủ sức làm. Chương 17 sẽ chuyển từ “instance có thể quan sát” sang “artefact được đóng gói và điều phối”; readiness khi ấy sẽ gặp một control plane thật, chứ không chỉ là một endpoint đẹp.
+Điểm dừng của chương đánh dấu một bước chuyển trong nhận thức: kết quả từ Chương 15 không còn là một giá trị `Result` bị in ra màn hình rồi lãng quên. Nó có thể chuyển hóa thành bằng chứng xác thực theo chuỗi thời gian, nhưng chỉ sau khi ta quy ước trung thực kết quả nào được thống kê, tín hiệu nào lưu giữ chi tiết bối cảnh, và những suy diễn nào mà số liệu hiện thời chưa đủ căn cứ chứng minh. Chương 17 sẽ chuyển dịch từ “thể hiện tiến trình có thể quan sát” sang “tạo phẩm được đóng gói và điều phối”; khi ấy tín hiệu sẵn sàng sẽ kết nối trực tiếp với một mặt phẳng điều khiển thực sự, thay vì chỉ dừng lại ở một điểm cuối hình thức.
 
 @references
 1. OpenTelemetry Authors. Signals: traces, metrics, logs và profiles. opentelemetry.io/docs/concepts/signals/

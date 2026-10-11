@@ -2,13 +2,13 @@
 
 # Chương 28 — MCP và AIOps bằng Go: trao công cụ cho Agent mà không trao toàn quyền
 
-Xét một Agent có tool đọc health, xem log và đề xuất restart service. Đọc dữ liệu và thay đổi hệ thống có tác động khác nhau; nối chúng qua một protocol không tự định nghĩa ai được phép làm gì. Chương này bắt đầu từ contract quyền hành động, không từ độ tự tin của câu trả lời.
+Xét một tác tử (Agent) có công cụ đọc trạng thái sức khỏe dịch vụ (*health check*), xem nhật ký (*logs*) và đề xuất khởi động lại dịch vụ (*restart service*). Đọc dữ liệu và thay đổi hệ thống mang lại tác động hoàn toàn khác nhau; việc kết nối chúng qua một giao thức không đồng nghĩa hệ thống đã tự phân định quyền hạn. Chương này bắt đầu từ khế ước (*contract*) về quyền thực thi hành động, không dựa trên mức độ tự tin trong câu trả lời của mô hình trí tuệ nhân tạo.
 
 Khi tool nối tới production, cần hỏi cụ thể:
 
 > *Nếu trao cho Agent quyền truy cập vào một công cụ, làm sao bạn bảo đảm tác tử không bị tấn công tiêm lời nhắc (Prompt Injection) để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ hạ tầng?*
 
-MCP chuẩn hóa ranh giới giao tiếp, nhưng không tự cấp quyền hay làm tool an toàn. Chương này dùng thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (v1.8.0) để dựng một server sư phạm có đặc quyền tối thiểu, target registry và audit trail. Policy authorization, trust của target registry và actuator thật vẫn là trách nhiệm của deployment.
+Giao thức bối cảnh mô hình (MCP, tức *Model Context Protocol*) chuẩn hóa ranh giới giao tiếp, nhưng không tự động cấp quyền hay làm cho công cụ trở nên an toàn. Chương này sử dụng thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (phiên bản v1.8.0) để dựng một máy chủ mẫu mang tính sư phạm theo nguyên tắc đặc quyền tối thiểu, có sổ đăng ký mục tiêu (*target registry*) và dấu vết kiểm toán (*audit trail*). Chính sách ủy quyền (*authorization policy*), độ tin cậy của sổ đăng ký mục tiêu và bộ chấp hành (*actuator*) thực tế vẫn là trách nhiệm của cấu hình triển khai.
 
 ---
 
@@ -24,21 +24,21 @@ Mô hình trung tâm của lab là mỗi lời gọi phải đi qua các kiểm 
 | Target và side effect | Target registry được tin, handler và actuator đã cấu hình. | Allowlist tên không bảo vệ nếu chính registry hay credential bị đổi trái phép. |
 | Audit | Ghi cả quyết định cho phép/từ chối ở boundary tương ứng. | Log không chỉ xảy ra sau hành động thành công; không có bảo đảm bền vững từ interface logger. |
 
-Stdio tránh mở listener HTTP của chính server nhưng không bảo vệ trước process local có quyền thích hợp. Schema kiểm tra constraint đã khai báo; quyền dựa trên identity tin cậy và action/target cụ thể. Registry target của lab là cấu hình tin cậy, không phải bất kỳ URL Agent đưa vào. Audit chỉ có ích khi recorder, đường lưu và phản ứng khi mất log có contract riêng.
+Cơ chế truyền nhận qua dòng nhập/xuất chuẩn (*stdio*) tránh việc mở cổng lắng nghe HTTP trên máy chủ nhưng không ngăn chặn được các tiến trình cục bộ trên cùng máy có đặc quyền phù hợp. Lược đồ (*schema*) chỉ kiểm tra các ràng buộc dữ liệu đã khai báo; quyền hạn phải dựa trên định danh tin cậy cùng hành động và mục tiêu cụ thể. Sổ đăng ký mục tiêu của bài lab là cấu hình tĩnh đáng tin cậy, không chấp nhận bất kỳ URL tùy ý nào do tác tử tự ý cung cấp. Dấu vết kiểm toán chỉ thực sự phát huy tác dụng khi bộ ghi, kênh lưu trữ và phương án xử lý khi mất nhật ký được quy định bằng một khế ước rõ ràng.
 
 ---
 
 ## 2. Model Context Protocol: Thư viện Go SDK Chính thức
 
-MCP là giao thức mở cho client trao đổi với server cung cấp tool và dữ liệu. Nó định nghĩa thông điệp và lifecycle kết nối; mức phổ biến hay nhãn “tiêu chuẩn công nghiệp” không chứng minh policy của một deployment đúng.
+MCP là giao thức mở cho phép ứng dụng khách (*client*) trao đổi với máy chủ cung cấp công cụ và dữ liệu. Giao thức này định nghĩa định dạng thông điệp và vòng đời kết nối; độ phổ biến hay nhãn “tiêu chuẩn công nghiệp” không chứng minh chính sách bảo mật của một hệ thống triển khai là chính xác.
 
-Về bản chất kỹ thuật, MCP vận hành trên nền giao thức **JSON-RPC 2.0**. Máy chủ Go công bố danh sách các công cụ khả dụng kèm mô tả chức năng và JSON Schema qua phương thức `tools/list`. Khi tác tử quyết định sử dụng một công cụ, nó phát thông điệp `tools/call` chứa tên công cụ và các tham số tương ứng. 
+Ở tầng kiến trúc giao vận, MCP vận hành trên nền giao thức **JSON-RPC 2.0**. Máy chủ Go công bố danh sách các công cụ khả dụng kèm mô tả chức năng và JSON Schema qua phương thức `tools/list`. Khi tác tử quyết định sử dụng một công cụ, nó phát thông điệp `tools/call` chứa tên công cụ và các tham số tương ứng.
 
-Dự án thực hành tại `labs/part28-mcp-ops-tools/` ghim SDK v1.8.0. Theo compatibility matrix của chính SDK, bản này hỗ trợ và thương lượng revision mới nhất `2026-07-28` với peer hỗ trợ nó, đồng thời còn tương thích các revision cũ. Vì protocol revision được thương lượng theo kết nối, server không được tự suy ra wire behavior chỉ từ version của dependency. SDK vẫn cho phép typed handler, JSON Schema từ struct tags và `ReceivingMiddleware` cho các policy cục bộ.
+Dự án thực hành tại `labs/part28-mcp-ops-tools/` ghim SDK v1.8.0. Theo ma trận tương thích của chính bộ công cụ phát triển (SDK), bản này hỗ trợ và thương lượng phiên bản giao thức (*revision*) mới nhất `2026-07-28` với các đối tác hỗ trợ, đồng thời vẫn tương thích ngược với các phiên bản cũ hơn. Vì phiên bản giao thức được thương lượng theo từng phiên kết nối, máy chủ không được tự suy diễn hành vi trên đường truyền chỉ từ số phiên bản của gói phụ thuộc. Thư viện SDK vẫn cho phép đăng ký hàm xử lý định kiểu rõ ràng, tự sinh JSON Schema từ thẻ cấu trúc Go và cung cấp `ReceivingMiddleware` cho các chính sách kiểm soát cục bộ.
 
 ### Giao vận Stdio và Kết nối Cục bộ
 
-Lab có đường Stdio để client khởi chạy server và trao đổi qua stdin/stdout, cùng `NewInMemoryTransports` cho test. Stdio không cần endpoint HTTP hay chứng chỉ TLS cho pipe cục bộ, nhưng vẫn cần kiểm soát executable, quyền process và cấu hình client. Không gán một latency hoặc ưu tiên transport chung cho mọi hệ DevOps.
+Bài lab cung cấp kênh kết nối Stdio để ứng dụng khách khởi chạy tiến trình máy chủ và trao đổi qua `stdin`/`stdout`, cùng hàm `NewInMemoryTransports` phục vụ kiểm thử. Kênh Stdio không cần điểm cuối HTTP hay chứng chỉ TLS cho đường ống dẫn cục bộ, nhưng vẫn đòi hỏi kiểm soát tệp thực thi, quyền hạn tiến trình và cấu hình ứng dụng khách. Không thể áp đặt một độ trễ cố định hay ưu tiên phương thức truyền tải chung cho mọi hệ thống DevOps.
 
 ---
 
@@ -55,7 +55,7 @@ Một sai lầm rất phổ biến của các kỹ sư khi mới thiết kế MC
 
 Đây là một khiếm khuyết an ninh nghiêm trọng. Các bộ xác thực JSON Schema chỉ kiểm tra định dạng hình thức của chuỗi ký tự mà không hiểu ngữ nghĩa của địa chỉ đích. Khi tác tử bị tấn công tiêm lời nhắc hoặc gặp hiện tượng ảo giác, nó có thể gửi yêu cầu nhắm tới địa chỉ siêu dữ liệu nhạy cảm của điện toán đám mây (`http://169.254.169.254/latest/meta-data/...`), cổng quản trị nội bộ trên `localhost:9090`, hoặc các máy chủ cơ sở dữ liệu chưa mã hóa trong mạng riêng (VPC).
 
-Để giảm bề mặt SSRF do **caller** chọn, agent không được truyền URL trực tiếp mà chỉ truyền `target_id` đã được duyệt trước. Server ánh xạ ID sang URL từ target registry và từ chối ID lạ. Đây không tự chứng minh URL trong registry là an toàn: registry bị ghi sai hoặc bị xâm phạm vẫn là một trust boundary riêng, cần review cấu hình, DNS/egress policy và quyền sửa registry.
+Để thu hẹp bề mặt tấn công SSRF do bên gọi tùy ý lựa chọn, tác tử tuyệt đối không được phép truyền trực tiếp địa chỉ URL mà chỉ được truyền mã định danh mục tiêu `target_id` đã được phê duyệt từ trước. Máy chủ thực hiện ánh xạ mã định danh này sang địa chỉ URL tương ứng từ danh bạ mục tiêu và lập tức từ chối các mã lạ. Điều này không tự chứng minh rằng địa chỉ URL trong danh bạ là hoàn toàn an toàn: một danh bạ bị nhập sai hoặc bị can thiệp trái phép vẫn là một ranh giới tin cậy riêng biệt, đòi hỏi phải thẩm định cấu hình, chính sách phân giải tên miền và lưu lượng mạng đi ra ngoài cùng thẩm quyền chỉnh sửa danh bạ.
 
 ---
 
@@ -91,7 +91,7 @@ Các trường struct có thể được bổ sung thêm tag `jsonschema` để 
 Policy phải lấy quyền của caller từ nguồn tin cậy:
 > *Vai trò của Agent phải được xác định qua Ngữ cảnh Phiên (Session Context), không để Agent tự khai báo vai trò trong tham số JSON của công cụ.*
 
-Nếu để Agent gửi `{"role": "admin"}` trong JSON arguments, việc prompt injection có thể dẫn tới việc Agent mạo danh quản trị viên để chiếm quyền điều khiển hệ thống.
+Nếu để tác tử tự ý gửi `{"role": "admin"}` trong các tham số dữ liệu JSON, nguy cơ tiêm lời nhắc có thể dẫn tới việc tác tử mạo danh quản trị viên để chiếm đoạt quyền điều khiển toàn bộ hệ thống.
 
 ### Gắn danh tính vào context.Context
 
@@ -123,13 +123,13 @@ func CallerRoleFromContext(ctx context.Context) Role {
 
 ### Một danh tính thật không tự sinh ra quyền tool
 
-Test session của chương giữ nguyên mức `MOCK_VERIFIED` cho nguồn identity. Muốn nhìn thấy boundary mạng thật mà không kéo MCP vào mọi phép thử, chạy lab TLS `part11-request-path/identity` trước: reader có verified certificate vẫn bị từ chối mutation; header tự khai admin không đổi quyết định. Đó là bằng chứng handshake và policy HTTP cục bộ, chưa phải kiểm định authorization của Streamable HTTP MCP.
+Bộ thử nghiệm phiên làm việc của chương giữ nguyên mức độ giả lập kiểm chứng đối với nguồn dữ liệu định danh. Nếu muốn khảo sát ranh giới mạng thực tế mà không cần đưa giao thức MCP vào mọi phép thử, hãy thực thi bài thực hành TLS từ Chương 11 trước: tiến trình đọc dù có chứng chỉ số đã được xác minh vẫn bị từ chối quyền đột biến; tiêu đề tự xưng là quản trị viên không thể thay đổi quyết định an ninh. Đó là bằng chứng về quá trình bắt tay và chính sách HTTP cục bộ, chưa phải là phép thẩm định ủy quyền toàn diện của giao thức truyền tải dạng luồng.
 
-Khi deployment dùng TLS termination ở proxy, handler có thể không còn `r.TLS.VerifiedChains` của client gốc. Không copy identity header từ Internet vào session context; phải xác định proxy nào được tin, bảo vệ đường proxy–service và kiểm tra cơ chế truyền identity của deployment. Stdio, OAuth hay mTLS có cách thiết lập caller khác nhau, nhưng cùng cần ánh xạ caller đã xác thực sang action/target được phép. Lab certificate không thay đổi policy MCP và không tuyên bố mọi MCP server cần mTLS.
+Khi triển khai hệ thống có cơ chế kết thúc TLS tại máy chủ ủy nhiệm, hàm xử lý có thể không còn giữ lại chuỗi chứng chỉ đã xác thực của máy khách ban đầu. Tuyệt đối không sao chép tiêu đề định danh từ mạng Internet vào ngữ cảnh phiên làm việc; hệ thống bắt buộc phải xác định máy chủ ủy nhiệm nào được tin cậy, bảo vệ đường truyền giữa máy chủ ủy nhiệm và dịch vụ nội bộ, đồng thời kiểm tra cơ chế chuyển giao danh tính của kiến trúc triển khai. Các phương thức truyền tải qua dòng dữ liệu chuẩn, xác thực OAuth hay xác thực hai chiều mTLS có cách thức thiết lập bên gọi khác nhau, nhưng đều có chung yêu cầu bắt buộc: ánh xạ bên gọi đã xác thực sang hành động và mục tiêu được phép. Chứng chỉ trong bài thực hành không làm thay đổi chính sách MCP và không khẳng định mọi máy chủ MCP đều bắt buộc phải dùng mTLS.
 
 ### Tách bạch hai nhóm công cụ và Rào chắn Đột biến
 
-Policy của lab cho `observer` gọi `query_service_health` trên target đã đăng ký và cấm `restart_service`. Đó không phải quyền “tự do truy vấn” chung: hệ thống thật cần giới hạn dữ liệu, target, budget và identity. Vai trò `operator` vẫn phải qua `ChangeAuthorizer` rồi `ServiceActuator`; tên role không tự đủ để cho phép thay đổi.
+Chính sách của bài thực hành cho phép vai trò quan sát viên gọi `query_service_health` trên các mục tiêu đã đăng ký và nghiêm cấm gọi `restart_service`. Đó không phải là đặc quyền tự do truy vấn tùy tiện: hệ thống thực tế đòi hỏi giới hạn phạm vi dữ liệu, mục tiêu cho phép, định mức tài nguyên và danh tính người gọi. Vai trò người vận hành vẫn bắt buộc phải đi qua bộ cấp phép thay đổi `ChangeAuthorizer` rồi mới tới bộ thực thi dịch vụ `ServiceActuator`; tên gọi của vai trò không tự nó mang đủ thẩm quyền để kích hoạt thay đổi.
 
 ~~~go
 type ServiceActuator interface {
@@ -149,11 +149,11 @@ type ChangeAuthorizer interface {
 
 ## 6. Xây dựng OpsServer trên nền tảng Official MCP Go SDK
 
-Dưới đây là các phần chính của `OpsServer` trong `labs/part28-mcp-ops-tools/server.go`. Snippet cho thấy các boundary của lab; các phần wiring còn lại nằm trong source:
+Dưới đây là các cấu phần trọng tâm của máy chủ `OpsServer` trong tệp `labs/part28-mcp-ops-tools/server.go`. Đoạn trích dẫn làm sáng tỏ các ranh giới kỹ thuật cốt lõi của bài thực hành; toàn bộ các thành phần kết nối chi tiết còn lại được lưu giữ trong mã nguồn:
 
-### 6.1. Khởi tạo server và ranh giới danh tính
+### 6.1. Khởi tạo máy chủ và ranh giới danh tính
 
-Trong kiến trúc của MCP Go SDK, `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp RPC gửi đến trước khi điều phối tới handler cụ thể. Ta sử dụng middleware này để bóc tách định danh caller từ phiên làm việc (`Session Context`) và tiêm vai trò bảo mật vào `context.Context`. Cần lưu ý rằng `context.Context` không tự tạo ra authenticated identity; middleware trong bài lab lấy role từ ánh xạ phiên giả lập để phục vụ kiểm thử mô hình. Trên môi trường production, tầng transport hoặc identity provider phải xác thực danh tính caller trước khi tiêm role vào context:
+Trong kiến trúc của bộ công cụ MCP Go, hàm `AddReceivingMiddleware` cho phép can thiệp vào mọi thông điệp triệu gọi từ xa gửi đến trước khi điều phối tới hàm xử lý cụ thể. Chúng ta sử dụng phần mềm trung gian này để bóc tách định danh bên gọi từ phiên làm việc và tiêm vai trò bảo mật vào ngữ cảnh `context.Context`. Bản thân `context.Context` không tự bảo đảm tính xác thực của danh tính; phần mềm trung gian trong bài thực hành lấy vai trò từ bảng ánh xạ phiên giả lập để phục vụ kiểm thử mô hình hóa. Trên môi trường vận hành thực tế, tầng truyền tải hoặc nhà cung cấp định danh bắt buộc phải xác thực danh tính bên gọi trước khi tiêm vai trò vào ngữ cảnh:
 
 ~~~go
 type OpsServer struct {
@@ -422,13 +422,13 @@ func (s *OpsServer) RecordAudit(
 }
 ~~~
 
-`auditLog` trong RAM chỉ giữ record trong process lifetime. Storage ngoài process có thể tăng độ bền, nhưng Kafka, Elasticsearch hay S3 Object Lock không tự bảo đảm toàn vẹn. Cần xác định ai được ghi/xóa, retention, cấu hình chống sửa và cách phát hiện mất record. Gửi bất đồng bộ còn có cửa sổ crash trước khi record được xác nhận lưu; policy phải quyết định có cho mutation khi audit sink lỗi hay không, cùng cơ chế đối soát outcome.
+Nhật ký kiểm toán trong bộ nhớ RAM chỉ lưu giữ các bản ghi trong vòng đời vận hành của tiến trình. Việc lưu trữ bên ngoài tiến trình có thể gia tăng độ bền vững, nhưng các hệ thống lưu trữ phân tán không tự động bảo đảm tính toàn vẹn tuyệt đối. Hệ thống cần xác định rõ ai có quyền ghi hoặc xóa, thời hạn lưu giữ, cấu hình chống sửa đổi và phương thức phát hiện bản ghi bị thất thoát. Việc chuyển giao dữ liệu bất đồng bộ còn tiềm ẩn khoảng thời gian tiến trình bị sập trước khi bản ghi được xác nhận lưu trữ bền vững; chính sách bắt buộc phải xác định rõ có cho phép thao tác đột biến diễn ra khi hệ thống lưu trữ kiểm toán gặp sự cố hay không, đi kèm cơ chế đối soát kết quả rõ ràng.
 
 ---
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part28-mcp-ops-tools`)
 
-Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools` (phân loại kiểm chứng: `UNIT_TESTED` / `MOCK_VERIFIED` cho giao thức MCP chính thức, phân quyền theo session context, rào chắn SSRF qua target allowlist, thực thi HTTP thật tới test server, và kích hoạt actuator). Chạy kiểm thử:
+Mã nguồn hoàn chỉnh nằm tại `labs/part28-mcp-ops-tools` (phân loại kiểm chứng: kiểm thử đơn vị và giả lập kiểm chứng cho giao thức MCP chính thức, phân quyền theo ngữ cảnh phiên làm việc, rào chắn chống SSRF qua danh sách mục tiêu cho phép, thực thi yêu cầu HTTP tới máy chủ kiểm thử và kích hoạt bộ thực thi). Chạy kiểm thử:
 
 ~~~bash
 go test -v -race ./...
@@ -455,9 +455,9 @@ ok      part28-mcp-ops-tools   0.234s
 
 ### Phân tích kết quả kiểm thử và Ranh giới xác thực:
 
-Bộ kiểm thử khởi tạo client và server MCP qua kênh `mcp.NewInMemoryTransports()`. Kịch bản kiểm tra `tools/list` xác nhận schema JSON được sinh tự động từ struct tags `jsonschema`. Kịch bản kiểm tra sức khỏe gửi yêu cầu HTTP thực tế tới `httptest.Server`, đo thời gian phản hồi và ghi nhận trạng thái `ALLOW`. 
+Bộ kiểm thử khởi tạo client và server MCP qua kênh `mcp.NewInMemoryTransports()`. Kịch bản kiểm tra `tools/list` xác nhận schema JSON được sinh tự động từ struct tags `jsonschema`. Kịch bản kiểm tra sức khỏe gửi yêu cầu HTTP thực tế tới `httptest.Server`, đo thời gian phản hồi và ghi nhận trạng thái `ALLOW`.
 
-Các test xác nhận unknown target bị từ chối, observer không gọi được restart, và ticket sai không kích hoạt actuator trong các case đã chạy. Denial record được kiểm tra trong log RAM. Đây không chứng minh chống mọi SSRF, prompt injection hay mất audit: registry, identity provider, transport và storage thật là những boundary chưa được fixture này kiểm chứng.
+Các bài kiểm thử xác nhận mục tiêu không xác định bị từ chối, vai trò quan sát viên không thể gọi thao tác khởi động lại, và phiếu phê duyệt sai không kích hoạt bộ thực thi trong các trường hợp đã kiểm tra. Bản ghi từ chối được kiểm chứng trực tiếp trong nhật ký bộ nhớ. Kết quả này không chứng minh khả năng phòng chống trước mọi cuộc tấn công SSRF, tiêm lời nhắc hay nguy cơ thất thoát dữ liệu kiểm toán: danh bạ mục tiêu, nhà cung cấp định danh, tầng truyền vận và kho lưu trữ thực tế là các ranh giới kỹ thuật chưa được bộ thử nghiệm này bao quát.
 
 ---
 
@@ -475,10 +475,10 @@ Các test xác nhận unknown target bị từ chối, observer không gọi đ�
 ## 9. Bài tập thực hành thiết kế MCP Server an toàn
 
 ### Thử thách 1: Điều tốc phiên làm việc của Agent (Agent Rate Limiting)
-**Yêu cầu:** Thiết kế ReceivingMiddleware cho tools/call, gắn rate limit với caller/session đã xác thực. Bài tập chọn 10 request/giây, không phải ngưỡng an toàn production. Test cả caller dùng nhiều session và cleanup state limiter; SDK không có API `ExecuteToolCall` trong ví dụ này.
+Yêu cầu: Thiết kế phần mềm trung gian tiếp nhận cho lệnh gọi công cụ, gắn định mức tốc độ với bên gọi hoặc phiên làm việc đã xác thực. Bài tập ấn định hạn mức 10 yêu cầu/giây, không phải ngưỡng an toàn áp dụng cho môi trường vận hành thực tế. Kiểm thử cả trường hợp bên gọi sử dụng nhiều phiên làm việc đồng thời và dọn dẹp trạng thái bộ điều tốc; bộ công cụ không cung cấp hàm thực thi trực tiếp trong ví dụ này.
 
 ### Thử thách 2: Cơ chế Phê duyệt Hai bước (Human-in-the-Loop Gate)
-**Yêu cầu:** Đối với các hành động phá hủy nghiêm trọng (như xóa cơ sở dữ liệu hay thu hồi hạ tầng), hãy thiết kế cơ chế phê duyệt hai bước cho công cụ MCP: hành động ban đầu trả về trạng thái chờ kèm mã xác nhận tạm thời. Thao tác chỉ được thực thi khi nhận được lệnh xác nhận chứa token hợp lệ trong thời hạn 5 phút. Cơ chế phải ràng buộc chặt chẽ token với hành động và mục tiêu đã phê duyệt, đồng thời đảm bảo token chỉ được dùng thành công đúng một lần.
+Yêu cầu: Đối với các hành động phá hủy nghiêm trọng (như xóa cơ sở dữ liệu hay thu hồi hạ tầng), hãy thiết kế cơ chế phê duyệt hai bước cho công cụ MCP: hành động ban đầu trả về trạng thái chờ kèm mã xác nhận tạm thời. Thao tác chỉ được thực thi khi nhận được lệnh xác nhận chứa mã thông báo hợp lệ trong thời hạn 5 phút. Cơ chế phải ràng buộc chặt chẽ mã xác nhận với hành động và mục tiêu đã phê duyệt, đồng thời bảo đảm mã xác nhận chỉ được dùng thành công đúng một lần duy nhất.
 
 ---
 
@@ -498,9 +498,9 @@ type ToolRateLimiter interface {
 
 ### Lời giải Thử thách 2: Rào chắn Phê duyệt Hai bước
 
-> **Dừng để dự đoán.** Giả sử Agent xin cấp token để khởi động lại dịch vụ cache staging, nhưng sau đó gửi lệnh xác nhận kèm theo hành động xóa database production. Nếu hệ thống chỉ kiểm tra thời hạn của token mà không so sánh hành động và mục tiêu, rủi ro an ninh nào sẽ phát sinh? Khi thiết kế thao tác xác nhận, ta nên xóa token ngay ở lần thử sai đầu tiên hay chỉ hủy token sau khi đã khớp thành công?
+> **Dừng để dự đoán:** Giả sử Agent xin cấp token để khởi động lại dịch vụ cache staging, nhưng sau đó gửi lệnh xác nhận kèm theo hành động xóa database production. Nếu hệ thống chỉ kiểm tra thời hạn của token mà không so sánh hành động và mục tiêu, rủi ro an ninh nào sẽ phát sinh? Khi thiết kế thao tác xác nhận, ta nên xóa token ngay ở lần thử sai đầu tiên hay chỉ hủy token sau khi đã khớp thành công?
 
-#### Đáp án — chỉ đọc sau khi đã tự làm
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 Nếu mã xác nhận không gắn chặt với hành động và mục tiêu (`Action` và `Target`), hệ thống sẽ vấp phải lỗ hổng tráo đổi mục tiêu (action substitution). Một lời nhắc độc hại từ bên ngoài có thể lợi dụng sự phê duyệt của con người cho một thao tác vô hại để thực thi lệnh phá hủy trên hệ thống trọng yếu. Vì vậy, bản ghi phê duyệt phải đóng băng bộ đôi hành động và tài nguyên ngay từ thời điểm tạo token.
 
 Về chính sách tiêu thụ token, ta lựa chọn chính sách vô hiệu hóa khi khớp thành công (single-use successful claim). Khi nhận đúng token, đúng hành động, đúng mục tiêu và còn trong thời hạn 5 phút, hàm sẽ xóa token khỏi bộ nhớ để chống tấn công phát lại (replay attack). Ngược lại, nếu chọn chính sách xóa token ngay cả khi tham số truyền vào không khớp, kẻ tấn công hoặc một tiến trình thử lại nhầm lẫn có thể cố tình gửi sai tham số để hủy hoại phiên phê duyệt hợp lệ, tạo ra nguy cơ từ chối dịch vụ (denial-of-service). Việc người dùng gửi một token không tồn tại hoàn toàn không gây ảnh hưởng đến các token hợp lệ khác. Nguy cơ dò đoán tham số khi giữ token được kiểm soát bằng độ hỗn loạn cao của chuỗi sinh ngẫu nhiên từ `crypto/rand` và thời gian hết hạn ngắn.
@@ -552,17 +552,17 @@ func (m *ApprovalManager) Confirm(
 }
 ~~~
 
-Toàn bộ thao tác kiểm tra và tiêu thụ token phải diễn ra nguyên tử dưới cùng một khóa `m.mu.Lock()` nhằm ngăn chặn hai goroutine chạy đua cùng lúc với một token và bảo toàn liên kết chặt chẽ với hành động cùng mục tiêu (`Action` và `Target`). Trong mô hình này, việc chỉ xóa token khi xác nhận thành công giúp duy trì tính hợp lệ của phiên phê duyệt trước các lần gửi sai tham số hoặc thử lại nhầm lẫn, đồng thời bảo đảm mỗi token chỉ được sử dụng đúng một lần.
+Toàn bộ thao tác kiểm tra và tiêu thụ mã xác nhận (`token`) phải diễn ra nguyên tử dưới cùng một khóa `m.mu.Lock()` nhằm ngăn chặn hai goroutine chạy đua cùng lúc với cùng một mã và bảo toàn liên kết chặt chẽ với hành động cùng mục tiêu (`Action` và `Target`). Trong mô hình này, việc chỉ xóa mã khi xác nhận thành công giúp duy trì tính hợp lệ của phiên phê duyệt trước các lần gửi sai tham số hoặc thử lại nhầm lẫn, đồng thời bảo đảm mỗi mã xác nhận chỉ được sử dụng đúng một lần.
 
-Tuy nhiên, việc không xóa token khi kiểm tra thất bại đặt ra yêu cầu bắt buộc về chính sách dọn dẹp: những token đã hết hạn mà không bao giờ được xác nhận sẽ tích tụ vĩnh viễn trong bản đồ nếu không có cơ chế thu gom. Một hệ thống hoàn chỉnh đòi hỏi tiến trình chạy nền dọn dẹp định kỳ (periodic cleanup worker) hoặc cơ chế loại bỏ lười (lazy eviction) để quét và xóa các mục có `time.Now().After(item.ExpiresAt)`. Cần nhấn mạnh rằng `ApprovalManager` trên đây là mô hình kiến trúc minh họa trong bộ nhớ cục bộ của một tiến trình, chưa phải giải pháp an toàn cho môi trường sản xuất. Môi trường thực tế đòi hỏi kho dữ liệu bền vững chịu lỗi qua các lần khởi động lại, xác thực danh tính con người độc lập khỏi AI agent, và nhật ký kiểm toán không thể sửa đổi.
+Tuy nhiên, việc không xóa token khi kiểm tra thất bại đặt ra yêu cầu bắt buộc về chính sách dọn dẹp: những mã xác nhận đã hết hạn mà không bao giờ được sử dụng sẽ tích tụ vĩnh viễn trong bản đồ nếu không có cơ chế thu gom. Một hệ thống hoàn chỉnh đòi hỏi tiến trình chạy nền dọn dẹp định kỳ (periodic cleanup worker) hoặc cơ chế loại bỏ lười (lazy eviction) để quét và xóa các mục có `time.Now().After(item.ExpiresAt)`. Cấu trúc `ApprovalManager` trên đây là mô hình kiến trúc minh họa trong bộ nhớ cục bộ của một tiến trình, chưa phải giải pháp an toàn cho môi trường sản xuất. Môi trường thực tế đòi hỏi kho dữ liệu bền vững chịu lỗi qua các lần khởi động lại, xác thực danh tính con người độc lập khỏi tác tử AI (`agent`), và nhật ký kiểm toán không thể sửa đổi.
 
-Một HTTP request hoàn thành không đồng nghĩa service khỏe. Lab dùng quy ước hẹp: chỉ `2xx` là `healthy`; `4xx`/`5xx` được trả về như trạng thái `unhealthy`, còn lỗi transport mới là lỗi gọi tool. Hệ thống thật cần contract health riêng (ví dụ readiness, body schema và timeout) thay vì suy ra sức khỏe chỉ từ mã HTTP.
+Một yêu cầu HTTP kết thúc thành công không đồng nghĩa dịch vụ đã thực sự khỏe mạnh. Bài lab áp dụng quy ước đơn giản: chỉ mã `2xx` được phân loại là `healthy`; mã `4xx`/`5xx` được trả về như trạng thái `unhealthy`, trong khi lỗi tầng truyền vận (*transport error*) mới tính là lỗi gọi công cụ. Hệ thống thực tế đòi hỏi khế ước kiểm tra trạng thái sức khỏe riêng biệt (chẳng hạn đầu kiểm tra sẵn sàng phục vụ như *readiness probe*, cấu trúc dữ liệu phản hồi và giới hạn thời gian chờ) thay vì chỉ suy diễn tình trạng sức khỏe từ mã trạng thái HTTP.
 
 ---
 
 ## 11. Điểm dừng: một tool an toàn là một boundary có bằng chứng
 
-Chương 28 nối các boundary công cụ đã học. Bảng dưới là bản đồ tra cứu, không phải chứng nhận đã làm chủ production; Chương 29 tiếp tục phân biệt đề xuất, bằng chứng, thẩm quyền và kết quả.
+Chương 28 kết nối các ranh giới công cụ kỹ thuật đã học. Bảng dưới là bản đồ tra cứu, không phải chứng nhận đã làm chủ production; Chương 29 tiếp tục phân biệt đề xuất, bằng chứng, thẩm quyền và kết quả.
 
 | Chặng đường | Phạm vi kiến thức và kỹ năng | Thành tựu kỹ thuật cốt lõi |
 | :--- | :--- | :--- |
@@ -572,4 +572,4 @@ Chương 28 nối các boundary công cụ đã học. Bảng dưới là bản 
 | **Phần VIII: Quan sát & Điều phối** | Metrics/trace, container, Kubernetes và opsprobe. | Phân biệt tín hiệu, desired state và observation. |
 | **Phần IX: Hạ tầng & Agent** | Controller, operator, AWS, Git, supply chain, eBPF và MCP. | Xét retry, identity, quyền và evidence của từng boundary. |
 
-Khi đưa những ý tưởng này vào production, hãy quay lại threat model, trust boundary, workload và incident policy của hệ thống cụ thể. Các lab chứng minh contract hẹp của chúng; chúng không thay thế xác thực danh tính thật, egress policy, durable audit hay review vận hành.
+Khi đưa những ý tưởng này vào môi trường vận hành thực tế, hãy rà soát lại mô hình mối đe dọa (*threat model*), ranh giới tin cậy (*trust boundary*), khối lượng công việc thực tế và quy trình xử lý sự cố của từng hệ thống cụ thể. Các bài thực hành chỉ chứng minh những khế ước kỹ thuật trong phạm vi hẹp; chúng không thể thay thế việc xác thực danh tính thực tế, chính sách kiểm soát lưu lượng đi ra (*egress policy*), hệ thống kiểm toán bền bỉ hay quy trình duyệt vận hành của con người.

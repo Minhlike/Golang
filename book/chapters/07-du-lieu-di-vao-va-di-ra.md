@@ -4,7 +4,7 @@
 
 Một lệnh vừa in ra một dòng `billing healthy=true` có vẻ như đã giao tiếp được với thế giới bên ngoài. Nhưng terminal chỉ là một `io.Writer` rất đặc biệt. Khi dữ liệu vào chuyển thành tệp cấu hình, pipe từ lệnh khác, body HTTP hay một stream nén, trực giác “đọc file rồi có dữ liệu” bắt đầu che một sự thật quan trọng: dữ liệu không nhất thiết đến cùng lúc, và tài nguyên không tự hết hạn đúng lúc ta muốn.
 
-Mô hình tinh thần của chương này là **stream cung cấp byte theo từng lượt, không phải một slice đã có đủ dữ liệu**. Caller phải xử lý byte nhận được, xác nhận điểm kết thúc và biết ai chịu trách nhiệm đóng tài nguyên. `io.Reader` không tự hứa một deadline hay tiến độ trong thời gian hữu hạn; những chính sách ấy thuộc nguồn dữ liệu và application.
+Mô hình tinh thần của chương này là stream cung cấp byte theo từng lượt, không phải một slice đã có đủ dữ liệu. Caller phải xử lý byte nhận được, xác nhận điểm kết thúc và biết ai chịu trách nhiệm đóng tài nguyên. `io.Reader` không tự hứa một deadline hay tiến độ trong thời gian hữu hạn; những chính sách ấy thuộc nguồn dữ liệu và application.
 
 ## Một lần `Read` không có nghĩa là toàn bộ input
 
@@ -19,9 +19,9 @@ Hãy bắt đầu với một lỗi nhỏ hơn `opsprobe`. Một cấu hình JSO
 ]
 ~~~
 
-Một cách nghĩ sai nhưng rất tự nhiên là cấp buffer đủ lớn cho mẫu test, gọi `Read` một lần, rồi phân tích số byte nhận được. Nó thường xanh với `strings.NewReader` và input ngắn. Nhưng `io.Reader` không hứa lấp đầy buffer. Reader có thể là file, socket, pipe hay decoder khác; mỗi lần gọi chỉ nhận được một phần byte hiện có.
+Một cách nghĩ sai lầm nhưng phổ biến là cấp phát vùng đệm (*buffer*) đủ lớn cho ca kiểm thử, gọi phương thức `Read` một lần duy nhất, rồi suy luận số byte nhận được. Cách làm này thường vượt qua kiểm thử với `strings.NewReader` và dữ liệu đầu vào ngắn. Nhưng `io.Reader` không cam kết sẽ lấp đầy vùng đệm. Nguồn đọc (*reader*) có thể là tệp, ổ cắm mạng (*socket*), đường ống dẫn (*pipe*) hay bộ giải mã khác; mỗi lần gọi phương thức chỉ tiếp nhận một phần lượng byte sẵn có.
 
-Contract tối thiểu của `Read(p)` là: nó trả `n` byte nằm trong `p[:n]`, và có thể trả một error. `n` có thể nhỏ hơn `len(p)`. Đặc biệt, một reader được phép trả byte hữu ích cùng `io.EOF` trong một lượt; caller phải tiêu thụ `p[:n]` trước khi xử lý error. `io.EOF` nghĩa là không còn byte nào cho stream đó, không phải là “lần gọi trước không có dữ liệu”.
+Giao ước (*contract*) tối thiểu của `Read(p)` quy định: hàm trả về `n` byte nằm trong lát cắt `p[:n]`, và có thể kèm theo một lỗi. Giá trị `n` hoàn toàn có thể nhỏ hơn `len(p)`. Đặc biệt, một nguồn đọc được phép trả về các byte dữ liệu hữu ích đi kèm mã lỗi lính canh `io.EOF` ngay trong một lượt gọi; bên gọi (*caller*) bắt buộc phải tiêu thụ dữ liệu `p[:n]` trước khi xử lý lỗi. Tín hiệu `io.EOF` biểu thị luồng dữ liệu đã kết thúc hoàn toàn, không đồng nghĩa với việc lần đọc hiện tại không chứa dữ liệu.
 
 @table Cách đọc kết quả `Read`
 
@@ -33,7 +33,7 @@ Contract tối thiểu của `Read(p)` là: nó trả `n` byte nằm trong `p[:n
 | `n == 0`, error khác `nil` | Trả hoặc phân loại lỗi | Lượt này không trả byte và có lỗi. |
 | `n == 0`, `err == nil` | Không coi là EOF; tránh vòng busy-loop vô hạn | Không có tiến độ trong lượt này; contract không khuyến khích kết quả ấy với buffer không rỗng nhưng caller vẫn phải phân biệt nó. |
 
-Đừng tự viết vòng `Read` chỉ để chứng minh đã hiểu contract nếu standard library đã có primitive đúng. `io.ReadAll` là lựa chọn hợp lý khi input có giới hạn kích thước đáng tin và việc giữ toàn bộ trong memory là chấp nhận được. Khi input có thể lớn hoặc vô hạn, thiết kế phải chuyển sang xử lý dần từng phần. Khác biệt này không phải micro-optimization: nó quyết định chương trình có thể bị ép allocate bao nhiêu memory bởi input không tin cậy.
+Đừng tự viết vòng lặp `Read` thủ công chỉ để chứng minh mình nắm vững giao ước nếu thư viện chuẩn đã cung cấp sẵn công cụ nguyên thủy (*primitive*) phù hợp. Hàm `io.ReadAll` là lựa chọn xác đáng khi dữ liệu đầu vào có giới hạn kích thước tin cậy và việc lưu trữ toàn bộ dữ liệu trong bộ nhớ là chấp nhận được. Khi dữ liệu đầu vào có khả năng tăng đột biến hoặc vô hạn, thiết kế bắt buộc phải chuyển sang kỹ thuật truyền dữ liệu phân đoạn (*streaming*). Sự khác biệt này không đơn thuần là tối ưu vi mô: nó quyết định chương trình có bị áp lực cấp phát bộ nhớ cưỡng bức bởi dữ liệu đầu vào không kiểm chứng hay không.
 
 ## Giới hạn byte trước khi gọi parser
 
@@ -45,13 +45,13 @@ Lab đầy đủ còn từ chối `max < 0` và thêm ngữ cảnh cho error. Nh
 
 `io.LimitReader` chỉ giới hạn số byte mà reader bọc ngoài sẽ trả; nó không tự nói JSON có hợp lệ hay không, và cũng không làm input nhỏ trở nên đáng tin. Vì thế giới hạn byte là một chính sách tài nguyên riêng; `Decode` vẫn chịu trách nhiệm cho cấu trúc JSON và số tài liệu. Hai test ngắn bảo vệ hai câu hỏi khác nhau, không gộp chúng thành một assertion mơ hồ kiểu “cấu hình lỗi”.
 
-Đây cũng là điểm cần tránh một lời hứa sai về cancellation. `io.Reader` chỉ công bố `Read`; interface không mang `context.Context`. Một wrapper như `ReadBounded` có thể dừng sau khi nhận đủ byte, nhưng không tự làm một underlying reader đang block thức dậy. Với file local, điều đó thường không phải policy cần thêm ở đây. Với body HTTP, deadline và cancellation thuộc lifecycle request sẽ được dạy lại ở chương networking, nơi ta nhìn được owner của connection và cách transport phản ứng.
+Đây cũng là điểm cần tránh một cam kết sai lầm về cơ chế hủy bỏ (*cancellation*). Giao diện `io.Reader` chỉ công bố phương thức `Read`; nó không tiếp nhận `context.Context`. Một lớp bọc (*wrapper*) như `ReadBounded` có thể dừng sau khi đọc đủ ngưỡng byte, nhưng không thể tự đánh thức một nguồn đọc cơ sở bên dưới đang bị nghẽn thao tác vào/ra (*blocking I/O*). Với tệp cục bộ, điều đó thường không phải chính sách bắt buộc. Với thân thông điệp HTTP (*HTTP body*), thời hạn chót (*deadline*) và tín hiệu hủy bỏ gắn liền với vòng đời của yêu cầu mạng sẽ được phân tích ở chương mạng, nơi ta xác định rõ quyền sở hữu kết nối và cách tầng vận chuyển phản hồi.
 
 ## Failing test trước parser
 
 Lab `labs/part7-stream-boundaries` không gắn ngay tệp JSON vào `opsprobe`. Project xuyên suốt hiện chưa cần tệp cấu hình; nhét nó vào lúc này chỉ khiến trực giác mới bị lẫn với chính sách endpoint cũ. Ta dùng một chương trình tái hiện tối thiểu để thấy ranh giới stream trước.
 
-Mở `targets/targets_test.go` và chỉ đọc `TestDecodeConsumesChunkedStream`. `chunkReader` cố tình chỉ nhả ba byte trong mỗi lần gọi. Trước khi xem `Decode`, hãy trả lời: nếu implementation giả định một lượt `Read` là đủ, test sẽ mất đoạn nào của document? Sau đó tạm đổi tên `Decode`, chạy test và tự dựng lại function theo contract mà test đòi.
+Hãy mở tệp `targets/targets_test.go` và quan sát ca kiểm thử `TestDecodeConsumesChunkedStream`. Cấu trúc `chunkReader` cố ý chỉ giải phóng ba byte dữ liệu trong mỗi lần gọi. Trước khi đọc phần triển khai của hàm `Decode`, hãy trả lời: nếu mã nguồn giả định ngây thơ rằng một lượt `Read` là đủ, ca kiểm thử sẽ đánh mất đoạn nào của tài liệu? Sau đó, hãy tạm đổi tên hàm `Decode`, chạy kiểm thử và tự xây dựng lại hàm theo đúng giao ước mà ca kiểm thử đòi hỏi.
 
 Function kết thúc có thể nhỏ:
 
@@ -80,21 +80,21 @@ func Decode(r io.Reader) ([]Target, error) {
 }
 ~~~
 
-`json.Decoder` nhận một `io.Reader`, nên nó tự tiếp tục đọc qua nhiều chunk; caller không cần giả vờ socket hay file là slice. Test thứ hai đặt thêm một JSON value sau document đầu. Chỉ `Decode` một lần là chưa đủ contract: program sẽ im lặng bỏ qua dữ liệu còn lại. Lần `Decode` thứ hai không phải để lấy config mới, mà để chứng minh sau document hợp lệ chỉ còn whitespace và EOF.
+`json.Decoder` tiếp nhận một `io.Reader`, do đó nó tự động đọc qua nhiều khối dữ liệu (*chunk*); bên gọi không cần giả định sai lầm rằng ổ cắm mạng hay tệp tin là một lát cắt bộ nhớ có sẵn. Ca kiểm thử thứ hai đặt thêm một giá trị JSON phía sau tài liệu đầu tiên. Việc chỉ gọi `Decode` một lần duy nhất chưa đáp ứng đầy đủ giao ước: chương trình sẽ âm thầm bỏ qua phần dữ liệu dư thừa còn lại. Lần gọi `Decode` thứ hai không nhằm mục đích lấy cấu hình mới, mà để kiểm chứng rằng sau tài liệu hợp lệ chỉ còn khoảng trắng và ký hiệu kết thúc luồng `io.EOF`.
 
-Điều này không biến JSON decoder thành lời giải cho mọi format. CSV có record và quoting riêng; line-oriented log có boundary theo newline; body HTTP có lifecycle mạng và limit khác. Chúng sẽ được dạy ở context phù hợp. Ở đây chỉ giữ một câu hỏi trung tâm: input kết thúc ở đâu, và code nào đã xác nhận điều đó?
+Điều này không biến bộ giải mã JSON thành lời giải vạn năng cho mọi định dạng. Tệp CSV có quy tắc phân tách bản ghi (*record*) và dấu trích dẫn (*quoting*) riêng; tệp nhật ký dòng lệnh (*line-oriented log*) có ranh giới phân tách theo ký tự xuống dòng; thân thông điệp HTTP có vòng đời mạng và giới hạn kích thước khác biệt. Các cơ chế đó sẽ được phân tích trong ngữ cảnh phù hợp. Ở đây, trọng tâm là câu hỏi kỹ thuật cốt lõi: dữ liệu đầu vào kết thúc ở đâu, và đoạn mã nào đã xác minh điều đó?
 
 ### Đủ một document chưa có nghĩa mọi decoder hiểu giống nhau
 
-Input `{"port":80,"port":443}` là một document nhưng có tên trùng. API `encoding/json` mà lab dùng vẫn giữ semantics v1: với field số trong ví dụ này, giá trị sau ghi đè giá trị trước. Go 1.27 đưa `encoding/json/v2` và `encoding/json/jsontext` thành API thông thường; mặc định v2 từ chối tên trùng và UTF-8 không hợp lệ. API v1 tiếp tục được hỗ trợ, dù implementation phía dưới đổi và wording lỗi có thể khác. Không đổi import rồi coi đó là migration tương đương.
+Dữ liệu đầu vào `{"port":80,"port":443}` là một tài liệu có khóa bị trùng lặp. Giao diện `encoding/json` mà phòng thực hành sử dụng giữ nguyên ngữ nghĩa v1: với trường số trong ví dụ này, giá trị khai báo sau sẽ ghi đè lên giá trị trước. Go 1.27 chính thức đưa `encoding/json/v2` và `encoding/json/jsontext` thành giao diện tiêu chuẩn; theo mặc định, phiên bản v2 sẽ từ chối các khóa trùng tên và chuỗi UTF-8 không hợp lệ. Giao diện v1 vẫn tiếp tục được hỗ trợ đầy đủ, mặc dù cơ chế cài đặt bên dưới có thể thay đổi và câu chữ chẩn đoán lỗi có thể khác biệt. Không được tùy tiện thay đổi đường dẫn nhập khẩu (*import path*) rồi xem đó là một đợt chuyển đổi mã nguồn (*migration*) tương đương.
 
-Trước khi chạy `TestJSONVersionBoundary` trong `labs/edition-contracts`, hãy dự đoán decoder nào chấp nhận document trên và `port` cuối cùng là bao nhiêu. Test chỉ kiểm tra hai trường hợp tên trùng và UTF-8 sai; không chứng minh decoder là bộ kiểm định toàn bộ policy cấu hình. Giới hạn byte, đúng một document, schema được phép và semantics chọn API là bốn câu hỏi riêng.
+Trước khi thực thi ca kiểm thử `TestJSONVersionBoundary` trong thư mục `labs/edition-contracts`, hãy dự đoán bộ giải mã nào chấp nhận tài liệu trên và giá trị `port` cuối cùng sẽ là bao nhiêu. Bài kiểm thử chỉ kiểm chứng hai trường hợp khóa trùng lặp và chuỗi UTF-8 không hợp lệ; nó không chứng minh bộ giải mã là công cụ kiểm định toàn bộ chính sách cấu hình. Giới hạn dung lượng byte, tính duy nhất của một tài liệu, lược đồ hợp lệ và ngữ nghĩa lựa chọn giao diện lập trình là bốn bài toán kỹ thuật hoàn toàn độc lập.
 
 ## Đóng output cũng là một phần của result
 
-Khi đọc file, `defer file.Close()` gần acquisition giúp không rò file descriptor. Khi ghi file, `Close` còn có thể là nơi buffer được flush và failure cuối cùng lộ ra. Nếu function ghi JSON chỉ trả error của `Encode`, caller có thể báo thành công trước khi biết output có được đóng hoàn chỉnh hay không.
+Khi đọc tệp, việc đặt `defer file.Close()` ngay sát điểm tiếp nhận tài nguyên (*acquisition*) giúp ngăn ngừa hiện tượng rò rỉ bộ mô tả tệp (*file descriptor*). Khi ghi tệp, phương thức `Close` còn là nơi vùng đệm được đẩy sạch dữ liệu (*flush*) xuống đĩa và các lỗi thất bại cuối cùng mới lộ diện. Nếu hàm xuất dữ liệu JSON chỉ trả về lỗi từ thao tác `Encode`, bên gọi có thể thông báo thành công quá sớm trước khi biết chắc chắn dữ liệu đầu ra đã được đồng bộ và đóng hoàn tất hay chưa.
 
-Lab đầy đủ mở resource rồi đặt `defer Close` ngay sau acquisition. Để nhìn riêng policy chọn result, phần lõi có thể viết ngắn hơn:
+Mã nguồn đầy đủ mở tài nguyên rồi thiết lập `defer Close` ngay sau điểm tiếp nhận. Để làm nổi bật chính sách chọn lọc kết quả, phần lõi có thể biểu diễn tinh gọn như sau:
 
 ~~~go
 func save(w io.WriteCloser, targets []Target) error {
@@ -107,7 +107,7 @@ func save(w io.WriteCloser, targets []Target) error {
 }
 ~~~
 
-Lab đầy đủ vẫn đóng tài nguyên trên mọi đường return. Đoạn trên chỉ làm policy lộ ra: giữ write error trước, rồi mới trả close error. Writer giả giữ contract ấy mà không cần filesystem thật.
+Mã nguồn thực tế vẫn giải phóng tài nguyên trên mọi nhánh trả về. Đoạn mã trên làm rõ chính sách kỹ thuật: ưu tiên giữ lại lỗi ghi trước, rồi mới phản hồi lỗi đóng tệp. Nguồn ghi giả lập bảo vệ giao ước đó mà không đòi hỏi phải phụ thuộc vào hệ thống tệp vật lý.
 
 ## Ranh giới Dữ liệu: Short Write, Bộ đệm và Ngộ nhận về Syscall
 
@@ -117,19 +117,19 @@ Khi làm việc với các dòng nhập xuất dữ liệu, trực giác bề m�
 
 Nếu như `io.Reader` cho phép trả về số byte đọc được `n < len(p)` kèm theo `err == nil` trong các tình huống bình thường (chẳng hạn khi đường ống mạng chưa nhận đủ dữ liệu), thì giao diện `io.Writer` lại áp đặt một hợp đồng nghiêm ngặt hơn nhiều. Theo đặc tả của thư viện chuẩn Go, một hàm `Write(p)` bắt buộc phải trả về một lỗi khác `nil` nếu nó không thể ghi trọn vẹn toàn bộ lát cắt dữ liệu (`n < len(p)`).
 
-`io.ErrShortWrite` là sentinel mô tả một lượt ghi ngắn không có error thích hợp. Writer có thể trả error cụ thể khác; contract không bắt mọi short write mang chính sentinel này. Nếu writer trả `n < len(p)` và error `nil`, nó vi phạm contract API của `io.Writer`, không phải một quy tắc ngôn ngữ. Caller dùng API ấy cần kiểm tra kết quả, không suy ra rằng byte đã tới đích cuối chỉ vì một lượt ghi ở tầng trung gian thành công.
+Biến lỗi `io.ErrShortWrite` là lỗi lính canh (*sentinel error*) mô tả một lượt ghi thiếu dữ liệu (*short write*) mà không có lỗi cụ thể đi kèm. Bộ ghi có thể trả về lỗi chi tiết khác; giao ước không bắt buộc mọi lượt ghi ngắn phải mang chính lỗi lính canh này. Nếu bộ ghi trả về `n < len(p)` kèm lỗi `nil`, hành vi đó vi phạm nghiêm trọng giao ước của giao diện `io.Writer`. Bên gọi sử dụng giao diện cần chủ động kiểm tra kết quả, không được suy diễn rằng dữ liệu đã tới đích cuối cùng chỉ vì thao tác ghi ở tầng trung gian báo thành công.
 
 ### Bộ đệm User-space với `bufio`
 
-Một syscall đưa việc thực thi qua ranh giới user/kernel. Nó có chi phí, nhưng không đồng nghĩa với context switch của scheduler sang thread khác; việc block và chuyển lịch còn phụ thuộc operation và trạng thái tài nguyên. Ghi từng byte qua file chưa đệm thường tăng số lượt I/O so với gom nhiều byte. Không thể suy ra một số syscall cố định hay mức giảm throughput chỉ từ số lần gọi interface `Write`; phải xác định concrete writer và đo đường chạy trên OS cụ thể.
+Một lời gọi hệ thống (*syscall*) đưa luồng thực thi vượt qua ranh giới giữa không gian người dùng (*user space*) và không gian nhân (*kernel space*). Thao tác này phát sinh chi phí tính toán nhất định, nhưng không đồng nghĩa với việc bộ lập lịch (*scheduler*) phải thực hiện chuyển đổi ngữ cảnh (*context switch*) sang luồng hệ điều hành (*OS thread*) khác; việc tạm hoãn (*blocking*) và tái lập lịch còn phụ thuộc vào bản chất thao tác và trạng thái sẵn sàng của tài nguyên. Ghi từng byte riêng lẻ qua tệp không có bộ đệm thường làm tăng đột biến số lượt thao tác vào/ra (*I/O*) so với việc gom thành khối lớn. Không thể suy đoán máy móc số lượng syscall hay mức sụt giảm thông lượng (*throughput*) chỉ từ số lần gọi phương thức `Write`; kỹ sư phải xác định rõ kiểu bộ ghi cụ thể (*concrete writer*) và tiến hành đo đạc trực tiếp trên hệ điều hành mục tiêu.
 
-`bufio.Reader` và `bufio.Writer` gom dữ liệu trong đệm user-space. Trong source Go 1.27.1, constructor mặc định dùng buffer 4096 byte; con số ấy không phải quy tắc của `io.Reader` hay cam kết mọi buffer đều cùng kích thước. Writer chuyển byte xuống underlying writer khi cần chỗ hoặc khi Flush; caller phải kiểm tra lỗi Flush. Buffer có thể giảm số lượt gọi tầng dưới, không bảo đảm một tỷ lệ syscall hay throughput cố định.
+`bufio.Reader` và `bufio.Writer` thực hiện gom cụm dữ liệu trong vùng đệm thuộc không gian người dùng (*user space buffer*). Trong mã nguồn Go 1.27.1, hàm khởi tạo mặc định phân bổ kích thước vùng đệm 4096 byte; con số này không phải quy tắc bắt buộc của `io.Reader` hay cam kết rằng mọi vùng đệm đều phải có dung lượng tương tự. Bộ ghi chỉ chuyển dữ liệu xuống nguồn ghi cơ sở khi cần giải phóng dung lượng hoặc khi được gọi phương thức `Flush` tường minh; bên gọi bắt buộc phải kiểm tra lỗi trả về từ `Flush`. Vùng đệm hỗ trợ giảm số lượt gọi tầng dưới, chứ không bảo đảm một tỷ lệ cắt giảm syscall hay mức tăng thông lượng cố định.
 
 ### Lời gọi `Read` không đồng nghĩa với Syscall
 
 Một ngộ nhận kỹ thuật phổ biến là mặc định rằng mọi lệnh `r.Read(p)` trong mã nguồn Go đều tương ứng với một chỉ thị CPU `SYSCALL` trực tiếp xuống kernel.
 
-Đường đi qua user-space hay syscall phụ thuộc implementation cụ thể, OS và trạng thái operation. Bảng dưới tách những trường hợp thường gặp:
+Đường dẫn thực thi đi qua vùng nhớ người dùng hay lời gọi hệ thống phụ thuộc vào bản cài đặt cụ thể, hệ điều hành và trạng thái thao tác. Bảng dưới đây phân định rành mạch các trường hợp thường gặp:
 
 | Kiểu cụ thể của Reader | Bản chất cơ chế khi gọi `Read(p)` | Có phát sinh Syscall xuống OS không? |
 | :--- | :--- | :--- |
@@ -139,11 +139,11 @@ Một ngộ nhận kỹ thuật phổ biến là mặc định rằng mọi lệ
 | `*os.File` chưa đệm | Gửi yêu cầu I/O trực tiếp tới kernel qua bảng mô tả tệp (OS file I/O path). | Có. Thực hiện syscall đọc tệp của hệ điều hành (`read` trên Linux hoặc `ReadFile` trên Windows). |
 | `*net.TCPConn` trong đường đọc Linux đã pin bên dưới | Thử non-blocking I/O; kết hợp poller nếu chưa sẵn sàng. | Có OS I/O; không có quan hệ một-một giữa số lần gọi `Read` và syscall. Windows dùng đường completion khác. |
 
-Với Go 1.27.1 trên Linux, đường đọc socket trong `internal/poll/fd_unix.go` có thể thử non-blocking read, gặp `EAGAIN`, chờ poller rồi thử lại. Đây là mô hình triển khai được pin, không phải lời hứa của `net.Conn`. Không áp nguyên trace readiness Linux cho Windows: backend IOCP dùng completion và đường triển khai khác. API chung vẫn là đọc byte, error và deadline; poller giúp điều phối goroutine chứ không loại bỏ I/O xuống OS. Chương 11 sẽ đặt cơ chế đó vào một request thật.
+Với Go 1.27.1 trên Linux, đường dẫn đọc ổ cắm mạng trong `internal/poll/fd_unix.go` có thể thử thao tác đọc không chặn (*non-blocking read*), gặp mã lỗi `EAGAIN`, chuyển quyền chờ cho bộ thăm dò mạng (*network poller*) rồi thử lại sau. Đây là mô hình triển khai cụ thể theo phiên bản, không phải cam kết bất biến của giao diện `net.Conn`. Không được áp đặt vết kiểm tra tính sẵn sàng (*readiness trace*) của Linux sang Windows: nền tảng IOCP sử dụng mô hình hoàn tất thao tác (*completion-based*) và cấu trúc xử lý khác biệt. Giao diện lập trình chung vẫn xoay quanh việc tiếp nhận byte, xử lý lỗi và kiểm soát thời hạn chót; bộ thăm dò mạng hỗ trợ điều phối goroutine hiệu quả chứ không thể triệt tiêu hoàn toàn thao tác vào/ra xuống hệ điều hành. Chương 11 sẽ tích hợp cơ chế này vào một yêu cầu mạng thực tế.
 
 ## Một filesystem là một khả năng, không phải một đường dẫn
 
-Parser ở trên chỉ cần byte, không cần quyền mở mọi file trên máy. Khi một application có nhiều nguồn file, `fs.FS` mô tả khả năng `Open(name)` với tên logic dùng dấu `/`. Consumer có thể nhận `embed.FS` chứa asset lúc build, `os.DirFS` nhìn vào directory lúc chạy, hoặc filesystem giả trong test. Consumer không cần đổi parser theo nguồn.
+Bộ phân tích cú pháp ở trên chỉ cần dữ liệu byte, hoàn toàn không đòi hỏi quyền mở mọi tệp tin trên máy chủ. Khi một ứng dụng có nhiều nguồn cung cấp tệp, giao diện `fs.FS` mô tả năng lực `Open(name)` với tên logic phân tách bằng dấu gạch chéo `/`. Bên tiêu dùng (*consumer*) có thể tiếp nhận `embed.FS` chứa tài nguyên nhúng tại thời điểm biên dịch, `os.DirFS` ánh xạ vào thư mục tại thời điểm thực thi, hoặc một hệ thống tệp giả lập phục vụ kiểm thử. Bên tiêu dùng không cần phải thay đổi bộ phân tích cú pháp theo từng nguồn cung cấp tệp.
 
 ~~~go
 // Đặt trong package có thư mục fixtures tại build time.
@@ -153,19 +153,21 @@ var files embed.FS
 data, err := fs.ReadFile(files, "fixtures/message.txt")
 ~~~
 
-Imports của đoạn này là `embed` và `io/fs`; bản chạy được nằm trong `labs/edition-contracts`. Directive phải ở package scope, gắn với variable phù hợp. Byte được đưa vào binary lúc build, không tự cập nhật khi file ngoài máy đổi. `embed.FS` có API đọc, không phải nơi lưu runtime secret hoặc config cần sửa sau triển khai. Những byte được bundle có thể bị trích xuất từ binary; “không còn file rời” không phải bảo mật.
+Các gói nhập khẩu của đoạn mã này bao gồm `embed` và `io/fs`; bản chạy được đặt tại `labs/edition-contracts`. Chỉ thị tiền biên dịch (*compiler directive*) bắt buộc phải đặt tại phạm vi gói (*package scope*) và gắn liền với biến dữ liệu phù hợp. Dữ liệu byte được đóng gói trực tiếp vào tệp nhị phân tại thời điểm biên dịch, không tự động cập nhật khi tệp bên ngoài thay đổi. Giao diện `embed.FS` chỉ cung cấp năng lực đọc dữ liệu, không phải là nơi lưu trữ khóa bí mật (*secret*) hoặc cấu hình cần điều chỉnh sau khi triển khai. Các byte dữ liệu được đóng gói hoàn toàn có thể bị trích xuất từ tệp nhị phân; việc biến mất tệp tin rời rạc trên đĩa không đồng nghĩa với an ninh bảo mật.
 
-`fs.ValidPath` không cho component `..` hoặc path bắt đầu bằng `/`; tên như `a..b` vẫn có thể hợp lệ, còn `.` là trường hợp đặc biệt chỉ root. Path hợp lệ không tự tạo sandbox. `os.DirFS` và `fs.Sub` không ngăn symlink bên dưới trỏ ra ngoài directory. Nếu nhận tên từ bên không tin cậy và cần confinement, đọc contract `os.Root` cùng giới hạn theo OS trong Go 1.27.1 thay vì tin `Clean` chặn mọi lối thoát. Quyền mở file và quyền parse dữ liệu là hai boundary khác nhau.
+Hàm `fs.ValidPath` không cho phép các thành phần đường dẫn `..` hoặc đường dẫn bắt đầu bằng dấu `/`; những tên như `a..b` vẫn có thể hợp lệ, còn `.` là trường hợp đặc biệt chỉ định thư mục gốc. Một đường dẫn hợp lệ không tự tạo ra vùng cách ly an toàn (*sandbox*). Hàm `os.DirFS` và `fs.Sub` không thể ngăn chặn các liên kết mềm bên dưới trỏ ra ngoài thư mục cơ sở. Nếu tiếp nhận tên tệp từ nguồn không tin cậy và đòi hỏi giới hạn truy cập nghiêm ngặt, hãy tham khảo giao ước của `os.Root` cùng các giới hạn theo hệ điều hành trong Go 1.27.1 thay vì tin tưởng mù quáng rằng hàm `Clean` chặn được mọi đường thoát. Quyền mở tệp và quyền phân tích cú pháp dữ liệu là hai ranh giới hoàn toàn độc lập.
 
-**Thực hành.** Viết một function nhận `fs.FS` và tên logic, đọc một tệp rồi đưa byte cho parser đã có. Test với filesystem giả; test riêng tên không hợp lệ và file thiếu. Sau đó thay bằng `embed.FS` mà không đổi parser. Đừng để test filesystem giả được diễn giải thành bằng chứng rằng symlink hoặc quyền truy cập thật trên OS đã an toàn.
+### Bài thực hành: Đọc tệp qua trừu tượng hóa fs.FS
+
+Viết một hàm tiếp nhận `fs.FS` và tên logic, đọc một tệp rồi chuyển các byte dữ liệu cho bộ phân tích cú pháp đã có sẵn. Kiểm thử với hệ thống tệp giả lập; kiểm thử riêng cho các trường hợp tên tệp không hợp lệ và tệp bị thiếu. Sau đó thay thế bằng `embed.FS` mà không cần sửa đổi bộ phân tích cú pháp. Đừng để kiểm thử trên hệ thống tệp giả lập bị ngộ nhận thành bằng chứng khẳng định liên kết mềm (*symlink*) hoặc quyền truy cập thực tế trên hệ điều hành đã được bảo đảm an toàn.
 
 ## Parser cũng có ngân sách
 
-Một log “mỗi dòng là một record” khiến `bufio.Scanner` tiện hơn vòng đọc thủ công. Nhưng Scanner có giới hạn token: một dòng dài có thể khiến `Scan()` trả false trước EOF. Caller phải đọc `Err()`, và nếu domain cho phép dòng lớn hơn thì gọi `Buffer` trước khi scan, với mức trần phù hợp. Không nên tăng trần vô hạn để chữa một input hỏng. `TestScannerLimitAndValidation` dùng cùng input với hai giới hạn để phân biệt kết thúc bình thường với token vượt ngân sách.
+Quy ước nhật ký “mỗi dòng là một bản ghi” khiến `bufio.Scanner` trở nên tiện lợi hơn vòng lặp đọc thủ công. Tuy nhiên, `Scanner` có giới hạn độ dài mã thông báo (*token*): một dòng nhật ký quá dài có thể khiến phương thức `Scan()` trả về `false` trước khi chạm tới ký hiệu kết thúc luồng `EOF`. Bên gọi bắt buộc phải kiểm tra `Err()`, và nếu miền nghiệp vụ cho phép độ dài dòng lớn hơn, hãy gọi phương thức `Buffer` trước khi quét với hạn mức trần thích hợp. Không bao giờ nâng mức trần lên vô hạn chỉ để cứu vãn một dữ liệu đầu vào bị hỏng. Ca kiểm thử `TestScannerLimitAndValidation` sử dụng cùng một dữ liệu đầu vào với hai hạn mức khác nhau để phân biệt trường hợp kết thúc hợp lệ với trường hợp vượt quá ngân sách tài nguyên.
 
-Byte limit cũng không thay kiểm tra miền số. `strconv.ParseUint(text, 10, 16)` trả error nếu chuỗi không phải số nguyên unsigned biểu diễn được trong 16 bit; sau đó business rule vẫn phải quyết định port 0 có được phép không. `Atoi` chọn `int` của kiến trúc, không định nghĩa một wire format ổn định. Khi format yêu cầu bit width, nói rõ width trong parser và test biên.
+Giới hạn dung lượng byte không thể thay thế cho thao tác kiểm tra miền giá trị số học. Hàm `strconv.ParseUint(text, 10, 16)` trả về lỗi nếu chuỗi văn bản không phải là số nguyên không dấu (*unsigned integer*) có thể biểu diễn trong 16 bit; sau đó quy tắc nghiệp vụ vẫn phải đưa ra quyết định liệu cổng mạng 0 có được phép hay không. Hàm `Atoi` chọn kiểu `int` phụ thuộc kiến trúc máy tính, không định nghĩa được một khuôn dạng truyền tải (*wire format*) ổn định. Khi định dạng đòi hỏi bề rộng bit chính xác, hãy chỉ định rõ bề rộng bit trong bộ phân tích cú pháp và kiểm thử kỹ lưỡng các giá trị biên.
 
-Với pattern do người dùng nhập, dùng `regexp.Compile` và xử lý error. `MustCompile` phù hợp với pattern cố định trong source mà lỗi là lỗi lập trình, không phải cách báo lỗi cho người vận hành. Package `regexp` cam kết thời gian match tuyến tính theo độ dài input; điều đó không cam kết chi phí compile, lượng memory hoặc số lượt match không cần giới hạn. Parser, số record, pattern và lifetime của stream vẫn phải có ngân sách của application. Chọn `strings` hay `bytes` khi thao tác chỉ là tìm delimiter hoặc prefix rõ ràng; thêm regexp chỉ khi grammar cần nó.
+Với biểu thức chính quy do người dùng nhập vào, hãy sử dụng `regexp.Compile` và xử lý lỗi cẩn trọng. Hàm `MustCompile` chỉ phù hợp với các mẫu biểu thức cố định trong mã nguồn mà sự cố cú pháp được coi là lỗi lập trình, không phải phương thức báo lỗi cho người vận hành. Gói `regexp` cam kết thời gian so khớp tuyến tính theo độ dài chuỗi đầu vào; điều đó không đồng nghĩa với việc chi phí biên dịch mẫu, dung lượng bộ nhớ hay tần suất so khớp không cần đặt giới hạn. Bộ phân tích cú pháp, số lượng bản ghi, mẫu biểu thức và vòng đời của luồng dữ liệu đều phải có ngân sách tài nguyên rõ ràng trong ứng dụng. Hãy ưu tiên các hàm trong gói `strings` hoặc `bytes` khi thao tác chỉ đơn giản là tìm kiếm ký tự phân tách hoặc tiền tố; chỉ bổ sung biểu thức chính quy khi ngữ pháp cú pháp thực sự đòi hỏi.
 
 ## Tự kiểm tra trước khi tích hợp
 
@@ -176,17 +178,19 @@ go test ./...
 go vet ./...
 ~~~
 
-Thử lần lượt: bỏ lượt `Decode` thứ hai; cho `chunkReader` nhả một byte; rồi cho writer giả fail ở `Write` trước `Close`. Dự đoán test nào vỡ.
+> **Dừng để dự đoán:** Thử lần lượt: bỏ lượt `Decode` thứ hai; cho `chunkReader` nhả một byte; rồi cho writer giả fail ở `Write` trước `Close`. Hãy dự đoán ca kiểm thử nào sẽ thất bại.
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Bỏ lượt decode thứ hai làm `TestDecodeRejectsAdditionalDocument` thất bại; chunk nhỏ hơn không đổi contract. Khi write và close cùng fail, phải giữ write error.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Bỏ lượt giải mã thứ hai làm `TestDecodeRejectsAdditionalDocument` thất bại; khối dữ liệu nhỏ hơn không làm thay đổi khế ước. Khi ghi và đóng tệp cùng gặp lỗi, phải ưu tiên giữ lại lỗi từ thao tác ghi.
 
 Với limit, input dài đúng `max` byte được trả nguyên vẹn; input dài `max + 1` trả error giữ identity `ErrDocumentTooLarge`. Đó là lý do lab không dùng một `if len(data) == max` mơ hồ: bằng chứng cần phân biệt đúng ngưỡng với vượt ngưỡng.
 
-Chương này không thêm file config vào `opsprobe`: chưa có yêu cầu vận hành nào bắt nó phải có. Đó là giữ teaching vehicle phục vụ bài học. Khi một yêu cầu thật cần import/export target, stream boundary và close policy ở lab này sẽ là nền để tích hợp có chủ đích.
+Chương này không bổ sung tệp cấu hình vào `opsprobe`: hiện tại chưa có yêu cầu vận hành thực tế nào đòi hỏi điều đó. Đây là chủ đích bảo toàn công cụ giảng dạy phục vụ trọng tâm bài học. Khi xuất hiện yêu cầu thực tế đòi hỏi nhập xuất dữ liệu mục tiêu, các ranh giới luồng dữ liệu và chính sách đóng tài nguyên trong phòng thực hành này sẽ trở thành nền tảng vững chắc để tích hợp có chủ đích.
 
-Trước khi chạm một API I/O mới, hãy tự hỏi ba câu. Byte đến theo từng lượt nào, đâu là dấu kết thúc được chấp nhận, và ai quan sát failure của resource sau cùng? Ba câu này không thay thế tài liệu của format hay protocol cụ thể, nhưng chúng ngăn một sai lầm rất phổ biến: coi input/output là vài dòng plumbing nằm ngoài contract của chương trình.
+Trước khi tiếp cận một giao diện vào/ra mới, hãy tự đặt ra ba câu hỏi: Các byte dữ liệu truyền đến theo từng lượt phân đoạn nào? Đâu là dấu hiệu kết thúc luồng được chấp thuận? Và thực thể nào sẽ quan sát lỗi thất bại của tài nguyên sau cùng? Ba câu hỏi này không thay thế cho tài liệu đặc tả của định dạng hay giao thức cụ thể, nhưng chúng triệt tiêu một quan niệm sai lầm phổ biến: xem nhẹ thao tác nhập/xuất như những đường ống phụ trợ nằm ngoài giao ước kỹ thuật của chương trình.
 
-Phần tiếp theo sẽ đặt một áp lực khác lên chương trình: nhiều goroutine cùng sống trong một process. Trước khi chọn channel hay mutex, ta cần nhìn một race không phải như một câu thần chú về thread safety, mà như hai access không có thứ tự an toàn.
+Phần tiếp theo sẽ đặt thêm một áp lực vận hành mới lên chương trình: nhiều goroutine cùng đồng thời hoạt động trong một tiến trình. Trước khi lựa chọn kênh truyền (*channel*) hay khóa loại trừ tương hỗ (*mutex*), ta cần nhìn nhận hiện tượng chạy đua dữ liệu (*data race*) không phải như một câu khẩu hiệu mơ hồ về tính an toàn luồng (*thread safety*), mà là hai thao tác truy cập dữ liệu không tồn tại trật tự xảy ra trước (*happens-before*) an toàn.
 
 @references
 1. Go Team. Go 1.27 Release Notes, encoding/json/v2 và encoding/json/jsontext. go.dev/doc/go1.27

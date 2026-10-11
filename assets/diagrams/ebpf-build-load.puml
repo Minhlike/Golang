@@ -1,13 +1,37 @@
 @startuml
 !include publication-flow.iuml
+
 top to bottom direction
-rectangle "<b>LÚC BUILD · C</b>\nexec_observer.c\nClang biên dịch BPF" as source
-rectangle "<b>LÚC BUILD · bpf2go</b>\nSinh Go bindings và\nobject BPF để nhúng" as generate
-rectangle "<b>LÚC BUILD · GO</b>\ngo build\nBinary chứa object BPF" as binary
-rectangle "<b>LÚC CHẠY · USER SPACE</b>\nGo loader gọi bpf(2)\nqua thư viện cilium/ebpf" as loader
-rectangle "<b>LÚC CHẠY · KERNEL</b>\nVerifier kiểm tra program\nLoad / attach theo quyền\nvà khả năng của kernel" as kernel
-source -down-> generate
-generate -down-> binary
-binary -right-> loader
-loader -up-> kernel
+
+package "Giai đoạn Biên dịch Đóng gói (Build Toolchain)" as build_box {
+  rectangle "<b>Mã nguồn C</b>\nexec_observer.c" as c_src
+  rectangle "<b>Clang / LLVM</b>\nBiên dịch mã đích BPF" as clang
+  rectangle "<b>Bộ sinh mã bpf2go</b>\nSinh tệp .o và Go bindings" as bpf2go
+  rectangle "<b>Tệp nhị phân Go ELF</b>\nChứa mã máy eBPF đã nhúng" as binary
+
+  c_src -right-> clang
+  clang -right-> bpf2go
+  bpf2go -right-> binary
+}
+
+package "Không gian Người dùng (User Space · Ring 3)" as user_box {
+  rectangle "<b>Ứng dụng Go Quản trị</b>\nThư viện cilium/ebpf loader" as go_app
+  rectangle "<b>Vòng đọc Ring Buffer</b>\nTiêu thụ sự kiện người dùng" as ring_buf
+
+  go_app -right-> ring_buf : đọc luồng sự kiện
+}
+
+package "Không gian Nhân Linux (Kernel Space · Ring 0)" as kernel_box {
+  rectangle "<b>Bộ kiểm định Verifier</b>\nKiểm tra an toàn bộ nhớ & vòng lặp" as verifier
+  rectangle "<b>Điểm móc Tracepoint</b>\nsyscalls/sys_enter_execve" as hook
+  rectangle "<b>Vùng đệm chia sẻ BPF Map</b>\nRingBuffer bộ nhớ dùng chung" as bpf_map
+
+  verifier -down-> hook : nạp và gắn kết an toàn
+  hook -right-> bpf_map : ghi nhận sự kiện
+}
+
+binary -down-> go_app : Nạp bytecode vào bộ nhớ tiến trình
+go_app -down-> verifier : Syscall bpf(BPF_PROG_LOAD)
+bpf_map -up-> ring_buf : Truyền dữ liệu qua RingBuffer (Zero-copy)
+
 @enduml

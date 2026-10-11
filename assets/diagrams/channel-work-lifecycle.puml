@@ -1,38 +1,47 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 28
+skinparam defaultFontSize 18
 skinparam shadowing false
+skinparam queue {
+  BackgroundColor #F4F4F4
+  BorderColor #222222
+  FontColor #000000
+}
 skinparam rectangle {
   BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
+  RoundCorner 8
 }
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
+  FontSize 15
 }
 skinparam ArrowColor #222222
 top to bottom direction
 
-rectangle "dispatcher\nđộc quyền gửi Job" as dispatcher
-rectangle "jobs\nchan Job\nđược dispatcher đóng" as jobs
-rectangle "workers\nnhận Job, gọi Work\nkhông đóng jobs" as workers
-rectangle "coordinator\nWaitGroup xong\nđóng results đúng một lần" as coordinator
-rectangle "results\nchan Result\nworker gửi hoặc dừng vì ctx" as results
-rectangle "consumer\nrange đến khi results đóng" as consumer
+rectangle "<b>Dispatcher Goroutine</b>\nĐộc quyền gửi vào jobs" as dispatcher
+queue "<b>jobs</b>: chan Job\n(do Dispatcher đóng)" as jobs
+rectangle "<b>Worker Pool Goroutines</b>\nNhận Job, gọi Work\nKhông đóng jobs" as workers
+rectangle "<b>Coordinator Goroutine</b>\nChờ WaitGroup xong\nĐóng results đúng một lần" as coordinator
+queue "<b>results</b>: chan Result\n(do Coordinator đóng)" as results
+rectangle "<b>Consumer Goroutine</b>\nrange results tới khi đóng" as consumer
 
-dispatcher -down-> jobs : gửi hoặc ctx.Done
-jobs -down-> workers : bàn giao Job
-workers -down-> coordinator : Done
-workers -down-> results : gửi Result hoặc ctx.Done
-coordinator -down-> results : close sau mọi worker
+dispatcher -down-> jobs : gửi Job hoặc dừng vì ctx
+jobs -down-> workers : phân phối Job
+workers -down-> coordinator : báo wg.Done()
+workers -down-> results : gửi Result hoặc dừng vì ctx
+coordinator -down-> results : close(results) sau khi mọi worker xong
 results -down-> consumer : nhận Result
 
 note right of results
-Đây là sơ đồ ownership.
-Nó không mô tả scheduler
-hay thời điểm chạy thật.
+  <b>Quy tắc Ownership trong Go:</b>
+  • Chỉ bên gửi mới được quyền đóng channel.
+  • jobs được đóng bởi Dispatcher.
+  • results được đóng bởi Coordinator.
+  • Worker không bao giờ đóng channel đầu vào.
 end note
 @enduml

@@ -4,26 +4,49 @@ skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
+skinparam arrowColor #222222
+skinparam map {
   BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "registry\nmap[string]int" as registry
-rectangle "alias\nmap[string]int" as alias
-rectangle "dữ liệu map (bảng băm)\nbilling → 2" as data
-registry --> data
-alias --> data
-note bottom of alias : alias := registry\nsao chép map value; vẫn chung dữ liệu
-note bottom of data : alias["billing"]++\nhiển thị khi đọc registry
+
+object "Biến: registry\n(Map Header Pointer)" as registry {
+  ptr = &hmap
+}
+
+object "Biến: alias\n(alias := registry)" as alias {
+  ptr = &hmap
+}
+
+map "Cấu trúc Bảng băm dùng chung (hmap)" as hmap {
+  count => 1
+  buckets => &bucket_array
+  "billing" => 2
+}
+
+registry::ptr -right-> hmap : Tham chiếu cùng hmap
+alias::ptr -right-> hmap : Tham chiếu cùng hmap
+
+note bottom of alias
+  Map trong Go là một con trỏ trỏ tới struct hmap runtime.
+  Phép gán alias := registry chỉ sao chép địa chỉ con trỏ.
+end note
+
+note bottom of hmap
+  Cả hai biến đều thao tác trên cùng một bảng băm.
+  Ghi dữ liệu qua alias lập tức phản ánh khi đọc từ registry.
+end note
 @enduml

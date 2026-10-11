@@ -1,32 +1,36 @@
 @startuml
+!include publication-flow.iuml
+
 top to bottom direction
-skinparam shadowing false
-skinparam dpi 300
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam rectangle {
-  BackgroundColor #F7F7F7
-  BorderColor #5D5D5D
-  FontColor #111111
-  RoundCorner 8
-}
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
+
+package "Mục tiêu Khai báo (Declarative Intent)" as spec_pkg {
+  rectangle "<b>Trạng thái Mong muốn (Spec)</b>\nSố lượng bản sao (Replicas)\nCấu hình phiên bản, nhãn pod" as desired
 }
 
-rectangle "trạng thái mong muốn (Spec)\nmã định danh gói, số bản sao,\nchính sách" as desired
-rectangle "bộ điều khiển (Controller)\nquan sát -> phán đoán -> hành động" as controller
-rectangle "workload được điều khiển\nPod, tiến trình, độ sẵn sàng" as current
+package "Động cơ Điều hòa (Reconciliation Engine · Level-Triggered Loop)" as controller_pkg {
+  rectangle "1. Quan sát (Observe)\nĐọc trạng thái hiện tại qua Informer Cache" as observe
+  rectangle "2. So sánh (Diff)\nTính chênh lệch: Diff = Spec - Status" as diff
+  rectangle "3. Hành động (Actuate)\nGọi API Client để tạo, sửa hoặc xóa tài nguyên" as actuate
 
-desired -down-> controller : cấu hình khai báo (Spec)
-current -up-> controller : quan sát\n(có thể trễ)
-controller -down-> current : điều chỉnh
+  observe -right-> diff : hiện trạng
+  diff -right-> actuate : lệnh điều chỉnh
+}
 
-note right of controller
-  Một vòng lặp không cam kết
-  đạt trạng thái cuối ngay tức thì.
-  Đây là quá trình hội tụ
-  liên tục qua thời gian.
+package "Tài nguyên Được Quản trị (Managed Cluster Workload)" as workload_pkg {
+  rectangle "<b>Hệ thống Thực tế (Workload & Pods)</b>\nTrạng thái vật lý chạy trên các Node" as current
+  rectangle "<b>Trạng thái Ghi nhận (Observed Status)</b>\nSố Pod đang sẵn sàng (ReadyReplicas)" as observed_status
+
+  current -right-> observed_status : báo cáo runtime
+}
+
+desired -down-> diff : Nạp Spec khai báo
+observed_status -up-> observe : Quan sát (có thể trễ)
+actuate -down-> current : Tác động điều chỉnh (Mutate)
+
+note bottom of controller_pkg
+  <b>Bản chất của Vòng lặp Điều hòa (Reconcile Loop):</b>
+  • Không cam kết hệ thống đạt trạng thái đích ngay tức thì trong một chu kỳ đơn lẻ.
+  • Luôn hướng tới trạng thái hội tụ tiệm cận liên tục theo thời gian thực.
+  • Thao tác điều hòa bắt buộc phải lũy đẳng (Idempotent) và có cơ chế giãn cách (Exponential Backoff).
 end note
 @enduml

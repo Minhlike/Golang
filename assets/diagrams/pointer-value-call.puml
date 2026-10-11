@@ -4,25 +4,43 @@ skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F5F5F5
+skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "bên gọi (caller)\nbalance: int\n100" as caller
-rectangle "tham số hàm\nx: int\n100" as parameter
-rectangle "sau x += 20\nx: int\n120" as changed
-caller --> parameter : sao chép giá trị 100
-parameter --> changed : gán cục bộ x
-note bottom of caller : biến balance gốc vẫn giữ nguyên 100
+
+package "Khung ngăn xếp bên gọi (Caller Frame)" as caller_frame {
+  object "Biến: balance\n(Địa chỉ: 0x0020)" as caller {
+    type = int
+    value = 100
+  }
+}
+
+package "Khung ngăn xếp hàm được gọi (Callee Frame)" as callee_frame {
+  object "Tham số: x\n(Địa chỉ: 0x0080)" as param {
+    type = int
+    value = 120 (ban đầu: 100)
+  }
+}
+
+caller .right.> param : Truyền tham trị (Pass-by-value)\nSao chép byte giá trị 100
+
+note bottom of caller
+  Biến balance nằm tại ô nhớ riêng biệt 0x0020.
+  Giá trị của balance vẫn nguyên vẹn là 100.
+end note
+
+note bottom of param
+  Tham số x nằm tại ô nhớ độc lập 0x0080.
+  Phép tính x += 20 chỉ sửa đổi giá trị cục bộ.
+end note
 @enduml

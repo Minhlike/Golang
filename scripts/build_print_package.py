@@ -100,7 +100,10 @@ def process_interior():
 
     # Preserve Outline / TOC
     master_toc = doc_master.get_toc()
-    new_toc = [[1, "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG", 1]] + master_toc
+    if master_toc and master_toc[0][1] == "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG":
+        new_toc = master_toc
+    else:
+        new_toc = [[1, "BÌA SÁCH // KIẾN TRÚC HỆ THỐNG GOLANG", 1]] + master_toc
     doc_out.set_toc(new_toc)
 
     # Set TrimBox and BleedBox on all interior pages

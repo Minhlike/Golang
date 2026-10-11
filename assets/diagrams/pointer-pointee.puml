@@ -4,24 +4,39 @@ skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F5F5F5
+skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "biến của bên gọi\namount: int\n100" as amount
-rectangle "tham số hàm\nbalance: *int\n(giá trị con trỏ)" as pointer
-pointer --> amount : lưu địa chỉ ô nhớ
-note bottom of pointer : ~*balance giải tham chiếu ô nhớ này\nđể đọc hoặc gán giá trị
-note bottom of amount : ~*balance += 20\nbiến đổi amount gốc thành 120
+
+object "Biến bên gọi: amount\n(Địa chỉ: 0x0040)" as amount {
+  type = int
+  value = 120 (ban đầu: 100)
+}
+
+object "Tham số hàm: balance\n(Địa chỉ: 0x0048)" as pointer {
+  type = *int
+  value = 0x0040
+}
+
+pointer::value -right-> amount : Lưu địa chỉ ô nhớ (&amount)
+
+note bottom of pointer
+  balance lưu giá trị con trỏ là địa chỉ 0x0040.
+  Toán tử *balance giải tham chiếu để truy cập ô nhớ đích.
+end note
+
+note bottom of amount
+  Phép toán *balance += 20 trực tiếp ghi vào ô nhớ 0x0040,
+  làm thay đổi biến amount của bên gọi từ 100 thành 120.
+end note
 @enduml

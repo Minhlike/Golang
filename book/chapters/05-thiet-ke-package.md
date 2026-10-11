@@ -2,15 +2,15 @@
 
 # Chương 5 — Package là ranh giới
 
-Sau Chương 4, `opsprobe` có một API cho một lần probe. Nhưng lab vẫn là một package `main` chứa model, policy error, config giả và cách in ra terminal. Khi mọi thứ còn ngắn, một tệp là lựa chọn tốt. Vấn đề xuất hiện không phải vì số tệp tăng, mà vì một thay đổi ở cách in CLI có thể nhìn thấy mọi chi tiết của probe, và một thay đổi config có thể kéo domain model đi cùng.
+Sau Chương 4, công cụ `opsprobe` đã sở hữu một giao diện lập trình (*API*) cho một thao tác thăm dò. Nhưng bài thực hành vẫn nằm gọn trong một gói `main` chứa lẫn lộn mô hình dữ liệu, chính sách lỗi, cấu hình giả lập và cách thức in ra thiết bị đầu cuối. Khi mọi thứ còn ngắn gọn, một tệp duy nhất là lựa chọn tốt. Vấn đề xuất hiện không phải vì số lượng tệp tăng lên, mà vì một thay đổi trong cách hiển thị dòng lệnh có thể nhìn thấy mọi chi tiết nội bộ của gói thăm dò, và một thay đổi cấu hình có thể kéo theo toàn bộ mô hình nghiệp vụ lõi.
 
-Ta sẽ không mở đầu bằng cây thư mục “chuẩn”. Ta bắt đầu bằng một review: code nào phải biết `fmt.Println`, code nào phải biết endpoint, và code nào có quyền quyết định config được đọc từ đâu? Khi câu trả lời khác nhau, boundary cũng phải khác nhau.
+Chúng ta không mở đầu bằng một cấu trúc thư mục “chuẩn mẫu” mang tính giáo điều. Chúng ta bắt đầu bằng việc rà soát trách nhiệm: đoạn mã nào cần biết lệnh `fmt.Println`, đoạn mã nào bắt buộc phải biết điểm cuối (*endpoint*), và đoạn mã nào nắm giữ quyền quyết định cấu hình được nạp từ đâu? Khi câu trả lời khác nhau, ranh giới kiến trúc (*boundary*) bắt buộc phải phân tách độc lập.
 
 ## Một dependency graph có thể đọc từ ngoài vào trong
 
 Refactor đầu tiên của `opsprobe` phân định ba vai trò kiến trúc rõ rệt:
 
-Package `cmd/opsprobe` đóng vai trò điểm khởi đầu (command entrypoint): tiếp nhận các phụ thuộc, điều phối các ca sử dụng và trình bày kết quả ra console.
+Package `cmd/opsprobe` là điểm khởi đầu dòng lệnh (command entrypoint): tiếp nhận các phụ thuộc, điều phối ca sử dụng và trình bày kết quả ra màn hình dòng lệnh.
 
 Package `probe` là thư viện có thể tái sử dụng (importable package): sở hữu mô hình nghiệp vụ cho một lần kiểm tra và hoàn toàn độc lập với thiết bị đầu ra.
 
@@ -18,9 +18,9 @@ Package `internal/config` là chi tiết triển khai nội bộ của ứng d�
 
 ![Dependency đi một chiều: command phối hợp config nội bộ và package probe; probe không import ngược command hay config.](../../assets/diagrams/package-boundary-graph.png)
 
-@figure Dependency direction là công cụ review. `cmd/opsprobe` là composition root; nó biết các package cụ thể. `probe` không biết CLI hay config source nên có thể được đọc, test và thay thế runner mà không kéo presentation theo.
+@figure Hướng phụ thuộc (*dependency direction*) là công cụ để rà soát thiết kế. Gói `cmd/opsprobe` là điểm cấu thành (*composition root*); nó biết rõ các gói cụ thể. Ngược lại, gói `probe` hoàn toàn không biết đến giao diện dòng lệnh hay nguồn cấu hình, do đó nó có thể được đọc hiểu, kiểm thử độc lập và thay thế hàm thực thi mà không kéo theo tầng hiển thị.
 
-`go.mod` đặt module path, còn mỗi directory Go là một package. Vì lab dùng module `example.com/golang-master/part5-package-design`, import path của package `probe` là `example.com/golang-master/part5-package-design/probe`. Một package có thể gồm nhiều file trong cùng directory; chia file không tạo thêm boundary nếu chúng vẫn khai báo cùng `package probe`.
+Tệp `go.mod` xác lập đường dẫn mô-đun (*module path*), còn mỗi thư mục trong Go là một gói riêng biệt. Vì bài thực hành sử dụng mô-đun `example.com/golang-master/part5-package-design`, đường dẫn nhập khẩu của gói `probe` là `example.com/golang-master/part5-package-design/probe`. Một gói có thể gồm nhiều tệp trong cùng một thư mục; việc chia nhỏ tệp không tạo thêm ranh giới mới nếu chúng vẫn cùng khai báo `package probe`.
 
 ~~~text
 part5-package-design/
@@ -31,11 +31,11 @@ part5-package-design/
 └── internal/config/config.go
 ~~~
 
-Tên `cmd` là convention hữu ích khi repository có thể chứa nhiều executable; bản thân compiler không trao ý nghĩa đặc biệt cho nó. `main.go` cũng chỉ là tên file theo convention. Boundary thực sự đến từ package clause, import path và hướng dependency.
+Thư mục mang tên `cmd` là một quy ước hữu ích khi kho mã nguồn chứa nhiều tệp thực thi; bản thân trình biên dịch không gán ý nghĩa cú pháp đặc biệt nào cho nó. Tệp `main.go` cũng chỉ là tên tệp theo quy ước cộng đồng. Ranh giới kiến trúc thực sự được xác lập từ mệnh đề khai báo gói, đường dẫn nhập khẩu và chiều hướng của các quan hệ phụ thuộc.
 
 ## Export là lời hứa, không phải cách sửa compile error
 
-Trong `probe`, caller cần tạo service, truyền một runner và đọc result. Những khái niệm ấy mới cần export:
+Trong gói `probe`, bên gọi chỉ cần khởi tạo dịch vụ, truyền hàm thực thi và nhận kết quả. Chỉ những khái niệm mang tính giao ước đó mới cần được xuất bản (*export*):
 
 ~~~go
 package probe
@@ -53,9 +53,9 @@ func Check(
 ) (Result, error)
 ~~~
 
-Chữ cái đầu viết hoa không làm type “quan trọng hơn”; nó mở một contract cho package khác. `Check` được export vì command thực sự gọi nó. Helper thêm context error ở bên trong có thể giữ unexported vì chưa có caller nào ngoài `probe` cần nó. Export trước rồi hy vọng một consumer xuất hiện là cách tạo API phải mang gánh nặng tương thích không cần thiết.
+Chữ cái đầu viết hoa không làm cho kiểu dữ liệu “quan trọng hơn”; nó mở ra một giao ước công khai (*contract*) cho các gói khác sử dụng. Hàm `Check` được xuất bản vì công cụ dòng lệnh thực sự cần kích hoạt nó. Hàm trợ giúp bổ sung ngữ cảnh lỗi ở bên trong có thể giữ kín nội bộ (*unexported*) vì chưa có bên gọi nào ngoài `probe` cần đến nó. Việc xuất bản vội vàng rồi hy vọng một bên tiêu dùng sẽ xuất hiện là con đường ngắn nhất tạo ra một giao diện lập trình cồng kềnh với gánh nặng tương thích ngược không đáng có.
 
-Package documentation cũng là một phần của contract. File `probe/doc.go` bắt đầu bằng comment `Package probe ...`, nói package chịu trách nhiệm gì và không chịu trách nhiệm gì. Comment của export nên mô tả behavior mà caller có thể dựa vào, không chỉ lặp lại tên type.
+Tài liệu hướng dẫn của gói cũng là một phần không thể tách rời của giao ước. Tệp `probe/doc.go` bắt đầu bằng lời chú thích `Package probe ...`, làm rõ gói chịu trách nhiệm cho những gì và tuyệt đối không đảm nhận những gì. Lời chú thích cho các định danh xuất bản nên mô tả hành vi mà bên gọi có thể an tâm dựa vào, thay vì chỉ lặp lại một cách sáo rỗng tên của kiểu dữ liệu.
 
 ## `internal` là boundary do go command kiểm tra
 
@@ -81,13 +81,13 @@ func DefaultTargets() []Target {
 }
 ~~~
 
-Package ở `internal` không phải “private bằng thỏa thuận”. Go chỉ cho code nằm trong cây thư mục của parent import nó. Vì `cmd/opsprobe` nằm dưới module root — parent của `internal` — nó import được `internal/config`. Code nằm ngoài cây cha ấy bị `go` command từ chối. Không nên dùng số module làm phép thử: một repository nhiều module có thể vẫn có các package nằm trong cây được phép.
+Package ở `internal` không phải “private bằng thỏa thuận”. Go chỉ cho code nằm trong cây thư mục của gói cha import nó. Vì `cmd/opsprobe` nằm dưới thư mục gốc module, vốn là thư mục cha của `internal`, nó hoàn toàn import được `internal/config`. Code nằm ngoài cây cha ấy bị lệnh `go` từ chối. Không nên dùng số lượng module làm phép thử: một kho mã nguồn nhiều module có thể vẫn có các package nằm trong cây được phép.
 
-Đây không phải lý do để nhét mọi package vào `internal` theo phản xạ. Với binary tự chứa, đó thường là default tốt vì không hứa API ngoài. Với `probe` trong lab này, ta cố tình để nó importable để boundary giữa domain operation và CLI được nhìn thấy. Nếu mai kia không còn consumer ngoài application, nó cũng có thể trở thành internal; vị trí phải theo consumer thật, không theo cây thư mục đẹp mắt.
+Đây không phải lý do để nhét mọi gói vào `internal` theo phản xạ. Với tệp nhị phân tự chứa, đó thường là giá trị mặc định (*default*) tốt vì không công bố giao diện lập trình (*API*) ra ngoài. Với `probe` trong bài thực hành này, chúng ta cố tình để gói này có thể nhập khẩu (*importable*) để ranh giới giữa thao tác nghiệp vụ (*domain operation*) và công cụ dòng lệnh (*CLI*) hiển lộ rõ ràng. Nếu sau này không còn bên tiêu dùng (*consumer*) nào bên ngoài ứng dụng, nó cũng có thể chuyển thành nội bộ (`internal`); vị trí phải dựa trên bên tiêu dùng thực tế, không theo cấu trúc thư mục hình thức.
 
-## Composition root chuyển dữ liệu, không giấu dependency
+## Điểm cấu thành (Composition root) chuyển dữ liệu, không giấu phụ thuộc
 
-`config.Target` và `probe.Service` không phải cùng type. Chúng thuộc hai boundary khác nhau: config nói dữ liệu được khai báo thế nào; probe nói một operation cần gì. `cmd/opsprobe` là nơi phù hợp để map giữa chúng:
+`config.Target` và `probe.Service` không cùng kiểu dữ liệu. Chúng thuộc hai ranh giới kiến trúc khác nhau: gói cấu hình xác định dữ liệu được khai báo như thế nào; trong khi gói thăm dò xác định một thao tác cần những gì. Tệp `cmd/opsprobe` là vị trí phù hợp nhất để ánh xạ giữa hai mô hình dữ liệu đó:
 
 ~~~go
 for _, target := range config.DefaultTargets() {
@@ -108,11 +108,11 @@ for _, target := range config.DefaultTargets() {
 }
 ~~~
 
-Mapping này trông như boilerplate nhỏ, nhưng nó giữ dependency direction trung thực: `probe` không cần import config, config không cần biết Result, và code in terminal không rò vào domain package. Khi source config chuyển từ default sang file hay environment ở chương sau, `probe.Check` không đổi chỉ vì đường đi của config đã đổi.
+Phép ánh xạ này thoạt nhìn như đoạn mã lặp lại thông thường, nhưng nó bảo toàn hướng phụ thuộc (*dependency direction*) một cách trung thực: `probe` không cần nhập khẩu gói cấu hình, gói cấu hình không cần biết tới cấu trúc kết quả, và mã in ấn ra thiết bị đầu cuối không rò rỉ vào gói nghiệp vụ lõi. Khi nguồn cấu hình chuyển từ giá trị mặc định sang tệp tin hoặc biến môi trường ở chương sau, phương thức `probe.Check` không hề bị xáo trộn chỉ vì cách nạp cấu hình đã đổi.
 
-## Một refactor có kiểm chứng, không phải một lần dời file
+## Tái cấu trúc có kiểm chứng, không phải di chuyển tệp đơn thuần
 
-Lab kiểm tra ba cam kết kỹ thuật trọng yếu khi phân tách package nhằm bảo vệ ranh giới kiến trúc:
+Bài thực hành kiểm tra ba cam kết kỹ thuật trọng yếu khi phân tách gói nhằm bảo vệ ranh giới kiến trúc:
 
 | Thành phần kiểm thử | Hành vi kỳ vọng của hệ thống | Rủi ro nếu thiết kế sai ranh giới |
 | :--- | :--- | :--- |
@@ -120,29 +120,37 @@ Lab kiểm tra ba cam kết kỹ thuật trọng yếu khi phân tách package n
 | Toàn vẹn kết quả | Đối tượng kết quả mang chính xác tên định danh dịch vụ đã cấu hình. | Trộn lẫn trạng thái giữa các dịch vụ trong quá trình duyệt danh sách. |
 | Độc lập dữ liệu (`internal/config`) | Trả về một slice độc lập theo từng lần gọi factory. | Caller sửa slice nhận được làm đột biến giá trị cấu hình mặc định dùng chung. |
 
-Test cuối không phải để khẳng định “mọi slice đều dangerous”. Nó chứng minh ownership của config factory: `DefaultTargets` tạo dữ liệu mới cho caller thay vì phát một slice dùng chung. Đây là cùng câu hỏi value semantics của Chương 2, nay được đặt vào một package boundary.
+Ca kiểm thử cuối cùng không nhằm khẳng định “mọi lát cắt đều nguy hiểm”. Nó chứng minh quyền sở hữu (*ownership*) của hàm tạo cấu hình: `DefaultTargets` tạo dữ liệu hoàn toàn mới cho bên gọi thay vì phát tán một lát cắt dùng chung. Đây là câu hỏi về ngữ nghĩa giá trị (*value semantics*) của Chương 2, nay được đặt vào ranh giới của một gói.
 
 ### Khởi tạo Gói và Ràng buộc Đồ thị Phụ thuộc (Initialization DAG)
 
-Go specification không cho phép package import chính nó, trực tiếp hay gián tiếp. Vì vậy đồ thị import không có chu trình; build có import cycle bị từ chối với diagnostic `import cycle not allowed`. Quy tắc này giúp xác định thứ tự khởi tạo package, không chứng minh các dependency ngoài process đã sẵn sàng.
+Đặc tả Go không cho phép một gói nhập khẩu chính nó, dù là trực tiếp hay gián tiếp. Vì vậy đồ thị nhập khẩu (*import graph*) tuyệt đối không được có chu trình; quá trình biên dịch phát hiện chu trình phụ thuộc (*cyclic dependency*) sẽ bị từ chối ngay với chẩn đoán `import cycle not allowed`. Quy tắc này giúp xác định thứ tự khởi tạo gói một cách tất định, chứ không chứng minh các dịch vụ phụ thuộc bên ngoài tiến trình đã sẵn sàng.
 
-Nếu package `A` import `B`, thì `B` phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng package, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc tĩnh, tiếp theo là các hàm `init()` chạy tuần tự trong goroutine khởi tạo trước khi `main` chạy. Tuy nhiên `init` có thể tạo goroutine khác; import graph không chứng minh các goroutine ấy đã hoàn tất hoặc config ngoài đã sẵn sàng. Công việc có thể lỗi, cần deadline hoặc cần dependency ngoài nên được gọi tường minh từ điểm khởi tạo ứng dụng, nơi caller quan sát được error.
+Nếu gói `A` nhập khẩu gói `B`, thì `B` bắt buộc phải được khởi tạo hoàn tất trước khi `A` bắt đầu. Trong phạm vi từng gói, các biến cấp gói được khởi tạo theo thứ tự phụ thuộc tĩnh, tiếp theo là các hàm `init()` chạy tuần tự trong luồng nhẹ khởi tạo trước khi hàm `main` thực thi. Tuy nhiên, hàm `init()` hoàn toàn có thể khởi tạo các luồng nhẹ khác; đồ thị nhập khẩu không thể bảo đảm các luồng đó đã kết thúc hoặc cấu hình bên ngoài đã sẵn sàng. Những tác vụ có thể phát sinh lỗi, cần thời hạn xử lý (*deadline*) hoặc cần tài nguyên bên ngoài nên được gọi một cách tường minh từ điểm khởi tạo ứng dụng, nơi bên gọi có thể trực tiếp quan sát và xử lý lỗi.
 
-Lần này không bắt đầu từ implementation đã tách. Mở `labs/part5-package-refactor` trong VS Code: điểm xuất phát là một `main.go` monolithic đang chạy. Chạy `go run .` để giữ behavior làm mốc, rồi chạy `go test -tags exercise ./...`. Lỗi compiler vì package `probe` chưa tồn tại là tín hiệu bắt đầu, không phải lỗi để lờ đi: test đang đòi một public boundary mà code chưa có. Từ requirement và test, anh tự quyết định file nào đi vào `probe`, file nào là `internal/config`, và command map hai model ở đâu. Khi xong, `go run ./cmd/opsprobe` phải giữ output, còn `go test -tags exercise ./...` và `go vet ./...` phải xanh.
+Lần này bài học không bắt đầu từ mã nguồn đã được phân tách sẵn. Mở thư mục `labs/part5-package-refactor` trong trình soạn thảo: điểm xuất phát là một tệp `main.go` nguyên khối đang chạy. Chạy `go run .` để ghi nhận hành vi hiện tại làm mốc kiểm chuẩn, rồi chạy `go test -tags exercise ./...`. Lỗi biên dịch do gói `probe` chưa tồn tại chính là tín hiệu bắt đầu, không phải lỗi cần bỏ qua: các ca kiểm thử đang đòi hỏi một ranh giới công khai mà mã nguồn chưa thiết lập. Từ yêu cầu nghiệp vụ và các ca kiểm thử, người học tự quyết định tệp nào đưa vào `probe`, tệp nào thuộc `internal/config`, và công cụ dòng lệnh ánh xạ hai mô hình dữ liệu ở đâu. Khi hoàn tất, lệnh `go run ./cmd/opsprobe` phải bảo toàn kết quả xuất ra, đồng thời các lệnh `go test -tags exercise ./...` và `go vet ./...` đều phải báo xanh.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Reference implementation nằm ở `labs/part5-package-design`, nhưng chỉ nên mở sau khi acceptance test đã cho phản hồi đầu tiên. Ranh giới cần giữ là: `probe` export operation mà test gọi, `internal/config` giữ policy default và trả slice mới, còn `cmd/opsprobe` là nơi map data rồi in kết quả. Không có lý do để `probe` import ngược config hoặc terminal.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-> **Bài tập - đặt code ở đâu?** Một bạn muốn thêm `fmt.Println` vào `probe.Check` để in progress, và muốn `probe` gọi `config.DefaultTargets` để đỡ mapping ở `main`. Với dependency graph trên, hai thay đổi đó tạo ra rủi ro gì? Đề xuất nơi thay thế cho mỗi việc.
+Bản triển khai tham chiếu nằm ở `labs/part5-package-design`, nhưng chỉ nên tham khảo sau khi các ca kiểm thử chấp nhận (*acceptance test*) đã đưa ra phản hồi đầu tiên. Ranh giới kiến trúc cần bảo toàn là: gói `probe` công bố các thao tác nghiệp vụ mà kiểm thử kích hoạt, gói `internal/config` duy trì chính sách mặc định và trả về lát cắt mới độc lập, còn `cmd/opsprobe` là nơi ánh xạ dữ liệu rồi hiển thị kết quả. Tuyệt đối không có lý do gì để `probe` nhập khẩu ngược lại gói cấu hình hoặc thiết bị đầu cuối.
 
-**Đáp án.** `fmt.Println` kéo presentation vào package có thể import; command nên quyết định format và nơi ghi output. Để `probe` gọi config đảo dependency từ domain operation sang application policy, khiến test probe phải mang config theo. Progress có thể là result/event do caller trình bày; mapping nên ở command hoặc một application service nằm phía ngoài cả `probe` lẫn config.
+### Bài thực hành: Xác định vị trí đặt mã nguồn trong kiến trúc gói
 
-## Một config source là dữ liệu không tin cậy, không phải endpoint
+Một kỹ sư muốn thêm lệnh `fmt.Println` vào `probe.Check` để in tiến trình xử lý, và muốn `probe` gọi trực tiếp `config.DefaultTargets` để giảm bớt bước ánh xạ ở `main`. Với đồ thị phụ thuộc trên, hai thay đổi đó gây ra rủi ro gì? Hãy đề xuất vị trí thay thế phù hợp.
 
-Requirement tiếp theo đến từ người vận hành: trong một lần chạy, họ muốn đổi endpoint mặc định mà không sửa source. Ta chọn một biến môi trường có shape rõ ràng: `OPS_PROBE_TARGET=payments.internal:9443`. Đây là capability của application, không phải capability của `probe`. `probe.Check` chỉ nhận `Endpoint` đã hợp lệ; nó không có lý do để biết chuỗi đó đến từ môi trường, file hay một flag tương lai.
+---
 
-Điều này giữ một ranh giới quan trọng. Environment luôn đưa vào string; endpoint cần host và port có ý nghĩa. Việc tách, chuyển kiểu và kiểm tra range là công việc của `internal/config`. Command đưa implementation thật `os.LookupEnv` vào boundary ấy, rồi chỉ nhận `[]Target` hoặc error. Shape của API đủ nhỏ để test mà không đổi environment của máy:
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Việc gọi `fmt.Println` kéo tầng hiển thị vào một gói có thể được tái sử dụng; công cụ dòng lệnh mới là nơi quyết định quy cách hiển thị và đích xuất dữ liệu. Việc để `probe` gọi gói cấu hình sẽ đảo ngược chiều phụ thuộc từ thao tác nghiệp vụ sang chính sách ứng dụng, khiến cho kiểm thử của `probe` bị ràng buộc chặt chẽ với cấu hình. Thông tin tiến trình nên được chuyển giao dưới dạng sự kiện hoặc kết quả để bên gọi tự hiển thị; việc ánh xạ dữ liệu nên nằm ở lệnh hoặc một dịch vụ ứng dụng nằm ngoài cả `probe` lẫn `config`.
+
+## Nguồn cấu hình là dữ liệu không đáng tin cậy, không phải điểm cuối
+
+Yêu cầu nghiệp vụ tiếp theo đến từ người vận hành: trong một lượt chạy, họ muốn thay đổi điểm cuối mặc định mà không cần sửa đổi mã nguồn. Chúng ta chọn một biến môi trường có định dạng rõ ràng: `OPS_PROBE_TARGET=payments.internal:9443`. Đây là năng lực của ứng dụng, không phải trách nhiệm của gói `probe`. Hàm `probe.Check` chỉ tiếp nhận đối tượng `Endpoint` đã hợp lệ; nó không có lý do gì để bận tâm chuỗi ký tự đó bắt nguồn từ biến môi trường, tệp cấu hình hay một cờ lệnh trong tương lai.
+
+Điều này xác lập một ranh giới kiến trúc quan trọng. Môi trường luôn cung cấp chuỗi ký tự thô; trong khi điểm cuối đòi hỏi tên máy chủ và cổng mạng có ý nghĩa. Thao tác phân tách, chuyển đổi kiểu và kiểm tra phạm vi thuộc về trách nhiệm của `internal/config`. Công cụ dòng lệnh chuyển giao hàm đọc thực tế `os.LookupEnv` vào ranh giới đó, rồi chỉ nhận về `[]Target` hoặc lỗi. Hình thức của giao diện lập trình đủ nhỏ gọn để kiểm thử độc lập mà không cần can thiệp biến môi trường của hệ điều hành:
 
 ~~~go
 type LookupEnv func(string) (string, bool)
@@ -150,25 +158,29 @@ type LookupEnv func(string) (string, bool)
 func LoadTargets(lookup LookupEnv) ([]Target, error)
 ~~~
 
-Đây không phải một dependency-injection framework. `LookupEnv` chỉ là function type nói đúng dependency mà config cần: với một key, trả value và cho biết key có tồn tại hay không. Trong test, một closure nhỏ thay `os.LookupEnv`; trong command, `os.LookupEnv` thỏa đúng signature. Nhờ vậy test mô tả input rõ ràng mà không có test nào phải sửa environment process chung.
+Đây không phải là một khung tiêm phụ thuộc (*dependency injection framework*) phức tạp. `LookupEnv` chỉ đơn thuần là một kiểu hàm mô tả chính xác phụ thuộc mà gói cấu hình cần: nhận một khóa, trả về giá trị chuỗi và báo hiệu khóa có tồn tại hay không. Trong kiểm thử, một hàm đóng kín nhỏ thay thế cho `os.LookupEnv`; trong lệnh chính, hàm `os.LookupEnv` đáp ứng trọn vẹn chữ ký hàm đó. Nhờ vậy, ca kiểm thử mô tả dữ liệu đầu vào tường minh mà không có ca kiểm thử nào phải thay đổi môi trường tiến trình dùng chung.
 
-`host:port` cũng không nên được cắt bằng `strings.Split`. Dấu `:` xuất hiện trong IPv6, nên `net.SplitHostPort` là parser phù hợp cho grammar socket. `payments.internal:9443` là input hợp lệ; IPv6 cần bracket như `[2001:db8::9]:9443`. Sau khi tách, port vẫn là text: `strconv.Atoi` chuyển nó thành `int`, rồi config kiểm tra range `1..65535` trước khi tạo target. Mọi input lỗi trả error có context để CLI in ra và dừng với exit code khác 0.
+Chuỗi `host:port` cũng không nên được tách bằng lệnh thô sơ `strings.Split`. Ký tự dấu hai chấm `:` xuất hiện phổ biến trong địa chỉ IPv6, do đó `net.SplitHostPort` là bộ phân tích cú pháp phù hợp với ngữ pháp socket mạng. Chuỗi `payments.internal:9443` là đầu vào hợp lệ; địa chỉ IPv6 cần đặt trong dấu ngoặc vuông như `[2001:db8::9]:9443`. Sau khi phân tách, cổng mạng vẫn ở dạng chuỗi: hàm `strconv.Atoi` chuyển đổi thành số nguyên `int`, rồi gói cấu hình kiểm tra phạm vi 1–65535 trước khi khởi tạo mục tiêu. Mọi dữ liệu lỗi đều trả về lỗi có ngữ cảnh để công cụ dòng lệnh in ra và thoát với mã khác 0.
 
-Ở đây không cần sentinel mới. Caller hiện chỉ có một policy cho config lỗi: báo người dùng và dừng trước khi probe bắt đầu. Nếu sau này CLI cần phân biệt lỗi syntax với secret bị thiếu để đưa remediation khác nhau, đó mới là lúc error identity đáng được đưa vào contract. Chương 4 không dạy “mọi error phải có type”; nó dạy chỉ giữ identity khi caller có quyết định khác nhau.
+Ở đây không cần khai báo lỗi lính gác (*sentinel error*) mới. Bên gọi hiện chỉ có một chính sách xử lý duy nhất cho cấu hình lỗi: thông báo cho người dùng và dừng chương trình trước khi quá trình thăm dò bắt đầu. Nếu sau này công cụ dòng lệnh cần phân biệt lỗi cú pháp với lỗi thiếu thông tin bảo mật để đưa ra giải pháp khắc phục khác nhau, đó mới là thời điểm danh tính lỗi xứng đáng được đưa vào giao ước. Chương 4 không yêu cầu “mọi lỗi phải có kiểu riêng”; nó nhấn mạnh chỉ giữ lại danh tính khi bên gọi có các quyết định ứng xử khác nhau.
 
-**Thực hành - requirement thay đổi sau refactor.** Sau khi hoàn thành lần tách package đầu tiên trong `labs/part5-package-refactor`, chạy `go test -tags configexercise ./...`. Test đòi `internal/config.LoadTargets` nhận một function đọc environment và đổi endpoint khi có `OPS_PROBE_TARGET`. Tự chọn file, API và error message; constraints là dùng `net.SplitHostPort`, từ chối host rỗng và port ngoài `1..65535`, còn `cmd/opsprobe` mới được gọi `os.LookupEnv`. Khi test xanh, chạy command với `OPS_PROBE_TARGET=payments.internal:9443` để kiểm tra đường đi runtime.
+### Bài thực hành: Yêu cầu thay đổi sau khi tái cấu trúc
+
+Sau khi hoàn thành lần tách package đầu tiên trong `labs/part5-package-refactor`, chạy `go test -tags configexercise ./...`. Test đòi `internal/config.LoadTargets` nhận một hàm đọc biến môi trường và đổi endpoint khi có `OPS_PROBE_TARGET`. Tự chọn file, API và thông báo lỗi; ràng buộc kỹ thuật là dùng `net.SplitHostPort`, từ chối host rỗng và port ngoài 1–65535, còn `cmd/opsprobe` mới được gọi `os.LookupEnv`. Khi test xanh, chạy lệnh với `OPS_PROBE_TARGET=payments.internal:9443` để kiểm tra đường đi thời gian chạy.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Reference implementation giữ `LoadTargets` trong `internal/config`, bắt đầu từ `DefaultTargets` để ownership của slice không đổi, rồi chỉ override host và port của target đầu. Command xử lý error ở process boundary bằng stderr và exit code `2`; `probe` không thay đổi. Đây là dấu hiệu refactor tốt: requirement về source config đi qua một package, trong khi operation kiểm tra endpoint không cần biết nguồn dữ liệu vừa đổi.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Bản hiện thực tham chiếu giữ `LoadTargets` trong `internal/config`, bắt đầu từ `DefaultTargets` để quyền sở hữu của slice không đổi, rồi chỉ ghi đè host và port của target đầu. Lệnh xử lý lỗi ở biên tiến trình bằng stderr và mã thoát `2`; `probe` không thay đổi. Đây là dấu hiệu tái cấu trúc tốt: yêu cầu về nguồn cấu hình đi qua một package, trong khi thao tác kiểm tra endpoint không cần biết nguồn dữ liệu vừa đổi.
 
 ## Code review: một field không có trạng thái thứ hai
 
-Sau config change, ta đọc lại public API thay vì vội thêm feature khác. `Check` có hai outcome: return `error` khi operation không hoàn tất, hoặc return `Result` khi runner thành công. Trong contract này, `Result.Healthy` luôn là `true`. Field đó trông vô hại, nhưng nó gợi cho caller một trạng thái thứ hai mà function không bao giờ trả về.
+Sau khi thay đổi cấu hình, chúng ta rà soát lại giao diện lập trình công khai thay vì vội vàng bổ sung thêm tính năng mới. Hàm `Check` có hai kết quả đầu ra: trả về `error` khi thao tác không hoàn tất, hoặc trả về `Result` khi hàm thực thi thành công. Trong giao ước này, trường `Result.Healthy` luôn mang giá trị `true`. Trường dữ liệu đó trông có vẻ vô hại, nhưng nó gợi ý cho bên gọi về một trạng thái thứ hai mà hàm không bao giờ trả về.
 
-Đây là một bug thiết kế, không phải bug compiler. Một caller mới có thể viết `if !result.Healthy { retry() }`, rồi tin rằng branch ấy có ý nghĩa. Thực tế, failure đã đi qua `error`; `result` zero value đi cùng error không phải một observation “unhealthy”. Giữ bool chỉ vì câu in terminal cần chữ `true` làm biên API rộng hơn dữ liệu mà operation thực sự cung cấp.
+Đây là một khiếm khuyết trong thiết kế, không phải lỗi của trình biên dịch. Một kỹ sư mới tiếp nhận mã nguồn có thể viết `if !result.Healthy { retry() }`, rồi tin rằng nhánh rẽ đó có ý nghĩa thực tế. Trong thực tế, sự cố đã được truyền tải qua giá trị `error`; giá trị mặc định của `Result` đi kèm với lỗi không phải là một quan sát mang ý nghĩa “không lành mạnh”. Việc cố giữ trường boolean chỉ để phục vụ câu in ra màn hình có chữ `true` đã khiến ranh giới giao diện rộng hơn dữ liệu mà thao tác thực sự cung cấp.
 
-Ta thu hẹp `Result` còn service đã hoàn tất. `cmd/opsprobe` đã có nhánh `err == nil`, nên chính command - nơi sở hữu presentation - in `healthy=true`. Không có information bị mất: success đã là bằng chứng của `true`; failure vẫn là error với context. Đây là một lần refactor đặc biệt đáng làm vì test không đỏ trước khi đổi. Test cũ xanh, nhưng contract cũ làm người đọc có thể suy luận sai.
+Chúng ta thu hẹp `Result` chỉ còn định danh dịch vụ đã hoàn tất. Tệp `cmd/opsprobe` đã sở hữu nhánh kiểm tra `err == nil`, do đó chính công cụ dòng lệnh, nơi sở hữu tầng hiển thị, sẽ in `healthy=true`. Hoàn toàn không có thông tin nào bị thất thoát: thành công đã là bằng chứng của trạng thái lành mạnh; thất bại vẫn là lỗi đi kèm ngữ cảnh. Đây là một lần tái cấu trúc đặc biệt giá trị vì kiểm thử không hề báo đỏ trước khi sửa. Kiểm thử cũ vẫn xanh, nhưng giao ước cũ có thể khiến người đọc suy luận sai lệch.
 
 ~~~go
 // Result identifies the service whose check
@@ -178,23 +190,27 @@ type Result struct {
 }
 ~~~
 
-Một comment tốt giờ cũng có thể viết chính xác hơn: Result không “chứa health status”, mà định danh service có check thành công. Khi API thật sự cần diễn đạt nhiều trạng thái quan sát - ví dụ healthy, degraded, unreachable với timestamp và latency - đó sẽ là một model khác, được thiết kế cùng requirement và test riêng. Đừng giữ placeholder cho một feature chưa tồn tại chỉ để API trông linh hoạt.
+Một lời ghi chú giải thích tốt giờ đây có thể phát biểu chính xác hơn: `Result` không “chứa trạng thái sức khỏe”, mà định danh dịch vụ đã kiểm tra thành công. Khi giao diện thực sự cần diễn đạt nhiều trạng thái quan sát (chẳng hạn như lành mạnh, suy giảm, không thể kết nối cùng mốc thời gian và độ trễ), đó sẽ là một mô hình dữ liệu khác, được thiết kế cùng yêu cầu nghiệp vụ và kiểm thử riêng. Đừng bao giờ chừa chỗ cho một tính năng chưa tồn tại chỉ để giao diện trông có vẻ linh hoạt.
 
 <!-- pagebreak -->
 
-**Thực hành - review dưới ràng buộc.** Trong `labs/part5-package-design`, tạm giữ `Healthy bool` trong `Result` rồi viết ra hai outcome mà `Check` có thể trả. Sau đó bỏ field, sửa test và chỉ sửa presentation ở command cho đến khi `go test ./...` cùng `go run ./cmd/opsprobe` đều xanh. Không được chuyển failure thành `Result{Healthy: false}`: điều đó làm mất error chain mà Chương 4 đã xây. Trong bản refactor độc lập, `public_boundary_test.go` là contract tối thiểu; hãy sửa implementation theo test, không thêm field chỉ để đoán tương lai.
+### Bài thực hành: Đánh giá mã nguồn dưới các ràng buộc
+
+Trong `labs/part5-package-design`, tạm giữ `Healthy bool` trong `Result` rồi viết ra hai kết quả mà `Check` có thể trả về. Sau đó bỏ trường này, sửa kiểm thử và chỉ sửa phần hiển thị ở tầng lệnh cho đến khi cả `go test ./...` cùng `go run ./cmd/opsprobe` đều đạt kết quả tốt. Tuyệt đối không chuyển lỗi thất bại thành `Result{Healthy: false}`: điều đó làm mất chuỗi lỗi mà Chương 4 đã xây dựng. Trong bản tái cấu trúc độc lập, `public_boundary_test.go` là khế ước tối thiểu; hãy sửa bản hiện thực theo kiểm thử, không tự ý thêm trường dữ liệu chỉ để dự đoán tương lai.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** `Result{Service: service.Name}` là đủ cho nhánh thành công. Sau `err == nil`, command tự in literal `healthy=true`. Nếu một ngày cần health state mà vẫn giữ operation failure riêng, API sẽ cần một contract mới nói rõ result nào có thể xuất hiện cùng error nào; đó không phải việc của bool hiện tại.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Giá trị `Result{Service: service.Name}` là đủ cho nhánh thành công. Sau khi kiểm tra `err == nil`, lệnh tự in chuỗi ký tự `healthy=true`. Nếu sau này cần trạng thái sức khỏe mà vẫn giữ việc phân biệt lỗi thao tác riêng, API sẽ cần một khế ước mới quy định rõ kết quả nào có thể xuất hiện cùng lỗi nào; đó không phải việc của cờ boolean hiện tại.
 
 ## Module chọn source nào để build
 
-Một package boundary đúng vẫn có thể build với source khác điều anh tưởng. Package là đơn vị tổ chức code; module là tập package có version và dependency requirements. `go.mod` đặt module path, phiên bản ngôn ngữ và các requirement; `go.sum` lưu checksum để kiểm tra nội dung dependency đã tải. Nó không phải lockfile liệt kê duy nhất mọi version sẽ dùng trong mọi chế độ build.
+Một ranh giới gói được phân chia chuẩn mực vẫn có thể biên dịch với mã nguồn khác với dự tính của người lập trình. Gói (*package*) là đơn vị tổ chức mã nguồn; trong khi mô-đun (*module*) là tập hợp các gói đi kèm phiên bản và các yêu cầu phụ thuộc. Tệp `go.mod` xác lập đường dẫn mô-đun, phiên bản ngôn ngữ và các yêu cầu; tệp `go.sum` lưu bảng băm kiểm tra để xác minh tính toàn vẹn của mã phụ thuộc đã tải. Nó không phải tệp khóa phiên bản liệt kê cứng mọi phiên bản sẽ dùng trong mọi chế độ biên dịch.
 
-Go dùng minimal version selection cho các requirement trong module graph: với mỗi module path, chọn version cao nhất được yêu cầu trong graph liên quan, không tự chọn bản mới nhất trên Internet. “Minimal” nói về tập version thỏa requirement, không có nghĩa chọn version thấp nhất trong mọi dependency. `replace` có thể thay source local hoặc version; một build dùng replace local chỉ chứng minh bản source ấy. Replace trong dependency không tự trở thành policy của main module tiêu dùng nó. Khi điều tra, đọc `go list -m all`, `go mod graph` và `go env GOMOD GOWORK` trước khi kết luận test đang chạy đúng dependency.
+Go sử dụng thuật toán chọn phiên bản tối thiểu (*minimal version selection*) cho các yêu cầu trong đồ thị mô-đun: với mỗi đường dẫn mô-đun, Go chọn phiên bản cao nhất được yêu cầu trong đồ thị liên quan, chứ không tự ý tải bản mới nhất trên mạng Internet. Thuật ngữ “tối thiểu” ở đây chỉ tập hợp phiên bản thỏa mãn yêu cầu, không có nghĩa là chọn phiên bản thấp nhất trong mọi phụ thuộc. Chỉ thị `replace` có thể hoán đổi mã nguồn cục bộ hoặc chỉ định phiên bản; một bản biên dịch sử dụng chỉ thị thay thế cục bộ chỉ chứng minh mã nguồn trên máy đó. Chỉ thị thay thế trong các gói phụ thuộc không tự động trở thành chính sách của mô-đun chính tiêu dùng nó. Khi điều tra sự cố, hãy đọc kỹ kết quả `go list -m all`, `go mod graph` và `go env GOMOD GOWORK` trước khi kết luận kiểm thử đang chạy đúng phụ thuộc mong muốn.
 
-Workspace thêm một lựa chọn local: `go.work` có thể đưa nhiều module vào vai trò main module để phát triển cùng nhau. Nó không gộp chúng thành một module để phát hành. Một service trong workspace có thể dùng library vừa sửa trên máy, trong khi downstream vẫn tải version đã phát hành. Vì vậy kiểm tra ngoài workspace là một phép thử khác, không phải sự lặp thừa:
+Không gian làm việc (*workspace*) bổ sung một lựa chọn cục bộ: tệp `go.work` có thể đưa nhiều mô-đun vào vai trò mô-đun chính để phát triển song song. Nó không hợp nhất chúng thành một mô-đun duy nhất để phát hành. Một dịch vụ trong không gian làm việc có thể dùng thư viện vừa sửa đổi trên máy, trong khi người dùng tải về vẫn nhận phiên bản đã phát hành chính thức. Vì vậy, việc kiểm tra ngoài không gian làm việc là một phép thử độc lập bắt buộc, không phải sự lặp lại thừa thãi:
 
 ~~~powershell
 go env GOMOD GOWORK
@@ -205,15 +221,15 @@ go test ./...
 Remove-Item Env:GOWORK
 ~~~
 
-Nếu đã có `GOWORK` trong môi trường, hãy lưu và khôi phục giá trị thay vì xóa nó; đoạn trên minh họa phiên shell chưa đặt biến ấy. Bài thực hành không cần dependency thật: tạo hai module local, cho module A import B, dùng workspace để test, rồi tắt workspace. Giải thích vì sao kết quả đổi, và điều gì phải xuất hiện trong `go.mod` hoặc version đã phát hành để consumer độc lập build được. Đừng chữa lỗi bằng một replace trỏ vào đường dẫn laptop rồi gọi artifact đó là tái tạo được.
+Nếu đã có biến `GOWORK` trong môi trường, hãy lưu và khôi phục giá trị thay vì xóa bỏ nó; đoạn trên minh họa phiên làm việc chưa đặt biến đó. Bài thực hành không cần phụ thuộc thực tế trên mạng: tạo hai mô-đun cục bộ, cho mô-đun A nhập khẩu mô-đun B, dùng không gian làm việc để kiểm thử, rồi tắt không gian làm việc. Hãy giải thích vì sao kết quả thay đổi, và điều gì bắt buộc phải xuất hiện trong `go.mod` hoặc phiên bản phát hành để bên tiêu dùng độc lập có thể biên dịch thành công. Đừng bao giờ sửa lỗi bằng chỉ thị `replace` trỏ vào đường dẫn máy tính cá nhân rồi coi sản phẩm đó là có thể tái lập.
 
-Toolchain đang chạy và phiên bản ngôn ngữ của module là hai điều khác nhau. Trong Go 1.27, `go test` mặc định chạy vet check `stdversion`, phát hiện symbol thư viện chuẩn quá mới so với version có hiệu lực cho file, xét cả `go.mod` và build tags. Cài toolchain mới không tự hợp thức hóa việc dùng API mới trong module tuyên bố hỗ trợ bản cũ. `go mod tidy` của module `go 1.27` còn gộp các require block trùng thành nhóm trực tiếp/gián tiếp; diff đó là thay đổi biểu diễn dependency, không phải bằng chứng đã nâng hay triển khai dependency thành công.
+Bộ công cụ đang chạy và phiên bản ngôn ngữ của mô-đun là hai khái niệm độc lập. Trong Go 1.27, lệnh `go test` mặc định kích hoạt kiểm tra vet `stdversion`, giúp phát hiện các biểu tượng thư viện chuẩn quá mới so với phiên bản có hiệu lực của tệp, sau khi đối chiếu cả `go.mod` và các thẻ chỉ thị biên dịch. Việc cài đặt bộ công cụ mới không tự động hợp thức hóa việc sử dụng các API mới trong một mô-đun vốn cam kết tương thích với phiên bản cũ. Lệnh `go mod tidy` của mô-đun `go 1.27` còn gom các khối khai báo `require` trùng lặp thành nhóm trực tiếp và gián tiếp; khác biệt đó là thay đổi về hình thức biểu diễn phụ thuộc, không phải bằng chứng đã nâng cấp hay tích hợp phụ thuộc thành công.
 
 ## Build là phép chọn tệp trước khi compile
 
-Hai tệp trong cùng thư mục chưa chắc cùng đi vào một binary. Tên như `probe_linux.go`, suffix kiến trúc và dòng `//go:build` điều khiển việc chọn source. Constraint phải ở đầu file, trước package clause và có dòng trống phân cách. Đây là bước chọn file của toolchain; compiler vẫn kiểm tra những file đã được chọn theo cùng language semantics.
+Hai tệp trong cùng một thư mục chưa chắc cùng được biên dịch vào một tệp nhị phân. Quy ước đặt tên như `probe_linux.go`, hậu tố kiến trúc và chỉ thị dòng `//go:build` điều khiển việc chọn lựa mã nguồn. Ràng buộc biên dịch (*build constraint*) bắt buộc phải đặt ở đầu tệp, đứng trước khai báo gói và cách biệt bằng một dòng trống. Đây là bước chọn lọc tệp của bộ công cụ; trình biên dịch vẫn kiểm tra các tệp đã chọn theo ngữ nghĩa ngôn ngữ chuẩn mực.
 
-Với một helper thuần Go, anh có thể đặt hai implementation cùng signature trong các tệp chọn theo OS. `go list -json .` cho biết `GoFiles`, `IgnoredGoFiles` và `CgoFiles`; nó hữu ích hơn suy đoán từ cây thư mục. Cross-compilation đổi target build, không làm máy Windows thực thi hay kiểm tra syscall Linux:
+Với một hàm trợ giúp thuần Go, người lập trình có thể đặt hai bản cài đặt có cùng chữ ký hàm trong các tệp phân tách theo hệ điều hành. Lệnh `go list -json .` hiển thị rõ các trường `GoFiles`, `IgnoredGoFiles` và `CgoFiles`; thông tin này hữu ích hơn nhiều so với việc phán đoán cảm tính từ cây thư mục. Biên dịch chéo (*cross-compilation*) thay đổi mục tiêu biên dịch, chứ không giúp máy tính Windows thực thi hay kiểm chứng các lời gọi hệ thống (*syscall*) của Linux:
 
 ~~~powershell
 $env:GOOS = "linux"
@@ -222,8 +238,8 @@ $env:CGO_ENABLED = "0"
 go build -o probe-linux ./cmd/opsprobe
 ~~~
 
-Chạy trong shell tạm hoặc khôi phục ba biến về giá trị trước đó. Build thành công mới chứng minh compiler/linker chấp nhận tập source cho target, chưa chứng minh binary chạy đúng trên target. Với cgo, còn cần C compiler và library phù hợp target; tắt cgo không phải một bản cross-build tương đương nếu chức năng C bị loại khỏi source. Chương 14 dạy hợp đồng ở biên giới C, Chương 17 kiểm tra process trong môi trường triển khai, còn Chương 26 kiểm tra provenance và vulnerability của artifact. Các bước ấy trả lời những câu hỏi khác nhau.
+Thực thi trong một phiên lệnh tạm thời hoặc khôi phục ba biến môi trường về giá trị trước đó. Việc biên dịch thành công mới chỉ chứng minh trình biên dịch và trình liên kết (*linker*) chấp nhận tập hợp mã nguồn cho mục tiêu đó, chứ chưa chứng minh tệp nhị phân sẽ thực thi chính xác trên môi trường đích. Khi sử dụng cgo, hệ thống còn đòi hỏi trình biên dịch C và các thư viện phù hợp với nền tảng đích; việc tắt cgo không tạo ra một bản biên dịch chéo tương đương nếu các chức năng dựa trên C bị loại bỏ khỏi mã nguồn. Chương 14 phân tích giao ước ở ranh giới C, Chương 17 kiểm tra tiến trình trong môi trường triển khai thực tế, còn Chương 26 xác minh nguồn gốc (*provenance*) và lỗ hổng bảo mật của sản phẩm đóng gói. Mỗi bước giải đáp một câu hỏi kỹ thuật riêng biệt.
 
 ## Điểm dừng: package đủ nhỏ để thay đổi
 
-Chưa có một “architecture hoàn chỉnh” nào ở đây: chưa parse file, chưa dùng generic, chưa tạo package cho từng noun. Ta chỉ có một graph mà mỗi mũi tên trả lời được “vì sao package này cần biết package kia?”. Đó là mức cấu trúc đủ để tiếp tục thay đổi code mà không biến mọi thay đổi thành sửa `main`.
+Chưa có một “kiến trúc hoàn chỉnh” phức tạp nào ở đây: chưa phân tích tệp cấu hình, chưa dùng kiểu tổng quát (*generics*), chưa tạo gói riêng cho từng danh từ. Chúng ta chỉ sở hữu một đồ thị phụ thuộc mà mỗi mũi tên đều giải thích rõ ràng “vì sao gói này cần biết đến gói kia?”. Đó là cấu trúc tinh gọn vừa đủ để tiếp tục thay đổi mã nguồn mà không biến mọi sửa đổi thành việc chắp vá hàm `main`.

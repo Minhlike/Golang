@@ -1,7 +1,7 @@
 # PHỤ LỤC A — ATLAS LỖI GO
 ## Đọc lỗi từ triệu chứng đến nguyên nhân
 
-Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn đoán nhanh, đóng vai trò điểm hội tụ cuối cùng cho các lỗi Go và lỗi vận hành xuất hiện xuyên suốt cuốn sách theo nguyên tắc Grayscale-first. Mỗi mục gồm: mã định danh chẩn đoán (bao gồm chuỗi lỗi thực tế `EXACT`, giá trị sentinel chuẩn `SENTINEL`, trạng thái nền tảng `STATUS`, hoặc nhóm hiện tượng chẩn đoán `FAMILY`); bản chất cơ chế trong 1 câu; điểm cảnh báo hiểu lầm (`!`) nếu có; hành động kiểm tra đầu tiên (`→`); cùng tham chiếu chương (`[ChX,Y]`).
+Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn đoán nhanh, là điểm hội tụ tra cứu cuối cùng cho các lỗi Go và lỗi vận hành xuất hiện xuyên suốt cuốn sách theo nguyên tắc Grayscale-first. Mỗi mục gồm: mã định danh chẩn đoán (bao gồm chuỗi lỗi thực tế `EXACT`, giá trị sentinel chuẩn `SENTINEL`, trạng thái nền tảng `STATUS`, hoặc nhóm hiện tượng chẩn đoán `FAMILY`); bản chất cơ chế trong 1 câu; điểm cảnh báo hiểu lầm (`!`) nếu có; hành động kiểm tra đầu tiên (`→`); cùng tham chiếu chương (`[ChX,Y]`).
 
 ### Bảng phân nhóm Taxonomy
 
@@ -62,7 +62,7 @@ Số lượng biến nhận ở vế trái không khớp chính xác với số 
 
 ### A07 `missing return`
 Hàm có khai báo kiểu dữ liệu trả về nhưng tồn tại nhánh rẽ control-flow đi đến cuối block mà không có lệnh `return`.
-→ Rà soát các nhánh `if/else`, `switch/case` để bảo đảm mọi luồng thực thi đều trả về giá trị hoặc panic. [Ch1,4]
+→ Rà soát các nhánh `if/else`, `switch/case` để bảo đảm mọi luồng thực thi đều trả về giá trị hoặc `panic`. [Ch1,4]
 
 ### A08 `invalid operation: operator not defined on struct`
 Sử dụng toán tử so sánh (`==`, `!=`) trên struct chứa ít nhất một field không thể so sánh (như slice, map, func).
@@ -98,8 +98,8 @@ Type cụ thể không thỏa mãn interface vì thiếu method hoặc sai khác
 ## B — Runtime & Panic
 
 ### B01 `panic: runtime error: invalid memory address or nil pointer dereference`
-Dereference con trỏ nil hoặc gọi method qua nil interface có thể gây panic. Method có pointer receiver vẫn có thể nhận nil và xử lý nó; chỉ lời gọi trên receiver nil chưa đủ kết luận.
-! Nil dereference có thể làm process crash; đừng dùng recover để che lỗi mà không xác định contract và recovery boundary.
+Dereference con trỏ `nil` hoặc gọi method qua `nil` interface có thể gây `panic`. Method có pointer receiver vẫn có thể nhận `nil` và xử lý nó; chỉ lời gọi trên receiver `nil` chưa đủ kết luận.
+! Nil dereference có thể làm process crash; đừng dùng `recover` để che lỗi mà không xác định contract và recovery boundary.
 → Thêm kiểm tra `if ptr == nil` trước khi truy cập, hoặc rà soát constructor/hàm khởi tạo chưa gán con trỏ. [Ch2,3,12]
 
 ### B02 `panic: runtime error: index out of range [x] with length y`
@@ -129,7 +129,7 @@ Gọi lệnh `close()` lần thứ hai trên cùng một channel đã được �
 
 ### B08 `panic: interface conversion: interface {} is T1, not T2`
 Ép kiểu dạng assertion `v := x.(T2)` thất bại trong runtime khi giá trị thực tế bên trong là `T1` hoặc `nil`.
-→ Dùng `v, ok := x.(T2)` khi type động chưa được bảo đảm bởi contract. Nếu dùng assertion một giá trị, cần invariant rõ và hiểu rằng vi phạm sẽ panic. [Ch3,14,19]
+→ Dùng `v, ok := x.(T2)` khi type động chưa được bảo đảm bởi contract. Nếu dùng assertion một giá trị, cần invariant rõ và hiểu rằng vi phạm sẽ `panic`. [Ch3,14,19]
 
 ### B09 `fatal error: concurrent map read and map write`
 Nhiều goroutine cùng truy cập đọc và ghi đồng thời vào một biến kiểu `map` chuẩn mà không có cơ chế khóa đồng bộ.
@@ -213,11 +213,11 @@ Phương thức `server.Shutdown(ctx)` chạm mốc timeout của context truy�
 ## E — Filesystem & Process
 
 ### E01 `no such file or directory`
-Đường dẫn tập tin hoặc thư mục mục tiêu không tồn tại trên filesystem của hệ điều hành (`os.ErrNotExist`).
+Đường dẫn tập tin hoặc thư mục đích không tồn tại trên filesystem của hệ điều hành (`os.ErrNotExist`).
 → Kiểm tra đường dẫn tuyệt đối/tương đối, working directory thực tế của process, hoặc mount path trong container. [Ch7,15,17]
 
 ### E02 `permission denied`
-Process không có đủ quyền đọc, ghi, hoặc thực thi tập tin/thư mục mục tiêu (`os.ErrPermission`).
+Process không có đủ quyền đọc, ghi, hoặc thực thi tập tin/thư mục đích (`os.ErrPermission`).
 → Kiểm tra file mode permission (`chmod`), UID/GID của container user (non-root), hoặc chính sách SELinux/AppArmor. [Ch15,17]
 
 ### E03 `file already exists`
@@ -263,7 +263,7 @@ Dial không hoàn tất trong ngân sách kết nối, hoặc đọc/ghi vượt
 ### F04 `read: connection reset by peer`
 TCP stack báo connection reset. RST có thể đến từ peer hoặc thiết bị trung gian; riêng error string không xác định nguồn gây reset.
 ! Process restart, policy timeout hoặc middlebox là các hướng điều tra, không phải nguyên nhân đã được chứng minh. Crash cũng không luôn tạo RST.
-→ Kiểm tra log của server phía đối tác xem có sự cố panic, OOM, hay timeout của load balancer trung gian không. [Ch11,12,20]
+→ Kiểm tra log của server phía đối tác xem có sự cố `panic`, OOM, hay timeout của load balancer trung gian không. [Ch11,12,20]
 
 ### F05 `write: broken pipe`
 Lời gọi ghi bị báo EPIPE ở đường socket đang xét. TCP cho phép half-close; nhận FIN chỉ báo đóng chiều gửi của peer, không tự chứng minh mọi lần ghi tiếp phải lỗi.
@@ -307,7 +307,7 @@ Thực hiện thao tác trên `*sql.DB` đã đóng. Đây không phải `sql.Er
 
 ### G02 `driver: bad connection`
 Driver báo connection không dùng được (`driver.ErrBadConn`); `database/sql` có thể retry theo contract. Đây khác với chờ pool đạt `SetMaxOpenConns`.
-! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên "connection pool exhausted".
+! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên “connection pool exhausted”.
 → Điều tra connection lỗi và thống kê pool riêng. Chỉ đổi `SetMaxOpenConns` sau khi xét capacity database; context budget giới hạn chờ khi driver hỗ trợ, không sửa connection hỏng. [Ch13,20]
 
 ### G03 Unclosed sql.Rows (Connection Pool Starvation)
@@ -399,13 +399,13 @@ GitHub REST API có thể trả HTTP 403 hoặc 429 khi vượt primary hay seco
 ## J — Container / Kubernetes / CI-CD
 
 ### J01 CrashLoopBackOff
-Container liên tục kết thúc rồi được restart theo policy, và kubelet đang áp backoff. Exit 0 dưới `restartPolicy: Always`, failure hay liveness kill đều có thể dẫn tới vòng restart; không chỉ panic hoặc exit code dương.
+Container liên tục kết thúc rồi được restart theo policy, và kubelet đang áp backoff. Exit 0 dưới `restartPolicy: Always`, failure hay liveness kill đều có thể dẫn tới vòng restart; không chỉ `panic` hoặc exit code dương.
 ! Đây là waiting reason của container được phản ánh trong trạng thái Pod, không phải chuỗi lỗi của Go runtime hay một Pod phase riêng.
 → Kiểm tra log của container trước khi crash bằng lệnh `kubectl logs <pod> --previous`, rà soát biến môi trường và config bị thiếu. [Ch17,18,21]
 
 ### J02 OOMKilled (Exit Code 137)
 Container runtime/kubelet báo container bị OOM kill. Có thể liên quan cgroup memory limit hoặc áp lực OOM của host; cần đọc reason và sự kiện, không suy từ RSS của một process đơn lẻ.
-! Exit code 137 thường biểu thị SIGKILL và không riêng OOM. SIGKILL không thể bị handler chặn, nên process không chạy defer để dọn tài nguyên.
+! Exit code 137 thường biểu thị SIGKILL và không riêng OOM. SIGKILL không thể bị handler chặn, nên process không chạy `defer` để dọn tài nguyên.
 → Kiểm tra rò rỉ bộ nhớ qua heap profile (`pprof`), điều chỉnh thuật toán caching hoặc nâng hạn mức `limits.memory` cho pod. [Ch10,17,21]
 
 ### J03 ImagePullBackOff / ErrImagePull
@@ -420,7 +420,7 @@ Trạng thái lỗi cấu hình (`Waiting Reason`) khi Kubernetes không tìm th
 
 ### J05 Readiness probe failed
 * `HTTP probe failed with statuscode: 503`
-Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod Ready có thể thành false. EndpointSlice có thể vẫn giữ endpoint với `ready=false`; behavior Service còn phụ thuộc `publishNotReadyAddresses`.
+Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod Ready có thể thành `false`. EndpointSlice có thể vẫn giữ endpoint với `ready=false`; behavior Service còn phụ thuộc `publishNotReadyAddresses`.
 ! Readiness failure không tự restart container và cũng không chứng minh process đang chạy bình thường; nó chỉ phản ánh kết quả của probe đã chọn.
 → Kiểm tra tình trạng kết nối đến các dependency hạ tầng (database, cache) và rà soát logic kiểm tra sẵn sàng của handler. [Ch12,17,20,21]
 

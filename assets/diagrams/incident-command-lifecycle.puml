@@ -1,41 +1,74 @@
 @startuml
 skinparam backgroundColor #FFFFFF
-skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 20
-skinparam arrowColor #333333
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
 hide footbox
+
 skinparam sequence {
-  ActorBackgroundColor #F5F5F5
-  ActorBorderColor #333333
-  ActorFontColor #000000
-  ParticipantBackgroundColor #F5F5F5
-  ParticipantBorderColor #333333
-  ParticipantFontColor #000000
-  LifeLineBorderColor #777777
-  LifeLineBackgroundColor #FFFFFF
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #334155
+  ActorFontColor #0F172A
+  ActorFontStyle bold
+
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantBorderColor #334155
+  ParticipantFontColor #0F172A
+  ParticipantFontStyle bold
+
+  LifeLineBorderColor #475569
+  LifeLineBackgroundColor #F8FAFC
 }
 
-actor "người vận hành" as operator
-participant "lệnh sự cố\nkiểm tra + ghi nhận" as command
-participant "bộ điều phối runner\nkhởi chạy + chờ + phân loại" as runner
-participant "tiến trình con\nstdout / stderr / mã thoát" as child
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
+}
 
-operator -> command : mục tiêu + thời hạn deadline
-command -> runner : đặc tả Spec + bối cảnh cha
-runner -> child : tệp thực thi + đối số
-child --> runner : kết quả xuất + mã thoát
-runner --> command : kết quả Result + lớp lỗi
-command --> operator : bản ghi chẩn đoán
+actor "Kỹ sư Vận hành (SRE)" as operator
+participant "Công cụ Dòng lệnh (CLI)\ncmd/opsprobe" as cli
+participant "Bộ Điều phối (Runner)\ninternal/diagnose" as runner
+participant "Tiến trình Con (OS Process)\nos/exec CommandContext" as child
 
-note over runner
-  Context bị cancel sẽ ngắt
-  tiến trình con theo mặc định.
-  Chính sách cho cây tiến trình (process tree) là cơ chế riêng.
+operator -> cli : <b>1. Thực thi chẩn đoán sự cố</b>\n<i>opsprobe diagnose --target=billing:8080 --timeout=5s</i>
+activate cli
+
+cli -> cli : <b>2. Khởi tạo Ngữ cảnh có Thời hạn chót</b>\nctx, cancel := context.WithTimeout(ctx, 5s)
+
+cli -> runner : <b>3. Chuyển giao Spec & Ngữ cảnh</b>\nrunner.Run(ctx, Spec{Target, Timeout})
+activate runner
+
+runner -> runner : <b>4. Thiết lập exec.CommandContext</b>\nGắn StdoutPipe, StderrPipe & ranh giới tiến trình
+
+runner -> child : <b>5. Khởi chạy tiến trình con (cmd.Start)</b>\nNạp binary chẩn đoán độc lập (ping, probe, curl)
+activate child
+
+child -> runner : <b>6. Dòng dữ liệu xuất (Pipes)</b>\nĐọc streaming stdout & stderr với bộ đệm an toàn
+
+alt Kịch bản Hoàn tất Bình thường (Thành công trước Deadline)
+  child --> runner : Tiến trình kết thúc, trả về mã thoát (exit code)
+  deactivate child
+else Kịch bản Quá hạn (DeadlineExceeded)
+  runner -> child : <b>Tự động ngắt khi ctx bị hủy</b>\nGửi SIGKILL / cmd.Process.Kill(), thu hồi socket
+  destroy child
+end
+
+runner -> runner : <b>7. Đóng gói Kết quả (Result)</b>\nPhân loại lỗi có cấu trúc: Timeout vs Lỗi tiến trình
+
+runner --> cli : Trả về Result{Output, ExitCode, Latency, Err}
+deactivate runner
+
+cli --> operator : <b>8. Hiển thị báo cáo chẩn đoán sự cố</b>\nIn định dạng JSON / văn bản có cấu trúc và mã thoát
+deactivate cli
+
+note right of runner
+  <b>Nguyên tắc Kiểm soát Tiến trình Con trong Go:</b>
+  • Không bao giờ gọi <i>exec.Command</i> mà không có ngữ cảnh giới hạn thời gian.
+  • <i>CommandContext</i> bảo đảm tiến trình con bị ngắt khi timeout, ngăn rò rỉ PID.
+  • Quản lý nhóm tiến trình (process group) cần cơ chế riêng theo hệ điều hành (POSIX Setpgid).
 end note
 @enduml

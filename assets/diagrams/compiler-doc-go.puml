@@ -1,39 +1,45 @@
 @startuml
-skinparam backgroundColor white
-skinparam shadowing false
+skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 21
-skinparam defaultFontColor #000000
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
+
 skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
-  FontColor #000000
-  RoundCorner 6
-}
-skinparam arrowColor #000000
-skinparam ArrowThickness 1.2
-skinparam note {
   BackgroundColor #FFFFFF
-  BorderColor #555555
+  BorderColor #222222
   FontColor #000000
-  FontName "Source Sans 3"
-  FontSize 15
 }
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
+}
+
 top to bottom direction
 
-rectangle "Mã nguồn .go\ntệp văn bản bạn viết" as source
-rectangle "Token từ vựng\npackage · định danh · số · toán tử" as tokens
-rectangle "Cú pháp ngữ pháp (AST)\nkhai báo · biểu thức · khối lệnh" as syntax
-rectangle "Kiểm tra kiểu (Type Check)\nint, string, bool, chữ ký hàm" as types
-rectangle "Mã máy thực thi\nchương trình khởi chạy" as run
+rectangle "<b>1. Mã nguồn (.go)</b>\nTệp văn bản UTF-8 người lập trình viết" as source
+rectangle "<b>2. Phân tích Từ vựng (Scanner / Lexer)</b>\nDòng token: <i>package</i> · định danh · toán tử · ký tự" as tokens
+rectangle "<b>3. Phân tích Cú pháp (Parser / AST)</b>\nCây cú pháp trừu tượng: khai báo, biểu thức, khối lệnh" as syntax
+rectangle "<b>4. Kiểm tra Kiểu (Type Checker / types2)</b>\nXác định kiểu tĩnh: gán giá trị, kiểm tra chữ ký hàm" as types
+rectangle "<b>5. Tối ưu hóa & Hạ cấp (SSA Backend)</b>\nBiểu diễn Static Single Assignment: inlining, escape analysis" as ssa
+rectangle "<b>6. Sinh Mã Máy (Code Generation)</b>\nTệp nhị phân thực thi độc lập cho kiến trúc đích (amd64, arm64)" as run
 
-source -right-> tokens : tách từ vựng
-tokens -down-> syntax : dựng cây cú pháp
-syntax -left-> types : phân tích ngữ nghĩa
-types -down-> run : hợp lệ thực thi
+source -down-> tokens : Tách từ vựng (Tokenization)
+tokens -down-> syntax : Xây dựng AST
+syntax -down-> types : Phân tích ngữ nghĩa & ràng buộc kiểu
+types -down-> ssa : Dựng đồ thị SSA & tối ưu hóa
+ssa -down-> run : Sinh mã máy trực tiếp
 
-note bottom of types
-  Mô hình tinh thần trừu tượng.
-  Compiler thực tế có thêm SSA, inlining và tối ưu mã.
+note right of ssa
+  <b>Mô hình Thực tế của Go Toolchain:</b>
+  • Không chạy qua máy ảo JVM hay bytecode trung gian.
+  • Kiểm tra tĩnh hoàn toàn trước khi sinh mã.
+  • Tối ưu thoát biến (*escape analysis*) quyết định
+    cấp phát biến trên Stack hay Heap.
 end note
 @enduml

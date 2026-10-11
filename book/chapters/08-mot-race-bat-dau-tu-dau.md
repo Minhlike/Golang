@@ -4,11 +4,11 @@
 
 Một chương trình kiểm tra nhiều endpoint thường có một người thu thập kết quả và một người trình bày. Bản chạy thử có thể luôn in đúng trên laptop, nên ta rất dễ gọi nó là “chạy song song được”. Nhưng kết quả đúng trong một lượt không tạo ra một lời hứa đúng cho lượt kế tiếp.
 
-Mô hình tinh thần của chương này là **race không phải là hai goroutine cùng tồn tại; race là các lần chạm vào cùng dữ liệu mà không có thứ tự an toàn giữa chúng**. Trước khi chọn channel, mutex hay atomic, ta phải lần được những lần truy cập đó và hỏi: thứ tự nào thực sự được thiết lập?
+Mô hình tinh thần của chương này: tranh chấp dữ liệu (data race) không đơn thuần là hai goroutine cùng tồn tại đồng thời, mà là hiện tượng nhiều luồng cùng truy cập một ô nhớ dữ liệu mà không có cơ chế đồng bộ hóa an toàn xác lập thứ tự giữa chúng. Trước khi chọn channel, mutex hay atomic, ta phải lần được những lần truy cập đó và hỏi: thứ tự nào thực sự được thiết lập?
 
 ## Một lá cờ không tự công bố kết quả
 
-Hãy tưởng tượng collector chuẩn bị một báo cáo, rồi đặt cờ `ready` để người in biết đã xong:
+Xét tình huống một tiến trình thu thập (collector) chuẩn bị bản báo cáo, sau đó gán cờ `ready` để báo cho bên hiển thị biết dữ liệu đã sẵn sàng:
 
 ~~~go
 type summary struct {
@@ -60,25 +60,25 @@ Chương 6 đã dùng race detector để tìm một lần truy cập thực s�
 
 Cần phân biệt rạch ròi hai cặp khái niệm thường bị nhầm lẫn trong môi trường đồng thời:
 
-Concurrency là cấu trúc nhiều phần việc có thể tiến triển trong các khoảng thời gian chồng nhau; parallelism là thực thi cùng lúc. Parallelism không bắt buộc mỗi dòng chạy trên một core vật lý riêng, vì logical CPU cũng có thể là hardware thread. Trong Go, số `P` qua GOMAXPROCS giới hạn thực thi Go code đồng thời; thread và việc OS lập lịch còn ảnh hưởng hành vi quan sát.
+Xử lý đồng thời (*concurrency*) là cấu trúc phân tách chương trình thành nhiều phần việc có thể tiến triển trong các khoảng thời gian đan xen chồng chéo; tính toán song song (*parallelism*) là việc thực thi thực tế cùng một thời điểm. Xử lý song song không bắt buộc mỗi luồng phải chạy trên một nhân vi xử lý vật lý riêng biệt, bởi CPU logic (*logical CPU*) cũng có thể là một luồng phần cứng (*hardware thread*). Trong Go, số lượng bộ xử lý logic `P` được cấu hình thông qua `GOMAXPROCS` giới hạn số goroutine thực thi mã nguồn Go đồng thời; các luồng hệ điều hành và cơ chế lập lịch của nhân hệ điều hành tác động trực tiếp đến hành vi quan sát được.
 
-Data race là các access vào cùng memory location không được sắp thứ tự bởi happens-before, có ít nhất một access ghi và không được bao phủ bởi contract atomic tương ứng. Không gọi Go data race là undefined behavior không giới hạn kiểu C/C++: Go memory model đặt các hạn chế cho implementation, dù race vẫn là lỗi và race trên dữ liệu nhiều word có thể gây memory corruption. Race condition là lỗi thứ tự ở mức logic; nó có thể tồn tại dù mỗi access đã được bảo vệ bằng mutex.
+Hiện tượng chạy đua dữ liệu (*data race*) xảy ra khi có ít nhất hai thao tác truy cập vào cùng một ô nhớ (*memory location*), trong đó có ít nhất một thao tác ghi, các thao tác này không được sắp đặt trật tự bởi quan hệ xảy ra trước (*happens-before*) và không được bao bọc bởi giao ước nguyên tử (*atomic*) tương ứng. Đừng quy chụp chạy đua dữ liệu trong Go là hành vi bất định không giới hạn (*undefined behavior*) như trong C/C++: mô hình bộ nhớ Go (*Go memory model*) đặt ra các ràng buộc an toàn nhất định cho bản cài đặt, mặc dù chạy đua dữ liệu vẫn là lỗi nghiêm trọng và sự cố tranh chấp trên dữ liệu đa từ máy (*multi-word data*) có thể gây hỏng hóc bộ nhớ (*memory corruption*). Trong khi đó, điều kiện chạy đua (*race condition*) là lỗi sai lệch trật tự ở tầng logic nghiệp vụ; nó hoàn toàn có thể phát sinh ngay cả khi từng thao tác truy cập riêng lẻ đều đã được bảo vệ bằng khóa loại trừ tương hỗ (*mutex*).
 
 Đừng biến ba tên thành câu thần chú. Với mỗi kết quả cần đọc, hãy vẽ đường cụ thể. Trong ví dụ `ready`, không có cạnh nào từ `latest = ...` sang việc `show` đọc `latest`; vì vậy lời giải không thể chỉ là thêm một vòng lặp chờ.
 
 ## Một khóa bảo vệ một bất biến, không bảo vệ một dòng
 
-Một `Mutex` hợp với dữ liệu thật sự được sở hữu chung, khi nhiều goroutine cần lần lượt sửa hoặc chụp lại cùng một trạng thái. Bất biến của lab mới là: **sau khi người điều phối đã chờ tất cả worker hoàn tất, snapshot chứa đúng một report của mỗi worker**. Mutex bảo vệ slice `reports` trong lúc thêm và sao chép; `WaitGroup` cho người điều phối biết khi nào có thể đánh giá bất biến.
+Khóa `sync.Mutex` phù hợp với dữ liệu thực sự thuộc quyền sở hữu chung, khi nhiều goroutine cần luân phiên biến đổi hoặc chụp ảnh trạng thái cùng một vùng nhớ. Bất biến kỹ thuật của phòng thực hành mới là: sau khi tiến trình điều phối đã chờ toàn bộ công nhân xử lý hoàn tất, bản chụp dữ liệu phải chứa chính xác một báo cáo từ mỗi công nhân. Khóa bảo vệ lát cắt `reports` trong suốt quá trình bổ sung và sao chép; `sync.WaitGroup` cung cấp bằng chứng cho tiến trình điều phối biết chính xác thời điểm có thể đánh giá bất biến.
 
-Trước khi mở `fixed/registry.go`, chỉ đọc `exercise/registry_test.go`. Test đang đòi một `Registry`, một `Add(Report)` và một `Snapshot() []Report`. Hãy tự quyết định field nào cần có, method nào dùng pointer receiver, và vùng lock cần bao trùm đến đâu. Lệnh khởi đầu cố ý đỏ vì phần hiện thực chưa tồn tại:
+Trước khi tham khảo `fixed/registry.go`, hãy đọc tệp `exercise/registry_test.go`. Bài kiểm thử đòi hỏi kiểu cấu trúc `Registry`, phương thức `Add(Report)` và phương thức `Snapshot() []Report`. Hãy tự quyết định trường dữ liệu nào cần khai báo, phương thức nào sử dụng bộ tiếp nhận con trỏ (*pointer receiver*), và phạm vi khóa (*critical section*) cần bao trùm tới ranh giới nào. Lệnh thực thi ban đầu sẽ báo lỗi đỏ vì mã nguồn chưa được lập trình:
 
 ~~~powershell
 go test -tags exercise ./exercise
 ~~~
 
-Đừng đáp bằng cách trả slice nội bộ. Bài cũ về aliasing đã cho ta lý do: người gọi giữ slice trả về có thể thay phần tử của nó. `Snapshot` ở đây hứa một ảnh chụp của container, nên lab dùng `copy` để người gọi không ghi đè phần tử bên trong registry. `Report` chỉ có string value để câu hỏi của bài vẫn là thứ tự; quyền sở hữu sâu hơn của object lồng nhau sẽ quay lại khi nó có nhu cầu thật.
+Tuyệt đối không giải quyết bằng cách trả về trực tiếp lát cắt nội bộ. Bài học về hiện tượng trùng lặp tham chiếu (*aliasing*) ở Chương 2 đã chứng minh lý do: bên gọi nắm giữ lát cắt trả về có thể biến đổi các phần tử bên trong nó. Phương thức `Snapshot` cam kết cung cấp một bản chụp độc lập của thùng chứa dữ liệu, do đó phòng thực hành sử dụng hàm `copy` để ngăn bên gọi ghi đè phần tử bên trong sổ đăng ký (*registry*). Kiểu `Report` chỉ chứa giá trị chuỗi thuần túy nhằm giữ trọng tâm bài học vào trật tự thực thi; quyền sở hữu phức tạp của các đối tượng lồng nhau sẽ được phân tích khi xuất hiện nhu cầu thực tế.
 
-Một phần hiện thực được chấp nhận không cần biết bộ lập lịch sẽ chạy worker nào trước. Nó chỉ cần khiến mỗi `Add` lock trước khi append, unlock sau đó, và `Snapshot` lock trong lúc tạo bản sao. Tài liệu `sync` cam kết `Unlock` xảy ra trước một `Lock` về sau trên cùng mutex. Đây là lời hứa API, không phải suy luận từ số core hay một lần test xanh.
+Một bản cài đặt đạt chuẩn không cần bận tâm bộ lập lịch sẽ kích hoạt luồng công nhân nào trước. Nó chỉ cần bảo đảm mỗi phương thức `Add` xác lập khóa trước khi nối phần tử và giải phóng khóa ngay sau đó, đồng thời `Snapshot` giữ khóa trong suốt quá trình nhân bản dữ liệu. Tài liệu gói `sync` cam kết thao tác `Unlock` xảy ra trước một thao tác `Lock` kế tiếp trên cùng một khóa. Đây là giao ước kỹ thuật của giao diện lập trình, không phải suy diễn cảm tính từ số lượng nhân CPU hay một lần kiểm thử vượt qua ngẫu nhiên.
 
 ## WaitGroup tạo mốc hoàn tất, không thay Mutex
 
@@ -87,9 +87,9 @@ Test đặt `wg.Add(workers)` trước khi tạo goroutine. Mỗi worker gọi `
 Đường chứng minh cho một worker có thể đọc thành lời:
 
 ![Mốc hoàn tất giữa worker và bên chờ WaitGroup](../../assets/diagrams/waitgroup-completion-proof.png)
-@figure Đường chứng minh cho một worker: các bước trong từng goroutine giữ thứ tự code; cạnh đứt là quan hệ Done mở khóa lượt Wait này. Snapshot chỉ chạy sau khi Wait trả về.
+@figure Đường chứng minh cho một công nhân: các bước trong từng goroutine tuân thủ trật tự mã nguồn; cạnh đứt là quan hệ Done mở khóa lượt Wait này. Hàm Snapshot chỉ chạy sau khi Wait trả về.
 
-Các mũi tên liền là thứ tự trong code; `Done → Wait returns` là điều `sync.WaitGroup` công bố. Mutex giữ các access vào slice không chồng lên nhau. `WaitGroup` không thay thế lock: nếu các worker cùng append vào một slice mà không khóa, chúng vẫn race dù main có chờ đến khi tất cả xong mới đếm kết quả.
+Các mũi tên nét liền thể hiện trật tự tuần tự trong mã nguồn; quan hệ `Done → Wait returns` là cam kết mà `sync.WaitGroup` xác lập. Khóa loại trừ tương hỗ bảo đảm các thao tác truy cập vào lát cắt không bị chồng lấn thời gian. `WaitGroup` không thể thay thế cho cơ chế khóa: nếu các tiến trình công nhân cùng đồng thời bổ sung phần tử vào một lát cắt mà không có khóa bảo vệ, sự cố chạy đua dữ liệu vẫn sẽ bùng phát cho dù luồng chính có kiên nhẫn chờ đến khi tất cả kết thúc mới thống kê kết quả.
 
 Sau khi tự làm, chạy bản tham chiếu độc lập:
 
@@ -97,19 +97,19 @@ Sau khi tự làm, chạy bản tham chiếu độc lập:
 go test -race ./fixed
 ~~~
 
-Kết quả xanh ở đây là hai loại bằng chứng cùng lúc: test kiểm tra bất biến cụ thể, còn race detector không thấy lần truy cập racy trên đường chạy của test. Nó vẫn không phải lời khẳng định rằng mọi API tương lai thêm vào `Registry` đều an toàn. Bất cứ method mới nào đọc hoặc ghi `reports` đều phải quay lại bất biến và phạm vi lock.
+Kết quả kiểm thử thành công cung cấp đồng thời hai loại bằng chứng kỹ thuật: bài kiểm thử xác nhận bất biến nghiệp vụ cụ thể, trong khi công cụ phát hiện chạy đua không tìm thấy bất kỳ truy cập xung đột nào trên nhánh thực thi đó. Tuy nhiên, điều này không đồng nghĩa với lời khẳng định rằng mọi giao diện lập trình bổ sung trong tương lai vào `Registry` đều tự động an toàn. Bất kỳ phương thức mới nào thao tác đọc hoặc ghi lên `reports` đều bắt buộc phải quay lại rà soát bất biến và phạm vi bao bọc của khóa.
 
 ## Điều `go` cho phép, điều nó không hứa
 
-Lệnh `go f()` thiết lập một quan hệ từ nơi khởi động đến lúc `f` bắt đầu. Điều đó đủ để goroutine mới thấy dữ liệu đã được chuẩn bị trước lệnh `go`; nó không cho chiều ngược lại. Việc `f` return hay goroutine kết thúc không tự báo cho goroutine khác rằng công việc đã xong. Đó là lý do `WaitGroup` trong lab là một phần của chứng minh, không phải nghi thức để test bớt flake.
+Câu lệnh `go f()` thiết lập quan hệ xảy ra trước từ thời điểm kích hoạt đến lúc hàm `f` bắt đầu chạy. Cơ chế này bảo đảm goroutine mới nhìn thấy đầy đủ dữ liệu đã chuẩn bị trước lệnh `go`; nhưng nó không cung cấp chiều ngược lại. Việc hàm `f` kết thúc hay goroutine hoàn tất không tự động phát tín hiệu cho các goroutine khác biết công việc đã xong. Đó là lý do `sync.WaitGroup` trong phòng thực hành là một mắt xích chứng minh hình thức, không phải là thủ thuật tạm bợ để giảm thiểu tình trạng kiểm thử chập chờn (*flaky test*).
 
-Không dùng `time.Sleep` để thay mũi tên còn thiếu. Sleep chỉ đoán rằng worker có đủ thời gian trên một lần chạy; nó không công bố thứ tự nào và làm test vừa chậm vừa không chắc. Channel ở Chương 9 giải quyết bàn giao công việc và vòng đời; trước đó, ta cần phân biệt công bố state với việc bảo vệ state đang tiếp tục bị sửa.
+Tuyệt đối không sử dụng `time.Sleep` để lấp liếm mũi tên quan hệ còn thiếu. Việc tạm dừng thời gian chỉ là phỏng đoán may rủi rằng tiến trình công nhân có đủ thời gian hoàn thành trên một lượt chạy; nó hoàn toàn không xác lập bất kỳ trật tự xảy ra trước nào và khiến bộ kiểm thử vừa chậm chạp vừa bất định. Kênh truyền ở Chương 9 sẽ giải quyết trọn vẹn bài toán bàn giao công việc và vòng đời; trước thời điểm đó, ta cần phân biệt rạch ròi giữa việc công bố trạng thái an toàn với việc bảo vệ trạng thái đang liên tục bị biến đổi.
 
 ## Công bố state và chờ điều kiện
 
-`sync.Once` giữ một hợp đồng “thực hiện một lần”, không phải “thử cho tới thành công”. Khi nhiều caller gọi `Do(f)` trên cùng Once, return của `f` xảy ra trước return của các lời gọi `Do` liên quan. Nhưng nếu `f` panic, Once vẫn coi lần ấy đã được thực hiện; caller recover rồi gọi `Do` lại không khiến `f` chạy lại. `TestOncePanicIsNotRetry` trong `labs/edition-contracts` giữ phản ví dụ này. Khởi tạo phụ thuộc có thể lỗi tạm thời cần policy retry tường minh; không giấu nó trong Once rồi hy vọng lần sau tự chữa.
+`sync.Once` duy trì giao ước kỹ thuật “thực thi đúng một lần duy nhất”, chứ không phải “thử lại cho đến khi thành công”. Khi nhiều bên gọi cùng thực thi `Do(f)` trên cùng một đối tượng `Once`, sự kiện kết thúc của hàm `f` được bảo đảm xảy ra trước sự trở về của toàn bộ các lời gọi `Do` liên quan. Tuy nhiên, nếu hàm `f` phát sinh lỗi hoảng loạn (`panic`), `Once` vẫn ghi nhận lượt thực thi đó đã hoàn tất; bên gọi dù có phục hồi lỗi (`recover`) rồi gọi lại `Do` cũng không thể kích hoạt hàm `f` chạy lại lần thứ hai. Ca kiểm thử `TestOncePanicIsNotRetry` trong `labs/edition-contracts` bảo vệ chính phản ví dụ này. Quá trình khởi tạo tài nguyên phụ thuộc có nguy cơ lỗi tạm thời đòi hỏi chính sách thử lại (*retry policy*) tường minh; không được che giấu rủi ro bên trong `Once` với hy vọng hệ thống sẽ tự khôi phục kỳ diệu.
 
-`sync.Cond` lại dùng cho một câu hỏi khác: chờ cho bất biến được bảo vệ bởi lock trở thành đúng. `Wait` nhả lock, chờ rồi lấy lock lại trước khi return. Notification không phải một token trạng thái để cất cho caller tương lai; predicate mới là state cần đọc dưới lock:
+Cấu trúc `sync.Cond` phục vụ bài toán hoàn toàn khác: chờ đợi cho đến khi vị từ điều kiện (*predicate*) được bảo vệ bởi khóa chuyển sang trạng thái hợp lệ. Phương thức `Wait` giải phóng khóa, tạm hoãn thực thi chờ tín hiệu, rồi tự động tái xác lập khóa trước khi trở về. Tín hiệu thông báo (*notification*) không phải là thẻ trạng thái có thể tích lũy cho bên gọi trong tương lai; chính điều kiện vị từ mới là trạng thái cốt lõi cần được kiểm tra cẩn trọng dưới sự bảo vệ của khóa:
 
 ~~~go
 mu.Lock()
@@ -120,13 +120,13 @@ for !ready {
 mu.Unlock()
 ~~~
 
-Vòng `for` không nói rằng Go cho phép Wait tự tỉnh vô cớ: tài liệu yêu cầu Signal hoặc Broadcast để Wait return. Nó cần thiết vì khi goroutine lấy lại lock, goroutine khác có thể đã làm predicate không còn đúng. Producer sửa predicate với cùng lock, rồi thông báo theo policy. Nếu producer đã làm `ready=true` trước khi consumer tới, consumer đọc predicate và không cần một notification lịch sử. Đây là nền để đọc queue ở Chương 21, không phải một lý do dùng Cond thay channel cho mọi công việc.
+Vòng lặp `for` bao quanh không hàm ý Go cho phép `Wait` tự động thức tỉnh vô cớ: tài liệu chính thức quy định rõ ràng cần có lời gọi `Signal` hoặc `Broadcast` để phương thức `Wait` trở về. Vòng lặp này tối quan trọng vì tại thời điểm goroutine tái đoạt được khóa, một goroutine khác có thể đã biến đổi dữ liệu khiến vị từ điều kiện không còn thỏa mãn. Bên sản xuất (*producer*) biến đổi vị từ dưới cùng một khóa bảo vệ, sau đó phát tín hiệu thông báo theo chính sách xác định. Nếu bên sản xuất đã thiết lập `ready = true` trước khi bên tiêu thụ tiếp cận, bên tiêu thụ sẽ trực tiếp đọc vị từ mà không cần truy vết tín hiệu thông báo trong lịch sử. Đây là nền tảng cốt lõi cho mô hình hàng đợi ở Chương 21, chứ không phải lý do lạm dụng `Cond` thay thế cho kênh truyền trong mọi tình huống.
 
-Atomic publication phù hợp khi reader lấy một snapshot đã hoàn tất, còn writer thay toàn bộ snapshot thay vì sửa object được công bố. Một `atomic.Pointer[Config]` có thể Store pointer mới và Load pointer hiện hành; operation atomic có thứ tự sequentially consistent theo API `sync/atomic`. Nhưng truy cập atomic vào pointer không tự làm các field sau pointer an toàn. Nếu Store xong rồi sửa map, slice hay field của cùng object trong khi reader đọc, race vẫn có thể tồn tại.
+Kỹ thuật công bố nguyên tử (*atomic publication*) phát huy tối đa hiệu quả khi bên đọc chỉ tiếp nhận một bản chụp dữ liệu (*snapshot*) đã hoàn tất toàn vẹn, trong khi bên ghi tiến hành thay thế toàn bộ bản chụp mới thay vì đột biến trực tiếp đối tượng đang lưu hành. Kiểu dữ liệu `atomic.Pointer[Config]` cho phép ghi nhận (*Store*) con trỏ mới và tải về (*Load*) con trỏ hiện hành; các thao tác nguyên tử này tuân thủ trật tự nhất quán tuần tự (*sequentially consistent*) theo đặc tả của gói `sync/atomic`. Tuy nhiên, thao tác nguyên tử trên con trỏ không tự động bảo vệ an toàn cho các trường dữ liệu nằm sau con trỏ đó. Nếu sau khi `Store` mà mã nguồn lại biến đổi bảng ánh xạ (*map*), lát cắt hay trường dữ liệu của chính đối tượng đó trong lúc bên đọc đang truy xuất, hiện tượng chạy đua dữ liệu vẫn sẽ bùng phát.
 
-Trong `TestCondPredicateAndAtomicPublication`, mỗi Config được dựng xong trước Store và không bị sửa về sau. Test kiểm tra giá trị quan sát trên các đường chạy đã chọn, race detector kiểm tra access trên lần chạy đó; chứng minh thiết kế vẫn là policy snapshot bất biến sau publication. Atomic không thay một transaction nhiều field, không giải quyết ownership của object lồng nhau và không có lời hứa luôn nhanh hơn mutex. Hãy dùng cơ chế có proof nhỏ nhất cho bất biến, rồi mới đo khi workload thực sự đòi tối ưu.
+Trong ca kiểm thử `TestCondPredicateAndAtomicPublication`, mỗi đối tượng cấu hình được khởi tạo hoàn tất trước lệnh `Store` và không bao giờ bị biến đổi về sau. Bài kiểm thử xác thực giá trị quan sát được trên các nhánh thực thi xác định, trong khi công cụ phát hiện chạy đua (*race detector*) kiểm chứng các truy cập bộ nhớ; bằng chứng kỹ thuật khẳng định chính sách bản chụp bất biến sau thời điểm công bố. Thao tác nguyên tử không thể thay thế cho một giao dịch nhiều trường dữ liệu, không giải quyết quyền sở hữu của các đối tượng lồng nhau và không có bất kỳ cam kết nào khẳng định nó luôn có hiệu năng cao hơn khóa `sync.Mutex`. Hãy lựa chọn cơ chế sở hữu bằng chứng tối thiểu bảo vệ được bất biến, sau đó tiến hành đo đạc thực tế khi khối lượng công việc thực sự đặt ra bài toán tối ưu hóa.
 
-Chương này kết thúc khi anh nhìn hai goroutine không còn hỏi “có chạy cùng lúc không?”, mà hỏi “lần truy cập nào cùng dữ liệu, bất biến nào cần giữ, và đường happens-before nào làm điều đó đúng?”. Câu hỏi ấy đi cùng anh qua channel, HTTP handler, cache và code runtime; cơ chế có thể đổi, nhưng trách nhiệm chứng minh thứ tự không đổi.
+Chương này kết thúc khi người học quan sát hai goroutine không còn hỏi “có chạy cùng lúc không?”, mà hỏi “lần truy cập nào cùng dữ liệu, bất biến nào cần giữ, và đường happens-before nào làm điều đó đúng?”. Câu hỏi ấy sẽ tiếp tục đồng hành qua channel, bộ xử lý HTTP, bộ nhớ đệm và mã nguồn runtime; cơ chế kỹ thuật có thể thay đổi, nhưng trách nhiệm chứng minh thứ tự luôn bất biến.
 
 ## Ghi chú kiểm chứng
 

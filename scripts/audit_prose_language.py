@@ -78,13 +78,16 @@ VN_NON_DIACRITIC = {
     "vat", "ve", "ven", "vi", "viac", "viec", "vien", "viet", "vinh", "vo",
     "voi", "von", "vong", "vu", "vua", "vuc", "vung", "vuon", "vuot", "xa",
     "xac", "xem", "xen", "xep", "xet", "xi", "xin", "xinh", "xoa", "xong",
-    "xu", "xuan", "xuat", "xuyen", "y", "yeu"
+    "xu", "xuan", "xuat", "xuyen", "y", "yeu",
+    "cha", "gian", "truy", "xanh", "ngang", "ghim", "nguy", "xung", "ninh",
+    "khoang", "nghieng", "nghiem", "nghien", "khuan", "duyen", "mu"
 }
 
 def audit_chapter(path: Path):
     text = path.read_text(encoding="utf-8")
     # Remove code blocks
     text = re.sub(r"```[\s\S]*?```", "", text)
+    text = re.sub(r"~~~[\s\S]*?~~~", "", text)
     # Remove inline code
     text = re.sub(r"`[^`]*`", "", text)
     # Remove images and markdown links

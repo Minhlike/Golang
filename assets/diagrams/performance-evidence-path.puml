@@ -1,35 +1,55 @@
 @startuml
 skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 16
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
+skinparam roundCorner 6
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
   FontColor #000000
 }
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam rectangle {
-  BackgroundColor #F5F5F5
-  BorderColor #333333
-  RoundCorner 8
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
 }
-skinparam arrowColor #333333
-left to right direction
 
-rectangle "Triệu chứng\nchậm hoặc phình bộ nhớ" as symptom
-rectangle "Câu hỏi + tải thử nghiệm\nđại diện thực tế" as question
-rectangle "Kiểm thử giữ cam kết\nBenchmark đo từng thao tác" as measure
-rectangle "Dữ liệu profile / trace\nthu hẹp phạm vi giả thuyết" as evidence
-rectangle "Một thay đổi nhỏ\nđược đo đạc lại" as change
+top to bottom direction
 
-symptom --> question
-question --> measure
-measure --> evidence
-evidence --> change
-change --> measure : cùng cam kết hợp đồng
+package "1. Quan sát Triệu chứng" as p1 {
+  rectangle "<b>Triệu chứng Thực tế (Production Symptom)</b>\n• Độ trễ P99 tăng đột biến\n• Tỷ lệ sử dụng CPU bão hòa\n• Bộ nhớ phình to (RSS/Heap chạm trần OOM)" as symptom
+}
 
-note bottom of evidence
-  Không võ đoán từ tên API
-  hay từ cảm tính mã nguồn.
+package "2. Lập Giả thuyết & Tải Mẫu" as p2 {
+  rectangle "<b>Tải Thử nghiệm Đại diện (Synthetic Workload)</b>\n• Mô phỏng phân phối yêu cầu thực tế\n• Cố định số lượng Goroutine và kích thước payload" as workload
+}
+
+package "3. Đo đạc & Hồ sơ hóa (Profiling)" as p3 {
+  rectangle "<b>Đo lường Mẫu chuẩn (Benchmark)</b>\n• Chạy testing.B: ns/op, B/op, allocs/op\n• Đối chiếu với baseline bằng công cụ benchstat" as bench
+  rectangle "<b>Thu thập Bằng chứng Hệ thống (pprof & Trace)</b>\n• CPU profile: xác định hàm tiêu tốn nhiều chu kỳ máy\n• Heap profile: phát sinh cấp phát bộ nhớ ngoài ý muốn\n• Execution Trace: nghẽn scheduler GMP và độ trễ GC" as profile
+}
+
+package "4. Tối ưu có Kiểm chứng" as p4 {
+  rectangle "<b>Can thiệp Vi mô (Surgical Optimization)</b>\n• Tiền cấp phát dung lượng lát cắt (pre-allocate)\n• Giảm thoát biến lên heap (escape analysis)\n• Giảm khóa tranh chấp (mutex contention)" as optimize
+}
+
+symptom -down-> workload : Đặt câu hỏi kỹ thuật cụ thể
+workload -down-> bench : Thiết lập kịch bản đo đạc
+bench -down-> profile : Thu thập mẫu dữ liệu khách quan
+profile -down-> optimize : Xác định chính xác điểm nghẽn
+
+optimize -up-> bench : <b>Vòng lặp Đối chiếu:</b>\nĐo lại cùng tải mẫu,\nkiểm thử tính đúng đắn bảo toàn 100%
+
+note right of profile
+  <b>Nguyên tắc Bằng chứng Hiệu năng:</b>
+  • Không tối ưu dựa trên trực giác hay tên hàm.
+  • Mọi can thiệp phải có bằng chứng từ pprof hoặc trace.
+  • Cải thiện thông lượng không được phá vỡ cam kết đúng đắn.
 end note
 @enduml

@@ -1,34 +1,52 @@
 @startuml
-skinparam backgroundColor white
-skinparam shadowing false
+skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 19
-skinparam defaultFontColor #000000
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
+
+skinparam frame {
+  BackgroundColor #FAFAFA
+  BorderColor #475569
+  FontColor #0F172A
+  FontStyle bold
+}
+
 skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
-  FontColor #000000
-  RoundCorner 4
-}
-skinparam arrowColor #000000
-skinparam note {
   BackgroundColor #FFFFFF
-  BorderColor #555555
+  BorderColor #334155
   FontColor #000000
-  FontName "Source Sans 3"
-  FontSize 15
 }
-frame "Khối lệnh main (phạm vi hàm)" as main {
-  rectangle "status\n(sống trong main)" as status
-  frame "Khối lệnh if (phạm vi con)" as ifblock {
-    rectangle "label\n(sống trong if)" as label
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
+}
+
+frame "Phạm vi Gói (Package Scope): Toàn bộ tệp trong package" as pkg_scope {
+  rectangle "<b>service = \"checkout\"</b>\n(Hằng số / biến toàn cục của gói)" as pkg_const
+  
+  frame "Phạm vi Hàm: func main()" as func_scope {
+    rectangle "<b>status := 500</b>\n(Biến cục bộ hàm: sống trong suốt thân main)" as status_var
+    
+    frame "Phạm vi Khối lệnh con: if status >= 500 { ... }" as if_scope {
+      rectangle "<b>label := \"CRITICAL\"</b>\n(Biến cục bộ khối: chỉ sống bên trong dấu { và })" as label_var
+    }
   }
 }
-note right of label
-  label chỉ hợp lệ
-  ở trong khối if
-end note
-note bottom of main
-  Sau dấu ngoặc đóng }, label hoàn toàn biến mất khỏi scope.
+
+label_var .up.> status_var : Đọc từ trong ra ngoài: Hợp lệ\n(Tra cứu biểu tượng ngược dòng scope)
+status_var .[#EF4444]down.> label_var : Thử truy cập từ ngoài vào: LỖI\n(Trình biên dịch báo: <i>undefined: label</i>)
+
+note right of if_scope
+  <b>Nguyên tắc Lexical Scope trong Go:</b>
+  • Biến con nhìn thấy biến ở phạm vi cha bao quanh.
+  • Phạm vi cha không thể nhìn thấy biến khai báo trong khối con.
+  • Sau dấu đóng ngoặc nhọn <b>}</b>, biến cục bộ khối <i>label</i>
+    hoàn toàn biến mất khỏi bảng ký hiệu.
 end note
 @enduml

@@ -2,13 +2,13 @@
 
 # Chương 27 — Quan sát Linux từ kernel bằng eBPF và Go
 
-Cho đến thời điểm này của cuốn sách, chúng ta đã xây dựng các công cụ giám sát dựa trên ba trụ cột Observability truyền thống: Metrics (Prometheus), Logs và Tracing (OpenTelemetry). 
+Cho đến thời điểm này của cuốn sách, chúng ta đã xây dựng các công cụ giám sát dựa trên ba trụ cột Observability truyền thống: Metrics (Prometheus), Logs và Tracing (OpenTelemetry).
 
-Instrumentation đặt trong application cần code ứng dụng tham gia để tạo metric và span có ngữ nghĩa nghiệp vụ. Nhưng metrics, logs và tracing không chỉ có nguồn ấy: OS, proxy và các tầng hạ tầng cũng có thể cung cấp tín hiệu độc lập. Câu hỏi ở đây là điểm quan sát nào còn thấy được hành vi khi application không chủ động báo cáo.
+Cơ chế thu thập dữ liệu quan sát (*instrumentation*) đặt trực tiếp trong ứng dụng đòi hỏi mã nguồn ứng dụng chủ động tạo chỉ số đo lường (*metrics*) và đoạn vết (*spans*) mang ngữ nghĩa nghiệp vụ. Nhưng chỉ số, nhật ký (*logs*) và vết thực thi (*traces*) không chỉ đến từ một nguồn: hệ điều hành, máy chủ ủy quyền (*proxy*) và các tầng hạ tầng cũng cung cấp tín hiệu độc lập. Câu hỏi đặt ra là: điểm quan sát nào vẫn phát hiện được hành vi bất thường khi bản thân ứng dụng không chủ động báo cáo?
 
-Xét một scenario: tiến trình web bị khai thác RCE, mở `/bin/sh`, tải payload vào `/tmp` rồi thực thi mà không tạo span hay metric trong application. Instrumentation của chính application có thể thiếu dấu vết đó; log OS, proxy hoặc audit vẫn có thể hữu ích. Ta bổ sung một điểm quan sát kernel cho hook đã chọn, không tuyên bố eBPF là nguồn nhìn thấy mọi hành vi.
+Xét một kịch bản giả định: một tiến trình web bị khai thác lỗ hổng thực thi mã từ xa (RCE), mở vỏ lệnh `/bin/sh`, tải dữ liệu độc hại vào thư mục `/tmp` rồi thực thi mà hoàn toàn không phát sinh đoạn vết hay chỉ số nghiệp vụ nào từ mã ứng dụng. Cơ chế quan sát nội tại của ứng dụng sẽ bỏ lọt dấu vết đó; trong khi nhật ký hệ điều hành, máy chủ ủy quyền hoặc nhật ký kiểm toán (*audit log*) vẫn có thể ghi nhận. Do đó, chúng ta bổ sung một điểm quan sát ở tầng nhân (*kernel*) tại các điểm móc (*hooks*) được chỉ định, thay vì ngộ nhận eBPF có thể thấu suốt mọi hành vi của toàn hệ thống.
 
-eBPF cho phép đặt điểm quan sát gần kernel cho những hook mà policy và kernel hỗ trợ; nó không nhìn thấy “mọi hành vi” và không thay thế audit log hay kiểm soát truy cập. Trước đây, can thiệp vào kernel thường dùng Linux Kernel Module (LKM) bằng C, có blast radius lớn khi lỗi. eBPF kết hợp `cilium/ebpf` cho phép nạp bytecode qua verifier, nhưng khả năng attach, quyền hạn và overhead vẫn phải được kiểm chứng trên kernel/workload thật.
+eBPF cho phép đặt điểm quan sát trực tiếp ở tầng nhân cho các điểm móc mà chính sách an ninh và phiên bản nhân Linux hỗ trợ; công nghệ này không nhìn thấy toàn bộ mọi hành vi và không thể thay thế nhật ký kiểm toán hay các cơ chế kiểm soát truy cập. Trước đây, việc can thiệp vào nhân hệ điều hành thường đòi hỏi mô-đun nhân Linux (LKM) viết bằng C, với bán kính ảnh hưởng sự cố (*blast radius*) rất lớn khi xảy ra lỗi nghiêm trọng. eBPF kết hợp với thư viện `cilium/ebpf` cho phép nạp mã trung gian (*bytecode*) thông qua bộ thẩm định nhân (*kernel verifier*), tuy nhiên khả năng gắn kết, đặc quyền thực thi và chi phí tài nguyên phụ trội (*overhead*) vẫn bắt buộc phải được kiểm chứng trên môi trường thực tế.
 
 ---
 
@@ -18,18 +18,18 @@ Mô hình trung tâm cần tách hai thời điểm. Verifier kiểm tra chươn
 
 | Thời điểm | Đường xử lý của lab | Ranh giới |
 | :--- | :--- | :--- |
-| Nạp và gắn chương trình | Loader nạp object; kernel verifier kiểm tra bytecode; loader gắn chương trình vào tracepoint. | Chấp nhận chương trình không chứng minh policy quan sát đầy đủ hoặc overhead phù hợp. |
+| Nạp và gắn chương trình | Trình nạp nạp tệp đối tượng; bộ kiểm định nhân kiểm tra mã bytecode; trình nạp gắn chương trình vào điểm vết (`tracepoint`). | Chấp nhận chương trình không chứng minh policy quan sát đầy đủ hoặc overhead phù hợp. |
 | Một lời gọi `execve` đi qua hook | Chương trình lấy trường sự kiện, reserve/submit record vào ring buffer; Go đọc record, giải mã ABI rồi áp dụng heuristic. | Record có thể mất; sự kiện đầu vào syscall không chứng minh exec thành công. |
 
-Với hook `sys_enter_execve` của lab, record chứa PID, UID, GID, tên tiến trình gọi và đường dẫn được đọc từ argument. Reader của `cilium/ebpf` ở version ghim có thể đọc dữ liệu đã sẵn sàng trước khi cần chờ qua `epoll`. Little-endian là lựa chọn ABI của object `bpfel` đang build, không phải quy tắc cho mọi kernel hay chương trình eBPF. Go chỉ phân tích những record nhận được; không có record không đồng nghĩa không có hành vi.
+Với điểm móc `sys_enter_execve` trong bài lab, bản ghi dữ liệu chứa định danh tiến trình (PID), định danh người dùng (UID), định danh nhóm (GID), tên tiến trình gọi và đường dẫn tệp thực thi đọc từ đối số. Bộ đọc của `cilium/ebpf` ở phiên bản được ghim có thể lấy dữ liệu đã sẵn sàng mà không cần chờ qua cơ chế `epoll`. Thứ tự byte nhỏ (*little-endian*) là quy ước giao diện nhị phân (ABI) của tệp đối tượng `bpfel` đang biên dịch, không phải quy tắc cố định cho mọi nhân hệ điều hành hay chương trình eBPF. Ứng dụng Go chỉ phân tích những bản ghi thực sự nhận được; việc không nhận được bản ghi không đồng nghĩa hệ thống hoàn toàn không có hành vi khả nghi.
 
 ---
 
 ## 2. Kernel Verifier: Kiểm tra trước khi nạp
 
-Tại sao Linux Kernel lại cho phép mã do người dùng viết chạy trực tiếp bên trong không gian bộ nhớ của nhân?
+Tại sao nhân Linux (`Linux Kernel`) lại cho phép mã do người dùng viết chạy trực tiếp bên trong không gian bộ nhớ của nhân?
 
-Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trước khi bất kỳ chương trình eBPF nào được nạp vào kernel thông qua lời gọi hệ thống `SYS_BPF`, Verifier sẽ phân tích tĩnh toàn bộ mã bytecode và thực thi các quy tắc kiểm tra nghiêm ngặt:
+Câu trả lời nằm ở bộ kiểm định nhân (`kernel verifier`). Trước khi bất kỳ chương trình eBPF nào được nạp vào nhân Linux thông qua lời gọi hệ thống `SYS_BPF`, bộ kiểm định (`Verifier`) sẽ phân tích tĩnh toàn bộ mã trung gian bytecode và thực thi các quy tắc kiểm tra nghiêm ngặt:
 
 | Tiêu chuẩn an toàn Verifier | Cơ chế kiểm tra | Mục đích bảo vệ Kernel |
 | :--- | :--- | :--- |
@@ -38,19 +38,19 @@ Câu trả lời nằm ở **Bộ kiểm định nhân (Kernel Verifier)**. Trư
 | **Giới hạn stack của mô hình BPF đang xét** | Tài liệu verifier mô tả frame 512 byte; call chain, program type và tính năng kernel còn có kiểm tra riêng. | Không dùng số này làm tổng stack budget cho mọi call chain hay version. |
 | **Theo dõi thanh ghi BPF và FP** | `R10` là frame pointer chỉ đọc; verifier theo dõi kiểu và trạng thái thanh ghi BPF. | Đây là thanh ghi của máy BPF, không phải lời hứa giữ nguyên mọi thanh ghi vật lý của CPU. |
 
-> **Tình huống minh họa suy luận: Ranh giới giữa trình biên dịch C và Kernel Verifier.**
-> Xét một đoạn mã C eBPF minh họa việc tra cứu và cập nhật bộ đếm trong map:
+> **Dừng để dự đoán:** Ranh giới giữa trình biên dịch C và bộ kiểm định nhân (*Kernel Verifier*):
+> Xét một đoạn mã C eBPF minh họa việc tra cứu và cập nhật bộ đếm trong bảng ánh xạ (*map*):
 > ~~~c
 > struct event *val = bpf_map_lookup_elem(&counters, &key);
 > val->count++;
 > ~~~
-> Về mặt cú pháp C thuần túy, trình biên dịch Clang có thể coi việc truy cập `val->count` là hợp lệ và phát sinh mã bytecode ELF. Tuy nhiên, khi chương trình Go nạp bytecode này vào kernel, bộ kiểm định Verifier sẽ từ chối chương trình tại thời điểm load. Vì sao Verifier lại nghiêm ngặt hơn trình biên dịch ngôn ngữ, và người viết eBPF phải thay đổi cách viết như thế nào?
+> Xét riêng cú pháp ngôn ngữ C thuần túy, trình biên dịch Clang có thể coi việc truy cập `val->count` là hợp lệ và biên dịch thành mã thực thi nhị phân. Tuy nhiên, khi chương trình Go nạp mã thực thi này vào nhân hệ điều hành, bộ kiểm định sẽ từ chối chương trình ngay tại thời điểm nạp. Vì sao bộ kiểm định nhân lại nghiêm ngặt hơn trình biên dịch ngôn ngữ, và lập trình viên eBPF bắt buộc phải điều chỉnh cú pháp như thế nào?
 
-#### Đáp án — chỉ đọc sau khi đã tự làm
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-Trình biên dịch C chỉ chịu trách nhiệm kiểm tra cú pháp và hệ thống kiểu ở tầng ngôn ngữ; nó không thể biết trước liệu tại thời điểm thực thi trong nhân, phần tử ứng với `key` có thực sự tồn tại trong bộ nhớ hay không. Hàm trợ giúp `bpf_map_lookup_elem` luôn có khả năng trả về con trỏ NULL nếu tra cứu thất bại. Trong không gian nhân Linux, việc giải tham chiếu con trỏ NULL tiềm ẩn nguy cơ nghiêm trọng đối với tính toàn vẹn của hệ thống: nó có thể gây ra kernel oops, làm đổ vỡ tiến trình liên quan, làm hỏng trạng thái nhân hoặc kích hoạt kernel panic tùy thuộc vào ngữ cảnh thực thi và cấu hình nhân.
+Trình biên dịch C chỉ chịu trách nhiệm kiểm tra cú pháp và hệ thống kiểu ở tầng ngôn ngữ; nó không thể biết trước liệu tại thời điểm thực thi trong nhân, phần tử ứng với `key` có thực sự tồn tại trong bộ nhớ hay không. Hàm trợ giúp `bpf_map_lookup_elem` luôn có khả năng trả về con trỏ `NULL` nếu tra cứu thất bại. Trong không gian nhân Linux, việc giải tham chiếu con trỏ `NULL` tiềm ẩn nguy cơ nghiêm trọng đối với tính toàn vẹn của hệ thống: nó có thể gây ra kernel oops, làm đổ vỡ tiến trình liên quan, làm hỏng trạng thái nhân hoặc kích hoạt kernel `panic` tùy thuộc vào ngữ cảnh thực thi và cấu hình nhân.
 
-Do đó, Kernel Verifier thực hiện phân tích đường đi trừu tượng và theo dõi trạng thái thanh ghi BPF chứa kết quả trả về dưới dạng con trỏ có thể mang giá trị NULL. Khi thanh ghi chưa được chứng minh an toàn, mọi chỉ thị đọc hoặc ghi bộ nhớ thông qua thanh ghi đó đều bị Verifier chặn đứng và từ chối nạp vì lỗi truy cập bộ nhớ không hợp lệ. Để vượt qua rào cản này, lập trình viên bắt buộc phải chèn một nhánh kiểm tra điều kiện tường minh ngay sau khi tra cứu:
+Do đó, bộ kiểm định nhân (`Kernel Verifier`) thực hiện phân tích đường đi trừu tượng và theo dõi trạng thái thanh ghi BPF chứa kết quả trả về dưới dạng con trỏ có thể mang giá trị `NULL`. Khi thanh ghi chưa được chứng minh an toàn, mọi chỉ thị đọc hoặc ghi bộ nhớ thông qua thanh ghi đó đều bị Verifier chặn đứng và từ chối nạp vì lỗi truy cập bộ nhớ không hợp lệ. Để vượt qua rào cản này, lập trình viên bắt buộc phải chèn một nhánh kiểm tra điều kiện tường minh ngay sau khi tra cứu:
 
 ~~~c
 struct event *val = bpf_map_lookup_elem(&counters, &key);
@@ -60,7 +60,7 @@ if (!val) {
 val->count++;
 ~~~
 
-Nhánh kiểm tra `if (!val)` cung cấp cho Verifier bằng chứng cần thiết để chứng minh rằng trên mọi nhánh thực thi đi tới câu lệnh `val->count++`, con trỏ trong thanh ghi chắc chắn khác NULL. Tuy nhiên, việc vượt qua kiểm tra con trỏ NULL chỉ giải quyết riêng lỗi truy cập con trỏ chưa kiểm chứng; nó hoàn toàn không bảo đảm chương trình sẽ vượt qua tất cả các tiêu chuẩn kiểm định khác của Verifier, chẳng hạn như giới hạn kích thước stack, tính hữu hạn của vòng lặp hay tính hợp lệ của các vùng đệm bộ nhớ truyền vào hàm trợ giúp.
+Nhánh kiểm tra `if (!val)` cung cấp cho Verifier bằng chứng cần thiết để chứng minh rằng trên mọi nhánh thực thi đi tới câu lệnh `val->count++`, con trỏ trong thanh ghi chắc chắn khác `NULL`. Tuy nhiên, việc vượt qua kiểm tra con trỏ `NULL` chỉ giải quyết riêng lỗi truy cập con trỏ chưa kiểm chứng; nó hoàn toàn không bảo đảm chương trình sẽ vượt qua tất cả các tiêu chuẩn kiểm định khác của bộ kiểm định (`Verifier`), chẳng hạn như giới hạn kích thước ngăn xếp (`stack`), tính hữu hạn của vòng lặp hay tính hợp lệ của các vùng đệm bộ nhớ truyền vào hàm trợ giúp.
 
 ---
 
@@ -71,9 +71,9 @@ Khi lập trình eBPF với Go, nhiều người lầm tưởng rằng bắt bu�
 Thư viện **`github.com/cilium/ebpf`** cung cấp đường nạp và quản lý object eBPF từ Go không phụ thuộc cgo ở phía userspace:
 
 ![Tách giai đoạn build eBPF và giai đoạn load trên Linux](../../assets/diagrams/ebpf-build-load.png)
-@figure Clang và bpf2go thuộc toolchain build. Binary Go mang object BPF đến runtime; kernel vẫn kiểm tra program, quyền và khả năng hỗ trợ trước khi load hoặc attach thành công.
+@figure Clang và bpf2go thuộc bộ công cụ biên dịch. Tệp nhị phân Go mang tệp đối tượng BPF đến môi trường chạy; nhân hệ điều hành vẫn thẩm định chương trình, quyền hạn và tính năng hỗ trợ trước khi nạp hoặc gắn kết thành công.
 
-Đường build dưới đây yêu cầu Linux có BTF, `bpftool`, Clang hỗ trợ target BPF và header libbpf. Chạy từ thư mục lab; `vmlinux.h` cung cấp kiểu tracepoint mà header `linux/bpf.h` không khai báo. Header được sinh từ kernel mục tiêu, không phải source Go viết tay:
+Quy trình biên dịch dưới đây đòi hỏi hệ điều hành Linux hỗ trợ định dạng BTF, công cụ `bpftool`, trình biên dịch Clang hỗ trợ đích biên dịch BPF cùng các tệp tiêu đề của thư viện `libbpf`. Thực thi lệnh từ thư mục bài thực hành; tệp tiêu đề `vmlinux.h` cung cấp các kiểu điểm theo dõi (*tracepoint*) mà tệp tiêu đề chuẩn của nhân không khai báo sẵn. Tệp tiêu đề này được trích xuất trực tiếp từ nhân hệ điều hành mục tiêu, hoàn toàn không phải mã nguồn Go viết thủ công:
 
 ~~~bash
 bpftool btf dump file /sys/kernel/btf/vmlinux \
@@ -91,19 +91,19 @@ go run github.com/cilium/ebpf/cmd/bpf2go \
 
 Một là, giai đoạn phát triển: Kỹ sư viết mã C eBPF, sau đó chạy `go generate` với `bpf2go` và Clang trên máy phát triển để biên dịch mã nguồn C thành bytecode eBPF (định dạng ELF) cùng các tệp Go bindings tương ứng.
 
-Hai là, tự động nhúng Bytecode: Công cụ `bpf2go` tự động sinh ra tệp Go chứa mã bytecode ELF đã được nhúng thẳng vào binary thông qua tính năng `//go:embed`.
+Hai là, tự động nhúng Bytecode: Công cụ `bpf2go` tự động sinh ra tệp Go chứa mã trung gian bytecode ELF đã được nhúng thẳng vào binary thông qua tính năng `//go:embed`.
 
-Ba là, phía Go có thể nạp object eBPF đã build sẵn qua syscall Linux mà không cần cgo. Điều đó không xóa dependency của môi trường: kernel phải hỗ trợ tính năng và hook cần dùng, caller phải có quyền phù hợp, và BTF hay các asset build-time cần khớp cách ứng dụng được đóng gói. Không cần C runtime cho loader thuần Go không đồng nghĩa không cần điều kiện nào trên host.
+Ba là, phía Go có thể nạp tệp đối tượng eBPF đã biên dịch sẵn thông qua các lời gọi hệ thống (*syscall*) của Linux mà không phụ thuộc cgo. Điều đó không xóa bỏ sự phụ thuộc vào môi trường máy chủ: nhân Linux phải hỗ trợ tính năng và điểm móc cần dùng, bên gọi phải có đặc quyền phù hợp, đồng thời dữ liệu BTF cùng các tài nguyên lúc biên dịch phải khớp với cách ứng dụng được đóng gói. Việc không cần môi trường thực thi C cho bộ nạp thuần Go không đồng nghĩa ứng dụng chạy được mà không cần các điều kiện tiên quyết trên máy chủ.
 
-Bốn là, test Go dùng nguồn đọc giả lập (`RecordReader`) để kiểm tra giải mã và điều phối channel mà không cần quyền nạp BPF. Lab chưa cung cấp một ứng dụng load/attach hoàn chỉnh; object thật, adapter ring buffer và quyền trên host phải được nối và kiểm chứng riêng. `CollectionSpec` dựng trong test không thay cho ELF được compiler tạo.
+Bốn là, bài kiểm thử Go dùng nguồn đọc giả lập (`RecordReader`) để kiểm tra logic giải mã và điều phối kênh truyền mà không cần đặc quyền nạp BPF vào nhân. Bài lab mang tính mô hình hóa; việc tích hợp tệp đối tượng thực tế, bộ tương thích vùng đệm vòng và phân quyền trên máy chủ cần được cấu hình và kiểm chứng độc lập. Đối tượng `CollectionSpec` dựng trong kiểm thử không thay thế cho tệp ELF do trình biên dịch sinh ra.
 
 ---
 
 ## 4. Kênh truyền dữ liệu tốc độ cao: BPF Ring Buffer
 
-Để đưa dữ liệu từ Kernel lên Go Userspace, eBPF cung cấp cấu trúc dữ liệu **BPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)**. Khác với perf event array thường dùng buffer theo CPU, Ring Buffer dùng vùng nhớ chung và có thể giữ thứ tự reservation giữa producer. Đây hữu ích cho event tuần tự như fork/exec/exit; nó không biến record thành đồng hồ toàn cục chính xác, cũng không cho phép suy ra toàn bộ causal order của event song song trên nhiều CPU.
+Để chuyển dữ liệu từ tầng nhân lên không gian người dùng (*userspace*) trong Go, eBPF cung cấp cấu trúc vùng đệm vòng BPF (`BPF_MAP_TYPE_RINGBUF`, tức *BPF ring buffer*). Khác với mảng sự kiện hiệu năng (*perf event array*) thường phân chia vùng đệm riêng theo từng lõi CPU, vùng đệm vòng sử dụng vùng nhớ chia sẻ và bảo toàn thứ tự giữ chỗ bộ nhớ giữa các tiến trình tạo sự kiện. Cơ chế này đặc biệt hiệu quả cho các sự kiện mang tính tuần tự như fork, exec hay exit; tuy nhiên nó không biến bản ghi thành một đồng hồ toàn cục chính xác, cũng như không tự động xác định được toàn bộ trật tự nhân quả giữa các sự kiện xảy ra đồng thời trên nhiều lõi CPU.
 
-Reader ở userspace ánh xạ ring buffer bằng `mmap` để lấy record; không cần một syscall riêng cho mỗi record, nhưng vẫn có chi phí đồng bộ, polling/wakeup và decode. Lab reserve bộ nhớ trong ring rồi submit. Reserve có thể thất bại vì đầy hoặc điều kiện đường chạy; khi đó chương trình bỏ record. Cần đếm loss nếu policy cần biết tín hiệu thiếu, không coi bỏ record là bảo đảm hệ thống không bị ảnh hưởng.
+Bộ đọc tại không gian người dùng ánh xạ vùng đệm vòng bằng lời gọi `mmap` để lấy các bản ghi; không cần một lời gọi hệ thống riêng lẻ cho từng bản ghi, nhưng vẫn phát sinh chi phí đồng bộ hóa, cơ chế đánh thức (*polling/wakeup*) và giải mã dữ liệu. Trong bài lab, chương trình giữ chỗ trước bộ nhớ trong vùng đệm rồi mới xác nhận ghi. Thao tác giữ chỗ có thể thất bại nếu vùng đệm bị đầy hoặc gặp nghẽn luồng xử lý; khi đó chương trình sẽ hủy bản ghi. Cần chủ động đếm số lượng bản ghi bị thất thoát nếu chính sách giám sát đòi hỏi phát hiện tín hiệu bị mất, tránh ngộ nhận việc bỏ qua bản ghi là hệ thống hoàn toàn ổn định.
 
 ---
 
@@ -185,17 +185,17 @@ int trace_execve(struct trace_event_raw_sys_enter *ctx) {
 
 ### Đặc điểm kỹ thuật trong mã nguồn C eBPF
 
-Hook `sys_enter_execve` biểu thị lời gọi bắt đầu, không chứng minh exec thành công. Lỗi `ENOENT` hay `EACCES` có thể xuất hiện sau đó. Chương trình tại hook có cơ hội tạo record, nhưng reserve, đọc argument và việc truyền record vẫn có thể thất bại; không hứa mỗi attempt đều được ghi nhận đầy đủ.
+Điểm móc `sys_enter_execve` chỉ ghi nhận thời điểm lệnh gọi hệ thống bắt đầu được phát đi, hoàn toàn không chứng minh tiến trình thực thi thành công sau đó. Các lỗi không tìm thấy tệp hoặc thiếu quyền truy cập hoàn toàn có thể phát sinh ở những bước tiếp theo. Chương trình tại điểm móc có cơ hội khởi tạo bản ghi, nhưng các thao tác đặt chỗ bộ nhớ, đọc đối số và chuyển giao bản ghi vẫn có thể thất bại; hệ thống không cam kết mọi nỗ lực thực thi đều được ghi nhận trọn vẹn.
 
-Record được khởi tạo toàn bộ rồi mới điền trường. Nếu helper đọc tên hoặc đường dẫn lỗi, chương trình discard thay vì publish dữ liệu thiếu; nếu buffer chuỗi quá ngắn, helper có thể trả chuỗi bị cắt. Lab chưa có bộ đếm loss hoặc cờ truncation. PID/TGID ở đây là định danh mà helper kernel trả về, không hứa trùng PID nhìn thấy từ mọi container namespace. `Timestamp` của Go là giờ decode, không phải thời điểm kernel bắt đầu syscall.
+Bản ghi được cấp phát bộ nhớ toàn phần trước khi điền dữ liệu vào từng trường. Nếu hàm trợ giúp gặp lỗi khi đọc tên hoặc đường dẫn, chương trình sẽ chủ động hủy bỏ bản ghi thay vì xuất bản dữ liệu khiếm khuyết; nếu bộ đệm chuỗi quá ngắn, hàm trợ giúp có thể trả về chuỗi ký tự bị cắt ngắn. Bài thực hành hiện chưa thiết lập bộ đếm thất thoát hoặc cờ báo cắt ngắn. Định danh tiến trình ở đây là giá trị do hàm trợ giúp của nhân trả về, không bảo đảm trùng khớp với định danh nhìn thấy từ bên trong mọi không gian tên của vùng chứa. Mốc thời gian của Go là thời điểm giải mã dữ liệu, không phải thời điểm nhân bắt đầu thực thi lệnh gọi hệ thống.
 
-Bên cạnh đó, hàm `bpf_get_current_comm` tại thời điểm này phản ánh tên của tiến trình đang phát lệnh gọi (calling task như `bash`, `python` hoặc `containerd`), trong khi đường dẫn tệp nhị phân đích phải được trích xuất từ tham số `ctx->args[0]`. Để phân giải PID tương thích với không gian người dùng, mã nguồn dịch bit phải 32 bit từ giá trị 64-bit của `bpf_get_current_pid_tgid()`, bởi trong nhân Linux định danh Thread Group ID (TGID) mới tương ứng với PID của tiến trình. Cuối cùng, việc đọc đường dẫn chuỗi người dùng bắt buộc phải thông qua hàm trợ giúp `bpf_probe_read_user_str` nhằm ngăn ngừa lỗi vi phạm trang nhớ (page fault) khi con trỏ trỏ tới vùng địa chỉ chưa hợp lệ.
+Hàm trợ giúp `bpf_get_current_comm` tại thời điểm này phản ánh tên của tiến trình đang phát lệnh gọi (như `bash`, `python` hoặc `containerd`), trong khi đường dẫn tệp nhị phân đích phải được trích xuất từ tham số đầu vào. Để phân giải định danh tiến trình tương thích với không gian người dùng, mã nguồn thực hiện dịch phải 32 bit từ giá trị 64-bit của hàm `bpf_get_current_pid_tgid()`, bởi trong nhân Linux định danh nhóm tiểu trình mới tương ứng với định danh tiến trình của người dùng. Cuối cùng, việc đọc đường dẫn chuỗi ký tự của người dùng bắt buộc phải thông qua hàm trợ giúp `bpf_probe_read_user_str` nhằm ngăn ngừa lỗi vi phạm trang nhớ khi con trỏ tham chiếu tới vùng địa chỉ chưa hợp lệ.
 
 ---
 
 ## 6. Xây dựng Trình giải mã nhị phân và Thu thập trong Go
 
-Khi sự kiện từ kernel được đẩy vào Ring Buffer, ứng dụng Go nhận được một mảng byte nhị phân thô (`[]byte`). Nhiệm vụ của chúng ta là giải mã mảng byte này thành struct Go với hiệu năng tối đa.
+Khi sự kiện từ nhân Linux được đẩy vào vùng đệm vòng (`Ring Buffer`), ứng dụng Go nhận được một mảng byte nhị phân thô (`[]byte`). Nhiệm vụ của chúng ta là giải mã mảng byte này thành struct Go với hiệu năng tối đa.
 
 ### Mô hình dữ liệu và giải mã ABI (`event.go`)
 
@@ -298,7 +298,7 @@ func NewObserver(
 }
 ~~~
 
-Đoạn rút gọn dưới đây cho thấy goroutine xử lý; `readLoop`, `sendErr` và `sendEvent` biểu diễn các nhánh tương ứng trong implementation lab, không phải các method đã được khai báo trong source. Khi thử chương trình, dùng `observer.go` đầy đủ, gồm cả goroutine gọi `Close` khi context bị hủy. `Start` chỉ được gọi một lần cho một observer:
+Đoạn mã rút gọn dưới đây minh họa tiến trình goroutine xử lý; các hàm `readLoop`, `sendErr` và `sendEvent` biểu diễn các nhánh xử lý tương ứng trong bài thực hành, không phải các phương thức được khai báo độc lập trong mã nguồn chính. Khi chạy thử chương trình, hãy sử dụng tệp `observer.go` hoàn chỉnh, bao gồm cả tiến trình goroutine gọi `Close` khi ngữ cảnh bị hủy bỏ. Phương thức `Start` chỉ được phép gọi duy nhất một lần cho mỗi đối tượng quan sát:
 
 ~~~go
 func (o *Observer) Start(
@@ -345,10 +345,10 @@ func (o *Observer) readLoop(ctx context.Context) {
 }
 ~~~
 
-`context` chỉ mở đường thoát ở `select`; nó không chui vào interface `RecordReader.Read()`. Vì vậy lab đăng ký một nhánh cancellation gọi `reader.Close()`. Contract cần có là `Close` làm một `Read` đang block trở về; fake reader mới trong test block thật rồi được `Close` giải phóng. Nếu source reader khác không có contract đó, phải bọc hoặc đổi API thay vì hứa cancellation tức thì.
+Ngữ cảnh chỉ mở ra lối thoát tại cấu trúc `select`; nó không thể tự động can thiệp vào phương thức đọc dữ liệu của bộ đọc. Do đó, bài thực hành thiết lập một nhánh hủy bỏ chuyên biệt gọi `reader.Close()`. Khế ước kỹ thuật bắt buộc phải có là thao tác `Close` phải khiến một lệnh đọc đang bị tắc nghẽn lập tức trả về; bộ đọc giả lập trong bài kiểm thử mô phỏng chính xác trạng thái tắc nghẽn này và được giải phóng an toàn khi đóng. Nếu nguồn đọc dữ liệu khác không đáp ứng khế ước đó, chúng ta bắt buộc phải bao bọc hoặc thay đổi giao diện lập trình thay vì đưa ra lời hứa hão huyền về việc hủy bỏ tức thì.
 
 ### Động cơ phát hiện bất thường an ninh (Heuristic Security Rules)
-Khi nhận được sự kiện, chúng ta đối chiếu với các quy tắc an ninh phỏng đoán. Cần lưu ý: Đây là các **quy tắc phỏng đoán (Heuristics)** hỗ trợ giám sát, không phải lá chắn bảo mật tuyệt đối, bởi kẻ tấn công nâng cao có thể lẩn tránh bằng cách gọi `execveat`, nạp nhị phân từ RAM qua `memfd_create`, hoặc dùng symlink:
+Khi nhận được sự kiện, chúng ta đối chiếu với các quy tắc an ninh phỏng đoán. Cần lưu ý: Đây là các quy tắc phỏng đoán (*heuristics*) hỗ trợ giám sát, không phải lá chắn bảo mật tuyệt đối, bởi kẻ tấn công nâng cao có thể lẩn tránh bằng cách gọi `execveat`, nạp nhị phân từ RAM qua `memfd_create`, hoặc dùng symlink:
 
 ~~~go
 type SecurityAlert struct {
@@ -416,7 +416,7 @@ func DetectSecurityAnomalies(e *ExecEvent) *SecurityAlert {
 
 ## 8. Kiểm chứng Lab thực tế (`labs/part27-ebpf-observer`)
 
-Bộ kiểm thử tại `labs/part27-ebpf-observer/observer_test.go` vận hành độc lập (phân loại kiểm chứng: `UNIT_TESTED` / `MODEL_ONLY` đối với mô hình streaming channel, ABI decoding 156 bytes, heuristic anomaly detection và kiểm tra cấu trúc BPF Spec mà không đòi hỏi quyền root của Linux). Chạy bộ kiểm thử hoàn chỉnh với cờ kiểm tra tương tranh dữ liệu:
+Bộ kiểm thử tại `labs/part27-ebpf-observer/observer_test.go` vận hành độc lập (phân loại kiểm chứng: kiểm thử đơn vị và mô hình hóa đối với mô hình luồng kênh dữ liệu, giải mã giao diện nhị phân 156 byte, phát hiện bất thường theo suy nghiệm và kiểm tra cấu trúc đặc tả BPF mà không đòi hỏi đặc quyền quản trị của Linux). Chạy bộ kiểm thử hoàn chỉnh với cờ kiểm tra tương tranh dữ liệu:
 
 ~~~bash
 go test -v -race ./...
@@ -443,9 +443,9 @@ ok      part27-ebpf-observer   0.742s
 
 ### Phân tích kết quả kiểm thử và Ranh giới kiểm chứng:
 
-Bộ kiểm thử được phân loại ở cấp độ `UNIT_TESTED` kết hợp `MODEL_ONLY`. Biên dịch object ELF là bước build, cần compiler và các header hoặc type asset mà mã C sử dụng; nó không tự đòi hỏi quyền nạp vào kernel. Load/attach tracepoint cần kernel Linux hỗ trợ hook và quyền phù hợp với kernel, loại program cùng chính sách bảo mật. Lab này chưa chạy bước ấy trên Linux (`SKIPPED_WITH_REASON`); thiếu kernel headers không phải lý do chung khiến object đã build không thể được nạp.
+Bộ kiểm thử được phân loại ở cấp độ kiểm thử đơn vị kết hợp mô hình hóa. Biên dịch tệp đối tượng nhị phân là công đoạn đóng gói, đòi hỏi trình biên dịch và các tệp tiêu đề mà mã nguồn C sử dụng; công đoạn này không tự đòi hỏi đặc quyền nạp vào nhân hệ điều hành. Thao tác nạp và gắn điểm theo dõi đòi hỏi nhân Linux hỗ trợ điểm móc nối và đặc quyền phù hợp với phiên bản nhân, chủng loại chương trình cùng chính sách an ninh. Bài thực hành này chủ động bỏ qua bước nạp nhân thực tế khi chạy trên môi trường không hỗ trợ; việc thiếu tệp tiêu đề của nhân không phải là nguyên nhân phổ quát khiến tệp đối tượng đã biên dịch không thể nạp thành công.
 
-Sáu kịch bản kiểm thử kiểm tra các contract cục bộ: giải mã little-endian theo layout 156 byte của lab; từ chối dữ liệu bị cắt ngắn (`Truncated`); điều phối channel; ngắt luồng đọc qua Context; áp dụng heuristic cảnh báo; và dựng `CollectionSpec` từ `cilium/ebpf` với Map `RingBuf`, Program `TracePoint`. Việc không phát hiện race hay goroutine bị giữ lại trên những đường chạy được kiểm tra không phải bằng chứng cho mọi lịch thực thi. Bộ test cũng không chứng minh load/attach thành công, thu đủ sự kiện hoặc overhead chấp nhận được trên kernel production; những điều đó cần kiểm chứng riêng trong môi trường Linux mục tiêu.
+Sáu kịch bản kiểm thử thẩm định các khế ước kỹ thuật cục bộ: giải mã định dạng byte nhỏ (*little-endian*) theo bố cục 156 byte của bài thực hành; từ chối các khối dữ liệu bị cắt ngắn; điều phối luồng kênh; ngắt luồng đọc dữ liệu thông qua ngữ cảnh; áp dụng quy tắc suy nghiệm cảnh báo; và khởi tạo đặc tả bộ sưu tập từ thư viện với cấu trúc bộ đệm vòng và chương trình điểm theo dõi. Việc không phát hiện lỗi tương tranh hay tiến trình goroutine bị mắc kẹt trên các nhánh thực thi đã kiểm tra không phải là bằng chứng bao quát cho mọi lịch trình thực thi. Bộ kiểm thử cũng không chứng minh việc nạp hay gắn kết sẽ luôn thành công, thu thập đầy đủ mọi sự kiện hoặc độ trễ phụ trội là chấp nhận được trên môi trường vận hành thực tế; những yếu tố đó bắt buộc phải được kiểm chứng độc lập trên môi trường Linux mục tiêu.
 
 ---
 
@@ -463,10 +463,10 @@ Sáu kịch bản kiểm thử kiểm tra các contract cục bộ: giải mã l
 ## 10. Bài tập thực hành thiết kế Observer eBPF
 
 ### Thử thách 1: Bộ đếm tần suất thực thi tiến trình (Exec Rate Limiter)
-**Yêu cầu:** Với fixture này, đếm exec attempt theo tên `Comm` trong cửa sổ cố định khoảng 1 giây, cảnh báo khi vượt 50. Đây là nhóm theo tên, không phải identity của một process; nhiều task có thể cùng Comm. Muốn đếm theo process cần PID/TGID cùng lifecycle và namespace phù hợp. Test phải phân biệt cửa sổ cố định với trượt; ngưỡng 50 chỉ là cấu hình bài tập.
+Yêu cầu: Với fixture này, đếm exec attempt theo tên `Comm` trong cửa sổ cố định khoảng 1 giây, cảnh báo khi vượt 50. Đây là nhóm theo tên, không phải identity của một process; nhiều task có thể cùng Comm. Muốn đếm theo process cần PID/TGID cùng lifecycle và namespace phù hợp. Test phải phân biệt cửa sổ cố định với trượt; ngưỡng 50 chỉ là cấu hình bài tập.
 
 ### Thử thách 2: Bóc tách tham số dòng lệnh từ Syscall (Argv Extraction)
-**Yêu cầu:** `ctx->args[1]` trỏ tới mảng pointer `argv`. Thiết kế việc đọc có giới hạn từng pointer/chuỗi ở phía kernel và wire format với delimiter NUL. Ở Go, decode record thành `Args []string` mà không split hay trim khoảng trắng. Hook hiện tại chưa thu argv; đây là bài tập thiết kế thêm, không phải khả năng đã có.
+Yêu cầu: `ctx->args[1]` trỏ tới mảng pointer `argv`. Thiết kế việc đọc có giới hạn từng pointer/chuỗi ở phía kernel và wire format với delimiter NUL. Ở Go, decode record thành `Args []string` mà không split hay trim khoảng trắng. Hook hiện tại chưa thu argv; đây là bài tập thiết kế thêm, không phải khả năng đã có.
 
 ---
 
@@ -531,10 +531,10 @@ func ParseNULSeparatedArgs(raw []byte) []string {
 }
 ~~~
 
-`argv` là mảng con trỏ tới các chuỗi C; wire format phải ghi số argument, độ dài payload đã dùng và cờ truncation, bên cạnh giới hạn capture. Decoder trên chỉ nhận payload hợp lệ: mỗi argument kết thúc bằng NUL, không truyền toàn bộ buffer còn padding. `a\x00\x00` phải thành hai argument `"a"`, `""`; bỏ mọi token rỗng sẽ làm mất đối số hợp lệ. Khoảng trắng cũng là dữ liệu, không dùng để split hay trim. Hook hiện tại chỉ thu filename; đây là thiết kế mở rộng, không phải khả năng capture argv đã có.
+Biến mảng tham số là mảng con trỏ tham chiếu tới các chuỗi ký tự ngôn ngữ C; định dạng truyền tải trên đường truyền bắt buộc phải ghi nhận số lượng đối số, độ dài dữ liệu thực tế đã sử dụng và cờ báo cắt ngắn, bên cạnh giới hạn thu thập tối đa. Bộ giải mã ở trên chỉ tiếp nhận các gói dữ liệu hợp lệ: mỗi đối số kết thúc bằng ký tự rỗng, tuyệt đối không truyền toàn bộ vùng đệm chứa khoảng đệm thừa. Chuỗi dữ liệu phân tách hai ký tự rỗng liên tiếp phải được phân giải thành hai đối số riêng biệt; việc tự ý loại bỏ các phần tử rỗng sẽ làm thất thoát đối số hợp lệ. Ký tự khoảng trắng cũng là dữ liệu hợp lệ, không được dùng để phân tách hay cắt tỉa chuỗi. Điểm móc nối hiện tại chỉ thu thập tên tệp; đây là hướng thiết kế mở rộng, không phải năng lực thu thập tham số sẵn có của bài thực hành.
 
 ---
 
-eBPF bổ sung một điểm quan sát mạnh, có giới hạn và cần được đo đạc; heuristic của lab chỉ tạo tín hiệu để điều tra, không phải cơ chế ngăn chặn hay bằng chứng xâm nhập. Trước khi dùng trên node thật, hãy xác minh kernel, capability, hook, tỷ lệ drop và policy dữ liệu của chính môi trường đó.
+eBPF bổ sung một điểm quan sát mạnh mẽ nhưng có giới hạn rõ ràng và cần được đo lường cẩn trọng; phương pháp suy nghiệm (*heuristic*) trong bài lab chỉ tạo tín hiệu cảnh báo phục vụ điều tra, không phải cơ chế ngăn chặn xâm nhập tuyệt đối. Trước khi áp dụng trên các máy chủ thực tế, hãy thẩm định kỹ phiên bản nhân hệ điều hành, đặc quyền hệ thống (*capabilities*), điểm móc được hỗ trợ, tỷ lệ thất thoát bản ghi và chính sách bảo mật dữ liệu của chính môi trường đó.
 
 Chương 28 chuyển từ điểm quan sát kernel sang boundary công cụ Agent: ai được gọi, target nào được phép và bằng chứng nào cho phép một thay đổi. MCP chuẩn hóa giao tiếp, không thay thế authorization hay trách nhiệm vận hành. Chương 29 tiếp tục xét bằng chứng và giới hạn của tự động hóa.

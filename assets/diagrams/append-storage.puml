@@ -1,23 +1,70 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 17
+skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
+skinparam arrowColor #222222
+skinparam map {
   BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  FontColor #000000
+  FontSize 15
+}
 top to bottom direction
-rectangle "A. Dung lượng (cap) còn đủ\nold, s cùng trỏ mảng nền A\nold: [99 20] · s: [99 20 30]" as reuse
-rectangle "B. Dung lượng (cap) đã hết\nold trỏ mảng nền cũ A [10 20]\ngrown cấp phát mảng nền mới B [99 20 30]" as allocate
-reuse -down-> allocate : kết quả append phụ thuộc dung lượng còn lại
+
+package "Kịch bản A: Dung lượng (cap) còn đủ — Tái sử dụng mảng nền" as scenA {
+  object "old: len 2, cap 4" as oldA {
+    Data = &arrA[0]
+  }
+  object "s := append(old, 30)\nlen 3, cap 4" as sA {
+    Data = &arrA[0]
+  }
+  map "Mảng nền A" as arrA {
+    0 => 99
+    1 => 20
+    2 => 30 (ghi thêm)
+    3 => (chưa dùng)
+  }
+  oldA::Data -right-> arrA::0
+  sA::Data -right-> arrA::0
+}
+
+package "Kịch bản B: Dung lượng (cap) đã hết — Cấp phát mảng mới" as scenB {
+  object "old: len 2, cap 2" as oldB {
+    Data = &arrB_old[0]
+  }
+  object "grown := append(old, 30)\nlen 3, cap 4" as grownB {
+    Data = &arrB_new[0]
+  }
+  map "Mảng nền cũ A" as arrB_old {
+    0 => 10
+    1 => 20
+  }
+  map "Mảng nền mới B (cấp phát mới)" as arrB_new {
+    0 => 10 (sao chép)
+    1 => 20 (sao chép)
+    2 => 30 (chèn mới)
+    3 => (dự phòng)
+  }
+  oldB::Data -right-> arrB_old::0
+  grownB::Data -right-> arrB_new::0
+}
+
+scenA -[hidden]down-> scenB
+
+note bottom of scenB
+  Khi hết cap, append buộc runtime cấp phát mảng mới và sao chép dữ liệu cũ sang.
+  old và grown lúc này hoàn toàn độc lập, thay đổi một bên không ảnh hưởng bên kia.
+end note
 @enduml

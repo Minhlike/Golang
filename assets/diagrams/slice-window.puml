@@ -4,23 +4,43 @@ skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
+skinparam arrowColor #222222
+skinparam map {
   BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "base\n[10] [20] [30] [40] [50]" as base
-rectangle "x := base[1:3]\nthấy: [20] [30]\nlen 2 · cap 4" as x
-x --> base : bắt đầu tại 20
-note bottom of base : cap kéo từ 20 đến 50
+
+object "Slice Header: x\n(x := base[1:3])" as x {
+  Data = &base[1]
+  Len  = 2
+  Cap  = 4
+}
+
+map "Mảng cơ sở: base ([5]int)" as base {
+  0 => 10
+  1 => 20
+  2 => 30
+  3 => 40
+  4 => 50
+}
+
+x::Data --> base::1 : Data trỏ tới &base[1] (giá trị 20)
+
+note bottom of x
+  Cửa sổ nhìn thấy (len = 2): [20, 30]
+  Phạm vi mở rộng (cap = 4): từ index 1 đến 4
+end note
 @enduml

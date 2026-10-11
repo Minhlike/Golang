@@ -30,7 +30,7 @@ Chương trình ghi dòng `he thong san sang` ra đầu ra tiêu chuẩn, thư�
 
 ## Đọc từng thành phần
 
-`package` và `import` là khai báo; `func main()` khai báo một hàm; trong thân hàm có lời gọi `fmt.Println(...)`. Dấu ngoặc nhọn giới hạn thân hàm, còn dấu ngoặc kép tạo string literal. Những vai trò này giúp anh phân biệt phần mô tả chương trình với hành động xảy ra khi chương trình chạy.
+`package` và `import` là khai báo; `func main()` khai báo một hàm; trong thân hàm có lời gọi `fmt.Println(...)`. Dấu ngoặc nhọn giới hạn thân hàm, còn dấu ngoặc kép tạo string literal. Những vai trò này giúp phân biệt phần mô tả chương trình với hành động xảy ra khi chương trình chạy.
 
 ### Khai báo gói và Không gian tên: `package main`
 
@@ -48,7 +48,7 @@ Import thông thường phải được dùng. Để thấy ranh giới, xóa l�
 
 Từ khóa `func` định nghĩa một hàm. Tên hàm `main` đại diện cho điểm nhập cuộc thực thi logic của người dùng. Hàm `main` khởi điểm không nhận bất kỳ tham số nào và không trả về giá trị.
 
-Theo Go specification, chương trình khởi tạo các package trước khi gọi `main`. Package được import phải khởi tạo xong trước package phụ thuộc vào nó; trong mỗi package, khởi tạo biến cấp package đi trước các hàm `init`. Đó là contract anh dùng để dự đoán code người dùng. Việc toolchain chuẩn dựng scheduler và allocator trước đó là tầng triển khai runtime, không phải danh sách thao tác mà ngôn ngữ bắt mọi implementation phải làm theo. Chương 5 sẽ đào sâu thứ tự khởi tạo; các chương runtime mới lần đường bootstrap đã pin theo phiên bản.
+Theo Go specification, chương trình khởi tạo các package trước khi gọi `main`. Package được import phải khởi tạo xong trước package phụ thuộc vào nó; trong mỗi package, khởi tạo biến cấp package đi trước các hàm `init`. Đó là khế ước kỹ thuật được dùng để dự đoán hành vi mã nguồn người dùng. Việc toolchain chuẩn dựng scheduler và allocator trước đó là tầng triển khai runtime, không phải danh sách thao tác mà ngôn ngữ bắt mọi implementation phải làm theo. Chương 5 sẽ đào sâu thứ tự khởi tạo; các chương runtime mới lần đường bootstrap đã pin theo phiên bản.
 
 ### Truy xuất định danh công khai và Xuất dữ liệu: `fmt.Println`
 
@@ -68,7 +68,7 @@ Bộ công cụ Go cung cấp hai lệnh cơ bản với vai trò rõ ràng tron
 Trong lần gọi mặc định của toolchain Go 1.27.1, `go run` dùng tệp thực thi tạm và dọn work directory khi kết thúc; tùy chọn `-work` giữ lại thư mục đó để điều tra. Work directory khác `GOCACHE`, nơi toolchain giữ kết quả build có thể tái sử dụng giữa các lần gọi.
 
 Tệp nhị phân sinh ra từ `go build` là mã máy thực thi trực tiếp trên vi kiến trúc CPU đích. Nó không chạy trên máy ảo như bytecode của Java và không dựa vào trình thông dịch như Python.
- 
+
 
 Tệp thực thi do toolchain chuẩn tạo ra có mã ứng dụng cùng phần hỗ trợ runtime cần cho chương trình, không phải toàn bộ source runtime hay mọi thư viện Go. Khả năng chạy trên máy khác còn phụ thuộc target OS, kiến trúc, cách liên kết và tài nguyên ngoài như tệp cấu hình. Chương 17 sẽ kiểm tra các phụ thuộc ấy trong container; ở đây build thành công chưa đủ để kết luận triển khai ở đâu cũng chạy.
 
@@ -78,7 +78,7 @@ Trước khi sửa một dòng, hãy dự đoán: thay đổi này làm chương
 
 ![Vòng lặp phản hồi khi học và viết Go](../../assets/diagrams/feedback-loop.png)
 
-@figure Vòng lặp phản hồi giả thuyết - đo đạc - sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là công cụ kiểm định tĩnh sớm nhất cho các dự đoán của bạn.
+@figure Vòng lặp phản hồi giả thuyết – đo đạc – sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là công cụ kiểm định tĩnh sớm nhất cho các dự đoán của bạn.
 
 Bảng dưới đây minh họa ba thí nghiệm nhỏ về ranh giới kiểm tra tĩnh của Go compiler:
 
@@ -88,4 +88,4 @@ Bảng dưới đây minh họa ba thí nghiệm nhỏ về ranh giới kiểm t
 | Import không sử dụng | Thêm dòng `import "time"` nhưng không tham chiếu định danh được export nào của `time`. | `"time" imported and not used` | Compiler kiểm tra việc sử dụng import; không phải chứng minh toàn bộ dependency graph đã tối thiểu. |
 | Khai báo biến cục bộ thừa | Khai báo `workerID := 1` trong `main` nhưng không dùng. | `workerID declared and not used` | Kiểm tra usage của biến cục bộ; không phải chứng minh toàn bộ dead code đã được phát hiện. |
 
-Compiler bắt một lớp lỗi cú pháp, kiểu và usage trước khi chạy; nó không chứng minh phần lớn lỗi vận hành đã bị loại bỏ. Deadline, quyền, resource budget và yêu cầu nghiệp vụ vẫn cần phép kiểm tra khác. Chương tiếp theo đi vào định danh, kiểu dữ liệu và phạm vi biến để anh biết chính xác compiler đang kiểm tra điều gì.
+Compiler bắt một lớp lỗi cú pháp, kiểu và usage trước khi chạy; nó không chứng minh phần lớn lỗi vận hành đã bị loại bỏ. Deadline, quyền, resource budget và yêu cầu nghiệp vụ vẫn cần phép kiểm tra khác. Chương tiếp theo đi vào định danh, kiểu dữ liệu và phạm vi biến để người học hiểu chính xác trình biên dịch đang kiểm tra điều gì.

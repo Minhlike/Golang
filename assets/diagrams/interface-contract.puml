@@ -1,31 +1,68 @@
 @startuml
-skinparam dpi 300
-skinparam backgroundColor white
-skinparam shadowing false
+skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam defaultFontColor #000000
-skinparam rectangle {
-  BackgroundColor #F5F5F5
-  BorderColor #222222
-  FontColor #000000
-  RoundCorner 5
-}
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam roundCorner 6
 skinparam arrowColor #222222
-skinparam note {
-  BackgroundColor #FFFFFF
-  BorderColor #555555
-  FontColor #000000
-  FontName "Source Sans 3"
-  FontSize 15
+skinparam arrowThickness 1.2
+
+skinparam interface {
+  BackgroundColor #F1F5F9
+  BorderColor #0F172A
+  FontColor #0F172A
+  FontStyle bold
 }
+
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+  FontColor #000000
+}
+
+skinparam note {
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
+}
+
 left to right direction
-rectangle "renderSummary\n(bên sử dụng / consumer)" as consumer
-rectangle "interface SummarySource\nSummary() string\n(cam kết hợp đồng)" as contract
-rectangle "Service\nSummary() string" as service
-rectangle "StaticTarget\nSummary() string" as static
-consumer --> contract : phụ thuộc hợp đồng
-service --> contract : tập method thỏa mãn
-static --> contract : tập method thỏa mãn
-note bottom of contract : không cần từ khóa implements\nthỏa mãn ngầm định (implicit)
+
+class "<b>renderSummary</b>\n(Bên tiêu dùng / Consumer)" as consumer <<func>> {
+  + renderSummary(src SummarySource): string
+}
+
+interface "<b>SummarySource</b>\n<<interface>>\n(Hợp đồng giao ước tối thiểu)" as contract {
+  + Summary(): string
+}
+
+class "<b>Service</b>\n(Đối tượng nghiệp vụ)" as service {
+  + Name: string
+  + Port: int
+  + Healthy: bool
+  --
+  + Summary(): string
+  + Record(healthy bool)
+}
+
+class "<b>StaticTarget</b>\n(Cấu hình tĩnh)" as static {
+  + Host: string
+  + Port: int
+  --
+  + Summary(): string
+}
+
+consumer ..> contract : <b><<use>></b>\nĐòi hỏi hợp đồng tối thiểu
+
+service ..|> contract : <b>Thỏa mãn ngầm định</b>\n(Cùng chữ ký Summary() string)
+static ..|> contract : <b>Thỏa mãn ngầm định</b>\n(Cùng chữ ký Summary() string)
+
+note bottom of contract
+  <b>Đặc trưng Duck Typing / Structural Typing trong Go:</b>
+  • Không cần từ khóa <i>implements</i> tường minh.
+  • Kiểu cụ thể tự động thỏa mãn interface nếu có đủ method set.
+  • Giao diện được thiết kế tại nơi tiêu dùng (consumer-driven),
+    giúp tách rời hoàn toàn mã hiển thị khỏi chi tiết cài đặt của Service.
+end note
 @enduml

@@ -4,26 +4,53 @@ skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
+skinparam arrowColor #222222
+skinparam map {
   BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
-skinparam arrowColor #222222
+skinparam object {
+  BackgroundColor #FFFFFF
+  BorderColor #222222
+  FontColor #000000
+}
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "a: []int\nlen 3 · cap 3" as a
-rectangle "b: []int\nlen 3 · cap 3" as b
-rectangle "mảng nền (backing array)\n[99] [20] [30]" as store
-a --> store
-b --> store
-note bottom of b : b := a sao chép slice header (con trỏ, len, cap)
-note bottom of store : thay đổi qua b[0] phản ánh trực tiếp sang a[0]
+
+object "Slice Header: a" as a {
+  Data = &store[0]
+  Len  = 3
+  Cap  = 3
+}
+
+object "Slice Header: b\n(b := a)" as b {
+  Data = &store[0]
+  Len  = 3
+  Cap  = 3
+}
+
+map "Mảng cơ sở dùng chung (Backing Array)" as store {
+  0 => 99 (b[0] ghi đè)
+  1 => 20
+  2 => 30
+}
+
+a::Data -right-> store::0 : Data trỏ ô nhớ store[0]
+b::Data -right-> store::0 : Data trỏ cùng ô nhớ store[0]
+
+note bottom of b
+  Phép gán b := a chỉ sao chép Slice Header (24 byte).
+  Không cấp phát lại hay sao chép mảng cơ sở.
+end note
+
+note bottom of store
+  Hai con trỏ Data cùng tham chiếu một vùng nhớ.
+  Thay đổi qua b[0] làm thay đổi dữ liệu mà a[0] nhìn thấy.
+end note
 @enduml

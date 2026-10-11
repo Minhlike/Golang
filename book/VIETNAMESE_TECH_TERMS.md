@@ -134,6 +134,10 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **retry** | **thử lại** | Thực hiện lại tác vụ khi gặp sự cố tạm thời (transient error) |
 | **idempotency** | **tính lũy đẳng** | Lặp operation giữ cùng tác động đã quy định như một lần, không nhất thiết cùng response; cần định nghĩa identity, state và crash boundary. Không nhầm với tính tất định. |
 | **artifact** | **tạo tác build / gói phát hành / artifact** | Sản phẩm sinh ra từ quá trình build (binary, image, OCI blob, package) — tuyệt đối không dịch là "hiện vật" |
+| **container image** / **image** | **ảnh container / container image / ảnh OCI** | Bản chụp snapshot nhị phân / các lớp tệp đóng gói OCI — tuyệt đối KHÔNG dịch là "hình ảnh vùng chứa" hay "hình ảnh" (tránh nhầm lẫn với file ảnh đồ họa/picture). |
+| **base image** | **ảnh cơ sở / ảnh nền (`base image`)** | Ảnh container gốc được dùng làm điểm xuất phát trong Dockerfile (`FROM ...`) — tuyệt đối không dịch là "hình ảnh cơ sở". |
+| **image digest** | **mã băm ảnh / mã băm ảnh container** | Định danh bất biến theo nội dung OCI (`sha256:...`), không bị trôi như nhãn (tag). |
+| **image manifest** | **bản kê ảnh container / manifest OCI** | Tài liệu JSON đặc tả các lớp dữ liệu và cấu hình của ảnh container. |
 | **health check** | **kiểm tra sức khỏe** | Cơ chế kiểm tra liveness và readiness của dịch vụ |
 | **circuit breaker** | **cầu dao ngắt mạch** | Cơ chế tự động ngắt kết nối đến dịch vụ hỏng để bảo vệ hệ thống |
 | **observability** | **năng lực quan sát** | Khả năng suy luận trạng thái nội tại qua dữ liệu phát ra |

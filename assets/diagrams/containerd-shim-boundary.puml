@@ -1,9 +1,31 @@
 @startuml
 !include publication-flow.iuml
+
 top to bottom direction
-rectangle "<b>containerd DAEMON</b>\nĐiều phối và quản lý trạng thái" as daemon
-rectangle "<b>RUNTIME v2 SHIM</b>\nTiến trình quản lý task riêng\nEndpoint theo bootstrap result" as shim
-rectangle "<b>CONTAINER TASK</b>\nỨng dụng chạy trên kernel host" as task
-daemon -down-> shim : quản lý qua endpoint
-shim -down-> task : runtime được chọn
+
+package "Tầng Điều phối Dịch vụ (Daemon Management Layer)" as daemon_pkg {
+  rectangle "<b>containerd Daemon</b>\n• Nhận lệnh qua gRPC API (CRI)\n• Quản lý metadata, image snapshot\n• Có thể khởi động lại mà không làm chết container" as daemon
+}
+
+package "Ranh giới Tách biệt Tiến trình (Shim v2 Process Boundary)" as shim_pkg {
+  rectangle "<b>containerd-shim-runc-v2</b>\n• Tiến trình cha trực tiếp của container\n• Giữ file descriptors (stdin, stdout, stderr)\n• Chuyển tiếp tín hiệu POSIX & báo exit code\n• Tồn tại độc lập với sự sống chết của daemon" as shim
+}
+
+package "Ranh giới Cô lập Nhân Linux (Linux Kernel Sandbox · Namespaces & Cgroups)" as sandbox_pkg {
+  rectangle "<b>runc OCI Runtime</b>\nCấu hình cgroups, namespaces, seccomp" as runc
+  rectangle "<b>Ứng dụng Go (Container Task Process)</b>\nChạy trong môi trường non-root distroless" as task
+
+  runc -down-> task : Khởi tạo tiến trình
+}
+
+daemon -down-> shim : Giao tiếp qua Unix Domain Socket (ttrpc)
+shim -down-> runc : Kích hoạt runtime OCI (spec config.json)
+shim -down-> task : Duy trì I/O streams & thu thập mã thoát
+
+note right of shim_pkg
+  <b>Ưu điểm của Kiến trúc Shim v2:</b>
+  • Daemonless execution: daemon nâng cấp/crash
+    không làm gián đoạn workload đang chạy.
+  • Mỗi container task có một shim chuyên biệt quản lý.
+end note
 @enduml

@@ -2,25 +2,43 @@
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 19
+skinparam defaultFontSize 18
 skinparam defaultFontColor #000000
-skinparam rectangle {
+skinparam arrowColor #222222
+skinparam map {
   BackgroundColor #F5F5F5
   BorderColor #222222
   FontColor #000000
-  RoundCorner 5
 }
 skinparam note {
   BackgroundColor #FFFFFF
   BorderColor #555555
   FontColor #000000
-  FontName "Source Sans 3"
   FontSize 15
 }
 left to right direction
-rectangle "a: [3]int\n[10] [20] [30]" as a
-rectangle "b: [3]int\n[99] [20] [30]" as b
-a ..> b : b := a\nsao chép mọi phần tử
-note bottom of a : a[0] vẫn là 10
-note bottom of b : b[0] trở thành 99
+
+map "Mảng gốc a: [3]int" as a {
+  0 => 10
+  1 => 20
+  2 => 30
+}
+
+map "Bản sao b: [3]int\n(sau b[0] = 99)" as b {
+  0 => 99
+  1 => 20
+  2 => 30
+}
+
+a .right.> b : b := a\nsao chép giá trị toàn bộ ô nhớ
+
+note bottom of a
+  Phép gán mảng sao chép toàn bộ byte dữ liệu.
+  a[0] vẫn giữ nguyên giá trị 10 ban đầu.
+end note
+
+note bottom of b
+  b sở hữu vùng nhớ độc lập hoàn toàn.
+  Thay đổi b[0] không tác động tới mảng a.
+end note
 @enduml

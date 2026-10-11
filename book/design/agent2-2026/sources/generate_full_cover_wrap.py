@@ -55,8 +55,8 @@ TOP_TRIM_PT = BOTTOM_TRIM_PT + PAGE_H_MM * MM_TO_PT
 # ==============================================================================
 # Helper: Draw Concept 1 Architectural Cross-Section Engine
 # ==============================================================================
-def draw_axonometric_cross_section(ax, cx, cy, scale=0.88):
-    """Draws the 4-tier isometric axonometric cross-section of the Go engine."""
+def draw_axonometric_cross_section(ax, cx, cy, scale=1.04):
+    """Draws an expanded, balanced 4-tier isometric axonometric cross-section of the Go engine."""
     cos30 = math.cos(math.radians(28))
     sin30 = math.sin(math.radians(28))
 
@@ -66,35 +66,46 @@ def draw_axonometric_cross_section(ax, cx, cy, scale=0.88):
         return px, py
 
     tiers = [
-        (-120, "TIER 0 // KERNEL & HARDWARE", "Syscall • Epoll • Cgroups", True),
-        (-30,  "TIER 1 // GO RUNTIME ENGINE", "M:N Scheduler • GC • Channels", False),
-        (60,   "TIER 2 // SERVICE BOUNDARIES", "gRPC • HTTP/2 • SQL Transactions", False),
-        (150,  "TIER 3 // DISTRIBUTED SRE", "Controller • eBPF • Observability", False),
+        (-135, "TIER 0 // KERNEL & HARDWARE", "Syscall • Epoll • Cgroups v2", True),
+        (-45,  "TIER 1 // GO RUNTIME CORE", "M:N Scheduler • Tri-Color GC", False),
+        (50,   "TIER 2 // SERVICE BOUNDARIES", "gRPC Wire • HTTP/2 • ACID Locks", False),
+        (145,  "TIER 3 // DISTRIBUTED SRE", "Kubernetes Controller • eBPF Mesh", False),
     ]
 
-    slab_dx = 110
-    slab_dy = 70
-    thickness = 11
+    slab_dx = 126
+    slab_dy = 75
+    thickness = 13
 
-    # Vertical transmission hairlines (drawn behind/through tiers)
-    for px_local in [-55, 0, 55]:
-        for py_local in [-25, 20]:
-            p_bot = iso_proj(px_local, py_local, -120)
-            p_top = iso_proj(px_local, py_local, 150)
-            ax.plot([p_bot[0], p_top[0]], [p_bot[1], p_top[1]],
-                    color="#888888", lw=0.35 * scale, ls=(0, (3, 4)), zorder=5)
+    # 1. Broad Background Architectural Projection Grid (Blueprint Lines)
+    grid_c = "#EEEEEE"
+    for gx in [-180, -120, -60, 0, 60, 120, 180]:
+        p_a = iso_proj(gx, -110, -155)
+        p_b = iso_proj(gx, 110, -155)
+        ax.plot([p_a[0], p_b[0]], [p_a[1], p_b[1]], color=grid_c, lw=0.45, ls=(0, (3, 3)), zorder=1)
+    for gy in [-110, -55, 0, 55, 110]:
+        p_a = iso_proj(-180, gy, -155)
+        p_b = iso_proj(180, gy, -155)
+        ax.plot([p_a[0], p_b[0]], [p_a[1], p_b[1]], color=grid_c, lw=0.45, ls=(0, (3, 3)), zorder=1)
 
+    # 2. Vertical Core Data Transmission Hairlines through all tiers
+    pillars = [(-65, -30), (-65, 30), (0, -35), (0, 0), (0, 35), (65, -30), (65, 30)]
+    for px_loc, py_loc in pillars:
+        p_bot = iso_proj(px_loc, py_loc, -150)
+        p_top = iso_proj(px_loc, py_loc, 160)
+        ax.plot([p_bot[0], p_top[0]], [p_bot[1], p_top[1]],
+                color="#666666", lw=0.42 * scale, ls=(0, (3, 4)), zorder=6)
+
+    # 3. Draw Slabs
     for z_base, t_title, t_sub, is_foundation in tiers:
         p0 = iso_proj(-slab_dx, -slab_dy, z_base)
         p1 = iso_proj(slab_dx, -slab_dy, z_base)
         p2 = iso_proj(slab_dx, slab_dy, z_base)
         p3 = iso_proj(-slab_dx, slab_dy, z_base)
 
-        face_color = "#E2E2E2" if is_foundation else "#FFFFFF"
-        edge_color = "#000000"
+        face_color = "#E4E4E4" if is_foundation else "#FFFFFF"
         poly_top = patches.Polygon([p0, p1, p2, p3], closed=True,
-                                   facecolor=face_color, edgecolor=edge_color,
-                                   lw=0.8 * scale, zorder=10 + int(z_base))
+                                   facecolor=face_color, edgecolor="#000000",
+                                   lw=0.85 * scale, zorder=10 + int(z_base))
         ax.add_patch(poly_top)
 
         # Front cut poché (thickness)
@@ -102,78 +113,114 @@ def draw_axonometric_cross_section(ax, cx, cy, scale=0.88):
         q1 = iso_proj(slab_dx, -slab_dy, z_base - thickness)
         poly_front = patches.Polygon([p0, p1, q1, q0], closed=True,
                                      facecolor="#1A1A1A", edgecolor="#000000",
-                                     lw=0.6 * scale, zorder=11 + int(z_base))
+                                     lw=0.65 * scale, zorder=11 + int(z_base))
         ax.add_patch(poly_front)
 
         # Right cut poché
         q2 = iso_proj(slab_dx, slab_dy, z_base - thickness)
         poly_side = patches.Polygon([p1, p2, q2, q1], closed=True,
                                     facecolor="#444444", edgecolor="#000000",
-                                    lw=0.6 * scale, zorder=11 + int(z_base))
+                                    lw=0.65 * scale, zorder=11 + int(z_base))
         ax.add_patch(poly_side)
 
-        # Internal poché voids & architectural features
+        # Internal Features
         if is_foundation:
+            # Tier 0: 4 Sockets
             for k in range(4):
-                kx = -75 + k * 45
-                ky = -20
+                kx = -90 + k * 48
+                ky = -22
                 v0 = iso_proj(kx, ky, z_base)
-                v1 = iso_proj(kx + 22, ky, z_base)
-                v2 = iso_proj(kx + 22, ky + 35, z_base)
-                v3 = iso_proj(kx, ky + 35, z_base)
-                void_poly = patches.Polygon([v0, v1, v2, v3], closed=True,
-                                            facecolor="#000000", edgecolor="#000000",
-                                            lw=0.4 * scale, zorder=12 + int(z_base))
-                ax.add_patch(void_poly)
-        elif z_base == -30:
-            for g in range(4):
-                gx = -80 + g * 42
-                gy = -25 + (g % 2) * 35
+                v1 = iso_proj(kx + 26, ky, z_base)
+                v2 = iso_proj(kx + 26, ky + 40, z_base)
+                v3 = iso_proj(kx, ky + 40, z_base)
+                ax.add_patch(patches.Polygon([v0, v1, v2, v3], closed=True,
+                                             facecolor="#111111", edgecolor="#000000",
+                                             lw=0.5 * scale, zorder=12 + int(z_base)))
+        elif z_base == -45:
+            # Tier 1: 6 Go Scheduler P-M-G Queues
+            for g in range(6):
+                col = g % 3
+                row = g // 3
+                gx = -80 + col * 60
+                gy = -28 + row * 38
                 r0 = iso_proj(gx, gy, z_base)
-                r1 = iso_proj(gx + 18, gy, z_base)
-                r2 = iso_proj(gx + 18, gy + 18, z_base)
-                r3 = iso_proj(gx, gy + 18, z_base)
-                poly_g = patches.Polygon([r0, r1, r2, r3], closed=True,
-                                         facecolor="#F0F0F0", edgecolor="#222222",
-                                         lw=0.5 * scale, zorder=12 + int(z_base))
-                ax.add_patch(poly_g)
-        elif z_base == 60:
+                r1 = iso_proj(gx + 26, gy, z_base)
+                r2 = iso_proj(gx + 26, gy + 22, z_base)
+                r3 = iso_proj(gx, gy + 22, z_base)
+                ax.add_patch(patches.Polygon([r0, r1, r2, r3], closed=True,
+                                             facecolor="#F4F4F4", edgecolor="#111111",
+                                             lw=0.55 * scale, zorder=12 + int(z_base)))
+                ir0 = iso_proj(gx + 5, gy + 4, z_base)
+                ir1 = iso_proj(gx + 21, gy + 4, z_base)
+                ir2 = iso_proj(gx + 21, gy + 18, z_base)
+                ir3 = iso_proj(gx + 5, gy + 18, z_base)
+                ax.add_patch(patches.Polygon([ir0, ir1, ir2, ir3], closed=True,
+                                             facecolor="#DDDDDD", edgecolor="#333333",
+                                             lw=0.35 * scale, zorder=13 + int(z_base)))
+        elif z_base == 50:
+            # Tier 2: Service Wire Channels
             for c in range(3):
-                cx_pipe = -55 + c * 55
-                pt_a = iso_proj(cx_pipe, -45, z_base)
-                pt_b = iso_proj(cx_pipe + 16, 45, z_base)
+                cx_pipe = -60 + c * 52
+                pt_a = iso_proj(cx_pipe, -50, z_base)
+                pt_b = iso_proj(cx_pipe + 18, 50, z_base)
                 ax.plot([pt_a[0], pt_b[0]], [pt_a[1], pt_b[1]],
-                        color="#111111", lw=1.1 * scale, zorder=12 + int(z_base))
-        elif z_base == 150:
-            c0 = iso_proj(-30, -30, z_base)
-            c1 = iso_proj(30, -30, z_base)
-            c2 = iso_proj(30, 30, z_base)
-            c3 = iso_proj(-30, 30, z_base)
-            tower = patches.Polygon([c0, c1, c2, c3], closed=True,
-                                    facecolor="#FFFFFF", edgecolor="#000000",
-                                    lw=0.9 * scale, zorder=12 + int(z_base))
-            ax.add_patch(tower)
+                        color="#111111", lw=1.3 * scale, zorder=12 + int(z_base))
+                mid_node = iso_proj(cx_pipe + 9, 0, z_base)
+                ax.scatter([mid_node[0]], [mid_node[1]], s=8 * scale,
+                           color="#000000", zorder=13 + int(z_base))
+        elif z_base == 145:
+            # Tier 3: Central SRE Tower
+            c0 = iso_proj(-35, -35, z_base)
+            c1 = iso_proj(35, -35, z_base)
+            c2 = iso_proj(35, 35, z_base)
+            c3 = iso_proj(-35, 35, z_base)
+            ax.add_patch(patches.Polygon([c0, c1, c2, c3], closed=True,
+                                         facecolor="#FFFFFF", edgecolor="#000000",
+                                         lw=1.0 * scale, zorder=12 + int(z_base)))
+            ic0 = iso_proj(-16, -16, z_base)
+            ic1 = iso_proj(16, -16, z_base)
+            ic2 = iso_proj(16, 16, z_base)
+            ic3 = iso_proj(-16, 16, z_base)
+            ax.add_patch(patches.Polygon([ic0, ic1, ic2, ic3], closed=True,
+                                         facecolor="#1A1A1A", edgecolor="#000000",
+                                         lw=0.6 * scale, zorder=13 + int(z_base)))
 
-        # Architectural tier tag leader from left corner (p3)
+        # 4. Architectural Tier Leader Callouts (Left-Hand Side)
         p3_x, p3_y = p3
-        ax.plot([p3_x, p3_x - 10 * scale], [p3_y, p3_y],
-                color="#000000", lw=0.5 * scale, zorder=20)
-        ax.plot([p3_x - 10 * scale, p3_x - 10 * scale], [p3_y - 2.5 * scale, p3_y + 2.5 * scale],
-                color="#000000", lw=0.5 * scale, zorder=20)
-        ax.text(p3_x - 13 * scale, p3_y + 4.5 * scale, t_title,
-                fontsize=5.6 * scale, fontfamily="sans-serif", weight="bold", color="#111111",
-                ha="right", va="bottom", zorder=20)
-        ax.text(p3_x - 13 * scale, p3_y - 2.0 * scale, t_sub,
-                fontsize=4.8 * scale, fontfamily="monospace", color="#444444",
-                ha="right", va="top", zorder=20)
+        lead_len = 16.0 * scale
+        ax.plot([p3_x, p3_x - lead_len], [p3_y, p3_y],
+                color="#000000", lw=0.6 * scale, zorder=20)
+        ax.plot([p3_x - lead_len, p3_x - lead_len], [p3_y - 3.5 * scale, p3_y + 3.5 * scale],
+                color="#000000", lw=0.8 * scale, zorder=20)
+        ax.scatter([p3_x], [p3_y], s=7 * scale, color="#000000", zorder=21)
+
+        ax.text(p3_x - lead_len - 4 * scale, p3_y + 4.0 * scale, t_title,
+                fontsize=6.4 * scale, fontfamily="sans-serif", weight="bold", color="#000000",
+                ha="right", va="bottom", zorder=22)
+        ax.text(p3_x - lead_len - 4 * scale, p3_y - 2.5 * scale, t_sub,
+                fontsize=5.2 * scale, fontfamily="monospace", color="#333333",
+                ha="right", va="top", zorder=22)
+
+        # 5. Right-Hand Elevation Benchmarks
+        p1_x, p1_y = p1
+        r_lead_len = 16.0 * scale
+        ax.plot([p1_x, p1_x + r_lead_len], [p1_y, p1_y],
+                color="#888888", lw=0.5 * scale, ls=(0, (3, 3)), zorder=18)
+        ax.plot([p1_x + r_lead_len, p1_x + r_lead_len], [p1_y - 3.0 * scale, p1_y + 3.0 * scale],
+                color="#777777", lw=0.7 * scale, zorder=18)
+        ax.scatter([p1_x], [p1_y], s=6 * scale, color="#555555", zorder=19)
+        el_str = f"EL. {z_base:+04d} MM"
+        ax.text(p1_x + r_lead_len + 4 * scale, p1_y, el_str,
+                fontsize=5.2 * scale, fontfamily="monospace", color="#555555",
+                ha="left", va="center", zorder=19)
 
 
 # ==============================================================================
 # 1. GENERATE FRONT COVER (BÌA 1) STANDALONE
 # ==============================================================================
 def generate_front_cover_page():
-    """Generates the standalone Front Cover A4 page for the electronic PDF."""
-    fig, ax = plt.subplots(figsize=(8.267, 11.692), dpi=300)
+    """Generates the standalone Front Cover A4 page for the electronic PDF (Full Bleed, No Frame Box)."""
+    fig, ax = plt.subplots(figsize=(PAGE_W_MM / 25.4, PAGE_H_MM / 25.4), dpi=300)
     fig.patch.set_facecolor("#FFFFFF")
     ax.set_facecolor("#FFFFFF")
     w_pt = PAGE_W_MM * MM_TO_PT
@@ -182,79 +229,96 @@ def generate_front_cover_page():
     ax.set_ylim(0, h_pt)
     ax.axis("off")
 
-    # Outer border
-    margin = 18.0 * MM_TO_PT
-    fw = w_pt - 2 * margin
-    fh = h_pt - 2 * margin
-    border_rect = patches.Rectangle((margin, margin), fw, fh,
-                                    facecolor="none", edgecolor="#000000", lw=1.2)
-    ax.add_patch(border_rect)
+    left_m = 32.0
+    right_m = w_pt - 32.0
 
-    # Top caliper header
-    header_y = margin + fh - 20
-    ax.plot([margin + 12, margin + fw - 12], [header_y, header_y], color="#000000", lw=0.6)
-    ax.text(margin + 16, header_y + 4, "SYSTEMS ARCHITECTURE SPECIFICATION // MONOCHROME SECTION",
-            fontsize=6.5, fontfamily="monospace", weight="bold", color="#333333", va="bottom")
-    ax.text(margin + fw - 16, header_y + 4, "DOC REF: PAP-SEC-2026",
-            fontsize=6.5, fontfamily="monospace", color="#555555", ha="right", va="bottom")
+    # 1. Top Technical Caliper Header Bar
+    head_y = h_pt - 36.0
+    ax.plot([left_m, right_m], [head_y, head_y], color="#000000", lw=0.7)
+    for tick_x in [left_m, (left_m + right_m) / 2.0, right_m]:
+        ax.plot([tick_x, tick_x], [head_y - 3.5, head_y + 3.5], color="#000000", lw=0.7)
 
-    # Main Title
-    title_y = header_y - 30
+    ax.text(left_m + 6, head_y + 5,
+            "SYSTEMS ARCHITECTURE SPECIFICATION // FULL MONOCHROME SECTION",
+            fontsize=6.5, fontfamily="monospace", weight="bold", color="#111111", va="bottom")
+    ax.text(right_m - 6, head_y + 5,
+            "DOC REF: PAP-SEC-2026 // ISO A4 EDITION",
+            fontsize=6.5, fontfamily="monospace", color="#444444", ha="right", va="bottom")
+
+    # 2. Main Title Block
+    title_y = head_y - 42.0
     ax.text(w_pt / 2.0, title_y, "G  O  L  A  N  G",
-            fontsize=40, fontfamily="sans-serif", weight="bold", color="#000000",
+            fontsize=46, fontfamily="sans-serif", weight="bold", color="#000000",
             ha="center", va="top")
 
-    subtitle_y = title_y - 48
-    ax.text(w_pt / 2.0, subtitle_y, "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
-            fontsize=9.2, fontfamily="sans-serif", weight="bold", color="#222222",
+    sub_y = title_y - 56.0
+    ax.text(w_pt / 2.0, sub_y,
+            "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
+            fontsize=9.6, fontfamily="sans-serif", weight="bold", color="#111111",
             ha="center", va="top")
 
-    author_y = subtitle_y - 20
-    ax.text(w_pt / 2.0, author_y, "ĐOÀN NGỌC HOÀNG MINH",
-            fontsize=9.0, fontfamily="sans-serif", color="#555555",
+    auth_y = sub_y - 20.0
+    ax.text(w_pt / 2.0, auth_y,
+            "ĐOÀN NGỌC HOÀNG MINH",
+            fontsize=9.2, fontfamily="sans-serif", color="#444444",
             ha="center", va="top")
 
-    # Caliper dividing rule
-    cal_y = author_y - 18
-    ax.plot([margin + 35, margin + fw - 35], [cal_y, cal_y], color="#000000", lw=0.8)
-    ax.plot([margin + 35, margin + 35], [cal_y - 3, cal_y + 3], color="#000000", lw=0.8)
-    ax.plot([margin + fw - 35, margin + fw - 35], [cal_y - 3, cal_y + 3], color="#000000", lw=0.8)
+    # Caliper dividing rule under author
+    cal_y = auth_y - 18.0
+    ax.plot([left_m + 15, right_m - 15], [cal_y, cal_y], color="#000000", lw=0.75)
+    for cx_tick in [left_m + 15, w_pt / 2.0, right_m - 15]:
+        ax.plot([cx_tick, cx_tick], [cal_y - 3, cal_y + 3], color="#000000", lw=0.75)
 
-    # Architectural Cross-Section Artwork
-    cx = (w_pt / 2.0) + 48.0
-    cy = 380.0
-    draw_axonometric_cross_section(ax, cx, cy, scale=0.88)
+    # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
+    art_cx = 345.0
+    art_cy = 385.0
+    draw_axonometric_cross_section(ax, art_cx, art_cy, scale=1.04)
 
-    # Bottom Caliper Divider
-    bot_div_y = margin + 75
-    ax.plot([margin + 12, margin + fw - 12], [bot_div_y, bot_div_y], color="#000000", lw=0.6)
+    # 4. Bottom Caliper Divider & 3-Column Metadata Specifications
+    bot_y = 96.0
+    ax.plot([left_m, right_m], [bot_y, bot_y], color="#000000", lw=0.7)
+    for bx_tick in [left_m, left_m + 175, left_m + 355, right_m]:
+        ax.plot([bx_tick, bx_tick], [bot_y - 3.5, bot_y + 3.5], color="#000000", lw=0.7)
 
-    # 3-Column Specifications with clean left-aligned gutters
-    col1_x = margin + 14
-    col2_x = margin + 14 + 165
-    col3_x = margin + 14 + 340
+    col1_x = left_m + 4
+    col2_x = left_m + 180
+    col3_x = left_m + 360
 
-    ax.text(col1_x, bot_div_y - 10, "SYSTEM RUNTIME SPECIFICATION",
-            fontsize=5.4, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(col1_x, bot_div_y - 23,
-            "M:N Work-Stealing Scheduler\nTri-Color Concurrent GC\nChannel Rendezvous Engine",
-            fontsize=4.6, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+    # Column 1
+    ax.text(col1_x, bot_y - 10, "SYSTEM RUNTIME SPECIFICATION",
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col1_x, bot_y - 24,
+            "M:N Work-Stealing Go Scheduler\nTri-Color Concurrent Mark-Sweep GC\nChannel Rendezvous & Mutex Arena",
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
-    ax.text(col2_x, bot_div_y - 10, "PRODUCTION & DEVOPS ENGINEERING",
-            fontsize=5.4, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(col2_x, bot_div_y - 23,
-            "Kubernetes Level-Triggered Reconcile\neBPF Kernel Observability Probes\nZero-Downtime Service Lifecycle",
-            fontsize=4.6, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+    # Column 2
+    ax.text(col2_x, bot_y - 10, "DISTRIBUTED SRE INFRASTRUCTURE",
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col2_x, bot_y - 24,
+            "Kubernetes Level-Triggered Reconcile\neBPF Kernel Tracing & Observability\nZero-Downtime Service Mesh Routing",
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
-    ax.text(col3_x, bot_div_y - 10, "PUBLICATION STANDARDS",
-            fontsize=5.4, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(col3_x, bot_div_y - 23,
+    # Column 3
+    ax.text(col3_x, bot_y - 10, "PUBLICATION STANDARDS",
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col3_x, bot_y - 24,
             "Format: ISO A4 (210 x 297 mm)\nType: Source Serif 4 & JetBrains Mono\nPrint: High-Density Grayscale Monotone",
-            fontsize=4.6, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+
+    # Sub-footer line
+    sub_foot_y = 28.0
+    ax.plot([left_m, right_m], [sub_foot_y, sub_foot_y], color="#999999", lw=0.4)
+    ax.text(left_m, sub_foot_y - 5,
+            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
+            fontsize=4.6, fontfamily="monospace", color="#666666", va="top")
+    ax.text(right_m, sub_foot_y - 5,
+            "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
+            fontsize=4.6, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # Save
     out_pdf = OUTPUT_DIR / "front_cover_page.pdf"
     out_png = OUTPUT_DIR / "front_cover_page_300dpi.png"
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
     fig.savefig(out_pdf, format="pdf", dpi=300)
     fig.savefig(out_png, format="png", dpi=300)
     plt.close(fig)
@@ -295,75 +359,96 @@ def generate_full_cover_wrap():
         draw_crop_mark(s_x, WRAP_H_PT, 0, -tick_len)
 
     # --------------------------------------------------------------------------
-    # FRONT COVER (BÌA TRƯỚC - BÌA 1)
+    # FRONT COVER (BÌA TRƯỚC - BÌA 1) - FULL BLEED, NO FRAME BOX
     # Range: x in [FRONT_LEFT_PT, FRONT_RIGHT_PT], y in [BOTTOM_TRIM_PT, TOP_TRIM_PT]
     # --------------------------------------------------------------------------
-    f_margin = 16.0 * MM_TO_PT
-    f_x0 = FRONT_LEFT_PT + f_margin
-    f_y0 = BOTTOM_TRIM_PT + f_margin
-    f_w = (PAGE_W_MM * MM_TO_PT) - 2 * f_margin
-    f_h = (PAGE_H_MM * MM_TO_PT) - 2 * f_margin
+    f_w_pt = PAGE_W_MM * MM_TO_PT
+    f_left_m = FRONT_LEFT_PT + 32.0
+    f_right_m = FRONT_LEFT_PT + f_w_pt - 32.0
 
-    # Border
-    ax.add_patch(patches.Rectangle((f_x0, f_y0), f_w, f_h, facecolor="none", edgecolor="#000000", lw=1.1))
+    # 1. Top Technical Caliper Header Bar
+    f_head_y = TOP_TRIM_PT - 36.0
+    ax.plot([f_left_m, f_right_m], [f_head_y, f_head_y], color="#000000", lw=0.7)
+    for tick_x in [f_left_m, (f_left_m + f_right_m) / 2.0, f_right_m]:
+        ax.plot([tick_x, tick_x], [f_head_y - 3.5, f_head_y + 3.5], color="#000000", lw=0.7)
 
-    # Header
-    f_head_y = f_y0 + f_h - 20
-    ax.plot([f_x0 + 10, f_x0 + f_w - 10], [f_head_y, f_head_y], color="#000000", lw=0.5)
-    ax.text(f_x0 + 14, f_head_y + 4, "SYSTEMS ARCHITECTURE SPECIFICATION // MONOCHROME SECTION",
-            fontsize=6.2, fontfamily="monospace", weight="bold", color="#333333", va="bottom")
-    ax.text(f_x0 + f_w - 14, f_head_y + 4, "DOC REF: PAP-SEC-2026",
-            fontsize=6.2, fontfamily="monospace", color="#555555", ha="right", va="bottom")
+    ax.text(f_left_m + 6, f_head_y + 5,
+            "SYSTEMS ARCHITECTURE SPECIFICATION // FULL MONOCHROME SECTION",
+            fontsize=6.5, fontfamily="monospace", weight="bold", color="#111111", va="bottom")
+    ax.text(f_right_m - 6, f_head_y + 5,
+            "DOC REF: PAP-SEC-2026 // ISO A4 EDITION",
+            fontsize=6.5, fontfamily="monospace", color="#444444", ha="right", va="bottom")
 
-    # Front Title
-    f_title_y = f_head_y - 26
-    f_cx = FRONT_LEFT_PT + (PAGE_W_MM * MM_TO_PT) / 2.0
-    ax.text(f_cx, f_title_y, "G  O  L  A  N  G",
-            fontsize=38, fontfamily="sans-serif", weight="bold", color="#000000", ha="center", va="top")
+    # 2. Main Title Block
+    f_title_y = f_head_y - 42.0
+    f_cx_center = FRONT_LEFT_PT + f_w_pt / 2.0
+    ax.text(f_cx_center, f_title_y, "G  O  L  A  N  G",
+            fontsize=46, fontfamily="sans-serif", weight="bold", color="#000000",
+            ha="center", va="top")
 
-    f_sub_y = f_title_y - 45
-    ax.text(f_cx, f_sub_y, "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
-            fontsize=8.8, fontfamily="sans-serif", weight="bold", color="#222222", ha="center", va="top")
+    f_sub_y = f_title_y - 56.0
+    ax.text(f_cx_center, f_sub_y,
+            "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
+            fontsize=9.6, fontfamily="sans-serif", weight="bold", color="#111111",
+            ha="center", va="top")
 
-    f_auth_y = f_sub_y - 18
-    ax.text(f_cx, f_auth_y, "ĐOÀN NGỌC HOÀNG MINH",
-            fontsize=8.6, fontfamily="sans-serif", color="#555555", ha="center", va="top")
+    f_auth_y = f_sub_y - 20.0
+    ax.text(f_cx_center, f_auth_y,
+            "ĐOÀN NGỌC HOÀNG MINH",
+            fontsize=9.2, fontfamily="sans-serif", color="#444444",
+            ha="center", va="top")
 
-    # Front Caliper Divider
-    f_cal_y = f_auth_y - 16
-    ax.plot([f_x0 + 30, f_x0 + f_w - 30], [f_cal_y, f_cal_y], color="#000000", lw=0.7)
-    ax.plot([f_x0 + 30, f_x0 + 30], [f_cal_y - 3, f_cal_y + 3], color="#000000", lw=0.7)
-    ax.plot([f_x0 + f_w - 30, f_x0 + f_w - 30], [f_cal_y - 3, f_cal_y + 3], color="#000000", lw=0.7)
+    # Caliper dividing rule under author
+    f_cal_y = f_auth_y - 18.0
+    ax.plot([f_left_m + 15, f_right_m - 15], [f_cal_y, f_cal_y], color="#000000", lw=0.75)
+    for cx_tick in [f_left_m + 15, f_cx_center, f_right_m - 15]:
+        ax.plot([cx_tick, cx_tick], [f_cal_y - 3, f_cal_y + 3], color="#000000", lw=0.75)
 
-    # Front Artwork
-    f_art_cy = BOTTOM_TRIM_PT + 380.0
-    draw_axonometric_cross_section(ax, f_cx + 48.0, f_art_cy, scale=0.88)
+    # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
+    f_art_cx = FRONT_LEFT_PT + 345.0
+    f_art_cy = BOTTOM_TRIM_PT + 385.0
+    draw_axonometric_cross_section(ax, f_art_cx, f_art_cy, scale=1.04)
 
-    # Front Bottom Metadata
-    f_bot_y = f_y0 + 72
-    ax.plot([f_x0 + 10, f_x0 + f_w - 10], [f_bot_y, f_bot_y], color="#000000", lw=0.5)
+    # 4. Bottom Caliper Divider & 3-Column Metadata Specifications
+    f_bot_y = BOTTOM_TRIM_PT + 96.0
+    ax.plot([f_left_m, f_right_m], [f_bot_y, f_bot_y], color="#000000", lw=0.7)
+    for bx_tick in [f_left_m, f_left_m + 175, f_left_m + 355, f_right_m]:
+        ax.plot([bx_tick, bx_tick], [f_bot_y - 3.5, f_bot_y + 3.5], color="#000000", lw=0.7)
 
-    f_col1_x = f_x0 + 14
-    f_col2_x = f_x0 + 14 + 168
-    f_col3_x = f_x0 + 14 + 348
+    f_col1_x = f_left_m + 4
+    f_col2_x = f_left_m + 180
+    f_col3_x = f_left_m + 360
 
+    # Column 1
     ax.text(f_col1_x, f_bot_y - 10, "SYSTEM RUNTIME SPECIFICATION",
-            fontsize=5.2, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(f_col1_x, f_bot_y - 23,
-            "M:N Work-Stealing Scheduler\nTri-Color Concurrent GC\nChannel Rendezvous Engine",
-            fontsize=4.5, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col1_x, f_bot_y - 24,
+            "M:N Work-Stealing Go Scheduler\nTri-Color Concurrent Mark-Sweep GC\nChannel Rendezvous & Mutex Arena",
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
-    ax.text(f_col2_x, f_bot_y - 10, "PRODUCTION & DEVOPS ENGINEERING",
-            fontsize=5.2, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(f_col2_x, f_bot_y - 23,
-            "Kubernetes Level-Triggered Reconcile\neBPF Kernel Observability Probes\nZero-Downtime Service Lifecycle",
-            fontsize=4.5, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+    # Column 2
+    ax.text(f_col2_x, f_bot_y - 10, "DISTRIBUTED SRE INFRASTRUCTURE",
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col2_x, f_bot_y - 24,
+            "Kubernetes Level-Triggered Reconcile\neBPF Kernel Tracing & Observability\nZero-Downtime Service Mesh Routing",
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
+    # Column 3
     ax.text(f_col3_x, f_bot_y - 10, "PUBLICATION STANDARDS",
-            fontsize=5.2, fontfamily="sans-serif", weight="bold", va="top")
-    ax.text(f_col3_x, f_bot_y - 23,
+            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col3_x, f_bot_y - 24,
             "Format: ISO A4 (210 x 297 mm)\nType: Source Serif 4 & JetBrains Mono\nPrint: High-Density Grayscale Monotone",
-            fontsize=4.5, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+
+    # Sub-footer line
+    f_sub_foot_y = BOTTOM_TRIM_PT + 28.0
+    ax.plot([f_left_m, f_right_m], [f_sub_foot_y, f_sub_foot_y], color="#999999", lw=0.4)
+    ax.text(f_left_m, f_sub_foot_y - 5,
+            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
+            fontsize=4.6, fontfamily="monospace", color="#666666", va="top")
+    ax.text(f_right_m, f_sub_foot_y - 5,
+            "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
+            fontsize=4.6, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # --------------------------------------------------------------------------
     # SPINE (GÁY SÁCH)

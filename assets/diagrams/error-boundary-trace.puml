@@ -1,31 +1,54 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 28
+skinparam defaultFontSize 16
 skinparam shadowing false
+skinparam roundCorner 6
+skinparam arrowColor #222222
+skinparam arrowThickness 1.2
+
 skinparam rectangle {
   BackgroundColor #FFFFFF
-  BorderColor #222222
+  BorderColor #334155
   FontColor #000000
 }
+
 skinparam note {
-  BackgroundColor #FFFFFF
-  BorderColor #555555
-  FontColor #000000
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+  FontColor #1E293B
+  FontSize 14
 }
-skinparam ArrowColor #222222
+
 top to bottom direction
 
-rectangle "ProbeFunc\ntrả nguyên nhân gốc" as run
-rectangle "ProbeFailure\nservice + endpoint + nguyên nhân" as failure
-rectangle "applyProbe\nbối cảnh operation với %w" as boundary
-rectangle "bên gọi (caller)\nerrors.Is / errors.As" as caller
+package "1. Tầng Hạ tầng / Mạng: Nguyên nhân gốc (Root Cause)" as l1 {
+  rectangle "<b>io.ErrUnexpectedEOF</b>\n(Lỗi sentinel tầng thấp từ I/O / socket mạng)" as root_err
+}
 
-run -down-> failure : nguyên nhân
-failure -down-> boundary : lỗi được bọc (%w)
-boundary -down-> caller : lỗi trả về
-note bottom of caller
-errors.Is: nhận diện theo loại lỗi sentinel
-errors.As: trích xuất bối cảnh probe có cấu trúc
+package "2. Tầng Nghiệp vụ: Cấu trúc hóa lỗi (Domain Error)" as l2 {
+  rectangle "<b>ProbeFailure struct</b>\nService: \"billing\"\nEndpoint: Endpoint{Host: \"billing.internal\", Port: 8080}\nCause: io.ErrUnexpectedEOF\n--\n<i>Triển khai Unwrap() error trả về Cause</i>" as domain_err
+}
+
+package "3. Tầng Vận hành / Boundary: Bổ sung ngữ cảnh (Context Wrapping)" as l3 {
+  rectangle "<b>applyProbe Wrapper</b>\nfmt.Errorf(\"probe check failed: %w\", failure)\n--\n<i>Bọc thêm tên thao tác, bảo toàn chuỗi Unwrap qua %w</i>" as wrap_err
+}
+
+package "4. Tầng Bên gọi / Caller: Chẩn đoán & Phân loại lỗi" as l4 {
+  rectangle "<b>errors.Is(err, io.ErrUnexpectedEOF)</b>\nKhẳng định nguyên nhân gốc là mất kết nối đột ngột\n(Lần ngược chuỗi Unwrap tới tận gốc)" as is_check
+  rectangle "<b>errors.As(err, &target)</b>\nTrích xuất an toàn con trỏ *ProbeFailure\nĐọc target.Service và target.Endpoint có cấu trúc" as as_check
+}
+
+root_err -down-> domain_err : Được đóng gói vào trường Cause
+domain_err -down-> wrap_err : Bọc thêm tiền tố tác vụ bằng động từ %w
+wrap_err -down-> is_check : Khớp lỗi sentinel
+wrap_err -down-> as_check : Trích xuất metadata
+
+note right of l4
+  <b>Nguyên tắc Bảo toàn Chuỗi Lỗi trong Go:</b>
+  • Không bao giờ nuốt chửng lỗi gốc bằng chuỗi ký tự cụt ngủn.
+  • Động từ <b>%w</b> duy trì cây liên kết lỗi để kiểm tra có lập trình.
+  • <b>errors.Is</b> kiểm tra sự hiện diện của giá trị sentinel.
+  • <b>errors.As</b> trích xuất thông tin có cấu trúc mà không cần cắt chuỗi.
 end note
 @enduml

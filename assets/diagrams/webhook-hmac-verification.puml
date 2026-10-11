@@ -1,10 +1,29 @@
 @startuml
 !include publication-flow.iuml
-participant "GitHub" as github
-participant "Webhook server Go" as server
-github -> github : HMAC-SHA256(secret, payload)
-github -> server : POST: body + chữ ký trong header
-server -> server : Body có giới hạn\nHMAC-SHA256(secret, raw body)
-server -> server : subtle.ConstantTimeCompare\nchữ ký nhận và chữ ký tính lại
-server -> server : Hợp lệ: xử lý theo policy\nKhông hợp lệ: từ chối request
+
+autonumber "<b>[00]</b>"
+
+participant "GitHub\n(Webhook Dispatcher)" as github
+participant "Webhook Server Go\n(HTTP Receiver)" as server
+participant "Bộ điều phối Sự kiện\n(Event Dispatcher)" as handler
+
+github -> github : Ký payload:\nHMAC-SHA256(secret, rawJSON)
+github -> server : HTTP POST /webhook\nHeader: X-Hub-Signature-256\nBody: raw JSON payload
+activate server
+
+server -> server : Đọc body an toàn:\nio.LimitReader(r.Body, maxBytes)
+server -> server : Tính chữ ký cục bộ:\nHMAC-SHA256(secret, rawBody)
+server -> server : So sánh bảo vệ kênh phụ thời gian:\nsubtle.ConstantTimeCompare(recvSig, expectedSig)
+
+alt #F4F4F4 Khớp chữ ký (Xác thực thành công)
+  server -> handler : Bàn giao sự kiện hợp lệ (Job)
+  activate handler
+  handler --> server : Tiếp nhận (Enqueue / Ack)
+  deactivate handler
+  server --> github : HTTP 200 OK (Chấp nhận)
+else #FFFFFF Không khớp (Chữ ký giả mạo hoặc sai secret)
+  server --> github : HTTP 401 Unauthorized (Từ chối ngay tại biên)
+end
+
+deactivate server
 @enduml

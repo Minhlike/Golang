@@ -1,32 +1,24 @@
 @startuml
-skinparam backgroundColor #FFFFFF
-skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
-  FontColor #000000
-}
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
-skinparam rectangle {
-  BackgroundColor #F5F5F5
-  BorderColor #333333
-  FontColor #000000
-  RoundCorner 8
-}
-skinparam arrowColor #333333
-top to bottom direction
+!include publication-flow.iuml
 
-rectangle "TIẾP NHẬN (ACCEPTING)\nlistener mở\nnhận yêu cầu mới" as accepting
-rectangle "GIẢI TỎA (DRAINING)\nlistener đóng\nxử lý nốt yêu cầu đang chạy" as draining
-rectangle "DỪNG HẲN (STOPPED)\nđóng kết nối\ngiải phóng tài nguyên" as stopped
+[*] --> Accepting : srv.ListenAndServe()
 
-accepting -down-> draining : tín hiệu dừng / deploy
-draining -down-> stopped : yêu cầu hoàn tất\nhoặc hết thời hạn deadline
+state "TIẾP NHẬN (ACCEPTING)\n• TCP Listener mở\n• Nhận kết nối HTTP mới\n• Worker xử lý song song" as Accepting
 
-note right of draining
-  Draining tách biệt với việc đóng listener:
-  không nhận thêm việc mới nhưng
-  hoàn tất công việc đang dang dở.
+state "GIẢI TỎA (DRAINING)\n• Đóng TCP Listener ngay lập tức\n• Từ chối nhận kết nối mới\n• Chờ xử lý nốt các request đang chạy" as Draining
+
+state "DỪNG HẲN (STOPPED)\n• Đóng toàn bộ idle connections\n• Thu hồi tài nguyên DB & Logger\n• Trả về nil từ Shutdown(ctx)" as Stopped
+
+Accepting --> Draining : Tín hiệu dừng SIGINT/SIGTERM\nKích hoạt srv.Shutdown(ctx)
+
+Draining --> Stopped : Toàn bộ request hoàn tất\n(hoặc ctx.Done() hết timeout)
+
+Stopped --> [*]
+
+note right of Draining
+  <b>Bản chất của Graceful Shutdown:</b>
+  • Đóng Listener chặn đứng traffic mới.
+  • Cho phép các in-flight requests có thời gian
+    về đích an toàn trước khi tắt hoàn toàn.
 end note
 @enduml
