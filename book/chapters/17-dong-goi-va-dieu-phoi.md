@@ -68,7 +68,7 @@ Chương 12 đã phân tách vòng đời máy chủ HTTP khỏi hàm `main`: t�
 
 Vì vậy, cú pháp `ENTRYPOINT ["/probe-api"]` mang ý nghĩa vận hành chuẩn tắc hơn `ENTRYPOINT /probe-api --config ...` khi mục đích là để tệp nhị phân trở thành tiến trình chính (PID 1). Dạng mảng thực thi (*exec form*) không tự động xử lý dừng êm dịu thay cho chương trình, nhưng nó tránh việc chèn một vỏ lệnh hệ thống (*shell*) nằm chắn giữa môi trường thực thi và tệp nhị phân. Tín hiệu `SIGTERM` vẫn chỉ là một thông điệp: ứng dụng phải chủ động quyết định cách chuyển nó thành thao tác làm cạn yêu cầu (*drain*), thiết lập hạn định thời gian (*deadline*) và trả về mã thoát phù hợp; hệ thống điều phối cần được cấu hình khoảng thời gian đủ lớn cho chính sách dừng đó.
 
-Đây cũng là lúc xem xét lại cơ chế sẵn sàng (*readiness*) của Chương 16 theo đúng phạm vi. Đầu kiểm tra sẵn sàng (*readiness probe*) chỉ trả lời câu hỏi: “Liệu có nên định tuyến lưu lượng truy cập mới vào phiên bản này ngay lúc này hay không?”. Nó không phải lời khẳng định ảnh container đã được đóng gói chuẩn xác, không đại diện cho trạng thái sống còn (*liveness*), không phản ánh lịch sử cam kết mức dịch vụ (SLO), và không phải lý do để vội vã khởi động lại tiến trình chỉ vì một dịch vụ phụ thuộc ở xa phản hồi chậm. Khi trạng thái sẵn sàng mang giá trị sai (`false`), bộ định tuyến lưu lượng sẽ ngừng phân phối yêu cầu mới tới phiên bản đó; bộ điều khiển vẫn duy trì phiên bản này tiếp tục hoạt động để tự phục hồi hoặc để người vận hành kiểm tra nguyên nhân.
+Đây cũng là lúc xem xét lại cơ chế sẵn sàng (*readiness*) của Chương 16 theo đúng phạm vi. Đầu kiểm tra sẵn sàng trả lời câu hỏi: “Có nên đưa Pod này vào tập đích phục vụ của Service hay không?”. Nó không xác nhận image được đóng gói đúng, không thay liveness hay SLO, và không yêu cầu khởi động lại chỉ vì một phụ thuộc ở xa đang chậm. Khi Pod được đánh dấu chưa sẵn sàng, Service thông thường sẽ loại nó khỏi tập đích sau khi trạng thái được truyền tới các thành phần định tuyến. Đây không phải hàng rào tức thời cho mọi yêu cầu mới: cập nhật có độ trễ, kết nối đã thiết lập và khách truy cập thẳng Pod không tự bị chặn. Readiness thất bại không tự dừng tiến trình; chính sách khác vẫn có thể thay thế Pod.
 
 ## Desired state không phải một script dài
 
@@ -282,12 +282,11 @@ Trong `deployment.yaml`, hai probe dẫn tới hai quyết định khác nhau:
 
 Thứ nhất là đầu kiểm tra sẵn sàng phục vụ (*readiness probe*, tại điểm cuối `/readyz`): Giải đáp câu hỏi “Liệu Pod này có sẵn sàng tiếp nhận lưu lượng truy cập từ đối tượng Dịch vụ (*Service*) ngay lúc này hay không?”. Sau khi vượt quá ngưỡng thất bại cho phép, tiến trình `kubelet` sẽ thiết lập điều kiện sẵn sàng thành sai (`false`). Với đối tượng dịch vụ thông thường, điểm cuối chưa sẵn sàng sẽ bị loại bỏ khỏi danh sách phân phối lưu lượng; đối tượng lát cắt điểm cuối (*EndpointSlice*) vẫn có thể lưu giữ địa chỉ mạng nhưng đánh dấu trạng thái chưa sẵn sàng. Cấu hình dịch vụ bật cờ `publishNotReadyAddresses` là trường hợp ngoại lệ cần đối soát chính sách riêng biệt. Việc kiểm tra sẵn sàng thất bại không tự động kích hoạt thao tác khởi động lại vùng chứa.
 
-Thứ hai là đầu kiểm tra sống còn (*liveness probe*, tại điểm cuối `/livez`): Giám sát điều kiện mà chính sách vận hành xác định là bắt buộc phải khởi động lại vùng chứa. Tiến trình `kubelet` áp dụng ngưỡng đếm thất bại và chính sách chấm dứt có kiểm soát, tuyệt đối không bao giờ khởi động lại chỉ vì một mẫu thử nghiệm đơn lẻ gặp lỗi. Cần tránh đưa lỗi phát sinh từ các dịch vụ phụ thuộc ở xa vào đầu kiểm tra sống còn nếu thao tác khởi động lại không thể giải quyết được nguyên nhân gốc; sai lầm này có thể kích hoạt chuỗi sụp đổ và khởi động lại liên hoàn (*cascading restart*). Đầu kiểm tra sẵn sàng và đầu kiểm tra sống còn phục vụ hai quyết định vận hành hoàn toàn tách biệt.
+Thứ hai là đầu kiểm tra sống còn (*liveness probe*, tại `/livez`): giám sát điều kiện mà chính sách vận hành chọn để khởi động lại container. `kubelet` đếm các lần thất bại liên tiếp theo `failureThreshold`; manifest của lab đặt ngưỡng 3, nên một lần thất bại chưa đủ. Ngưỡng có thể được đặt bằng 1: không có bảo đảm chung rằng một mẫu lỗi đơn lẻ không bao giờ dẫn tới restart. Khi đủ ngưỡng, kubelet chấm dứt container theo grace period và áp dụng restart policy. Tránh đưa lỗi phụ thuộc ở xa vào liveness nếu restart không giải quyết nguyên nhân gốc; nó có thể tạo chuỗi khởi động lại liên hoàn. Readiness và liveness phục vụ hai quyết định khác nhau.
 
 Phần tài nguyên cũng phân định rạch ròi giữa mức yêu cầu `requests` (chỉ số mà bộ lập lịch sử dụng
 để tìm kiếm nút mạng phù hợp cho Pod) và mức trần `limits` (ngưỡng giới hạn tài nguyên được cưỡng chế thực thi theo
-cơ chế của môi trường vận hành). Với nhóm điều khiển (*cgroup*) trên Linux, xung nhịp CPU sẽ bị tiết lưu (*throttled*) khi tiêu hao hết
-định mức thời gian; trong khi giới hạn bộ nhớ được xử lý theo cơ chế phản ứng thụ động và có thể
+cơ chế của môi trường vận hành). Với nhóm điều khiển (*cgroup*) trên Linux, khi hết ngân sách thời gian CPU trong một chu kỳ, tiến trình có thể phải chờ tới lần cấp ngân sách kế tiếp (*throttling*). Đây là giới hạn thời gian được chạy, không phải giảm xung nhịp phần cứng. Giới hạn bộ nhớ được xử lý theo cơ chế phản ứng thụ động và có thể
 dẫn tới việc tiến trình bị tiêu diệt do cạn bộ nhớ (*OOM kill*). Đây không phải lời cam đoan rằng mọi thời điểm vượt ngưỡng đều bị chấm dứt
 tức thì, cũng không phải là trần giới hạn dành riêng cho vùng nhớ heap của Go.
 
@@ -347,6 +346,8 @@ Hai số lệch nhau cho biết trạng thái chưa theo kịp thế hệ hiện
 bộ điều khiển đang tiến triển: nó có thể đang lỗi hoặc chưa chạy. Hai số bằng nhau
 cũng không chứng minh khối lượng công việc khỏe mạnh; còn phải đọc các điều kiện và trạng thái bản sao.
 
+Lab chỉ in một snapshot rồi chờ sự kiện đầu tiên; nó không duy trì một dòng lịch sử liên tục. Watch hiện không truyền `ResourceVersion` từ kết quả Get, nên một thay đổi xảy ra giữa hai lời gọi có thể không được phản ánh trong dòng sự kiện mà người học thấy. Thời hạn 15 giây là ngân sách chung của cả Get và Watch, không phải thêm 15 giây sau Get. Không lấy việc watch im lặng làm bằng chứng Deployment không thay đổi. Chương 22 sẽ dạy đầy đủ cách nối List/Watch và xử lý lịch sử đã hết hạn; không biến công cụ chẩn đoán này thành controller mới.
+
 @table Các lớp kiểm soát từ binary đến cluster
 
 | Tầng kiểm soát | Nhiệm vụ chính | Bằng chứng kiểm chứng | Giới hạn không được suy diễn |
@@ -373,3 +374,5 @@ Khi yêu cầu kỹ thuật đòi hỏi đóng gói và đẩy ảnh container, 
 4. Kubernetes Authors. Pod lifecycle: Pod spec/status, restart policy, readiness và container lifecycle. kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
 5. Kubernetes Authors. Package `client-go`: programmatic interface cho Kubernetes API. pkg.go.dev/k8s.io/client-go
 6. GoogleContainerTools. Distroless: language focused docker images, non-root user và minimal runtime footprint. github.com/GoogleContainerTools/distroless
+7. Kubernetes Authors. Configure probes: failureThreshold và restart policy; Resource management: CPU throttling và memory limits. kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/; kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+8. Kubernetes Authors. API concepts: get/list/watch và resourceVersion. kubernetes.io/docs/reference/using-api/api-concepts/

@@ -1,6 +1,34 @@
-# Independent scientific review — checkpoints 1–5
+# Independent scientific review — ongoing complete-manuscript pass
 
 Trạng thái: **REVIEW_IN_PROGRESS, chưa nghiệm thu toàn sách**. Checkpoint 1 giữ nguyên bằng chứng Ch02/16/26/27; checkpoint 2 tiếp tục Ch03–Ch07; checkpoint 3 tiếp tục Ch08–Ch10 và đóng duy nhất đoạn R33 ở Ch02; checkpoint 4 tiếp tục Ch11–Ch13; checkpoint 5 tiếp tục Ch14–Ch15. Mười bảy manuscript đã được đọc; các kết luận chỉ áp dụng cho chủ đề, source và test được chỉ rõ, không phải mọi claim hay mọi trang. Những chương khác và hai Atlas chưa được review khoa học thủ công. Theo chỉ thị tiếp nối, các mốc là lưu trữ nội bộ, không phải điểm dừng trả lượt. Không merge hoặc promotion Master.
+
+## Ch17–19: internal evidence batch 6, not a stopping point
+
+STARTING_HEAD `61d506fb46279cf2d3bd6bf20715cb46329dbb59`. Three additional manuscripts read in full; 20 of 31 reviewed so far, 11 and both Atlas remain. Earlier evidence is historical, not invalidated or overwritten by the new run.
+
+| ID / severity / classification | Repair and independent evidence |
+| --- | --- |
+| R81 / P2 / AGENT2_REGRESSION | Readiness is not an absolute traffic barrier; propagation, existing connections and direct access remain relevant. C made the guarantee stronger than B. Kubernetes probe documentation checked. |
+| R82 / P2 / INHERITED_DEFECT | Liveness may restart on a single failure when failureThreshold=1; no universal multiple-failure requirement. B already assumed a larger threshold. |
+| R83 / P2 / AGENT2_REGRESSION | CPU throttling limits runnable CPU time, not hardware clock frequency. Kubernetes resource documentation checked. |
+| R84 / P3 / CONTENT_GAIN | Get/Watch observer prints one event, shares one timeout, and omits resourceVersion; fake-client test proves watch options and observed/desired fields, not real watch continuity. |
+| R85 / P2 / INHERITED_DEFECT | go run does not preserve the child exit code for the shell; built CLI test checks allow=0, deny=1, malformed=2 and compares go run. |
+| R86 / P2 / INHERITED_DEFECT | Workflow promotion invoked a nested module from repo root; working-directory corrected. Original root command independently reproduced as EXPECTED_FAILURE. |
+| R87 / P2 / INHERITED_DEFECT | ECR names require length and complete path-component pattern; IAM role name has a separate contract. Variables separated; static positive/negative fixtures checked. No Terraform/cloud execution claimed. |
+| R88 / P2 / INHERITED_DEFECT | Printed uniquePorts lacked return; corrected and compiled/executed directly from Markdown and PDF. |
+| R89 / P3 / CONTENT_GAIN | Go1.20+ comparable satisfaction exception and NaN behavior tested; a nil map assignment mutant is detected by the new independence assertion. Generic methods remain valid in verified Go1.27.1. |
+| R90 / P2 / EDITORIAL_IMPROVEMENT | Quoted code fence rendered as literal text; removed quoting from fence and verified PDF extraction. |
+| R91 / P2 / AGENT2_REGRESSION | Two diagrams promised or depicted actions absent from the lab (forced kill, mandatory backoff, already-signed artifact, Pod observation). Corrected model and actual Deployment fields; overly small first rendering rejected and rebuilt vertically. |
+| R92 / P2 / INHERITED_DEFECT | Truncated Action SHAs were not runnable pins. Full SHAs retain legal YAML scalar line breaks; parsed excerpt compared with actual workflow. |
+| R93 / P2 / INHERITED_DEFECT | Workflow comments required push/export for manifest digest existence. Official Buildx --load metadata example disproves that prerequisite; config digest remains distinct and no registry availability is inferred. |
+
+13 repaired groups: 11 P2, two P3. Sources inspected: [Go specification](https://go.dev/ref/spec), [Go1.27 release notes](https://go.dev/doc/go1.27), [cmd/go](https://pkg.go.dev/cmd/go), [Kubernetes probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/), [API concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/), [resource limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/), [Buildx metadata](https://docs.docker.com/reference/cli/docker/buildx/build/), [AWS OIDC condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html), [ECR names](https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_CreateRepository.html), [IAM role names](https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html). AWS now documents the GitHub ref condition key; no obsolete removal based on a generic custom-claim warning.
+
+New boundary assertions and six module suites run race/count3 and vet. Markdown and actual-PDF excerpts compile/run; intentional assignment/typed-nil and mutant failures remain EXPECTED_FAILURE, not PASS. Raw command bytes/hashes in validation.json/checkpoint6. Superseded harness failures are retained with explanation; missing fixture support was not a product failure. Docker/kubectl/kind/Terraform/AWS are NOT_RUN because executables/prerequisites are unavailable. YAML/pattern static checks do not prove real workflow deployment or IAM assumption.
+
+Candidate: 610 pages, SHA `ccf1b0ec58db14c1a216a2b824fe8314d30c5a49bd83719a597c060c28dc7e01`. Individually opened exactly 56 pages, 2 and 298–352, at Poppler144dpi/original resolution. 554 pages not opened for this SHA. Final diagram pages300/310 read without clipping; code and tables in scope remain legible. One discovered P3 layout issue remains for the next source correction in this continuous pass: page338 splits a single prediction prompt into four quote boxes; a Ch17 reference to CPU quota in Ch20 also needs correction against the actual target chapter. Neither is hidden by the automated PASS.
+
+363 prose/table cells and 31 fences match PDF content and expanded indentation; 30 unchanged sections and other body raster pixels preserved. 29 TOC/29 bookmark destinations match headings. Code-width0, visual manifest/diagram semantics/encoding/character-art, zero-bullet and Error Atlas structural gates pass. This is scoped scientific/layout evidence, not full publication acceptance. Master/rollback/MASTER/renderer/shared style/main/Agent2 worktree unchanged. Continue directly with Ch20 onward.
 
 ## Checkpoint 5
 

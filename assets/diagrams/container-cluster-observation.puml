@@ -3,36 +3,19 @@
 
 top to bottom direction
 
-package "Registry Hình ảnh (Artifact Repository)" as reg_pkg {
-  rectangle "<b>OCI Container Image</b>\nprobe-api:v1.0@sha256:...\nẢnh bất biến đã ký" as image
-}
-
-package "Kubernetes Cluster (Control Plane & Data Plane)" as k8s_pkg {
-  rectangle "<b>Deployment Controller</b>\n• Quản lý Pod Template & Replicas\n• Định nghĩa cấu hình liveness/readiness" as deployment
-  rectangle "<b>Kubernetes Service</b>\n• Bộ chọn nhãn (Label Selector)\n• Chỉ định tuyến tới Pod Ready" as service
-
-  package "Node Data Plane (Kubelet & Pod Instance)" as pod_pkg {
-    rectangle "<b>Pod Workload (Container Runtime)</b>\nỨng dụng Go cung cấp health endpoints" as pod
-    rectangle "<b>Kubelet Health Probes</b>\n• /livez: Kiểm tra chết treo (Restart)\n• /readyz: Kiểm tra sẵn sàng (Traffic)" as probes
-    
-    pod -right-> probes : phơi bày cổng HTTP
-  }
-
-  deployment -down-> pod : Điều phối vòng đời
-  service -down-> pod : Định tuyến traffic nếu /readyz = 200
-}
-
-package "Hệ thống Giám sát Ngoài (Out-of-Cluster / Observer)" as obs_pkg {
-  rectangle "<b>Observer Go (client-go)</b>\n• Thực thi List / Watch tài nguyên\n• Thu thập sự kiện Pod từ API Server\n• Giám sát thụ động (Read-only)" as observer
-}
-
-image -down-> deployment : Nạp image digest
-deployment .right.> observer : API Server phát sự kiện (Watch)
-
-note right of pod_pkg
-  <b>Phân biệt Rõ Hai Ranh giới Probe:</b>
-  • /livez thất bại: Kubelet khởi động lại container (kill -9).
-  • /readyz thất bại: Kubelet gỡ Pod khỏi Service Endpoints,
-    ngăn không cho request người dùng đi vào Pod đang lỗi.
+rectangle "<b>IMAGE · DIGEST</b>\nprobe-api@sha256:...\nKhông tự chứng minh chữ ký" as image
+rectangle "<b>DEPLOYMENT</b>\nSpec: image, replicas, Pod template\nStatus: quan sát đã ghi nhận" as deployment
+rectangle "<b>POD · KUBELET</b>\nỨng dụng cung cấp /livez và /readyz\nKubelet thực hiện health probes" as pod
+rectangle "<b>SERVICE</b>\nChọn endpoint theo readiness\nCập nhật có độ trễ" as service
+rectangle "<b>OBSERVER Go · client-go</b>\nGet / Watch Deployment qua API server\nIn snapshot và sự kiện đầu tiên\nChỉ đọc; budget chung 15 giây" as observer
+image -down-> deployment : tham chiếu artifact
+deployment -down-> pod : điều phối
+service -left-> pod : đường traffic
+deployment -down[dashed]-> observer : quan sát qua API
+note bottom of observer
+  /livez: đạt ngưỡng lỗi liên tiếp mới dừng container.
+  Grace period và restart policy vẫn có hiệu lực.
+  /readyz: thay đổi điều kiện endpoint của Service;
+  không chặn tức thì kết nối cũ hoặc truy cập thẳng Pod.
 end note
 @enduml

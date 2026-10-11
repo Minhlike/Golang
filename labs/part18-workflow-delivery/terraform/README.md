@@ -40,5 +40,8 @@ trữ access key dài hạn**.
 
 4. **Tên ECR Repository tuân thủ chuẩn:**
    Tách riêng biến `ecr_repository_name` với quy tắc validation bắt buộc viết thường
-   (`^[a-z0-9][a-z0-9-_/]*$`), tránh lỗi không tương thích giữa tên GitHub repo viết
-   hoa và quy tắc đặt tên của AWS ECR.
+   theo từng đoạn đường dẫn và giới hạn 2–256 ký tự trong `variables.tf`, tránh
+   chấp nhận tên như `team//api` hoặc tên kết thúc bằng dấu phân cách. Tên IAM
+   role là biến riêng `deployer_role_name`: tên kho ECR chứa `/` không thể dùng
+   trực tiếp làm tên role. Đây là kiểm tra cấu hình, chưa phải `terraform validate`
+   hay bằng chứng tạo tài nguyên AWS thành công.

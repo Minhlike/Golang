@@ -1,36 +1,19 @@
 @startuml
 !include publication-flow.iuml
-
 top to bottom direction
-
-package "Mục tiêu Khai báo (Declarative Intent)" as spec_pkg {
-  rectangle "<b>Trạng thái Mong muốn (Spec)</b>\nSố lượng bản sao (Replicas)\nCấu hình phiên bản, nhãn pod" as desired
-}
-
-package "Động cơ Điều hòa (Reconciliation Engine · Level-Triggered Loop)" as controller_pkg {
-  rectangle "1. Quan sát (Observe)\nĐọc trạng thái hiện tại qua Informer Cache" as observe
-  rectangle "2. So sánh (Diff)\nTính chênh lệch: Diff = Spec - Status" as diff
-  rectangle "3. Hành động (Actuate)\nGọi API Client để tạo, sửa hoặc xóa tài nguyên" as actuate
-
-  observe -right-> diff : hiện trạng
-  diff -right-> actuate : lệnh điều chỉnh
-}
-
-package "Tài nguyên Được Quản trị (Managed Cluster Workload)" as workload_pkg {
-  rectangle "<b>Hệ thống Thực tế (Workload & Pods)</b>\nTrạng thái vật lý chạy trên các Node" as current
-  rectangle "<b>Trạng thái Ghi nhận (Observed Status)</b>\nSố Pod đang sẵn sàng (ReadyReplicas)" as observed_status
-
-  current -right-> observed_status : báo cáo runtime
-}
-
-desired -down-> diff : Nạp Spec khai báo
-observed_status -up-> observe : Quan sát (có thể trễ)
-actuate -down-> current : Tác động điều chỉnh (Mutate)
-
-note bottom of controller_pkg
-  <b>Bản chất của Vòng lặp Điều hòa (Reconcile Loop):</b>
-  • Không cam kết hệ thống đạt trạng thái đích ngay tức thì trong một chu kỳ đơn lẻ.
-  • Luôn hướng tới trạng thái hội tụ tiệm cận liên tục theo thời gian thực.
-  • Thao tác điều hòa bắt buộc phải lũy đẳng (Idempotent) và có cơ chế giãn cách (Exponential Backoff).
+rectangle "<b>Ý ĐỊNH · SPEC</b>\nReplicas, image và policy" as desired
+rectangle "<b>QUAN SÁT</b>\nĐọc trạng thái; cache có thể trễ" as observe
+rectangle "<b>SO SÁNH</b>\nChọn hành động theo sai lệch\nKiểm tra identity và precondition" as diff
+rectangle "<b>HÀNH ĐỘNG</b>\nGọi API để tạo, sửa hoặc xóa\nTrả nil chưa chứng minh đã hội tụ" as act
+rectangle "<b>HỆ THỐNG BÊN NGOÀI</b>\nWorkload và trạng thái ghi nhận" as current
+desired -down-> diff : đầu vào
+observe -down-> diff
+diff -down-> act
+act -down-> current : tác động
+current -left-> observe : quan sát lại
+note bottom of current
+  Hội tụ phụ thuộc quyền, tài nguyên và dependency.
+  Hành động cần an toàn khi lặp; retry có budget.
+  Backoff là policy, không phải bảo đảm hội tụ.
 end note
 @enduml

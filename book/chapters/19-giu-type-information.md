@@ -18,7 +18,15 @@ func uniqueNames(values []string) []string {
 }
 
 func uniquePorts(values []int) []int {
-	// cùng vòng lặp, chỉ khác type của value và map
+	seen := make(map[int]struct{}, len(values))
+	result := make([]int, 0, len(values))
+	for _, value := range values {
+		if _, exists := seen[value]; !exists {
+			seen[value] = struct{}{}
+			result = append(result, value)
+		}
+	}
+	return result
 }
 ~~~
 
@@ -56,6 +64,10 @@ Nếu thử nghiệm với `Unique([][]byte{{1}, {1}})`, mã nguồn sẽ không
 
 Kiểu `any` là tên định danh phụ (*alias*) của `interface{}` rỗng. Nó phát huy vai trò ở ranh giới thực sự tiếp nhận nhiều hình thái dữ liệu đa dạng, tương tự như Chương 14 khi tiếp nhận đối tượng đích để kiểm tra qua cơ chế phản chiếu. Tuy nhiên, khai báo `func UniqueAny(values []any) []any` sẽ ép buộc phần hiện thực phải chuyển mạch kiểu (*type switch*), khẳng định kiểu (*type assertion*) hoặc chấp nhận phát sinh lỗi lúc chạy mới biết cách so sánh. Kiểu tổng quát không làm biến mất kiểu dữ liệu; nó yêu cầu trình biên dịch kiểm tra tính hợp lệ của đối số kiểu đối với ràng buộc ngay trước khi mã nguồn được phép thực thi.
 
+Có một ngoại lệ cần kiểm tra ngay: từ Go1.20, `any` và một số kiểu chứa interface có thể thỏa mãn ràng buộc `comparable`, dù không thuộc tập kiểu strictly comparable. Vì thế `Unique([]any{[]byte{1}})` biên dịch nhưng panic khi dùng slice động làm khóa map; chỉ một phần tử cũng đủ. Constraint cho phép viết phép toán trong thân hàm, không cam đoan mọi giá trị động đều so sánh an toàn. Test `TestUniqueInterfaceKeyCanPanic` bắt panic có chủ đích này; không chuyển nó thành hợp đồng trả error mà implementation không có.
+
+Ngay cả phép so sánh không panic cũng chưa định nghĩa cách gộp mọi dữ liệu nghiệp vụ: `NaN != NaN`, nên hai NaN vẫn là hai phần tử trong kết quả Unique. Hãy chọn chính sách riêng nếu miền dữ liệu muốn gộp NaN. Các phép thử tên miền/cổng chỉ dùng string/int; chúng không chứng minh hàm là bộ chuẩn hóa dữ liệu phổ quát.
+
 ## Constraint là danh sách phép được phép, không phải giấy phép bao hết type
 
 Có những thao tác đòi hỏi so sánh thứ tự hơn kém thay vì so sánh bằng. Chúng ta hoàn toàn có thể tự định nghĩa một ràng buộc thu hẹp phù hợp với đúng miền nghiệp vụ của bài toán, thay vì sao chép một ràng buộc quá rộng lớn chỉ để hàm trông có vẻ “tái sử dụng được”.
@@ -77,15 +89,19 @@ type Milliseconds int64
 slowest := Max(Milliseconds(120), Milliseconds(80))
 ~~~
 
+Max ở đây dùng đúng toán tử `>` chứ không định nghĩa thứ tự toàn phần cho số thực. Với NaN, phép so sánh ấy là false: `Max(NaN, 1)` trả 1 nhưng `Max(1, NaN)` trả NaN. Nếu số đo có thể chứa NaN, cần xác thực đầu vào hoặc quy định rõ cách xử lý; không suy từ constraint rằng kết quả độc lập thứ tự hai đối số.
+
 Toán tử hợp nhất `|` chỉ ra rằng một đối số kiểu phải thuộc về một trong các thành phần liệt kê. Ký tự ngã `~` mở rộng thành phần đó cho mọi kiểu tự định nghĩa (*defined type*) có kiểu nền tảng tương ứng. Nếu thiếu `~int64`, kiểu `Milliseconds` sẽ không thỏa mãn ràng buộc cho dù phép so sánh `left > right` hoàn toàn sáng tỏ về mặt ngữ nghĩa. Ngược lại, ký tự `~` không thực hiện ép kiểu ngầm định giữa hai giá trị đã mang kiểu cụ thể: kiểu `int` và `int64` vẫn hoàn toàn khác biệt, vì vậy lời gọi `Max(int(1), int64(2))` không thể tìm ra một tham số `T` duy nhất để suy luận kiểu. Riêng các hằng số chưa định kiểu (như số `1`) có thể tự động tiếp nhận kiểu dữ liệu từ đối số còn lại.
 
 Một ràng buộc chứa thành phần kiểu như `~int | ~int64` được gọi là giao diện tổng quát (*general interface*): nó được dùng riêng để giới hạn tham số kiểu, hoàn toàn không phải một giá trị giao diện để truyền qua lại trong chương trình. Một giao diện cơ bản (*basic interface*) có thể được dùng làm kiểu của biến: nó chỉ khai báo hoặc nhúng các phương thức, và có thể để rỗng như `any`. Ràng buộc còn có thể sử dụng các thành phần kiểu để giới hạn tập hợp kiểu dữ liệu và các phép toán mà trình biên dịch cho phép. Việc đặt cả hai khái niệm này dưới cùng một từ khóa “interface” rất dễ làm mờ nhạt đi hai vai trò kỹ thuật riêng biệt.
 
 > **Dừng để dự đoán:** Xét đoạn mã sau:
-> ~~~go
-> slowest := Max(Milliseconds(120), Milliseconds(80))
-> var raw int64 = slowest
-> ~~~
+
+~~~go
+slowest := Max(Milliseconds(120), Milliseconds(80))
+var raw int64 = slowest
+~~~
+
 > 1. Trình biên dịch thực hiện suy luận kiểu (type inference) cho `T` là `int64` hay `Milliseconds`?
 > 2. Biến `slowest` có kiểu dữ liệu tĩnh là gì?
 > 3. Lệnh gán `var raw int64 = slowest` có biên dịch thành công không, hay bị compiler báo lỗi?

@@ -179,32 +179,26 @@ Ba là, ghim hành động tự động bằng mã băm commit bất biến: Tha
 Bốn là, không đánh đồng mã định danh ảnh cục bộ với mã băm Manifest: Trường `.Id` mà lệnh kiểm tra (`inspect`) của bài lab lấy ra chính là mã băm cấu hình (*config digest*), không phải mã băm manifest dùng để kéo ảnh từ kho lưu trữ. Bản kê OCI Manifest và mã băm tương ứng hoàn toàn có thể được tạo cục bộ theo bố cục OCI; việc đẩy ảnh lên kho không phải là điều kiện tiên quyết để mã băm tồn tại. Đường ống CI/CD này trích xuất định danh phục vụ thăng hạng từ siêu dữ liệu Buildx/kho lưu trữ và bắt buộc phải phân biệt giữa bản kê của một nền tảng đơn lẻ với chỉ mục ảnh (*image index*) hỗ trợ đa nền tảng.
 
 ~~~yaml
-# Trích đoạn từ workflows/delivery.yaml
-permissions:
-  contents: read
-
-jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      # Ghim commit SHA bất biến (v4.2.2 và v5.3.0)
-      - uses: actions/checkout@11bd719... # v4.2.2
-      - uses: actions/setup-go@3041d5d... # v5.3.0
-        with:
-          go-version: '1.27.1'
-      # Kiểm tra từng module thuộc delivery path
-      - name: Verify Service Module
-        working-directory: labs/part16-real-signals
-        run: |
-          go test -v ./...
-          go vet ./...
-          go test -race ./...
-      - name: Verify Gate Module
-        working-directory: labs/part18-workflow-delivery
-        run: |
-          go test -v ./...
-          go vet ./...
-          go test -race ./...
+# Trích riêng verify.steps; workflow đầy đủ nằm trong lab.
+# YAML scalar xuống dòng, SHA vẫn là một chuỗi liên tục.
+- uses:
+    actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+- uses:
+    actions/setup-go@3041d5d36e89ee602123d24268e0ec2d978a6375
+  with:
+    go-version: '1.27.1'
+- name: Verify Service Module
+  working-directory: labs/part16-real-signals
+  run: |
+    go test -v ./...
+    go vet ./...
+    go test -race ./...
+- name: Verify Gate Module
+  working-directory: labs/part18-workflow-delivery
+  run: |
+    go test -v ./...
+    go vet ./...
+    go test -race ./...
 ~~~
 
 ### Thực thi cổng phê duyệt bằng Go và nguyên tắc đóng khi lỗi
@@ -232,36 +226,37 @@ tuyệt đối không truyền cờ giả mạo `--provenance-verified=true` (tr
 # Định danh digest mẫu 64 ký tự hex
 $DIGEST = "sha256:0123456789abcdef0123456789abcdef" + `
           "0123456789abcdef0123456789abcdef"
+go build -o promote-gate.exe ./cmd/promote-gate
 
 # 1. Thiếu provenance: gate từ chối fail-closed (Exit 1)
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=true `
   --provenance-verified=false
 
 # 2. Đạt chuẩn khi có đủ cả test và provenance (Exit 0)
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=true `
   --provenance-verified=true
 
 # 3. Trượt test: gate từ chối (Exit 1)
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=false `
   --provenance-verified=true
 
 # 4. Định danh trôi nổi :latest: lỗi đầu vào (Exit 2)
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest ":latest" `
   --revision "bcb3fe0"
 ~~~
 
 Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo:
-`invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2.
+`invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2. Các lệnh trên chạy binary vừa build, nên `$LASTEXITCODE` là mã của chương trình: 0 cho allow, 1 cho deny, 2 cho input lỗi. Nếu thay bằng `go run`, công cụ Go chỉ trả mã khác 0 khi chương trình lỗi; không giữ nguyên mã2 cho shell (chẩn đoán có thể ghi `exit status 2`). Hậu tố `.exe` và cách gọi trên dành cho PowerShell/Windows; trên Linux build tên không hậu tố rồi gọi `./promote-gate`.
 
 Đặc biệt, trong đường ống CI/CD, khi công cụ `promote-gate` trả về mã lỗi (khác 0) do thiếu dữ liệu xuất xứ hoặc trượt kiểm thử, tác vụ thăng hạng phải dừng lại ngay lập tức. Mọi cơ chế nuốt lỗi (như `|| echo` hay `continue-on-error`) nhằm để bước triển khai tiếp tục chạy đều là hành vi “diễn kịch bằng chứng”: dựng cổng kiểm soát cho có hình thức nhưng vẫn âm thầm phát hành mã nguồn chưa qua kiểm chứng. Ứng viên phát hành bị cổng từ chối đồng nghĩa với việc tuyệt đối không có bất kỳ lệnh triển khai nào được phép kích hoạt.
 
@@ -277,7 +272,7 @@ Thứ nhất, khóa chặt danh tính: chính sách tin cậy (*trust policy*) s
 
 Thứ hai, phân định tài nguyên theo từng hành động cụ thể: trong chính sách của bài lab, mệnh đề `ecr:GetAuthorizationToken` bắt buộc phải dùng `Resource = ["*"]` vì hành động này không hỗ trợ định danh tài nguyên cụ thể (ARN ở cấp độ tài nguyên). Đó không phải trường hợp ngoại lệ duy nhất trong toàn bộ hệ thống phân quyền AWS IAM. Các hành động ECR còn lại trong chính sách đều hỗ trợ giới hạn theo ARN của kho lưu trữ; các hành động trên AWS App Runner được giới hạn bằng ARN của dịch vụ tương ứng. Luôn tra cứu tài liệu tham khảo phân quyền dịch vụ cho từng hành động trước khi thiết lập tài nguyên và điều kiện kiểm tra; cấu hình ARN thu hẹp trong một ví dụ cụ thể không thể coi là quy tắc áp dụng cho mọi quyền hạn.
 
-Thứ ba, tên kho lưu trữ tuân thủ chuẩn quy ước: Biến `ecr_repository_name` được phân tách độc lập và áp dụng quy tắc kiểm tra định dạng bắt buộc viết thường (`^[a-z0-9][a-z0-9-_/]*$`), tránh phát sinh xung đột với quy tắc đặt tên có ký tự viết hoa của kho mã nguồn GitHub.
+Thứ ba, tên kho ECR và tên IAM role có hợp đồng riêng. `ecr_repository_name` kiểm độ dài và từng thành phần đường dẫn theo pattern của API ECR, không chỉ xem các ký tự có viết thường hay không: một tên như `team//api` vẫn sai. Biến `deployer_role_name` giữ tên role riêng với giới hạn IAM, vì tên kho có dấu `/` không thể dùng nguyên xi làm tên role. Không suy từ việc Terraform nhận biến rằng tài nguyên đã tồn tại hay caller có quyền thao tác.
 
 ~~~hcl
 # Trích đoạn từ terraform/main.tf
@@ -334,3 +329,5 @@ Từ đây, cuốn sách bước vào một nghiên cứu điển hình lớn h�
 6. HashiCorp Terraform. AWS Provider: `aws_iam_openid_connect_provider` và `aws_iam_role`. registry.terraform.io/providers/hashicorp/aws/latest/docs
 7. AWS Documentation. Actions, resources, and condition keys for Amazon Elastic Container Registry. docs.aws.amazon.com/service-authorization/latest/reference/list_ecr.html
 8. OCI. Image Format Specification: image manifest, image index và OCI image layout. github.com/opencontainers/image-spec
+9. AWS IAM. OIDC condition context keys: GitHub claims, including ref. docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html
+10. AWS. ECR CreateRepository and IAM CreateRole: naming patterns and length limits. docs.aws.amazon.com/AmazonECR/latest/APIReference/API_CreateRepository.html; docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html
