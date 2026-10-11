@@ -1,61 +1,18 @@
 @startuml
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 16
-skinparam shadowing false
-skinparam roundCorner 6
-skinparam arrowColor #222222
-skinparam arrowThickness 1.2
-
-skinparam package {
-  BackgroundColor #FAFAFA
-  BorderColor #334155
-  FontColor #0F172A
-  FontStyle bold
-}
-
-skinparam rectangle {
-  BackgroundColor #FFFFFF
-  BorderColor #475569
-  FontColor #000000
-}
-
-skinparam note {
-  BackgroundColor #F8FAFC
-  BorderColor #64748B
-  FontColor #1E293B
-  FontSize 14
-}
-
-top to bottom direction
-
-package "Ranh giới Giao dịch Cơ sở Dữ liệu (ACID Transaction Boundary)" as tx_boundary {
-  rectangle "<b>1. Khởi tạo Giao dịch (db.BeginTx)</b>\n• Mượn độc quyền 1 kết nối từ pool sql.DB\n• Thiết lập mức cô lập Isolation Level qua TxOptions\n• Đăng ký <i>defer tx.Rollback()</i> ngay sau khi mở" as begin_tx
-
-  rectangle "<b>2. Thao tác Cập nhật Thực thể</b>\nUPDATE checks SET enabled = false WHERE id = ?" as step_update
-
-  rectangle "<b>3. Thao tác Ghi Nhật ký Sự kiện</b>\nINSERT INTO check_events (check_id, event) VALUES (?, 'disabled')" as step_audit
-
-  begin_tx -down-> step_update : Thực thi tuần tự
-  step_update -down-> step_audit : Thành công
-}
-
-package "Kết cục Giao dịch (Atomic Outcomes)" as outcomes {
-  rectangle "<b>Xác nhận Bền vững (tx.Commit)</b>\n• Toàn bộ thay đổi có hiệu lực vĩnh viễn\n• Trả kết nối về pool an toàn\n• Lệnh defer Rollback sau đó trở thành no-op" as commit_node
-
-  rectangle "<b>Hoàn nguyên Toàn phần (tx.Rollback)</b>\n• Kích hoạt khi có lỗi, context timeout, hoặc panic\n• Xóa bỏ mọi thay đổi dở dang trên kết nối\n• Trả kết nối về pool, bảo toàn trạng thái cũ" as rollback_node
-}
-
-step_audit -down-> commit_node : <b>Mọi bước thành công:</b>\nGọi tx.Commit()
-step_update .[#EF4444]down.> rollback_node : <b>Lỗi bước 1:</b>\nRollback
-step_audit .[#EF4444]down.> rollback_node : <b>Lỗi bước 2:</b>\nRollback
-
-note right of tx_boundary
-  <b>Nguyên tắc Atomicity & Resource Lifecycle trong Go:</b>
-  • Tính nguyên tử bảo đảm: hoặc cả hai thay đổi cùng thành công,
-    hoặc không có gì thay đổi trên cơ sở dữ liệu.
-  • Một transaction neo chặt vào đúng 1 kết nối duy nhất;
-    việc quên đóng transaction sẽ gây rò rỉ kết nối trong pool.
-  • Mọi luồng thoát đều phải đi qua Commit hoặc Rollback.
-end note
+!include publication-flow.iuml
+start
+:BeginTx thành công;\nđăng ký defer Rollback;
+:Qua tx: cập nhật checks.enabled\nrồi thêm check_events(check_id, action);\ndừng ngay tại lỗi hoặc check không tồn tại;
+if (Hai statement thành công?) then (Có)
+  :Gọi Commit;
+  if (Commit trả nil?) then (Có)
+    :Xác nhận cả hai thay đổi;
+  else (Lỗi)
+    :Không suy kết cục lưu trữ\nchỉ từ lỗi xác nhận;
+    :Đối chiếu contract driver/database\nvà định danh thao tác;
+  endif
+else (Không)
+  :Thoát; deferred Rollback\nhoàn nguyên transaction;
+endif
+stop
 @enduml

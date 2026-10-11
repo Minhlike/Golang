@@ -4,7 +4,7 @@
 
 Một buổi trực, dịch vụ trả mã `500` cho thao tác tắt một điểm kiểm tra đang gặp lỗi. Người trực ca tin rằng yêu cầu thất bại nên thực hiện gọi lại. Lần đọc tiếp theo lại cho thấy điểm kiểm tra đã bị tắt, nhưng nhật ký kiểm toán (*audit log*) không ghi nhận dòng nào về danh tính người thực hiện. Đây không phải lỗi bỏ quên nhật ký đơn thuần. Từ ngoài nhìn vào, hệ thống đang kể hai câu chuyện mâu thuẫn về cùng một thay đổi.
 
-Trạng thái bền vững khác với một giá trị nằm trong RAM: nó sẽ được yêu cầu kế tiếp, tiến trình khác, hoặc lần khởi động sau dùng làm sự thật. Vì vậy câu hỏi đầu tiên của lưu trữ bền vững (*persistence*) không phải là chọn ORM hay viết bao nhiêu câu SQL. Câu hỏi là: sau khi một thao tác nhiều bước báo hoàn tất hoặc báo lỗi, những trạng thái nào được phép tồn tại? Mô hình tư duy của chương là một ranh giới (*boundary*): với các thay đổi cùng một ý nghĩa nghiệp vụ, bên quan sát trạng thái phải thấy phiên bản cũ hoặc phiên bản mới đã hoàn tất, không phải một trạng thái dang dở ở giữa chừng.
+Trạng thái bền vững sẽ được yêu cầu kế tiếp, tiến trình khác hoặc lần khởi động sau sử dụng. Câu hỏi đầu tiên là: sau thao tác nhiều bước, những trạng thái nào được phép tồn tại? Mô hình tư duy của chương là ranh giới xác nhận: các thay đổi cùng ý nghĩa nghiệp vụ phải được xác nhận hoặc hoàn nguyên cùng nhau. Tính nguyên tử bảo vệ kết cục lưu trữ; việc người đọc đồng thời thấy gì còn phụ thuộc mức cô lập, snapshot và cách họ nhóm các lần đọc. Hai truy vấn độc lập vẫn có thể đọc một phần trước và một phần sau commit, dù giao dịch ghi nguyên tử.
 
 ## Một `if err != nil` không tự tạo atomicity
 
@@ -27,7 +27,7 @@ if _, err := db.ExecContext(ctx,
 
 Nhưng hai lời gọi độc lập là hai ranh giới thực thi tách biệt. Nếu câu lệnh `UPDATE` thành công còn `INSERT` lỗi vì vi phạm ràng buộc toàn vẹn (*constraint*), hàm trả về lỗi thật, song cơ sở dữ liệu vẫn giữ điểm kiểm tra ở trạng thái tắt. Bên gọi có lý do để thực hiện thử lại; người điều tra sự cố đối mặt với một trạng thái thiếu nguyên nhân phát sinh. Không có dòng `if` nào tự động đảo ngược câu lệnh đầu tiên chỉ vì câu lệnh kế tiếp thất bại.
 
-Giao dịch (*transaction*) là cách thông báo cho cơ sở dữ liệu biết tập hợp câu lệnh này thuộc về một đơn vị công việc nguyên tử: hoặc tất cả được xác nhận (*commit*), hoặc không câu lệnh nào trong đơn vị được lưu lại. Giao dịch không giải quyết mọi vấn đề về tính nhất quán (*consistency*); nó chỉ bảo đảm cam kết giới hạn nhưng tối quan trọng ấy tại ranh giới cơ sở dữ liệu.
+Giao dịch thông báo cho cơ sở dữ liệu rằng tập câu lệnh thuộc một đơn vị công việc: các thay đổi được xác nhận hoặc hoàn nguyên cùng nhau theo contract của hệ quản trị. Tính nguyên tử không có nghĩa “hàm Go trả lỗi thì chắc chắn chưa commit”. Nếu phản hồi xác nhận bị mất, bên gọi có thể không biết kết cục dù phía lưu trữ đã quyết định. Khi `Commit` trả lỗi, tài liệu Go yêu cầu bỏ các kết quả của giao dịch vì không còn xác nhận được chúng là hợp lệ; việc truy vấn lại hoặc thử lại cần định danh thao tác và policy của database/driver.
 
 ![Một transaction giữ hai thay đổi trong cùng boundary](../../assets/diagrams/transaction-boundary.png)
 @figure Sơ đồ khái niệm về tính nguyên tử (*atomicity*) của thao tác `Disable`. Hình không khẳng định mức độ cô lập (*isolation level*) nào; cơ sở dữ liệu, trình điều khiển (*driver*) và `TxOptions` mới quyết định chi tiết mức cô lập được hỗ trợ.
@@ -104,7 +104,7 @@ func Disable(
 }
 ~~~
 
-Sau khi đã thử nghiệm, hãy đối chiếu với `fixed/disable.go`. Điểm dễ bỏ sót không phải câu lệnh SQL mà là quyền sở hữu của giao dịch. Lệnh `defer tx.Rollback()` được đặt ngay sau khi giao dịch đã khởi tạo thành công. Nếu bất kỳ lệnh `return` nào xảy ra trước `Commit`, thao tác hoàn nguyên (*rollback*) là bước dọn dẹp an toàn; sau `Commit`, lệnh hoàn nguyên chỉ trả về lỗi đã kết thúc và được bỏ qua an toàn. Tất cả câu lệnh thuộc đơn vị công việc phải được gọi trên đối tượng `tx`. Một lời gọi `db.ExecContext` chen vào giữa sẽ chạy ngoài giao dịch này.
+Sau khi tự làm, hãy đối chiếu `fixed/disable.go`. `defer tx.Rollback()` đặt ngay sau `BeginTx` bảo vệ những đường thoát trước khi giao dịch kết thúc; mọi statement của đơn vị phải chạy qua `tx`, không chen `db.ExecContext` ở ngoài. Sau `Commit` thành công, rollback trả `sql.ErrTxDone`. Trong Go 1.27.1, nếu đã gọi `driver.Tx.Commit` rồi driver trả lỗi, `sql.Tx` cũng đã đánh dấu kết thúc: deferred rollback không gọi ngược xuống driver để đảo commit. Test `TestCommitErrorDoesNotMakeDeferredRollbackUndoCommit` dùng driver giả cố ý trả lỗi xác nhận để kiểm chứng vòng đời thật của `database/sql`; nó không giả làm thí nghiệm mất gói tin với database thật. Cleanup của Go và kết cục lưu trữ là hai ranh giới khác nhau.
 
 Phương thức `RowsAffected` trả về số dòng bị tác động do trình điều khiển cung cấp; một số hệ cơ sở dữ liệu hoặc câu lệnh đặc thù có thể không hỗ trợ thông tin này. Bài thực hành dùng SQLite, nơi hợp đồng này được kiểm chứng nhất quán. Trong dịch vụ thực tế, kỹ sư cần chọn cách phân biệt trường hợp không tìm thấy bản ghi dựa trên ngữ nghĩa của hệ quản trị và truy vấn đang dùng, thay vì xem một phương thức tiện tay là quy chuẩn chung của SQL.
 
@@ -178,7 +178,7 @@ return checks, nil
 
 ## Câu lệnh chuẩn bị sẵn (Prepared Statement) và ranh giới tài nguyên
 
-Khi một câu lệnh SQL được gửi tới cơ sở dữ liệu, engine phải phân tích cú pháp (parse), lập kế hoạch thực thi (query plan), rồi mới tiến hành truy vấn. Nếu cùng một mẫu câu lệnh được thực thi hàng nghìn lần lặp lại trong một đợt xử lý, việc lặp lại các bước phân tích này có thể tạo ra chi phí phụ trội không đáng có. `database/sql` cung cấp kiểu `*sql.Stmt` thông qua phương thức `PrepareContext` để biên dịch câu lệnh một lần và thực thi nhiều lần:
+`PrepareContext` tạo một statement có thể thực thi nhiều lần với các đối số khác nhau. Driver và hệ quản trị quyết định nó chuẩn bị, lập kế hoạch và tái sử dụng tài nguyên thế nào; `database/sql` không hứa một lần biên dịch SQL duy nhất cho cả pool. Statement tạo từ `DB` có thể được chuẩn bị lại trên kết nối khác, còn statement từ `Tx` gắn với kết nối của giao dịch. Ví dụ sau chuẩn bị một mẫu chèn sự kiện rồi dùng lại trong cùng `tx`:
 
 ~~~go
 stmt, err := tx.PrepareContext(ctx,
@@ -274,7 +274,7 @@ Ba là, tính tương thích khi triển khai (*deployment compatibility*). Tron
 
 Bốn là, chiến lược xử lý sự cố khi nâng cấp dữ liệu. Phương án sửa tiến (*forward-fix*) thường được ưu tiên trong thực tế vận hành để tránh nguy cơ mất mát dữ liệu mới phát sinh trong giai đoạn chuyển tiếp nếu chạy tập lệnh đảo ngược (*down migration*). Tuy nhiên, lựa chọn giữa sửa tiến và hoàn nguyên (*rollback*) phụ thuộc vào mô hình lỗi, tính toàn vẹn của dữ liệu và chính sách vận hành của từng hệ thống.
 
-Năm là, ranh giới giao dịch đối với các câu lệnh định nghĩa dữ liệu (*DDL*). Khả năng bọc câu lệnh DDL trong giao dịch phụ thuộc vào hệ quản trị cơ sở dữ liệu và phiên bản cụ thể. PostgreSQL hỗ trợ giao dịch DDL nguyên tử cho nhiều thao tác danh mục (như `CREATE TABLE`, `ALTER TABLE`), tuy nhiên kỹ sư vẫn cần xem xét các yếu tố về khóa bảng và các ngoại lệ như `CREATE INDEX CONCURRENTLY`. SQLite hỗ trợ giao dịch DDL cho các thao tác được công cụ cho phép (như `ALTER TABLE ADD COLUMN` được kiểm chứng trong bài thực hành). Trong khi đó, MySQL hiện đại (từ MySQL 8.0) hỗ trợ cơ chế DDL nguyên tử ở cấp độ từng câu lệnh riêng lẻ, nhưng các câu lệnh DDL trong MySQL vẫn tự động gây ra lệnh xác nhận ngầm định (*implicit commit*), do đó không thể kết hợp tùy ý nhiều câu lệnh DDL cùng các thao tác dữ liệu khác vào trong một giao dịch để hoàn nguyên toàn phần.
+Năm là, khả năng đặt các câu lệnh định nghĩa dữ liệu (*DDL*) trong giao dịch phụ thuộc vào hệ quản trị và phiên bản. PostgreSQL cho phép nhiều thao tác như `CREATE TABLE`, `ALTER TABLE` nằm trong giao dịch, nhưng vẫn phải xét khóa và ngoại lệ như `CREATE INDEX CONCURRENTLY`. SQLite cho phép giao dịch chứa DDL; lab kiểm chứng `ALTER TABLE ADD COLUMN`. MySQL 8.0 có DDL nguyên tử cho những statement được hỗ trợ; với thao tác trên bảng, khả năng này còn phụ thuộc storage engine, cụ thể là InnoDB. DDL nguyên tử từng statement không phải giao dịch DDL do ứng dụng quản lý: phần lớn DDL gây xác nhận ngầm định (*implicit commit*), nên không thể gom tùy ý với những thay đổi khác rồi hoàn nguyên chung. `CREATE TEMPORARY TABLE` là ngoại lệ không gây implicit commit, nhưng bảng được tạo vẫn không bị xóa bởi `ROLLBACK`. Phải đọc contract của đúng statement, không áp một quy tắc chung cho mọi DDL.
 
 Sáu là, kiểm thử tiến hóa lược đồ dữ liệu (*schema evolution*). Bài thực hành của chương chứng minh cơ chế này qua kiểm thử `TestSchemaMigrationOrderingAndRollback`. Việc nâng cấp lược đồ từ phiên bản 1 lên phiên bản 2 được thực thi trong giao dịch nguyên tử. Kiểm thử chủ động tạo kịch bản di chuyển lỗi (thêm cột `failed_col` nhưng hoàn nguyên giao dịch trước khi hoàn tất ghi nhận phiên bản) và kiểm tra qua `PRAGMA table_info` cùng bảng `schema_migrations` để xác nhận cột hủy không tồn tại và số hiệu phiên bản giữ nguyên ở mức 1; sau đó mới thực thi bước nâng cấp v2 hợp lệ và xác nhận thành công.
 
@@ -302,7 +302,7 @@ Tính tương thích của dữ liệu đã lưu trữ phụ thuộc vào địn
 
 Điểm dừng của chương không phải là việc thuộc lòng các câu lệnh SQL hay cấu hình máy chủ. Đó là thói quen phân định ranh giới trạng thái một cách có kỷ luật:
 
-Một là, gom cụm các thao tác cùng ý nghĩa nghiệp vụ vào một transaction nguyên tử trên cơ sở dữ liệu, bảo đảm tính toàn vẹn hoặc không gì cả.
+Một là, gom các thay đổi cùng ý nghĩa nghiệp vụ vào một transaction; phân biệt kết cục nguyên tử với bằng chứng bên gọi nhận được và mức cô lập của các lần đọc.
 
 Hai là, quản lý kết nối như một tài nguyên dùng chung có giới hạn qua connection pool, đo lường bằng `DB.Stats()` thay vì suy đoán thông số.
 

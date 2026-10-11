@@ -4,7 +4,7 @@
 
 Trong nhật ký vận hành (*log*), một lệnh gọi HTTP thường chỉ còn lại một dòng tóm tắt: `GET https://api.example/... 1.8s`. Dòng nhật ký đó hữu ích, nhưng lại che giấu gần như toàn bộ câu chuyện bên dưới. Khoảng thời gian 1.8 giây có thể là tra cứu DNS, chờ một kết nối rảnh trong bể kết nối, kết nối TCP (*TCP dial*), bắt tay bảo mật (*TLS handshake*), máy chủ xử lý, đọc thân phản hồi, trễ qua máy chủ ủy quyền (*proxy*), hoặc thời hạn chót (*deadline*) do chính bên gọi đặt ra. Nếu chỉ thiết lập một thời gian chờ tổng thể duy nhất và một dòng nhật ký sau cùng, ta chỉ biết yêu cầu thất bại nhưng hoàn toàn không biết cần khắc phục ở tầng nào.
 
-Mô hình tinh thần của chương này: một yêu cầu HTTP là chuỗi giao ước theo từng chặng độc lập; một chặng chỉ phát sinh khi trạng thái kết nối và chính sách vận hành khiến nó thực sự cần thiết. Một yêu cầu tái sử dụng kết nối rảnh có thể bỏ qua bước tra cứu DNS, không cần quay số tạo kết nối TCP mới, và không cần bắt tay TLS lại từ đầu. Một yêu cầu mới toanh sẽ phải đi qua đầy đủ các chặng đó. Vì vậy sơ đồ dưới đây là bản đồ khả năng, không phải lời cam đoan về một thứ tự máy móc cho mọi lần gọi.
+Mô hình tinh thần của chương này: một yêu cầu HTTP đi qua những chặng do địa chỉ đích, trạng thái kết nối và chính sách vận hành quyết định. Tái sử dụng kết nối có thể tránh DNS, TCP và TLS mới. Ngay cả khi phải tạo kết nối, địa chỉ IP trực tiếp không cần phân giải tên, HTTP không có TLS, còn proxy có thể thay đổi nơi quay số và cách phân giải. HTTP/2 còn cho nhiều yêu cầu dùng chung kết nối đang hoạt động. Vì vậy sơ đồ dưới đây giới hạn ở đường HTTP/1.x trực tiếp thông thường, không phải thứ tự bắt buộc của mọi lần gọi.
 
 ## Bắt đầu bằng dấu vết thay vì API
 
@@ -36,7 +36,7 @@ req = req.WithContext(traceCtx)
 Trường `GotConnInfo.Reused` mang ý nghĩa quyết định, chứ không chỉ là mốc thời gian thông thường. Thông tin này phân biệt rõ một yêu cầu tái sử dụng kết nối sẵn có trong bể kết nối (*connection pool*) với một yêu cầu phải thiết lập kết nối mạng mới. Dấu vết quan sát (*trace*) là dữ liệu của *một vòng khứ hồi (round trip)*; nó không tự động bao phủ toàn bộ chuỗi chuyển hướng (*redirect*) và không thay thế nhật ký ngữ cảnh nghiệp vụ. Hãy gắn định danh yêu cầu (*request ID*), đích đến đã chuẩn hóa và kết quả vào nhật ký vận hành; chỉ dùng dấu vết truy vết khi cần bóc tách độ trễ (*latency*) chi tiết theo từng chặng kỹ thuật.
 
 ![Các chặng có thể của HTTP client request](../../assets/diagrams/http-client-request-path.png)
-@figure Bản đồ khái niệm của một yêu cầu máy khách. Nhánh “kết nối rảnh” bỏ qua DNS, TCP và TLS mới; thân phản hồi vẫn là tài nguyên mà bên gọi phải chịu trách nhiệm giải phóng trọn vẹn vòng đời.
+@figure Đường HTTP/1.x trực tiếp: DNS chỉ cần khi phải phân giải tên, TLS chỉ có với HTTPS. Đọc và đóng thân phản hồi tạo điều kiện tái sử dụng nhưng không bảo đảm socket sẽ được giữ lại; HTTP/2 và proxy nằm ngoài hình.
 
 ## Tên miền, địa chỉ mạng, kết nối và danh tính không phải là một
 
@@ -104,7 +104,7 @@ Thời gian chờ không thể tự trả lời câu hỏi liệu việc thử l
 
 Phương thức `Client.Do` trả về cấu trúc `Response` với trường thân `Body` khác `nil` khi không có lỗi. Bên gọi bắt buộc phải đóng thân phản hồi này. Việc đọc hết đến ký tự kết thúc `io.EOF` rồi mới đóng sẽ tạo điều kiện để tái sử dụng kết nối HTTP/1.x duy trì (*keep-alive*), dù không cam đoan yêu cầu tiếp theo chắc chắn sẽ dùng lại kết nối đó. Từ Go 1.27, khi gọi lệnh `Close`, tầng hiện thực HTTP/1 sẽ tự động giải phóng phần dữ liệu chưa đọc tới một hạn mức thận trọng để hỗ trợ tái sử dụng kết nối. Điều đó không đồng nghĩa với việc đóng một phần thân bất kỳ đều sẽ đọc hết dữ liệu hoặc giữ lại được kết nối mạng; không nên biến chi tiết cài đặt này thành chính sách phân định quyền sở hữu tài nguyên. Hàm tiện ích hoặc trả về `*http.Response` và ghi rõ tài liệu yêu cầu bên gọi phải đóng thân phản hồi, hoặc chủ động đọc hết, đóng lại rồi chỉ trả về giá trị dữ liệu độc lập.
 
-Bài thực hành của chương lựa chọn chính sách thứ hai. Giao ước bắt đầu bằng ca kiểm thử báo đỏ: hàm `Fetch` phải tạo yêu cầu gắn với ngữ cảnh của bên gọi, đọc toàn bộ thân phản hồi, đóng thân phản hồi, và chuyển đổi mọi mã trạng thái ngoài dải 2xx thành lỗi `StatusError`. Không được sử dụng biến toàn cục `http.DefaultClient`; bộ kiểm thử truyền một bộ điều vận giả vào máy khách để quan sát yêu cầu mà không cần chạm tới mạng thực tế.
+Bài thực hành lựa chọn chính sách thứ hai cho phản hồi nhỏ, đáng tin. Hàm `Fetch` gắn ngữ cảnh bên gọi vào yêu cầu và đóng thân trên cả nhánh thành công lẫn lỗi đọc. Nó đọc thân trước rồi mới kiểm tra mã trạng thái cuối cùng sau chính sách chuyển hướng của `Client`; nếu đọc thành công mà mã ngoài dải 2xx, nó trả `StatusError`. Lỗi đọc thân được ưu tiên, không tự biến thành `StatusError`. `Client.Do` không coi mã ngoài 2xx là lỗi truyền tải. Bộ kiểm thử truyền máy khách và bộ điều vận giả để quan sát contract mà không cần mạng ngoài; `Fetch` hiện không có trần số byte, nên không phải hàm an toàn cho phản hồi lớn hoặc nguồn không đáng tin.
 
 ~~~powershell
 cd labs/part11-request-path
@@ -133,7 +133,9 @@ go test -run TestTransportReusesIdleConnection ./fixed
 go test -race ./fixed
 ~~~
 
-Khi đứng trước một yêu cầu bị chậm trễ, đừng vội hỏi “điểm cuối API nào bị chậm?”. Hãy đặt những câu hỏi mang tính chẩn đoán: kết nối có được tái sử dụng hay không, mốc thời gian chờ nào đã kích hoạt, thời gian tra cứu DNS, bắt tay TLS và nhận byte đầu tiên nằm ở đâu trên dấu vết truy vết, thân phản hồi đã được hoàn trả nợ tài nguyên chưa, và thao tác thử lại có bảo đảm tính toàn vẹn của nghiệp vụ hay không. Những câu hỏi chính xác đó sẽ biến một dòng nhật ký 1.8 giây mơ hồ thành một cuộc điều tra kỹ thuật có thể kết luận và khắc phục triệt để.
+Kiểm thử `TestLiteralIPNeedsNoDNSAndServerMayPreventReuse` đặt thêm một phản ví dụ: máy chủ cục bộ dùng địa chỉ IP và gửi `Connection: close`. Hai yêu cầu đều đọc hết và đóng thân nhưng không có điểm móc DNS nào và không tái sử dụng kết nối. Điều này tách trách nhiệm đóng tài nguyên của bên gọi khỏi quyền quyết định giữ kết nối của hai phía.
+
+Khi điều tra yêu cầu chậm, hãy kiểm tra kết nối có được tái sử dụng, giới hạn nào đã kích hoạt, các mốc DNS/TLS/byte đầu tiên nằm ở đâu, thân phản hồi có được đóng và việc thử lại có an toàn cho nghiệp vụ hay không. Một dòng nhật ký 1.8 giây là điểm khởi đầu; kết luận cần dữ liệu ở đúng chặng đang nghi ngờ.
 
 @references
 1. Go Team. Package `net`, phần Name Resolution và `Resolver.LookupHost`. pkg.go.dev/net

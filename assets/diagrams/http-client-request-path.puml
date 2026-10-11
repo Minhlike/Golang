@@ -2,31 +2,14 @@
 !include publication-flow.iuml
 
 start
-
-:Khởi tạo HTTP Request (Gắn context và deadline);
-
-if (Có kết nối rảnh trong Connection Pool?) then (Có sẵn)
-  :Tái sử dụng kết nối TCP hiện hữu\n(Bỏ qua chi phí bắt tay kết nối);
-else (Không có)
-  :1. Phân giải DNS (Resolve Hostname -> IP);
-  :2. Bắt tay TCP 3-Way Handshake (net.Dialer);
-  if (URL là HTTPS?) then (Có bảo mật)
-    :3. Bắt tay TLS Handshake (Xác thực chứng chỉ);
-  endif
-  :4. Kích hoạt kết nối vận chuyển (Transport);
+:Tạo request\nvới context bên gọi;
+if (Có kết nối HTTP/1.x\ndùng lại được?) then (Có)
+  :Chọn kết nối từ pool;
+else (Chưa có)
+  :Thiết lập kết nối mới:\nDNS nếu cần phân giải;\nTCP; TLS nếu dùng HTTPS;
 endif
-
-:5. Gửi Request Headers và Body Stream;
-:6. Tiếp nhận Response Headers từ Server;
-:7. Đọc dữ liệu qua resp.Body (io.Reader);
-:8. Đóng luồng dữ liệu (defer resp.Body.Close());
-
-note right
-  <b>Quy tắc Socket Lifecycle trong Go:</b>
-  • Đọc cạn toàn bộ dữ liệu và gọi Close().
-  • Đóng đúng chuẩn: socket được hoàn trả về Pool.
-  • Bỏ quên Close(): socket bị rò rỉ hoặc đóng cưỡng bức.
-end note
-
+:Gửi request,\nnhận response headers;
+:Bên gọi đọc hoặc xử lý resp.Body;
+:Bên gọi đóng resp.Body\ntrên mọi đường thoát;
 stop
 @enduml

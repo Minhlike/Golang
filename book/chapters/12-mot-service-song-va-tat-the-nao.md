@@ -11,7 +11,7 @@ Mô hình tinh thần của chương này: dịch vụ là một ranh giới bi�
 Xét trường hợp `/v1/checks` tiếp nhận một mục tiêu kiểm tra, lưu yêu cầu, rồi trả về mã `201`. Trong một lần triển khai phiên bản mới, bộ cân bằng tải (*load balancer*) chuyển hướng lưu lượng mạng sang phiên bản mới nhưng tiến trình cũ nhận tín hiệu dừng ngay giữa lúc đang ghi phản hồi. Có ba trạng thái cần phân biệt rõ ràng: dịch vụ còn nhận kết nối mới, đang để các yêu cầu đã tiếp nhận chạy đến khi hoàn tất, hay đã dừng hẳn. Phương thức `Server.Shutdown` của `net/http` đóng trình lắng nghe (*listener*), đóng các kết nối rảnh (*idle connection*), rồi kiên nhẫn chờ các kết nối đang hoạt động hoàn tất để trở về trạng thái rảnh rồi mới đóng lại. Lệnh này không tự hủy ngữ cảnh của hàm xử lý đang chạy. Ngữ cảnh `r.Context()` của yêu cầu gửi đến có vòng đời độc lập: nó bị hủy khi máy khách ngắt kết nối, luồng HTTP/2 bị hủy, hoặc khi `ServeHTTP` trả về, chứ không phải chỉ vì `Shutdown` vừa được gọi. Nó không tự chờ các kết nối đã chuyển giao quyền kiểm soát (*hijacked connection*), chẳng hạn như WebSocket; những kết nối tồn tại lâu dài luôn cần chính sách vòng đời chuyên biệt.
 
 ![Vòng đời phục vụ và rút lui của service](../../assets/diagrams/http-service-lifecycle.png)
-@figure Khái niệm vòng đời (*lifecycle*) khi dịch vụ tắt êm dịu (*graceful shutdown*). Thời hạn chót (*deadline*) của quá trình tắt là chính sách vận hành: giới hạn thời gian chờ, không biến mọi yêu cầu thành kết quả thành công.
+@figure Tách kết quả `Shutdown` khỏi vòng đời của handler. Hết ngân sách chờ trả về lỗi context, không chứng minh handler đã kết thúc; DB, logger và kết nối hijack vẫn cần bên sở hữu riêng.
 
 Một hàm chạy server có thể giữ contract ấy trong một nơi thay vì để `main` thoát vì mọi error đều trông giống nhau. Hãy đọc phần đầu và phần shutdown dưới đây như hai đoạn liên tiếp của cùng một function; tách chúng ra cũng giúp lifecycle hiện rõ hơn trên trang:
 
@@ -65,7 +65,11 @@ func ServeUntilStopped(
 }
 ~~~
 
-Ba mệnh đề bảo vệ (*guard clauses*) đầu tiên không phải lập trình phòng thủ vô định. `srv`, `ln` và `grace` là ba điều kiện tiên quyết của hàm hỗ trợ vòng đời; nếu thiếu một trong số đó, việc gọi `Serve` chỉ để nhận hoảng loạn (`panic`) hoặc treo tiến trình sẽ không giúp bên gọi sửa được cấu hình. `shutdownCtx` được tạo từ `context.Background()` có chủ đích. Ngữ cảnh gốc (*root context*) đã bị hủy để phát tín hiệu dừng; nếu lấy thời hạn chót tắt dịch vụ trực tiếp từ đó, thời hạn sẽ bị hủy ngay trước khi `Shutdown` có cơ hội giải phóng các yêu cầu còn dang dở. Tham số `grace` phải xuất phát từ chỉ tiêu cam kết dịch vụ (SLO), thời gian triển khai và đặc thù yêu cầu của hệ thống, thay vì một con số sao chép từ ví dụ mẫu. Sau thời hạn chót, `Shutdown` trả về lỗi; quyết định tiếp theo (ghi nhật ký, cảnh báo, cưỡng bức đóng kết nối hay để trình giám sát tiến trình xử lý) là chính sách cần được quy định rõ tại ranh giới vận hành.
+`srv`, `ln` và `grace` là ba tiền điều kiện mà helper kiểm tra; bên gọi cũng phải cung cấp context khác `nil` theo contract của gói `context`. `shutdownCtx` được tạo từ `context.Background()` vì context phát tín hiệu dừng đã bị hủy. Ngân sách `grace` cần phù hợp với giới hạn triển khai và thời lượng yêu cầu, không lấy context đã hủy làm cơ hội chờ drain.
+
+Sau khi hết ngân sách, `Shutdown` trả lỗi context nhưng handler có thể vẫn chạy. Ngay cả `Serve` trả `ErrServerClosed` cũng chỉ xác nhận vòng nhận kết nối đã dừng, không phải mọi công việc đã kết thúc. Test `TestShutdownExpiredBudgetDoesNotFinishActiveHandler` giữ handler tại một cổng chờ, dùng deadline đã quá hạn rồi xác nhận context request chưa bị hủy và handler chưa hoàn tất. Fixture tự mở cổng chờ và join khi dọn dẹp. `Server.Close` có thể cưỡng bức đóng kết nối HTTP do server quản lý, nhưng không giết goroutine đang tính toán hoặc tự dọn DB/logger. Chỉ đóng các phụ thuộc sau khi những tác vụ còn dùng chúng đã kết thúc theo policy đã chọn.
+
+`RegisterOnShutdown` dùng để phát thông báo bắt đầu shutdown cho giao thức riêng; `Shutdown` không chờ các callback này hoàn tất. Test `TestShutdownCallbackIsNotificationNotJoin` giữ một callback đang chờ ngay cả khi `Shutdown` đã trả `nil`. Nếu WebSocket hoặc tác vụ nền cần join, chủ sở hữu phải tạo và chờ tín hiệu hoàn tất riêng.
 
 ### Từ signal của process sang context của server
 
@@ -139,11 +143,11 @@ Ngữ cảnh của yêu cầu gửi đến `r.Context()` do máy chủ HTTP qu�
 Trong bài thực hành, `POST /v1/checks` là một ranh giới nhỏ. Điểm cuối tiếp nhận dữ liệu JSON chỉ chứa trường `target`, chấp nhận giao thức `http` hoặc `https` với máy chủ không rỗng, chuyển giá trị hợp lệ sang kho lưu trữ `Store`, và không để lộ lỗi nội bộ của kho lưu trữ ra phía máy khách. Bài thực hành chưa thực hiện lệnh thăm dò gửi ra ngoài: đó là quyết định tiềm ẩn rủi ro giả mạo yêu cầu phía máy chủ (SSRF) và cạn kiệt hạn ngạch (*quota*), do đó không nên đưa tùy tiện vào một hàm xử lý mẫu.
 
 > **Dừng để dự đoán:** Xét một hàm xử lý HTTP tiếp nhận gói tin (*payload*) thông qua `json.Decoder`:
-> ~~~go
-> decoder := json.NewDecoder(r.Body)
-> var input Check
-> err := decoder.Decode(&input)
-> ~~~
+~~~go
+decoder := json.NewDecoder(r.Body)
+var input Check
+err := decoder.Decode(&input)
+~~~
 > Nếu client gửi body gồm một document hợp lệ rồi nối thêm dữ liệu thừa như `{"target":"https://example.com"}{"debug":true}`, lệnh `decoder.Decode(&input)` có báo lỗi không, và phần dữ liệu thừa phía sau sẽ đi về đâu? Làm thế nào để chứng minh stream đã thực sự kết thúc trước khi chuyển giao dữ liệu sang `Store`?
 
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
@@ -151,7 +155,7 @@ Lệnh `decoder.Decode(&input)` đọc và giải mã thành công object đầu
 
 Để chứng minh luồng dữ liệu (*stream*) không còn dữ liệu thừa ngoài khoảng trắng, hàm xử lý thực hiện thêm một lần giải mã thứ hai vào một cấu trúc rỗng (`var extra struct{}`). Khi luồng dữ liệu đã kết thúc đúng chuẩn, bộ giải mã bắt buộc phải trả về chính xác lỗi `io.EOF`. Mọi dữ liệu còn sót lại trong bộ đệm giải mã hoặc trên luồng mạng đều khiến lần gọi thứ hai trả về một kết quả khác `io.EOF`, tạo bằng chứng rõ ràng để hàm xử lý từ chối yêu cầu bằng mã 400 Bad Request trước khi chuyển giao việc cho `Store`.
 
-Dưới đây là cài đặt kiểm định ranh giới hoàn chỉnh của handler trong lab:
+Dưới đây là handler của lab; các helper về lỗi và ghi JSON được định nghĩa trong cùng package:
 
 ~~~go
 func (a app) createCheck(
@@ -160,6 +164,10 @@ func (a app) createCheck(
 ) {
 	if r.Method != http.MethodPost {
 		methodNotAllowed(w)
+		return
+	}
+	if a.store == nil {
+		internalError(w)
 		return
 	}
 
@@ -189,7 +197,7 @@ func (a app) createCheck(
 
 Lần gọi `Decode` thứ hai không nhằm đọc một bản ghi kiểm tra khác. Nó chỉ kiểm chứng rằng sau giá trị đầu tiên chỉ còn khoảng trắng và ký hiệu kết thúc tệp `io.EOF`; nếu vẫn còn giá trị JSON dư thừa, yêu cầu sẽ bị từ chối trước khi chuyển giao cho `Store`. Đoạn mã trên không phải bộ giải mã dùng chung cho mọi giao diện lập trình (API): chẳng hạn điểm tiếp nhận tải tệp lên không thể áp dụng mức trần 4 KiB cố định này. Nguyên tắc cốt lõi là giới hạn dung lượng, lược đồ dữ liệu và kiểm tra tính hợp lệ phải được thực thi ngay trước khi dữ liệu đầu vào biến thành công việc nội bộ; không nên giải mã vô hạn rồi mới kiểm tra tính hợp lệ của yêu cầu.
 
-`http.MaxBytesReader` thiết lập hạn ngạch bảo vệ ranh giới thân yêu cầu (*body*). Lệnh `Decoder.DisallowUnknownFields` áp dụng lược đồ chặt chẽ, rất hữu ích khi máy khách gửi nhầm tên trường mà hệ thống không muốn âm thầm bỏ qua. Tính chặt chẽ là sự cân nhắc về độ tương thích: một API mở rộng có thể cần phiên bản hóa hoặc chính sách xử lý trường linh hoạt hơn. Tuy nhiên, “bỏ qua mọi trường lạ” không được trở thành thói quen vô thức khi dữ liệu đầu vào có khả năng điều khiển các hành vi tiêu tốn chi phí hệ thống.
+`http.MaxBytesReader` giới hạn số byte được đọc từ thân; lab trả 400 khi việc giải mã hoặc kiểm tra phần dư gặp lỗi, kể cả vượt 4 KiB. `DisallowUnknownFields` từ chối tên trường không ánh xạ vào struct, không phải bộ kiểm tra lược đồ hoàn chỉnh. Với `encoding/json` đang dùng, tên trường được đối chiếu không phân biệt hoa/thường và trường trùng được xử lý theo thứ tự: hai trường `target` kiểu string khiến giá trị sau thay giá trị trước. Test `TestJSONBoundaryDocumentsDuplicateCaseAndSizePolicy` ghi rõ hành vi này và chứng minh thân quá lớn chưa chạm tới `Store`. Nếu chữ ký hay phân quyền đòi một biểu diễn không nhập nhằng, cần policy từ chối trường trùng và quy tắc tên chính xác riêng; không suy ra chúng từ cờ này.
 
 Bài thực hành bắt đầu bằng các ca kiểm thử thất bại (báo đỏ) đối với yêu cầu hợp lệ, sai phương thức HTTP, JSON chứa trường lạ, chứa tài liệu JSON thứ hai và sai mục tiêu kiểm tra. Hãy tự hoàn thiện hàm xử lý trước khi tham khảo thư mục `fixed/`:
 
@@ -226,7 +234,7 @@ Thời gian chờ phía máy khách ở chương trước bảo vệ bên *gọi
 | `IdleTimeout` | Keep-alive không gửi request tiếp | Bao lâu connection rảnh vẫn đáng giữ? |
 | `MaxHeaderBytes` | Header bất thường lớn | Cookie/proxy hợp lệ chiếm bao nhiêu? |
 
-Không có bộ tham số chung nào phù hợp cho mọi dịch vụ. Với thời gian chờ đọc, ghi hoặc duy trì kết nối rảnh, giá trị bằng không đồng nghĩa với việc không áp đặt thời gian chờ theo tài liệu chuẩn của `net/http`; thuộc tính `MaxHeaderBytes` cũng có giá trị mặc định riêng. Mặc định vô thức vẫn là một chính sách vận hành. Hãy đánh giá khối lượng công việc, hạ tầng ủy quyền trung gian (*proxy*), đường dẫn tải tệp và ngân sách bộ nhớ trước khi ấn định các con số; sau đó kiểm thử lưu lượng mạng thực tế khi có người dùng truy cập.
+Giá trị zero không có cùng nghĩa ở mọi trường. `ReadTimeout` và `WriteTimeout` không dương nghĩa là không áp giới hạn ấy. Nhưng `ReadHeaderTimeout=0` và `IdleTimeout=0` lấy giá trị `ReadTimeout`; muốn hiểu cấu hình phải đọc cả quan hệ kế thừa này. `MaxHeaderBytes=0` dùng mức mặc định riêng. Với HTTP/1 trong Go 1.27.1, deadline ghi được đặt sau khi đọc header, nên thời gian handler xử lý trước lần ghi cũng có thể tiêu ngân sách `WriteTimeout`; đây không phải đồng hồ chỉ bắt đầu ở lệnh `Write` đầu tiên hay cơ chế cưỡng chế hủy handler. Không suy từ cấu hình socket rằng computation đã dừng. Hãy kiểm chứng policy trên giao thức và môi trường triển khai thật, nhất là với streaming hoặc proxy.
 
 Phương thức `Server.Shutdown` không ngắt các yêu cầu đang hoạt động và không tự hủy `r.Context()` của hàm xử lý. Hàm xử lý vẫn phải tôn trọng `r.Context()` khi tương tác với cơ sở dữ liệu, máy khách gọi ra ngoài hoặc luồng xử lý nền, bởi vì yêu cầu gửi đến có vòng đời độc lập. Chương 9 và Chương 11 đã cung cấp hai mảnh ghép còn lại: goroutine phải có đường thoát khi ngữ cảnh bị hủy; yêu cầu của máy khách phải tiếp nhận ngữ cảnh từ bên gọi. Việc tắt êm dịu chỉ thực sự đạt được khi các ranh giới bên trong sẵn sàng trả lại quyền điều khiển.
 

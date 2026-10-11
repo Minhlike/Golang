@@ -1,24 +1,17 @@
 @startuml
 !include publication-flow.iuml
 
-[*] --> Accepting : srv.ListenAndServe()
-
-state "TIẾP NHẬN (ACCEPTING)\n• TCP Listener mở\n• Nhận kết nối HTTP mới\n• Worker xử lý song song" as Accepting
-
-state "GIẢI TỎA (DRAINING)\n• Đóng TCP Listener ngay lập tức\n• Từ chối nhận kết nối mới\n• Chờ xử lý nốt các request đang chạy" as Draining
-
-state "DỪNG HẲN (STOPPED)\n• Đóng toàn bộ idle connections\n• Thu hồi tài nguyên DB & Logger\n• Trả về nil từ Shutdown(ctx)" as Stopped
-
-Accepting --> Draining : Tín hiệu dừng SIGINT/SIGTERM\nKích hoạt srv.Shutdown(ctx)
-
-Draining --> Stopped : Toàn bộ request hoàn tất\n(hoặc ctx.Done() hết timeout)
-
-Stopped --> [*]
-
-note right of Draining
-  <b>Bản chất của Graceful Shutdown:</b>
-  • Đóng Listener chặn đứng traffic mới.
-  • Cho phép các in-flight requests có thời gian
-    về đích an toàn trước khi tắt hoàn toàn.
-end note
+start
+:Phục vụ yêu cầu;
+:Ứng dụng gọi Shutdown\nvới ngân sách chờ riêng;
+:Đóng listener, đóng kết nối rảnh;
+:Chờ kết nối đang phục vụ\ntrở về rảnh;
+if (Drain xong trước\nhết ngân sách?) then (Có)
+  :Trả kết quả\nđóng listener;
+else (Không)
+  :Shutdown trả lỗi context;
+  :Handler có thể\nvẫn đang chạy;
+endif
+:Chủ sở hữu xử lý việc còn lại\nvà vòng đời các phụ thuộc;
+stop
 @enduml
