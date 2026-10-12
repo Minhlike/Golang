@@ -17,7 +17,7 @@ Nếu controller lặp List toàn bộ Pod mỗi giây, nó tạo công việc t
 
 Reflector duy trì observation bằng list/watch và xử lý thay đổi resourceVersion cùng lỗi transport. Đường khởi tạo cụ thể có thể dùng List hoặc watch-list tùy version, capability và cấu hình. Watch là stream API event, không phải trực tiếp theo dõi mọi thay đổi etcd; HTTP/2 cũng không dùng HTTP/1.1 chunked transfer encoding. Khi lịch sử không còn đủ hoặc stream lỗi, Reflector xử lý recovery theo source đã pin; không phải mỗi lần đứt stream đều bắt buộc List lại.
 
-Dữ liệu nhận về không được chuyển ngay cho người dùng mà đẩy vào một hàng đợi gom cụm đột biến mang tên `DeltaFIFO` (`tools/cache/delta_fifo.go`). Khi một Pod bị sửa đổi dồn dập 10 lần trong nửa giây, `DeltaFIFO` lưu trữ chuỗi delta theo khóa định danh `namespace/name`. Từ đây, vòng lặp xử lý nội bộ của Informer (`controller.processLoop`) rút delta ra, cập nhật đối tượng vào một bộ nhớ đệm luồng an toàn cục bộ gọi là `Indexer` (`tools/cache/index.go`), được bảo vệ bởi `sync.RWMutex`.
+Trong đường dùng `DeltaFIFO` (`tools/cache/delta_fifo.go`), dữ liệu được gom theo khóa, không chuyển ngay tới handler người dùng. Các delta của một Pod có thể được giữ chung theo `namespace/name`. Vòng xử lý Informer rút delta rồi cập nhật cache trước khi phát event. `Indexer` ở `tools/cache/index.go` là interface; backing store tại `tools/cache/thread_safe_store.go` dùng `sync.RWMutex`. Lock ấy bảo vệ cấu trúc store, không làm object pointer trả về an toàn để sửa tại chỗ: caller phải coi object trong cache là chỉ đọc hoặc DeepCopy trước khi thay đổi. Đường queue được chọn còn phụ thuộc cấu hình/feature của phiên bản đã ghim.
 
 ![Đường observation và khóa công việc trong informer](../../assets/diagrams/library-informer-data-path.png)
 @figure Informer cập nhật cache rồi phát event tới handler; handler của ứng dụng đưa khóa vào workqueue. Worker đọc observation hiện có khi điều hòa, không coi payload event là trạng thái cuối cùng.
@@ -289,7 +289,7 @@ Một image `scratch` không tự mang shell, git hay C runtime; các biến th�
 Tầng plumbing (`plumbing/format/packfile/parser.go`, `packfile.go`) đọc packfile chứa các Git object, trong đó object delta tham chiếu một base object bằng offset hoặc object ID. Base không nhất thiết là “file của commit cũ”; đối tượng có thể là blob, tree, commit hoặc tag. Đường giải mã cần tìm base và áp dụng chuỗi delta để tái tạo object. Không suy ra toàn bộ object graph luôn được giữ trong RAM.
 
 `plumbing/storer/storer.go` khai báo `EncodedObjectStorer`, tách thao tác với Git object khỏi backend lưu trữ. Hai lựa chọn cho ví dụ là:
-- `storage/filesystem`: Ghi các object và reflog xuống thư mục `.git` trên ổ đĩa vật lý như Git truyền thống.
+- `storage/filesystem`: Lưu Git objects và references qua filesystem, thường ở `.git`; không suy từ tên backend rằng mọi tính năng Git CLI, như reflog, đều được hiện thực tương đương.
 - `storage/memory`: Lưu trữ toàn bộ các object Git bên trong một mảng băm trên RAM (`storage/memory.Storage`).
 
 ```go
@@ -315,7 +315,7 @@ Xét scenario một channel liên tục xuất dữ liệu trong khi consumer đ
 SSH có flow control theo channel để receiver giới hạn lượng dữ liệu sender được gửi cho channel đó. Nó không loại bỏ contention của connection chung, TCP head-of-line blocking hay giới hạn memory của application; vẫn cần budget và xử lý consumer chậm.
 - Mỗi kênh logic sở hữu một biến kích thước cửa sổ nhận dữ liệu độc lập (`myWindow uint32`).
 - Bên gửi chỉ được phép truyền một lượng byte tối đa bằng đúng kích thước cửa sổ mà bên nhận đã cấp phép.
-- Khi ứng dụng của bạn gọi `session.StdoutPipe().Read(buf)` và đọc bớt dữ liệu ra khỏi bộ đệm, mã nguồn trong `channel.go` mới gửi một gói tin kiểm soát đặc biệt mang tên `msgChannelWindowAdjust` để cấp thêm hạn ngạch nhận byte cho bên gửi.
+- Khi ứng dụng đọc qua reader nhận từ `session.StdoutPipe()`, nó giải phóng dữ liệu trong bộ đệm; mã nguồn trong `channel.go` gửi `msgChannelWindowAdjust` để cấp thêm hạn ngạch nhận byte cho bên gửi. Phải xử lý cả error mà `StdoutPipe()` trả về trước khi dùng reader.
 
 Nếu consumer ngừng đọc và cửa sổ nhận của kênh đó hết, sender không thể tiếp tục gửi data cho riêng kênh ấy cho tới khi có điều chỉnh cửa sổ. Các kênh khác có cửa sổ riêng, nhưng vẫn chia sẻ cùng TCP connection và tài nguyên process; vì vậy không có bảo đảm chúng luôn “mượt mà” khi một consumer chậm.
 
@@ -429,7 +429,7 @@ OCI Distribution quy định API trao đổi manifest và blob, trong đó diges
 
 Tại sao chúng ta phải xây dựng các hệ thống lưu trữ riêng biệt cho Helm charts, tệp nhị phân WebAssembly (Wasm), tệp cấu hình Terraform, file chữ ký điện tử hay danh mục thành phần của phần mềm (SBOM - Software Bill of Materials), trong khi có thể lưu trữ toàn bộ chúng trực tiếp trên OCI Registry có sẵn của doanh nghiệp?
 
-ORAS (OCI Registry As Storage) hiện thực hóa tầm nhìn đó thông qua mã nguồn tại `registry/remote/repository.go` và `content/oci/store.go`. Trọng tâm kiến trúc của ORAS là interface `Target`:
+ORAS (OCI Registry As Storage) hiện thực hóa tầm nhìn đó thông qua mã nguồn tại `registry/remote/repository.go` và `content/oci/oci.go`. Trọng tâm kiến trúc của ORAS là interface `Target`:
 
 ```go
 type Target interface {
@@ -1027,4 +1027,4 @@ Atlas này không tồn tại độc lập mà là điểm tựa thực tế cho
 - Vòng lặp xử lý `io.ReadCloser` và drain body trong `aws-sdk-go-v2` và `go-retryablehttp` neo chặt vào **Chương 11** (Lần theo một request HTTP) và **Chương 20** (OpsProbe Capstone).
 - Tinh chỉnh CFS quota của `automaxprocs` và netlink socket giải thích tường tận các ranh giới hệ điều hành được trình bày tại **Chương 15** (Từ incident đến công cụ).
 
-`library_sources/lock.json` khóa identity của 50 nguồn, không bảo đảm một binary hay cấu hình khác có cùng behavior. Đọc API contract, implementation và test như ba lớp bằng chứng khác nhau. Các scenario/policy là yêu cầu thiết kế của bài học; những chi tiết source chỉ có phạm vi commit ở heading, không phải một lời hứa về mọi version tương lai.
+Commit ở heading là điểm neo của từng bài trong Atlas. `library_sources/lock.json` có thể đã được cập nhật tới version mới hơn; hãy đối chiếu full SHA trong hồ sơ nguồn rồi đọc đúng commit, không lấy checkout mới nhất thay thế âm thầm cho bản được giải thích. Identity không bảo đảm một binary hay cấu hình khác có cùng behavior. Đọc API contract, implementation và test như ba lớp bằng chứng khác nhau; scenario/policy là yêu cầu thiết kế, không phải lời hứa cho mọi version tương lai.

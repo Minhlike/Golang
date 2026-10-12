@@ -1,29 +1,12 @@
 @startuml
 !include publication-flow.iuml
-
-autonumber "<b>[00]</b>"
-
-participant "GitHub\n(Webhook Dispatcher)" as github
-participant "Webhook Server Go\n(HTTP Receiver)" as server
-participant "Bộ điều phối Sự kiện\n(Event Dispatcher)" as handler
-
-github -> github : Ký payload:\nHMAC-SHA256(secret, rawJSON)
-github -> server : HTTP POST /webhook\nHeader: X-Hub-Signature-256\nBody: raw JSON payload
-activate server
-
-server -> server : Đọc body an toàn:\nio.LimitReader(r.Body, maxBytes)
-server -> server : Tính chữ ký cục bộ:\nHMAC-SHA256(secret, rawBody)
-server -> server : So sánh bảo vệ kênh phụ thời gian:\nsubtle.ConstantTimeCompare(recvSig, expectedSig)
-
-alt #F4F4F4 Khớp chữ ký (Xác thực thành công)
-  server -> handler : Bàn giao sự kiện hợp lệ (Job)
-  activate handler
-  handler --> server : Tiếp nhận (Enqueue / Ack)
-  deactivate handler
-  server --> github : HTTP 200 OK (Chấp nhận)
-else #FFFFFF Không khớp (Chữ ký giả mạo hoặc sai secret)
-  server --> github : HTTP 401 Unauthorized (Từ chối ngay tại biên)
-end
-
-deactivate server
+start
+:<b>GitHub POST → Go HTTP handler</b>\nRaw body + X-Hub-Signature-256\nHandler giới hạn body; giữ đúng byte\nKhông serialize lại JSON để tính MAC;
+:<b>VerifyHMACSHA256</b>\nTừ chối secret rỗng / header sai\nTính HMAC-SHA256(secret, rawBody)\nSo sánh hai MAC bằng hmac.Equal;
+if (MAC khớp?) then (Có)
+  :Bàn giao payload đã xác minh\ncho bộ xử lý sự kiện;
+else (Không)
+  :Từ chối trước khi xử lý sự kiện;
+endif
+stop
 @enduml

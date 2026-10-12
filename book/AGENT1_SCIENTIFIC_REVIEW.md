@@ -1,6 +1,86 @@
-# Independent scientific review — ongoing complete-manuscript pass
+# Independent scientific review — complete-manuscript pass
 
-Trạng thái: **REVIEW_IN_PROGRESS, chưa nghiệm thu toàn sách**. Checkpoint 1 giữ nguyên bằng chứng Ch02/16/26/27; checkpoint 2 tiếp tục Ch03–Ch07; checkpoint 3 tiếp tục Ch08–Ch10 và đóng duy nhất đoạn R33 ở Ch02; checkpoint 4 tiếp tục Ch11–Ch13; checkpoint 5 tiếp tục Ch14–Ch15. Mười bảy manuscript đã được đọc; các kết luận chỉ áp dụng cho chủ đề, source và test được chỉ rõ, không phải mọi claim hay mọi trang. Những chương khác và hai Atlas chưa được review khoa học thủ công. Theo chỉ thị tiếp nối, các mốc là lưu trữ nội bộ, không phải điểm dừng trả lượt. Không merge hoặc promotion Master.
+Đã đọc toàn bộ **31 manuscript chương** (hai phần Ch00 và Ch01–Ch29), Library Atlas và Error Atlas. Các kết luận kỹ thuật gắn với source, phiên bản và phép thử cụ thể bên dưới; không đồng nhất việc đọc hết với việc thực nghiệm mọi claim trên mọi hệ điều hành. Báo cáo và bằng chứng các batch cũ được giữ như lịch sử, không chuyển nhãn visual acceptance của PDF cũ sang bản cuối. Không merge main, không promotion Master và không coi scientific review là nghiệm thu xuất bản toàn bộ PDF.
+
+## Kết luận cuối của đợt review liên tục
+
+**SCIENTIFIC_REVIEW_STATUS=COMPLETE_WITH_VERIFICATION_LIMITS.** Phạm vi đọc thủ công đã hoàn thành: **31/31 manuscript chương, 2/2 Atlas; còn 0 manuscript chưa đọc**. Đây là kết luận đóng đợt review, không phải checkpoint và không phải khẳng định mọi claim đã chạy trên mọi môi trường. Không viết thêm chương, không deep-rewrite và không mở vòng polish mới.
+
+Candidate cuối **614 trang**, SHA256 **`5e235322d2ecda00dd64ea6a6a95293f08907bff2cfd48d74a7fee131f084307`**. Build candidate-only; Master/rollback không đổi. `validation.json/finalization/pdf_4` là bằng chứng mới của đúng bản cuối: **332 fences** giữ ký tự không rỗng/thứ tự/expanded indentation, **3.869 prose/heading/caption/table cells** hiện diện, **20 sections không sửa** giữ text chuẩn hóa so candidate CP6, **29 TOC entries và 34 bookmark destinations** khớp heading thật. Sáu raster sửa xuất hiện đúng số lần; pixel inventory thân sách còn lại giữ nguyên (cover loại rõ). Không hứa raw tabs/blank lines/byte-copy fidelity.
+
+Năm harness lấy code từ **actual final PDF** đã compile/run: Ch20 drain helper, Ch24 provider/middleware, Ch25 HMAC/Git/quota/jitter, Ch22 biến thể interface/deletion guard và Ch28 constructor/audit/tool handlers. Imports/types/helpers hỗ trợ lấy từ lab được công bố; Ch28 chỉ chạy subset đúng policy được in, không lấy excerpt để chứng minh limiter bị lược. Test đầy đủ của lab vẫn tách riêng. `tests_2` có **20 positive commands** (race/count3 và vet cho opsprobe, Ch21–25, part1-reading-go, edition-contracts, Ch29 và MCP fixture =10 module) và **một EXPECTED_FAILURE** cho role policy cũ. Continuation chạy riêng retention race/count3 +vet và giữ **sáu old-implementation negative controls**. Hồi quy outbox/TLS ở batch cũ không được ghi như vừa chạy lại trong tests_2. Test Operator API thật chạy control plane envtest riêng trong WSL; mutant root_status_write fail đúng assertion. Linux integration binary được ghi COMPILE_ONLY trước khi execution, không đánh đồng hai trạng thái.
+
+**Final visual scope: 77 actual individual pages, 76 VISUAL_PASS, một ISSUE:V04/P3; scoped NOT_REVIEWED=0, whole-PDF pages not opened=537.** Danh sách từng trang, PNG SHA và quan sát nằm ở `book/evidence/agent1-scientific-review/final_visual_review.json`. Mỗi trang được mở riêng ở Poppler144dpi/original resolution rồi mới đánh trạng thái; không dùng contact sheet hoặc kế thừa verdict của ảnh cũ. Pixel scan của **77 renders** xác nhận R=G=B; không gọi đó là grayscale scan cả614 trang. Folio, code/table/figure clipping và độ đọc ở trang thật đã kiểm trong scope; sáu hình ở426/443/444/468/490/603 đọc được, không crop/overlap/warning banner; nominal scaled font khoảng11,69–13,07pt. Không đo toàn sách printable frame/perceptual duplicates trong đợt khoa học này.
+
+**Giới hạn còn lại:** V04 tại trang535, source Ch28:597–601 dùng nhãn curriculum PhầnI–IX trong khi TOC của candidate dùng PhầnI–IV. Đây là P3 structural/edition mismatch còn giữ để không tự thay kiến trúc/nhánh thiết kế; không giấu bằng nhãn PASS. Cover/edition và các P3 wrapping/caption đã ghi ở batch cũ chưa được nghiệm thu lại toàn sách trên SHA cuối. Các runtime cần live eBPF kernel, AWS/cloud, Docker/kind/Terraform, registry/Sigstore/SLSA/govulncheck thực tế, PostgreSQL/MySQL vẫn giữ đúng NOT_RUN/giới hạn lịch sử. Không sử dụng cluster/cloud người dùng. 110 file tại pin của50 guides được lấy/đối chiếu độc lập, ba AWS429 dùng fallback Git commit/blob/SHA đã kiểm; **SOURCE_FILES_RETRIEVED_NOT_SEMANTIC_PASS**, không tự thừa kế50 ledger verdicts.
+
+Đợt cuối sửa **21 nhóm R94–R114: 19 P2 và2 P3**. Không phát hiện P0/P1 trong findings của đợt cuối; không coi đó là chứng minh toàn sách không có lỗi. V04 là P3 còn mở, không cộng vào nhóm đã sửa. Bằng chứng fail/oracle lỗi của chính reviewer và candidate bị loại vẫn giữ nguyên.
+
+Code-width, Error Atlas, zero-bullet, manuscript diagrams, encoding, semantic-repair provenance, visual-manifest checks và diff-range/staged checks đạt ở `gates_4`. Gofmt không còn file cần format. `main`/`origin/main` giữ `bb00a9ad33e3cd5115928dc3542d2ce66c8d08d8`; Agent2 checkout sạch, giữ nhánh `design/agent2-object-specimens` tại `5938862b864b51d755209031972a1bb07f5babf2`. Protected hashes trong final evidence: Master `7dfedd98…`, rollback `685b0b7a…`, hai MASTER PROMPT, renderer và shared style đều không đổi. **FINAL_STATUS=SCIENTIFIC_REVIEW_COMPLETE_WITH_LIMITS; PUBLICATION_STATUS=NOT_FULL_PUBLICATION_ACCEPTANCE.** Commit/push chỉ nhánh review; không merge main, không promotion Master.
+
+## Hoàn tất phần còn lại — không dừng ở checkpoint
+
+STARTING_HEAD của đợt liên tục cuối: `34aa4b41b048061422a3d77543a95b6ef228be63`. Đã đọc hai Ch00, Ch01, Ch20–Ch25, Ch28–Ch29 và cả hai Atlas, cùng source/test liên quan. Không viết chương mới. Đối chiếu B/C cho thấy các sai lệch dưới đây đã có ở B; không đổ lỗi cho Agent 2 chỉ vì C diễn đạt dài hơn.
+
+| ID / mức / phân loại | Sửa và bằng chứng độc lập |
+| --- | --- |
+| R94 / P3 / EDITORIAL_IMPROVEMENT | Ch17 trỏ CPU quota tới Ch10 thay vì Ch20; Ch18 giữ một câu hỏi trong một quote thay vì bốn hộp rời. Hai lỗi nhìn thấy ở batch6 được đóng trong source. |
+| R95 / P2 / INHERITED_DEFECT | Gauge active_workers tăng/giảm quanh ProbeSingle, không đo vòng đời worker; producer mẫu cấp việc hết trước worker, không minh họa backpressure thực. Đối chiếu điểm instrumentation và source pipeline. |
+| R96 / P2 / INHERITED_DEFECT | drainResponseBody in sách sai signature/contract; đồng bộ hàm thật, xử lý nil/disabled/MaxInt64 và lỗi đọc/đóng. Test biên mới bắt panic của implementation đầu lượt. Không biến body drain thành bảo đảm tái dùng HTTP/1 connection. |
+| R97 / P2 / INHERITED_DEFECT | Backoff nhân trước rồi cap có thể tràn; saturation kiểm trước doubling. Mutant khôi phục công thức cũ bị assertion bắt. Timer AfterFunc không được join/dừng trong lab; worker join không chứng minh timer cleanup. |
+| R98 / P2 / INHERITED_DEFECT | Ch22 dùng interface/deletion guard khác callback lab. Ghi rõ biến thể và chạy riêng fake-indexer harness, không lấy test callback làm chứng cứ cho code khác. |
+| R99 / P2 / INHERITED_DEFECT | Result{},nil không triệt tiêu dirty key/timer/sự kiện mới. Deployment cùng tên nhưng không do AppService sở hữu bị từ chối trước mutation; fixture ownership hợp lệ giữ nguyên mục tiêu drift/status. Ready dựa AvailableReplicas không chứng minh rollout mới; ConfigMap reload không mặc nhiên là restart. |
+| R100 / P2 / INHERITED_DEFECT | CredentialsCache làm mới theo nhu cầu nhưng dùng async singleflight ở SDK1.36.3; caller cancel không nhất thiết cancel shared provider. Test có điều phối/join chứng minh một lần Retrieve của provider. IMDS Region là opt-in; retryable classification không tự bảo đảm write retry an toàn. Không chạy AWS cloud. |
+| R101 / P2 / INHERITED_DEFECT | Git write/short-write/Close errors phải ngăn Add/Commit; test ba lỗi filesystem xác nhận HEAD không tiến. Sửa fixture primary-reset thực, không bỏ qua lỗi parse rồi dùng fallback. |
+| R102 / P2 / INHERITED_DEFECT | Jitter từ chối NaN/Inf/ngoài [0,1), duration tràn; Retry-After không rút ngắn primary wait, giây âm không hợp lệ, giây quá lớn saturate. Hàm chỉ đọc Retry-After dạng giây; không giả nhận hỗ trợ HTTP-date. Mutant implementation cũ bị bắt. |
+| R103 / P2 / INHERITED_DEFECT | Secret HMAC rỗng fail-closed; fixture cũ bị test mới bắt. HMAC vẫn là MAC dùng shared secret, không đánh đồng chữ ký bất đối xứng. Dedup Process kiểm handler/ID; không hứa side effect exactly-once. |
+| R104 / P2 / INHERITED_DEFECT | MCP chỉ cho operator/admin đổi trạng thái, không cho role lạ có ticket vượt quyền. Test cũ fail đúng assertion. Đoạn in có limiter dependency/nil guard/local deny/duration dùng thực; phần điều tốc bị lược được ghi rõ. Allowlist ID không chặn redirect: test hai HTTP server cục bộ chứng minh ranh giới này. Approval variant in sách và policy consume-on-attempt của lab được phân biệt; deadline equality và 20 concurrent claims được test, đúng một thành công. |
+| R105 / P2 / INHERITED_DEFECT | Library Atlas: Indexer interface không phải RWMutex implementation; object pointer trả về phải read-only/DeepCopy. Không hứa reflog parity của go-git. Sửa ORAS oci.go và cách dùng reader từ StdoutPipe; phân biệt edition pins với lock cập nhật. Nguồn lấy lại độc lập, không thừa kế verdict của ledger. |
+| R106 / P2 / INHERITED_DEFECT | Error Atlas: undefined không đồng nghĩa unexported; := cần biến mới khác _; assignability không phải universal conversion; terminating statement có infinite for; QueryRow trì hoãn ErrNoRows tới Scan; liveness threshold=1; message MCP ứng dụng khác diagnostic chuẩn/IP filter. Compiler fixture thực giữ đúng A04 `declared and not used: x`. |
+| R107 / P2 / INHERITED_DEFECT | Phép đối chiếu toàn bộ fences phát hiện quoted C fence còn sót ở Ch27: PDF in marker/fence và code bằng serif trong nhiều callout thay vì code block. Sửa prefix trong Markdown, giữ câu hỏi/verifier model và rebuild, không sửa renderer. |
+
+14 nhóm sửa, 13 P2 và một P3; không phải số lượng mọi câu sửa hoặc mọi test. Lần chạy đầu của finalization/edition-contracts **FAIL** vì chính reviewer đảo wording A04 sai; lỗi này chưa commit, đã trả lại wording đúng và sửa oracle trước chạy lại. Giữ nguyên raw failure trong evidence, không tính A04 là lỗi của Agent 2 hoặc biến lần fail thành PASS.
+
+Ch00/Ch01 không tìm thấy lỗi cần rewrite: đối chiếu Go FAQ/lịch sử release và chạy ví dụ/assembly trên toolchain thật. Ch29 giữ nguyên số liệu sau đối chiếu nghiên cứu GitHub Copilot 2023, METR2025 (16 developer/246 task/19%), cập nhật METR2026 về giới hạn dữ liệu, Go Survey2025 (7,070 thô/5,379 hợp lệ), BLS2025–2035 và DORA2025; không biến kết quả một nghiên cứu thành quy luật năng suất hay dự báo nghề nghiệp chắc chắn.
+
+Bằng chứng mới nằm trong `validation.json/continuation` và `/finalization`: raw stdout/stderr UTF-8, base64 và SHA; `EXPECTED_FAILURE`, `COMPILE_ONLY`, `INTEGRATION_TESTED`, `NOT_VERIFIED` tách khỏi PASS. Test thực Operator dùng envtest1.37.0 Linux được đối chiếu SHA512 từ release chính thức rồi khởi động control plane riêng trong WSL; không đọc kubeconfig hoặc dùng cluster/cloud người dùng. Không suy kết quả này thành kiểm chứng scheduler/kubelet/GC/full production rollout.
+
+Điểm neo của các phát hiện cuối (dòng source sau sửa; tên chương dưới `book/chapters/`):
+
+| ID | File:dòng |
+| --- | --- |
+| R94 | `17-dong-goi-va-dieu-phoi.md:63`; `18-dua-thay-doi-ra-production.md:312` |
+| R95 | `20-du-an-tong-ket-opsprobe.md:107` |
+| R96 | `20-du-an-tong-ket-opsprobe.md:175`; `projects/opsprobe/internal/probe/boundary_contract_test.go:1` |
+| R97 | `21-vong-lap-dieu-hoa-controller.md:158,240`; `labs/part21-reconciliation-controller/queue/boundary_contract_test.go:1` |
+| R98 | `22-tu-watch-den-controller-that.md:132`; `continuation.py/excerpts` |
+| R99 | `23-tu-controller-den-operator.md:209,300,387`; `labs/part23-controller-runtime-operator/controllers/boundary_contract_test.go:1` |
+| R100 | `24-tu-dong-hoa-aws-bang-go.md:36,40`; `labs/part24-aws-sdk-go-v2/boundary_contract_test.go:1` |
+| R101 | `25-git-github-automation-event-driven.md:312`; `labs/part25-github-automation/boundary_contract_test.go:1` |
+| R102 | `25-git-github-automation-event-driven.md:176,428` |
+| R103 | `25-git-github-automation-event-driven.md:60,120` |
+| R104 | `28-mcp-va-aiops-an-toan-bang-go.md:154,247,534`; `labs/part28-mcp-ops-tools/boundary_contract_test.go:1` |
+| R105 | `book/appendices/devops-library-atlas.md:20,292,318,432` |
+| R106 | `book/appendices/error-atlas.md:37,41,53,63,177,427,457` |
+| R107 | `27-quan-sat-linux-bang-ebpf-va-go.md:41` |
+
+### Lỗi sơ đồ phát hiện trong final render
+
+R108–R113 được đối chiếu trực tiếp với cả source B và C; khác với R94–R107, các claim mới chỉ có trong C được phân loại regression. Năm PNG cũ dừng ở đúng 4.096px và đã được mở riêng: AWS, HMAC, eBPF, reachability và mailbox đều mất nội dung ở cạnh phải; hình Git/GitHub còn đè nhãn. Không coi manifest cũ `SOURCE_AND_RENDER_REVIEWED` là bằng chứng độc lập.
+
+| ID / mức / phân loại | Source:dòng; trước → sau; source of truth |
+| --- | --- |
+| R108 / P2 / AGENT2_REGRESSION | `assets/diagrams/git-github-boundaries.puml:4–9`: C thêm reflog parity, go-github GraphQL và mọi thao tác offline → phân biệt object/refs cục bộ với transport cần mạng, REST client và không hứa reflog. Source go-git/go-github đã pin; B không có những lời hứa này. Bố trí dọc loại nhãn chồng. |
+| R109 / P2 / EDITORIAL_IMPROVEMENT | `assets/diagrams/webhook-hmac-verification.puml:4–14`: C thêm dispatcher rồi crop khỏi ảnh → khôi phục nhánh chấp nhận/từ chối đầy đủ, đúng `VerifyHMACSHA256`/`hmac.Equal` đã test. Raw body không serialize lại; giới hạn body thuộc handler, không suy từ HMAC helper. B cũng dùng tên comparison khác lab; không quy riêng khác biệt helper đó thành regression. |
+| R110 / P2 / AGENT2_REGRESSION | `assets/diagrams/aws-credentials-resolution.puml:4–10`: C thay bản đồ nguồn bằng env/profile/workload ưu tiên 1–2–3 và refresh tự động, mọi CanExpire=true → resolution phụ thuộc explicit profile/configuration, refresh theo Retrieve, expiry tùy provider. `config/resolve_credentials.go`, `aws/credential_cache.go` SDK đã pin và test cancel/provider R100; không đo AWS cloud. |
+| R111 / P2 / AGENT2_REGRESSION | `assets/diagrams/ebpf-build-load.puml:4–12`: C gộp load/attach và hứa zero-copy → verifier ở load, attach là bước riêng; bpf2go gọi Clang; `ringbuf/ring.go:90–96` tại e55144e1 cấp/tái dùng buffer rồi copy RawSample. Chỉ source inspection, không giả nhận kernel execution PASS. |
+| R112 / P2 / AGENT2_REGRESSION | `assets/diagrams/agent-mailbox-contract.puml:4–10`: C thay mailbox AgentScope bằng MCP, tự xác thực stdio/SSE và audit “bất biến” → trở lại đúng mental model ứng dụng-owned mailbox, ownership/capacity/consumer/lifecycle. README/source AgentScope đã pin và contract Atlas: không suy isolation chỉ từ pattern/framework. |
+| R113 / P2 / AGENT2_REGRESSION | `assets/diagrams/vulnerability-call-reachability.puml:4–14`; Ch26:67: C tự gán bcrypt CVE-XXXX, nói kích hoạt lỗ hổng và mọi SCA là false positive → static reachability khác exploitation, không tìm thấy đường gọi không là an toàn tuyệt đối. Caption khớp hình tổng quát, không gán CVE giả. [Go vulnerability guidance](https://go.dev/doc/security/vuln/) và source govulncheck/fixture Ch26 đã pin. |
+| R114 / P3 / EDITORIAL_IMPROVEMENT | Ch21:129–135: actual page377 còn literal `$T_0$`/`$T_1'$` → nhãn T0/T1/T1′, giữ nguyên bảy hàng và trạng thái queue/dirty/processing. Không thay số liệu hoặc renderer. |
+
+Sáu source PlantUML giữ shared style/font22 và được render bằng toolchain dự án PlantUML1.2024.7 (JAR SHA256 `88171d8bdaf6bafbd0a26d10f268ef2d9c77c60b8ede243556585730c13153f3`), UTF-8, limit20.000. PlantUML1.2026.8 thử trước có warning banner màu từ skinparam Padding; output đó bị loại, không sửa shared style để giấu warning và không dùng ảnh đó trong final candidate. Kích thước ảnh cuối đều dưới4.096; đây không thay actual PDF page inspection.
+
+Nguồn chính thức bổ sung: [GitHub webhook verification](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries), [AWS SDK configuration](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html), [cilium loader](https://ebpf-go.dev/concepts/loader/). Các source-map/ledger có nhãn sẵn không được dùng để tự cấp semantic PASS; bản đồ generated có tên API tổng quát không phải source of truth.
 
 ## Ch17–19: internal evidence batch 6, not a stopping point
 
@@ -80,9 +160,9 @@ Cột A→B dưới đây là source tại hai commit đã nêu. `IDENTICAL_SOUR
 
 | Chương / tài liệu | A→B | B→C: kết luận hiện có | Review khoa học tiếp theo |
 | --- | --- | --- | --- |
-| Ch00 lịch sử | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch00 mở cửa | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch01 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
+| Ch00 lịch sử | IDENTICAL_SOURCE | EDITORIAL_REWRITE, không thấy lỗi cần sửa | Đã đọc; đối chiếu FAQ và release history chính thức |
+| Ch00 mở cửa | IDENTICAL_SOURCE | EDITORIAL_REWRITE, không thấy lỗi cần sửa | Đã đọc; chạy ví dụ đầu tiên thật |
+| Ch01 | IDENTICAL_SOURCE | CONTENT_GAIN ở đọc trace/scope; không thấy lỗi cần sửa | Đã đọc; test reading-go và assembly toolchain hiện tại |
 | Ch02 | IDENTICAL_SOURCE | EDITORIAL_REWRITE phần slice/ownership; CONTENT_REGRESSION ở cách gọi aliasing và assignment/pass-by-value | Đã kiểm chứng các contract bên dưới; chưa audit mọi claim runtime/UTF-8 |
 | Ch03 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở composite literal/map/alias và hình; INHERITED_DEFECT ở ví dụ state/addressability | Đã kiểm chứng value/pointer/map, method sets và compiler boundary; xem R16–R19/R31 |
 | Ch04 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở identity/defer/hình; CONTENT_GAIN ở error tree/API/recover | Đã kiểm chứng matching, cleanup và recover có kiểm soát; xem R20–R23/R31 |
@@ -98,21 +178,21 @@ Cột A→B dưới đây là source tại hai commit đã nêu. `IDENTICAL_SOUR
 | Ch14 | IDENTICAL_SOURCE | INHERITED_DEFECT ở field nội bộ; AGENT2_REGRESSION ở nhãn kiểm chứng thực nghiệm; CONTENT_GAIN ở quyền reflection/schema/unsafe | Đối chiếu source Go1.27.1, test alias, quyền gán, dữ liệu chia sẻ và cgo thật; không chạy conversion sai để chứng minh an toàn; xem R70–R74 |
 | Ch15 | IDENTICAL_SOURCE | AGENT2_REGRESSION ở hình và bảo đảm trả ngay; INHERITED_DEFECT ở logging; CONTENT_GAIN ở argv/result/context policy | Test child thật bắt tay trước cancel; excerpt từ Markdown/PDF chạy race; không chứng minh cleanup hậu duệ hay deadline cứng; xem R75–R79 |
 | Ch16 | IDENTICAL_SOURCE | EDITORIAL_REWRITE phần signals; CONTENT_REGRESSION ở dịch idempotent và cardinality | Đã kiểm chứng recorder, window, instrumentation boundary và quan hệ span |
-| Ch17 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch18 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch19 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch20 | IDENTICAL_SOURCE | UNREVIEWED | Chưa review chương; hồi quy opsprobe không thay thế việc đọc |
-| Ch21 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch22 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch23 | IDENTICAL_SOURCE | UNREVIEWED | Real API không chạy trong checkpoint này |
-| Ch24 | IDENTICAL_SOURCE | UNREVIEWED | Không chạy cloud |
-| Ch25 | IDENTICAL_SOURCE | UNREVIEWED | Cần kiểm tra HMAC/MAC với chữ ký số trong lượt tiếp nối |
+| Ch17 | IDENTICAL_SOURCE | AGENT2_REGRESSION về readiness/throttle/hình; INHERITED_DEFECT liveness | Đã đọc; R81–R84/R91/R94, fake observer không thay real cluster |
+| Ch18 | IDENTICAL_SOURCE | INHERITED_DEFECT workflow/exit code/pins; AGENT2_REGRESSION ở hình | Đã đọc; R85–R87/R91–R94, static YAML/IAM không phải cloud deployment |
+| Ch19 | IDENTICAL_SOURCE | INHERITED_DEFECT missing return; CONTENT_GAIN comparable | Đã đọc; R88–R90, compiler và typed-nil/NaN/assignment tests |
+| Ch20 | IDENTICAL_SOURCE | INHERITED_DEFECT instrumentation/drain signature | Đã đọc; R95–R96, opsprobe race/tests và printed function harness |
+| Ch21 | IDENTICAL_SOURCE | INHERITED_DEFECT backoff overflow/lifecycle claim | Đã đọc; R97, saturation mutant; không giả nhận timer join |
+| Ch22 | IDENTICAL_SOURCE | INHERITED_DEFECT printed variant khác lab | Đã đọc; R98, fake harness riêng cho đoạn in |
+| Ch23 | IDENTICAL_SOURCE | INHERITED_DEFECT owner/Ready/requeue claims | Đã đọc; R99, fake ownership và real owned API + mutant |
+| Ch24 | IDENTICAL_SOURCE | INHERITED_DEFECT cache/cancel/Region/retry claims | Đã đọc; R100, SDK1.36.3 thực và fake HTTP, AWS cloud NOT_RUN |
+| Ch25 | IDENTICAL_SOURCE | INHERITED_DEFECT file failures/rate/HMAC/excerpt | Đã đọc; R101–R103, filesystem/HTTP giả, không GitHub API thật |
 | Ch26 | IDENTICAL_SOURCE | EDITORIAL_REWRITE phần trust boundary; CONTENT_REGRESSION do dịch exact error; code không khớp lab là lỗi kế thừa từ A/B | Đã kiểm chứng model, delegation, dừng tuần tự và bài tập contract |
 | Ch27 | IDENTICAL_SOURCE | EDITORIAL_REWRITE phần kernel; hook sys_enter_execve vẫn đúng ở A/B/C, không phải lỗi mới | Đã kiểm chứng decoder/reader giả và các giới hạn hook; chưa compile/load BPF thật |
-| Ch28 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Ch29 | IDENTICAL_SOURCE | UNREVIEWED | Chưa đọc manuscript |
-| Library Atlas | IDENTICAL_SOURCE | UNREVIEWED | Chưa review source guides thủ công |
-| Error Atlas | IDENTICAL_SOURCE | UNREVIEWED | Validator cấu trúc không thay review từng diagnostic |
+| Ch28 | IDENTICAL_SOURCE | INHERITED_DEFECT authorization/excerpts/approval boundary | Đã đọc; R104, official SDK pin + in-memory MCP + real local HTTP |
+| Ch29 | IDENTICAL_SOURCE | EDITORIAL_REWRITE; số liệu giữ sau đối chiếu | Đã đọc; nghiên cứu/survey/BLS/DORA nguồn gốc, không dự báo chắc chắn |
+| Library Atlas | IDENTICAL_SOURCE | INHERITED_DEFECT source anchors/implementation claim | Đã đọc đủ 50 guide; R105, retrieval khác semantic proof, các giới hạn ghi riêng |
+| Error Atlas | IDENTICAL_SOURCE | INHERITED_DEFECT semantic explanation/app diagnostics | Đã đọc toàn phụ lục; R106, compiler fixtures và API/source, không chỉ validator |
 
 CONTENT_GAIN trong checkpoint mới là phản ví dụ có test cho capacity/copy nông, SLI tích lũy/cửa sổ, timeout wrapper và test kiểm chứng parent span cụ thể. Không gán nhãn CONTENT_GAIN cho một đoạn dài hơn hoặc một gloss song ngữ mới.
 
@@ -154,7 +234,7 @@ Nguồn kỹ thuật cho phần đã sửa: [Go specification — slices](https:
 | 6 Language quality | PARTIAL_MANUAL_REVIEW | Sửa dịch sai và một số đoạn trọng điểm; không claim hết song ngữ/slop toàn sách |
 | 7 PDF content parity | SCOPED_BODY_CHECKS_PASS; WHOLE_BOOK_PENDING | 25 chương không sửa + hai Ch00 + hai Atlas bằng nhau sau normalization; 58 raster occurrences bảo toàn trừ một hình sửa có phép so pixel riêng; TOC/bookmark 29 chương khớp heading. Cover parity không đạt; visual chỉ 34/604 trang, không promotion |
 
-## Checkpoint để tiếp nối
+## Checkpoint để tiếp nối — lịch sử, đã được lượt hoàn tất thay thế
 
 Không bắt đầu lại từ các nhãn PASS của Agent 2. Tiếp nối từ branch này sau khi xác minh HEAD/status và hash candidate trong evidence. Bốn manuscript của checkpoint 1 không đồng nghĩa mọi dependency/live path đã kiểm chứng. Tại checkpoint 1, phạm vi chưa đọc gồm Ch00/01/03–15/17–25/28/29 và hai Atlas; mục checkpoint 2 bên dưới cập nhật năm chương đã tiếp tục. Live Sigstore/SLSA/govulncheck, BPF và Operator API không được tự đổi thành PASS.
 

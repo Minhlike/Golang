@@ -38,13 +38,14 @@ Câu trả lời nằm ở bộ kiểm định nhân (`kernel verifier`). Trư�
 | **Giới hạn stack của mô hình BPF đang xét** | Tài liệu verifier mô tả frame 512 byte; call chain, program type và tính năng kernel còn có kiểm tra riêng. | Không dùng số này làm tổng stack budget cho mọi call chain hay version. |
 | **Theo dõi thanh ghi BPF và FP** | `R10` là frame pointer chỉ đọc; verifier theo dõi kiểu và trạng thái thanh ghi BPF. | Đây là thanh ghi của máy BPF, không phải lời hứa giữ nguyên mọi thanh ghi vật lý của CPU. |
 
-> **Dừng để dự đoán:** Ranh giới giữa trình biên dịch C và bộ kiểm định nhân (*Kernel Verifier*):
-> Xét một đoạn mã C eBPF minh họa việc tra cứu và cập nhật bộ đếm trong bảng ánh xạ (*map*):
-> ~~~c
-> struct event *val = bpf_map_lookup_elem(&counters, &key);
-> val->count++;
-> ~~~
-> Xét riêng cú pháp ngôn ngữ C thuần túy, trình biên dịch Clang có thể coi việc truy cập `val->count` là hợp lệ và biên dịch thành mã thực thi nhị phân. Tuy nhiên, khi chương trình Go nạp mã thực thi này vào nhân hệ điều hành, bộ kiểm định sẽ từ chối chương trình ngay tại thời điểm nạp. Vì sao bộ kiểm định nhân lại nghiêm ngặt hơn trình biên dịch ngôn ngữ, và lập trình viên eBPF bắt buộc phải điều chỉnh cú pháp như thế nào?
+> **Dừng để dự đoán:** Ranh giới giữa trình biên dịch C và bộ kiểm định nhân (*Kernel Verifier*). Xét đoạn minh họa tra cứu và cập nhật bộ đếm trong map dưới đây:
+
+~~~c
+struct event *val = bpf_map_lookup_elem(&counters, &key);
+val->count++;
+~~~
+
+Với các khai báo hỗ trợ phù hợp, Clang có thể biên dịch đoạn C này; nhưng đường truy cập con trỏ chưa kiểm tra kết quả tra cứu không đủ bằng chứng cho BPF verifier. Vì sao verifier đòi hỏi thêm một nhánh kiểm tra, và nhánh đó phải chứng minh điều gì trước `val->count++`?
 
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 

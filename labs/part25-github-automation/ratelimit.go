@@ -2,6 +2,7 @@ package automation
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -23,11 +24,15 @@ func CalculateBackoffWithJitter(base time.Duration, next JitterSource) (time.Dur
 		return 0, fmt.Errorf("jitter source is required")
 	}
 	value := next()
-	if value < 0 || value >= 1 {
+	if math.IsNaN(value) || value < 0 || value >= 1 {
 		return 0, fmt.Errorf("jitter value must be in [0, 1)")
 	}
 	factor := 0.10 + value*0.15
-	return base + time.Duration(float64(base)*factor), nil
+	jitter := time.Duration(float64(base) * factor)
+	if base > time.Duration(math.MaxInt64)-jitter {
+		return 0, fmt.Errorf("backoff duration overflows")
+	}
+	return base + jitter, nil
 }
 
 // RateLimitStatus summarizes the GitHub API quota and required backoff.
@@ -69,8 +74,14 @@ func ParseRateLimit(header http.Header, now time.Time) RateLimitStatus {
 
 	// Secondary rate limit (Abuse detection) uses standard Retry-After header
 	if retryAfterStr := header.Get("Retry-After"); retryAfterStr != "" {
-		if seconds, err := strconv.Atoi(retryAfterStr); err == nil {
-			status.RetryAfter = time.Duration(seconds) * time.Second
+		if seconds, err := strconv.ParseInt(retryAfterStr, 10, 64); err == nil && seconds >= 0 {
+			delay := time.Duration(math.MaxInt64)
+			if seconds <= math.MaxInt64/int64(time.Second) {
+				delay = time.Duration(seconds) * time.Second
+			}
+			if delay > status.RetryAfter {
+				status.RetryAfter = delay
+			}
 			status.IsExhausted = true
 		}
 	}

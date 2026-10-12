@@ -33,11 +33,11 @@ Hai là, cơ chế vai trò cho tác vụ ECS: Nhà cung cấp thông tin xác t
 
 Ba là, cơ chế định danh Pod trên EKS: Nhà cung cấp thông tin xác thực vùng chứa tương tác trực tiếp với tiến trình hỗ trợ danh tính trên nút máy chủ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_FULL_URI` và mã thông báo xác thực tại `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE`.
 
-Để giảm thiểu số lượt gọi mạng lặp lại trước mỗi yêu cầu HTTP, phiên bản SDK v2 bao bọc nhà cung cấp bên trong cấu trúc bộ nhớ đệm `aws.CredentialsCache`. Bộ đệm này hoàn toàn không cần một tiến trình goroutine chạy nền để định kỳ làm mới khóa xác thực. Lượt gọi hàm `Retrieve(ctx)` tiếp theo sẽ chủ động lấy lại khóa từ nhà cung cấp khi dữ liệu trong bộ đệm hết hạn. Cụ thể, mỗi khi mã nguồn gọi `Retrieve(ctx)`, bộ đệm kiểm tra trực tiếp thời điểm hết hiệu lực của khóa: nếu `ExpiryWindow > 0`, bộ đệm sẽ chủ động coi khóa hết hạn sớm hơn thời điểm thực tế để lượt gọi tiếp theo thực hiện làm mới một cách đồng bộ; nếu `ExpiryWindow <= 0`, tùy chọn này được bỏ qua. Nhờ cơ chế kiểm tra đồng bộ theo nhu cầu thực tế, bộ đệm duy trì tính hợp lệ của phiên làm việc mà không đòi hỏi tiến trình quét định kỳ chạy ngầm.
+SDK bao bọc provider trong `aws.CredentialsCache` để tránh lấy khóa lặp lại trước mỗi request. Khi có lượt `Retrieve` cần dữ liệu và khóa chưa có hoặc đã hết hạn, cache mới gọi provider; nó không có vòng quét định kỳ tự làm mới khi không có người gọi. `ExpiryWindow > 0` điều chỉnh mốc hết hạn lưu trong cache để lần gọi sau làm mới sớm; window không dương được bỏ qua. Không hiểu “theo nhu cầu” thành “không tạo goroutine”: source SDK v1.36.3 dùng singleflight để các caller cùng chờ một lượt lấy khóa, chạy lượt đó trong goroutine ngắn hạn. Context bị hủy có thể kết thúc một caller mà không hủy lượt lấy khóa dùng chung. Test có điểm bắt tay kiểm caller đã trả lỗi hủy, provider vẫn chạy rồi hoàn tất cho caller khác; đây là hành vi của phiên bản được ghim, không phải bảo đảm không còn việc nền khi caller trả về.
 
 ### Xác định Region và Ranh giới Dịch vụ Vùng
 
-Khi nạp cấu hình qua `config.LoadDefaultConfig`, việc xác định Region tuân theo chuỗi phân giải: cờ tùy chọn tường minh `config.WithRegion("ap-southeast-1")`, biến môi trường `AWS_REGION` hoặc `AWS_DEFAULT_REGION`, cấu hình profile trong file `~/.aws/config`, và EC2 instance metadata (IMDS).
+Khi nạp qua `config.LoadDefaultConfig`, Region có thể đến từ `config.WithRegion("ap-southeast-1")`, `AWS_REGION`/`AWS_DEFAULT_REGION` hoặc profile trong `~/.aws/config`; giá trị tường minh có ưu tiên cao hơn. SDK không có Region mặc định. Lấy Region từ EC2 IMDS cần bật tùy chọn `config.WithEC2IMDSRegion()`; không nhầm việc credential provider tự dùng IMDS với việc Region tự được suy ra từ IMDS.
 
 Khác với các dịch vụ mang tính toàn cầu (global services như IAM), hầu hết dịch vụ AWS (như Amazon S3, DynamoDB, EC2) đều vận hành theo từng region vật lý riêng biệt. Nếu không xác định được Region từ các nguồn cấu hình trên, SDK v2 sẽ trả về lỗi khi khởi tạo cuộc gọi đến dịch vụ vùng. Đặc biệt với Amazon S3, dù tên bucket là duy nhất trên phạm vi toàn cầu, mỗi bucket vẫn cư trú tại một region xác định; gửi request tới bucket ở region khác mà không cấu hình cross-region có thể dẫn đến lỗi điều hướng HTTP 301 hoặc lỗi ký chữ ký số SigV4.
 
@@ -143,6 +143,8 @@ func ClassifyError(err error) (bool, string) {
 }
 ~~~
 
+`true` ở đây chỉ đánh dấu ứng viên lỗi tạm thời, không phải quyền thử lại mọi thao tác ghi. Bộ thử lại tiêu chuẩn mặc định tối đa ba **attempt**, gồm lượt đầu và tối đa hai lượt thử lại, không phải ba lần thử lại ngoài lượt đầu. Cấu hình có thể thay đổi; ngân sách và khả năng lặp tác dụng phụ vẫn do từng thao tác quyết định.
+
 ---
 
 ## 5. Hiện thực Storage Client và Middleware tùy biến
@@ -163,6 +165,11 @@ type DynamicCredentialProvider struct {
 func (p *DynamicCredentialProvider) Retrieve(
 	ctx context.Context,
 ) (aws.Credentials, error) {
+	select {
+	case <-ctx.Done():
+		return aws.Credentials{}, ctx.Err()
+	default:
+	}
 	count := p.retrieveCount.Add(1)
 	now := time.Now()
 

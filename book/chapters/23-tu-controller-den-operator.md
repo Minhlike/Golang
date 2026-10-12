@@ -206,7 +206,7 @@ Nhánh thứ hai, trả về `(ctrl.Result{RequeueAfter: d}, nil)` với `d > 0`
 
 Nhánh thứ ba, trả về `(ctrl.Result{Requeue: true}, nil)`: Bộ điều khiển đưa yêu cầu trở lại hàng đợi có kiểm soát tốc độ qua bộ giới hạn tốc độ (rate limiter). Trong các phiên bản controller-runtime mới, cách trả về này dần được thay thế bằng lỗi hoặc `RequeueAfter` tường minh.
 
-Nhánh thứ tư, trả về `(ctrl.Result{}, nil)`: Điều hòa thành công. Controller xóa lịch sử lỗi (`Forget`), không xếp lại request, và worker chỉ thức dậy khi có sự kiện watch mới tác động lên tài nguyên.
+Nhánh thứ tư, trả về `(ctrl.Result{}, nil)`: lượt này không yêu cầu xếp lại và lịch sử lỗi được xóa (`Forget`). Key vẫn có thể đã được đánh dirty trong lúc xử lý, có lịch chờ từ trước hoặc được nguồn sự kiện khác đưa vào queue; không suy rằng chỉ watch mới mới đánh thức worker.
 
 ### Xử lý Xóa an toàn và Dọn dẹp ngoại vi
 
@@ -297,7 +297,7 @@ Lab sửa desired deployment rồi gọi Reconcile để kiểm tra logic khôi 
 Gán `DeletionTimestamp` vào đối tượng. Bộ điều hòa gọi `ExternalCleaner.Cleanup()` rồi mới gỡ `finalizer`; thiếu bộ dọn dẹp là lỗi và `finalizer` phải giữ lại. Test chỉ chứng minh contract của lab; việc object thực sự biến mất là trách nhiệm API server/garbage collection và không được suy ra từ fake client.
 
 ### 4. Cập nhật Status Subresource độc lập (TestReconcileStatusSubresource)
-Kiểm chứng rằng khi đối tượng `Deployment` con đạt trạng thái sẵn sàng (`AvailableReplicas: 3`), bộ điều hòa cập nhật `appService.Status.AvailableReplicas = 3` và gán nhãn `Phase = "Ready"` thông qua cổng `r.Status().Update()` mà không làm biến đổi bất kỳ trường nào trong `Spec`.
+Test kiểm chính sách hẹp của lab: `AvailableReplicas: 3` với ba replica mong muốn dẫn tới `Phase = "Ready"`, cập nhật qua `r.Status().Update()` mà không đổi `Spec`. Chính sách này chưa kiểm `Deployment.Status.ObservedGeneration`, `UpdatedReplicas` hoặc rollout mới đã hoàn tất; nhãn Ready không đủ chứng minh ảnh mới đang phục vụ. `AppService.Status.ObservedGeneration` chỉ ghi thế hệ AppService được lượt này đọc. Test mới từ chối Deployment cùng tên nhưng không thuộc quyền điều khiển; hai fixture drift/status cũ được gắn owner reference để đúng tình huống child sở hữu, không coi name là ownership.
 
 ### 5. An toàn khi tài nguyên biến mất (TestNotFoundResourceNoOp)
 Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Hàm điều hòa trả về `(ctrl.Result{}, nil)` một cách nhẹ nhàng, không gây `panic` hay sinh lỗi rác trong log hệ thống.
@@ -408,7 +408,7 @@ Thứ nhất là kiểm tra quyền sở hữu (ownership verification). Khi `r.
 
 Thứ hai là khắc phục hiện tượng trôi dạt cấu hình (drift correction). Với đối tượng `ConfigMap` đã xác thực đúng quyền sở hữu, việc chỉ kiểm tra trạng thái không tìm thấy khi khởi tạo ban đầu là chưa đủ. Nếu ai đó chỉnh sửa `ConfigMap` trực tiếp hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, luồng xử lý chỉ tạo mới sẽ bỏ sót sai lệch dữ liệu. Do đó, hàm điều hòa đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi gọi `Update(ctx, found)` khi có khác biệt để bảo đảm tính nhất quán sau cùng (eventual consistency).
 
-Thứ ba là ranh giới tác động đến tiến trình trong `Pod` (ranh giới khối lượng công việc). Việc cập nhật `ConfigMap` trên máy chủ API không làm `Pod` tự động khởi động lại, trừ khi ứng dụng tự thiết lập cơ chế theo dõi tệp trên đĩa để nạp lại cấu hình. Nếu ứng dụng nạp cấu hình qua biến môi trường (`envFrom`) hoặc gắn kết tệp qua `subPath`, tiến trình `kubelet` sẽ không tự đẩy dữ liệu mới vào vùng chứa. Để giải quyết ranh giới này, thay đổi của `ConfigMap` không thể tự động cập nhật `Deployment`; chính hàm điều hòa của bộ vận hành (`Operator`) phải chủ động tính toán mã băm SHA-256 của chuỗi `app.json` mới rồi gắn vào chú thích (`annotation`) của mẫu `Pod` trong `Deployment` (chẳng hạn `app.kubernetes.io/config-hash: <sha256>`). Khi bộ vận hành cập nhật `Deployment` với chú thích mẫu mới, bộ điều khiển `Deployment` của Kubernetes mới nhận diện được sự thay đổi ở cấp độ mẫu `Pod` và kích hoạt quá trình cập nhật cuộn (`Rolling Update`) để thay thế toàn bộ `Pod` bằng phiên bản nạp cấu hình mới.
+Thứ ba là tác động tới ứng dụng trong Pod. Cập nhật `ConfigMap` không tự restart Pod. Với volume thông thường, dữ liệu mới được chiếu xuống sau một khoảng trễ; ứng dụng có thể theo dõi và nạp lại cấu hình mà không restart. Biến môi trường `envFrom` và mount qua `subPath` không tự nhận dữ liệu mới theo cách đó. Nếu chọn policy rollout, Operator có thể gắn mã băm cấu hình vào annotation của Pod template rồi cập nhật Deployment; thay đổi template kích hoạt triển khai theo strategy đã cấu hình. Đây là một lựa chọn, không phải cơ chế duy nhất, và việc gửi update thành công chưa chứng minh rollout hoàn tất.
 
 ### Lời giải Thử thách 2: Quản lý Condition bằng meta.SetStatusCondition
 

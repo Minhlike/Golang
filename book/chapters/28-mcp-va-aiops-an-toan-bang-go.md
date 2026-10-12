@@ -131,6 +131,8 @@ Khi triển khai hệ thống có cơ chế kết thúc TLS tại máy chủ ủ
 
 Chính sách của bài thực hành cho phép vai trò quan sát viên gọi `query_service_health` trên các mục tiêu đã đăng ký và nghiêm cấm gọi `restart_service`. Đó không phải là đặc quyền tự do truy vấn tùy tiện: hệ thống thực tế đòi hỏi giới hạn phạm vi dữ liệu, mục tiêu cho phép, định mức tài nguyên và danh tính người gọi. Vai trò người vận hành vẫn bắt buộc phải đi qua bộ cấp phép thay đổi `ChangeAuthorizer` rồi mới tới bộ thực thi dịch vụ `ServiceActuator`; tên gọi của vai trò không tự nó mang đủ thẩm quyền để kích hoạt thay đổi.
 
+`DefaultChangeAuthorizer` chỉ chấp nhận đúng `operator` hoặc `admin` rồi mới kiểm phiếu và dịch vụ. Một vai trò rỗng, viết sai hay chưa được định nghĩa phải bị từ chối; kiểm riêng `role != observer` sẽ vô tình mở quyền cho các giá trị ấy. Đây là policy của lab, không phải role model do MCP chuẩn hóa.
+
 ~~~go
 type ServiceActuator interface {
 	RestartService(
@@ -149,7 +151,7 @@ type ChangeAuthorizer interface {
 
 ## 6. Xây dựng OpsServer trên nền tảng Official MCP Go SDK
 
-Dưới đây là các cấu phần trọng tâm của máy chủ `OpsServer` trong tệp `labs/part28-mcp-ops-tools/server.go`. Đoạn trích dẫn làm sáng tỏ các ranh giới kỹ thuật cốt lõi của bài thực hành; toàn bộ các thành phần kết nối chi tiết còn lại được lưu giữ trong mã nguồn:
+Dưới đây là các cấu phần trọng tâm của máy chủ `OpsServer` trong tệp `labs/part28-mcp-ops-tools/server.go`. Các đoạn trích được rút gọn để đọc từng ranh giới: phần gắn khóa caller cho điều tốc và phép kiểm tra limiter trong handler không in lại ở đây. Source lab mới là cài đặt đầy đủ; việc biên dịch các đoạn trích không chứng minh policy đã bị lược bỏ vẫn hoạt động.
 
 ### 6.1. Khởi tạo máy chủ và ranh giới danh tính
 
@@ -161,6 +163,7 @@ type OpsServer struct {
 	httpClient  *http.Client
 	actuator    ServiceActuator
 	authorizer  ChangeAuthorizer
+	limiter     ToolRateLimiter
 	targets     map[string]HealthTarget
 
 	mu          sync.RWMutex
@@ -172,10 +175,14 @@ func NewOpsServer(
 	client *http.Client,
 	actuator ServiceActuator,
 	authorizer ChangeAuthorizer,
+	limiter ToolRateLimiter,
 	targets []HealthTarget,
 ) *OpsServer {
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	if limiter == nil {
+		limiter = NewKeyedIntervalLimiter(10)
 	}
 	targetMap := make(map[string]HealthTarget, len(targets))
 	for _, t := range targets {
@@ -196,6 +203,7 @@ func NewOpsServer(
 		httpClient:  client,
 		actuator:    actuator,
 		authorizer:  authorizer,
+		limiter:     limiter,
 		targets:     targetMap,
 		sessionRole: make(map[string]Role),
 	}
@@ -210,7 +218,10 @@ func NewOpsServer(
 				req mcp.Request,
 			) (mcp.Result, error) {
 				role := CallerRoleFromContext(ctx)
-				sess := req.GetSession()
+				var sess mcp.Session
+				if req != nil {
+					sess = req.GetSession()
+				}
 				if role == RoleObserver && sess != nil {
 					ops.mu.RLock()
 					id := sess.ID()
@@ -233,7 +244,7 @@ func NewOpsServer(
 
 ### 6.2. Đăng ký Công cụ Kiểm tra Sức khỏe và Rào chắn SSRF
 
-Công cụ `query_service_health` được đăng ký qua `mcp.AddTool`. SDK tự động giải mã tham số vào `QueryHealthInput` và chuyển giao quyền kiểm soát cho closure handler:
+Công cụ `query_service_health` được đăng ký qua `mcp.AddTool`. SDK tự động giải mã tham số vào `QueryHealthInput` và chuyển giao quyền kiểm soát cho closure handler. Allowlist dưới đây chỉ chặn ID lạ; `http.Client` vẫn có thể theo redirect, và đích DNS có thể thay đổi. Lab không cài bộ lọc IP hoặc redirect: không dùng test ID lạ làm bằng chứng đã chặn mọi đường SSRF.
 
 ~~~go
 mcp.AddTool(s.mcpServer, &mcp.Tool{
@@ -248,7 +259,9 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 	target, found := s.targets[input.TargetID]
 	if !found {
 		errStr := fmt.Sprintf(
-			"target %q blocked by policy", input.TargetID,
+			"unapproved target_id %q: "+
+				"blocked by SSRF allowlist policy",
+			input.TargetID,
 		)
 		s.RecordAudit(
 			role, "query_service_health",
@@ -306,8 +319,9 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 		health = "healthy"
 	}
 	resText := fmt.Sprintf(
-		"Service %s (%s) %s: HTTP %d",
-		target.ServiceName, target.ID, health, resp.StatusCode,
+		"Service %s (%s) %s: HTTP %d in %v",
+		target.ServiceName, target.ID, health,
+		resp.StatusCode, duration,
 	)
 	s.RecordAudit(
 		role, "query_service_health",
@@ -339,6 +353,18 @@ mcp.AddTool(s.mcpServer, &mcp.Tool{
 	args := map[string]any{
 		"service_name":  input.ServiceName,
 		"change_ticket": input.ChangeTicket,
+	}
+	deny := func(message string) (
+		*mcp.CallToolResult, any, error,
+	) {
+		s.RecordAudit(role, "restart_service", args,
+			"DENY", message)
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: message},
+			},
+		}, nil, nil
 	}
 
 	if s.authorizer == nil || s.actuator == nil {
@@ -507,6 +533,8 @@ Về chính sách tiêu thụ token, ta lựa chọn chính sách vô hiệu hó
 
 Cài đặt an toàn của `ApprovalManager` dưới mô hình bộ nhớ cục bộ:
 
+Đoạn dưới là phác thảo của biến thể **chỉ tiêu thụ khi khớp thành công**, không phải source lab nguyên vẹn: nó lược constructor khởi tạo `pendings` và helper sinh token bằng `crypto/rand` có trả lỗi. Source `approval.go` chọn policy khác: một lần xác nhận có token tồn tại sẽ tiêu thụ token, kể cả khi gửi sai action/target. `TestApprovalTokenIsBoundAndOneTime` kiểm policy đó. Hai lựa chọn đánh đổi khả năng thử lại hợp lệ với nguy cơ dò/thử nhiều lần; không dùng test của policy này làm chứng cứ cho policy kia.
+
 ~~~go
 type PendingApproval struct {
 	Action    string
@@ -541,7 +569,7 @@ func (m *ApprovalManager) Confirm(
 	defer m.mu.Unlock()
 
 	item, exists := m.pendings[token]
-	if !exists || time.Now().After(item.ExpiresAt) {
+	if !exists || !time.Now().Before(item.ExpiresAt) {
 		return false
 	}
 	if item.Action != action || item.Target != target {

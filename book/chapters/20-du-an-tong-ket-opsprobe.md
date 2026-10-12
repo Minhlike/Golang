@@ -104,7 +104,7 @@ for w := 0; w < numWorkers; w++ {
 wg.Wait()
 ~~~
 
-Chỉ số đo lường `opsprobe_active_workers` ghi nhận số lượng tiến trình làm việc đã khởi động và chưa thoát, thông qua đối tượng quan sát `WorkerObserver`. Chỉ số này không phân tách riêng các tiến trình đang tích cực xử lý mục tiêu: một tiến trình đang tạm dừng chờ việc trong hàng đợi vẫn được tính vào chỉ số. Nếu muốn đo lường chính xác số lượng thao tác đang diễn ra trong thực tế, hệ thống cần một chỉ số riêng biệt với các điểm tăng và giảm bao quanh từng thao tác cụ thể.
+Đoạn trên lược bỏ instrumentation và một số field kết quả. Trong source, producer đưa toàn bộ job vào kênh đệm rồi đóng kênh trước khi khởi động worker. `WorkerObserver.WorkerStarted/WorkerStopped` bao quanh từng lượt `ProbeSingle`, nên `opsprobe_active_workers` đo thao tác thăm dò đang chạy, không phải tổng số goroutine còn sống hay worker đang chờ việc. Lượt job bị bỏ qua vì context đã hủy không tăng gauge này. `wg.Wait()` là điểm bàn giao kết quả sau khi mọi worker kết thúc; hook quan sát không thay cho phép join đó.
 
 Tại giao diện HTTP API, một kênh đệm vận hành như cờ hiệu (*semaphore*) để giới hạn số lượng lượt chạy đồng thời theo cấu hình. Khi cạn kiệt vị trí xử lý, chính sách của bài thực hành sẽ chủ động từ chối tiếp nhận công việc mới bằng mã trạng thái `429 Too Many Requests`; giới hạn này là định mức của ví dụ mẫu, chưa phải năng lực chịu tải đã được kiểm chứng an toàn cho môi trường thực tế:
 
@@ -129,9 +129,9 @@ default:
 
 Dữ liệu lưu trữ chỉ có giá trị khi nó phản ánh đúng trạng thái nhất quán của thế giới thực. Nếu một đợt chạy gồm 10 target, hệ thống không được phép rơi vào trạng thái: lưu thành công 5 target đầu rồi crash, bỏ lại 5 target sau và làm lệch báo cáo tổng hợp.
 
-Trong `internal/store/store.go`, toàn bộ bản ghi đợt chạy (`runs`) và các kết quả probe (`probe_results`) được thực thi bên trong một transaction duy nhất qua `database/sql`:
+Trong `internal/store/store.go`, bản ghi đợt chạy (`runs`) và các kết quả probe (`probe_results`) được ghi trong một transaction qua `database/sql`. Đoạn dưới là mã giả về thứ tự thao tác; dấu `...` lược các đối số nên không phải mã Go có thể sao chép để biên dịch. Truy vấn, đối số và nhánh lỗi đầy đủ nằm trong source và được kiểm thử bằng SQLite thật:
 
-~~~go
+~~~text
 tx, err := s.db.BeginTx(ctx, nil)
 if err != nil {
 	return fmt.Errorf("begin transaction: %w", err)
@@ -172,16 +172,27 @@ Bên gọi bắt buộc phải luôn đóng luồng dữ liệu `resp.Body`. Vi�
 ~~~go
 const MaxDrainBytes = 16384 // 16 KiB
 
-func drainResponseBody(body io.ReadCloser) bool {
+func drainResponseBody(
+	body io.ReadCloser, maxBytes int64,
+) (bool, error) {
 	if body == nil {
-		return false
+		return false, nil
 	}
 	defer body.Close()
-
-	lr := &io.LimitedReader{R: body, N: MaxDrainBytes + 1}
+	if maxBytes <= 0 {
+		return false, nil
+	}
+	if maxBytes == int64(^uint64(0)>>1) {
+		return false, errors.New(
+			"drain limit leaves no room for sentinel byte")
+	}
+	lr := &io.LimitedReader{R: body, N: maxBytes + 1}
 	_, err := io.Copy(io.Discard, lr)
+	if err != nil {
+		return false, err
+	}
 	// Body nhỏ đã chạm EOF; không phải guarantee reuse.
-	return err == nil && lr.N > 0
+	return lr.N > 0, nil
 }
 ~~~
 
@@ -222,7 +233,7 @@ Hệ thống probe giả định được triển khai để kiểm tra sức kh
 #### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 Kết quả cURL phản hồi nhanh chỉ cho thấy dịch vụ đích có khả năng phục vụ một kết nối đơn lẻ tại thời điểm thử nghiệm. Nó giúp thu hẹp nghi vấn về việc máy chủ đích bị treo hoàn toàn, nhưng chưa đủ để loại trừ các yếu tố hạ tầng phức tạp như giới hạn kết nối đồng thời trên tường lửa, chính sách cân bằng tải hay tình trạng bão hòa hàng đợi socket.
 
-Để cô lập nguyên nhân, kỹ sư sử dụng `net/http/httptrace` đo lường tỷ lệ kết nối mới so với kết nối tái sử dụng qua trường `info.Reused`. Theo tài liệu của gói `net/http`, một kết nối HTTP/1.x chỉ đủ điều kiện đưa trở lại pool tái sử dụng khi client đã đọc hết dữ liệu của response body và đóng nó tường minh qua `resp.Body.Close()`. Nếu client bỏ rơi body hoặc quên đóng, `http.Transport` buộc phải để kết nối ở trạng thái dở dang hoặc ngắt bỏ, khiến mỗi request tiếp theo đều phải mở một kết nối TCP mới cho đến khi cạn kiệt tài nguyên hệ thống.
+Để cô lập nguyên nhân, kỹ sư dùng `net/http/httptrace` và trường `info.Reused`. Theo tài liệu `net/http`, nếu body chưa được đọc đến EOF và đóng, Transport có thể không tái sử dụng kết nối HTTP/1.x. Trong fixture cố ý bỏ body, ta quan sát kết nối mới; đó không phải bảo đảm rằng mọi request tiếp theo trong mọi cấu hình đều phải mở TCP mới hay chắc chắn cạn tài nguyên. HTTP/2 còn có vòng đời stream khác; không ngoại suy kết quả này sang mọi giao thức.
 
 ### Bằng chứng mã nguồn và Đo đạc thực nghiệm
 

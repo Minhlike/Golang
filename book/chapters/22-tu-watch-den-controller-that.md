@@ -129,7 +129,7 @@ Thứ hai, nếu gặp thất bại tạm thời: Không gọi `Forget`, mà g�
 
 ## 6. Hiện thực Controller hoàn chỉnh trong Go
 
-Đoạn mã dưới đây trích xuất phần lõi của `labs/part22-client-go-controller/controller.go`, sử dụng API generic trong client-go v0.37.0. Phiên bản được ghim cố định để đối chiếu kỹ thuật, không bắt buộc dự án luôn phải chạy theo các gói phụ thuộc mới nhất.
+Đoạn dưới là biến thể sư phạm sử dụng interface `Reconciler`, không phải bản chép nguyên source lab. Trong `labs/part22-client-go-controller/controller.go`, điểm mở rộng là callback `ReconcileFn`; khi không cấp callback, `reconcile` ghi kết quả vào `results` và `Results()` trả bản sao. Nhánh kiểm `DeletionTimestamp` dưới đây cũng không có trong lab đó. Cả hai dùng API generic của client-go v0.37.0. Test lab chứng minh implementation trong repository, không tự chứng minh biến thể in sách; khi đối chiếu, phải giữ rõ ranh giới này.
 
 ~~~go
 type Reconciler interface {

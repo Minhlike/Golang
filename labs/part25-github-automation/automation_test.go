@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -141,8 +142,7 @@ func TestRateLimitParsingPrimaryAndSecondary(t *testing.T) {
 	h1.Set("X-RateLimit-Limit", "5000")
 	h1.Set("X-RateLimit-Remaining", "0")
 	resetEpoch := now.Add(15 * time.Minute).Unix()
-	h1.Set("X-RateLimit-Reset", string(rune(resetEpoch))) // format as string number
-	h1.Set("X-RateLimit-Reset", "1790295300")             // epoch timestamp
+	h1.Set("X-RateLimit-Reset", strconv.FormatInt(resetEpoch, 10))
 
 	status1 := ParseRateLimit(h1, now)
 	if !status1.IsExhausted {
@@ -150,6 +150,9 @@ func TestRateLimitParsingPrimaryAndSecondary(t *testing.T) {
 	}
 	if status1.Limit != 5000 || status1.Remaining != 0 {
 		t.Errorf("expected limit 5000 and remaining 0, got %d and %d", status1.Limit, status1.Remaining)
+	}
+	if status1.RetryAfter != 15*time.Minute {
+		t.Fatalf("primary reset wait = %v, want 15m", status1.RetryAfter)
 	}
 
 	// Case 2: Secondary rate limit (Abuse triggered Retry-After)

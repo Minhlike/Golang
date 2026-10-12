@@ -1,35 +1,11 @@
 @startuml
 !include publication-flow.iuml
-
-left to right direction
-
-package "Không gian Agent Trí tuệ Nhân tạo (AI Agent Space)" as agent_pkg {
-  rectangle "<b>LLM Agent Client</b>\n• Tiếp nhận mục tiêu từ kỹ sư\n• Suy luận kế hoạch hành động\n• Phát sinh JSON-RPC 2.0 (tools/call)" as agent
-}
-
-package "Rào chắn Kiểm soát Vận hành (MCP Security & Blast Radius Barrier)" as gateway_pkg {
-  rectangle "<b>MCP Server Gateway (Go)</b>\n• Xác thực giao thức stdio / SSE\n• Kiểm tra tính hợp lệ của tham số\n• Đối soát ranh giới ủy quyền (Least Privilege)" as gateway
-
-  rectangle "<b>Cổng Phê duyệt Con người (Human-in-the-Loop Gate)</b>\n• Đánh giá bán kính ảnh hưởng (Blast Radius)\n• Thao tác đọc (Read-only): Tự động cho phép\n• Thao tác ghi/xóa/restart: Bắt buộc kỹ sư duyệt" as hitl
-
-  rectangle "<b>Sổ Nhật ký Bất biến (Audit Trail)</b>\nGhi nhận người gọi, tham số, dấu thời gian" as audit
-}
-
-package "Hạ tầng Vận hành Thực tế (Production Infrastructure)" as infra_pkg {
-  rectangle "<b>Hệ thống Đích (Target Resources)</b>\nKubernetes Pods, AWS Cloud, Linux Nodes\nThực thi công việc trong phạm vi thu hẹp" as infra
-}
-
-agent -right-> gateway : tools/call\n(Yêu cầu thực thi lệnh)
-gateway -down-> audit : Ghi nhận nhật ký kiểm toán
-gateway -right-> hitl : Đánh giá mức độ rủi ro
-
-hitl -right-> infra : Lệnh đã được phê duyệt an toàn
-infra --> gateway : Kết quả thực thi
-gateway --> agent : tools/call Result\n(Báo cáo hoàn tất)
-
-note bottom of gateway_pkg
-  <b>Nguyên tắc An toàn MCP trong Vận hành (AIOps Guardrails):</b>
-  Tuyệt đối không trao toàn quyền truy cập hạ tầng (Zero Blind Trust) cho AI Agent.
-  Mọi hành động có khả năng gây đột biến phải qua rào chắn phân định rủi ro và xác nhận từ con người.
-end note
+top to bottom direction
+rectangle "<b>Agent A gửi message</b>\nQuy định copy / ownership của dữ liệu" as sender
+rectangle "<b>Mailbox của Agent B</b>\nNhận yêu cầu; quy định capacity\nĐầy / đóng: trả lỗi hay chờ theo policy" as mailbox
+rectangle "<b>B xử lý state của mình</b>\nMột consumer nếu cần xử lý tuần tự\nJoin vòng xử lý khi kết thúc lifecycle" as owner
+rectangle "<b>Policy ứng dụng, không là isolation có sẵn</b>\nGo không tự cấm direct call\nMessage có pointer vẫn có thể alias" as boundary
+sender -down-> mailbox : Gửi theo contract
+mailbox -down-> owner : Bàn giao message
+owner -down-> boundary
 @enduml

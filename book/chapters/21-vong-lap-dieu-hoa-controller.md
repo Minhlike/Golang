@@ -126,13 +126,13 @@ Bảng dưới đây mô tả sự dịch chuyển trạng thái nội bộ củ
 
 | Thời điểm | Thao tác | `queue` | `dirty` | `processing` | Ý nghĩa vận hành |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| $T_0$ | Ban đầu | `[]` | `{}` | `{}` | Hàng đợi rỗng. |
-| $T_1$ | `Add("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Đưa vào slice và đánh dấu dirty. |
-| $T_1'$ | Worker 1 gọi `Get()` | `[]` | `{}` | `{"pod-1"}` | Lấy ra xử lý: xóa khỏi dirty, đưa vào processing. |
-| $T_2$ | `Add("pod-1")` (lần 1) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đang processing: chỉ đánh dấu dirty, không thêm vào slice. |
-| $T_2'$ | `Add("pod-1")` (lần 2) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đã trong dirty: gộp lại (deduplicate), bỏ qua. |
-| $T_3$ | Worker 1 gọi `Done("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Xóa khỏi processing; thấy dirty còn key: đưa lại vào slice. |
-| $T_4$ | Lượt `Get()` kế tiếp | `[]` | `{}` | `{"pod-1"}` | Reconcile lại để quan sát trạng thái mới nhất. |
+| T0 | Ban đầu | `[]` | `{}` | `{}` | Hàng đợi rỗng. |
+| T1 | `Add("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Đưa vào slice và đánh dấu dirty. |
+| T1′ | Worker 1 gọi `Get()` | `[]` | `{}` | `{"pod-1"}` | Lấy ra xử lý: xóa khỏi dirty, đưa vào processing. |
+| T2 | `Add("pod-1")` (lần 1) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đang processing: chỉ đánh dấu dirty, không thêm vào slice. |
+| T2′ | `Add("pod-1")` (lần 2) | `[]` | `{"pod-1"}` | `{"pod-1"}` | Thấy đã trong dirty: gộp lại (deduplicate), bỏ qua. |
+| T3 | Worker 1 gọi `Done("pod-1")` | `["pod-1"]` | `{"pod-1"}` | `{}` | Xóa khỏi processing; thấy dirty còn key: đưa lại vào slice. |
+| T4 | Lượt `Get()` kế tiếp | `[]` | `{}` | `{"pod-1"}` | Reconcile lại để quan sát trạng thái mới nhất. |
 
 Cơ chế này hiện thực hóa mô hình điều hòa dựa trên trạng thái (level-triggered), không phải một hệ thống hàng đợi tin nhắn đảm bảo chuyển phát từng sự kiện riêng lẻ. Việc gộp sự kiện (coalescing) bảo đảm rằng dù có bao nhiêu thay đổi dồn dập trong lúc xử lý, hàng đợi chỉ lên lịch thêm đúng một lượt điều hòa kế tiếp sau khi tiến trình xử lý hiện tại hoàn tất, đồng thời ngăn chặn việc hai tiến trình cùng xử lý một khóa song song. Quan trọng hơn, hàng đợi trong bộ nhớ không đưa ra cam kết xử lý chính xác một lần (exactly-once): nếu tiến trình bị dừng đột ngột, toàn bộ dữ liệu trong slice và map sẽ biến mất và bộ điều khiển phụ thuộc hoàn toàn vào chu kỳ quan sát kế tiếp để tái lập bức tranh trạng thái có thẩm quyền từ nguồn chân lý.
 
@@ -155,12 +155,8 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 		return false // Vượt quá số lần thử lại tối đa
 	}
 
-	// Chờ tăng gấp đôi: base * 2^(failures-1)
-	multiplier := 1 << (failures - 1)
-	delay := q.config.BaseDelay * time.Duration(multiplier)
-	if delay > q.config.MaxDelay {
-		delay = q.config.MaxDelay
-	}
+	delay := retryDelay(
+		q.config.BaseDelay, q.config.MaxDelay, failures)
 
 	time.AfterFunc(delay, func() {
 		q.Add(item)
@@ -168,6 +164,8 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 	return true
 }
 ~~~
+
+Hàm `retryDelay` trong source tăng gấp đôi nhưng kiểm tra `delay > max/2` trước khi nhân và bão hòa tại `max`. Cắt ngưỡng sau một phép nhân đã tràn là quá muộn: thời lượng có thể trở thành âm hoặc 0. Test `TestRetryDelaySaturatesBeforeOverflow` kiểm cả lần thất bại thứ 65 và thời lượng sát giới hạn số nguyên, không phụ thuộc scheduler hay độ trễ thực tế.
 
 Với `BaseDelay=50ms`, lịch thử lại của mô hình này tăng theo 50ms, 100ms, 200ms, 400ms, rồi chạm trần `MaxDelay`. Khoảng giãn cách giúp giới hạn nhịp thử lại dồn dập khi hệ thống đích gặp lỗi; nó không loại bỏ mọi đợt thử lại đồng thời giữa nhiều khóa hay nhiều bộ điều khiển. Khi hàm điều hòa thành công, bộ điều khiển gọi `q.Forget(item)` để xóa bộ đếm thất bại.
 
@@ -239,7 +237,7 @@ func (c *Controller) Run(ctx context.Context) error {
 }
 ~~~
 
-Phương thức `queue.ShutDown()` giải phóng các goroutine đang bị nghẽn ở lệnh `cond.Wait()`. Vòng lặp `for c.processNextWorkItem(ctx)` nhận được tín hiệu `shutdown == true` khi hàng đợi đã cạn, kết thúc vòng lặp và thông báo qua `wg.Done()`. Việc đóng hàng đợi chỉ giúp các tiến trình thoát an toàn; nó không tự bảo đảm các thao tác ghi ra bên ngoài đã hoàn tất. Bộ thực thi phải tôn trọng `ctx`, và các tác dụng phụ đã gửi sang hệ thống khác đòi hỏi tính lũy đẳng hoặc quan sát lại riêng biệt.
+Phương thức `queue.ShutDown()` đánh thức goroutine đang chờ `cond.Wait()`. Worker nhận `shutdown == true` khi hàng đợi đã cạn, kết thúc vòng lặp rồi thông báo qua `wg.Done()`. Nó không tự hoàn tất thao tác bên ngoài; bộ thực thi phải tôn trọng `ctx`, và tác dụng phụ đã gửi cần tính lũy đẳng hoặc quan sát lại. Lab chưa lưu và dừng các timer `AfterFunc`: callback đến muộn sẽ bị `Add` từ chối sau shutdown, nhưng timer có thể còn giữ closure tới lúc hết hạn. Join worker không chứng minh mọi timer đã được thu hồi; không coi queue mô phỏng này là thư viện vận hành hoàn chỉnh.
 
 ### Bài thực hành: Kiểm chứng Controller và WorkQueue
 

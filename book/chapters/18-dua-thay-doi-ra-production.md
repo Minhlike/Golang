@@ -309,10 +309,7 @@ blocker này rõ ràng, không tự cài và không tạo tài nguyên cloud th�
 | Cổng phê duyệt | Công cụ dòng lệnh Go kiểm tra đóng an toàn (*fail-closed*). | Chính sách tiếp nhận thăng hạng. | Không thay thế được môi trường vận hành thực tế. |
 | Triển khai môi trường | Cập nhật trạng thái mong muốn của cụm máy chủ. | Bộ điều khiển của hệ thống điều phối. | Bản sao sẵn sàng không bảo đảm cam kết mức dịch vụ (SLO) nghiệp vụ. |
 
-> **Dừng để dự đoán:** Nếu một đường ống CI tự động gán cờ `--provenance-verified=true`
-> mà không chạy bất kỳ lệnh xác thực chữ ký nào, điều gì sẽ xảy ra nếu một kẻ tấn
-> công tráo đổi ảnh container trong kho lưu trữ bằng một ảnh độc hại có cùng nhãn? Tại sao
-> đây lại được coi là tạo ảo tưởng bằng chứng giả (*evidence theater*)?
+> **Dừng để dự đoán:** Nếu một đường ống CI tự động gán cờ `--provenance-verified=true` mà không xác thực chữ ký, điều gì sẽ xảy ra nếu kẻ tấn công tráo đổi ảnh container bằng một ảnh độc hại có cùng nhãn? Vì sao đó là tạo ảo tưởng bằng chứng (*evidence theater*)?
 
 ## Điểm dừng: evidence không thay thế trách nhiệm
 

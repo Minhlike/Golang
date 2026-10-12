@@ -216,9 +216,15 @@ const MaxDrainBytes = 16384 // 16 KiB
 // drainResponseBody đóng body và kiểm tra xem toàn bộ response đã được đọc cạn đến EOF chưa.
 // Trả về true nếu và chỉ nếu toàn bộ dữ liệu đã được tiêu thụ mà không vượt quá maxBytes.
 func drainResponseBody(body io.ReadCloser, maxBytes int64) (bool, error) {
-	defer body.Close()
-	if body == nil || maxBytes <= 0 {
+	if body == nil {
 		return false, nil
+	}
+	defer body.Close()
+	if maxBytes <= 0 {
+		return false, nil
+	}
+	if maxBytes == int64(^uint64(0)>>1) {
+		return false, errors.New("drain limit leaves no room for sentinel byte")
 	}
 
 	// Giới hạn đọc maxBytes + 1 byte

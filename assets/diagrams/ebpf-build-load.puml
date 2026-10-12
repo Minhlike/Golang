@@ -1,37 +1,11 @@
 @startuml
 !include publication-flow.iuml
-
 top to bottom direction
-
-package "Giai đoạn Biên dịch Đóng gói (Build Toolchain)" as build_box {
-  rectangle "<b>Mã nguồn C</b>\nexec_observer.c" as c_src
-  rectangle "<b>Clang / LLVM</b>\nBiên dịch mã đích BPF" as clang
-  rectangle "<b>Bộ sinh mã bpf2go</b>\nSinh tệp .o và Go bindings" as bpf2go
-  rectangle "<b>Tệp nhị phân Go ELF</b>\nChứa mã máy eBPF đã nhúng" as binary
-
-  c_src -right-> clang
-  clang -right-> bpf2go
-  bpf2go -right-> binary
-}
-
-package "Không gian Người dùng (User Space · Ring 3)" as user_box {
-  rectangle "<b>Ứng dụng Go Quản trị</b>\nThư viện cilium/ebpf loader" as go_app
-  rectangle "<b>Vòng đọc Ring Buffer</b>\nTiêu thụ sự kiện người dùng" as ring_buf
-
-  go_app -right-> ring_buf : đọc luồng sự kiện
-}
-
-package "Không gian Nhân Linux (Kernel Space · Ring 0)" as kernel_box {
-  rectangle "<b>Bộ kiểm định Verifier</b>\nKiểm tra an toàn bộ nhớ & vòng lặp" as verifier
-  rectangle "<b>Điểm móc Tracepoint</b>\nsyscalls/sys_enter_execve" as hook
-  rectangle "<b>Vùng đệm chia sẻ BPF Map</b>\nRingBuffer bộ nhớ dùng chung" as bpf_map
-
-  verifier -down-> hook : nạp và gắn kết an toàn
-  hook -right-> bpf_map : ghi nhận sự kiện
-}
-
-binary -down-> go_app : Nạp bytecode vào bộ nhớ tiến trình
-go_app -down-> verifier : Syscall bpf(BPF_PROG_LOAD)
-bpf_map -up-> ring_buf : Truyền dữ liệu qua RingBuffer (Zero-copy)
-
+rectangle "<b>Build: C → bpf2go → Go</b>\nbpf2go gọi Clang, sinh .o và bindings\nGo binary nhúng object eBPF" as build
+rectangle "<b>Go loader → Linux BPF_PROG_LOAD</b>\ncilium/ebpf tạo maps, nạp chương trình\nVerifier kiểm tra trước khi chấp nhận\nLoad thành công chưa có nghĩa đã attach" as verify
+rectangle "<b>Attach vào tracepoint</b>\nGo tạo link; kernel gọi chương trình\nkhi sự kiện tương ứng xảy ra" as hook
+rectangle "<b>Kernel → ring buffer → Go</b>\nChương trình eBPF ghi record vào map\nringbuf.Reader đọc và sao chép record\nGo giải mã; không mặc định zero-copy" as events
+build -down-> verify
+verify -down-> hook : Attach riêng
+hook -down-> events
 @enduml

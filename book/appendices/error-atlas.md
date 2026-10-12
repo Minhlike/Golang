@@ -35,11 +35,11 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 ## A — Compiler & Type System
 
 ### A01 `undefined: x`
-Không tìm thấy identifier trong scope hiện tại hoặc identifier chưa được export từ package ngoài.
+Không tìm thấy identifier trong scope hiện tại. Tham chiếu tên không được export từ package khác có thể phát diagnostic khác, chẳng hạn `name not exported`; đừng so khớp chúng như cùng một chuỗi.
 → Kiểm tra lỗi chính tả tên biến/hàm, scope khai báo, hoặc viết hoa chữ cái đầu nếu gọi từ package khác. [Ch1,3,5]
 
 ### A02 `no new variables on left side of :=`
-Tất cả các biến ở vế trái toán tử `:=` đều đã được khai báo trước đó trong cùng một scope.
+Vế trái `:=` không có biến mới nào khác `_` trong block đang xét; dùng lại toàn bộ biến cũ hoặc chỉ có `_` đều không thỏa điều kiện khai báo ngắn.
 → Đổi toán tử sang phép gán thường `=`, hoặc bổ sung ít nhất một biến mới vào vế trái. [Ch1,2]
 
 ### A03 `"fmt" imported and not used`
@@ -51,7 +51,7 @@ Biến cục bộ được khai báo nhưng không có bất kỳ dòng code nà
 → Sử dụng biến vào logic, gán vào blank identifier `_ = x` nếu đang debug dở, hoặc loại bỏ khai báo thừa. [Ch1,2]
 
 ### A05 `cannot use x (variable of type T1) as T2 value in argument`
-Sai khác kiểu dữ liệu trong phép gán hoặc truyền đối số; Go không hỗ trợ ép kiểu ngầm định (implicit coercion).
+Đối số không gán được cho kiểu tham số theo quy tắc assignability. Không suy ra mọi cặp kiểu khác tên đều phải conversion: hằng số biểu diễn được, interface satisfaction và một số kiểu không có tên có quy tắc riêng.
 → Thực hiện ép kiểu tường minh `T2(x)` nếu hai kiểu tương thích, hoặc sửa signature của hàm nhận. [Ch2,3,14]
 
 ### A06 `assignment mismatch`
@@ -61,8 +61,8 @@ Số lượng biến nhận ở vế trái không khớp chính xác với số 
 → Kiểm tra signature của hàm gọi và hứng đủ tất cả các giá trị trả về (dùng `_` để bỏ qua nếu cần). [Ch1,4]
 
 ### A07 `missing return`
-Hàm có khai báo kiểu dữ liệu trả về nhưng tồn tại nhánh rẽ control-flow đi đến cuối block mà không có lệnh `return`.
-→ Rà soát các nhánh `if/else`, `switch/case` để bảo đảm mọi luồng thực thi đều trả về giá trị hoặc `panic`. [Ch1,4]
+Hàm có kết quả nhưng thân hàm không kết thúc bằng terminating statement theo Go spec. Compiler không chứng minh mọi điều kiện nghiệp vụ luôn đúng; một vòng `for {}` không có break cũng có thể là terminating statement.
+→ Kiểm tra return và các nhánh theo quy tắc terminating statement; không thêm panic chỉ để che một kết quả nghiệp vụ chưa được thiết kế. [Ch1,4]
 
 ### A08 `invalid operation: operator not defined on struct`
 Sử dụng toán tử so sánh (`==`, `!=`) trên struct chứa ít nhất một field không thể so sánh (như slice, map, func).
@@ -175,7 +175,7 @@ Chuỗi JSON đưa vào `json.Unmarshal` bị rỗng hoặc bị ngắt cụt gi
 → Kiểm tra dữ liệu thực đọc được và lỗi decode; không dùng riêng `Content-Length` làm bằng chứng body đầy đủ. Giới hạn byte và xử lý stream rỗng theo contract API. [Ch7,11,20]
 
 ### C07 `sql: no rows in result set`
-Truy vấn `QueryRowContext` không tìm thấy bất kỳ bản ghi nào khớp với điều kiện lọc trong cơ sở dữ liệu (`sql.ErrNoRows`).
+Không có hàng cho truy vấn một kết quả; `QueryRowContext` trả `*sql.Row` và trì hoãn lỗi `sql.ErrNoRows` tới `Scan`, không trả cặp row/error trực tiếp.
 → Dùng `errors.Is(err, sql.ErrNoRows)` để phân biệt trường hợp không có dữ liệu với lỗi truy vấn database thực sự. [Ch13,20]
 
 ### C08 `sql: transaction has already been committed or rolled back`
@@ -425,7 +425,7 @@ Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod
 → Kiểm tra tình trạng kết nối đến các dependency hạ tầng (database, cache) và rà soát logic kiểm tra sẵn sàng của handler. [Ch12,17,20,21]
 
 ### J06 Liveness probe failed
-Liveness probe thất bại; đạt failure threshold dẫn tới xử lý restart container theo lifecycle và restart policy. Một lần probe lỗi chưa đủ suy ra container bị restart ngay.
+Liveness probe thất bại; đạt failure threshold dẫn tới xử lý restart container theo lifecycle và restart policy. Nếu `failureThreshold=1`, một lần lỗi đã đủ đạt ngưỡng; vẫn phải xét grace period và policy, không suy ra restart tức thời chỉ từ event.
 ! Tránh dùng lỗi database xa làm liveness failure nếu restart không chữa được nó; policy sai có thể gây cascading restart.
 → Chọn probe mà restart có khả năng chữa failure. Thường tránh đưa dependency xa vào liveness nếu nó gây restart dây chuyền; đây là khuyến nghị thiết kế, không phải giới hạn API chỉ cho kiểm tra nội tại. [Ch12,17,21]
 
@@ -455,9 +455,9 @@ Trạng thái chặn theo policy khi công cụ phân tích tìm đường gọi
 → Cập nhật phiên bản dependency đã vá lỗi, loại bỏ việc gọi ký hiệu chứa lỗ hổng, hoặc kiểm tra lại builder ID trong CI workflow. [Ch26]
 
 ### J11 MCP Tool Execution Denied: unauthorized mutation or SSRF boundary violation
-* `mcp: tool authorization denied for role <role> on tool <tool>`
-* `mcp: ssrf blocked: target ip <ip> belongs to private/metadata range`
-Trạng thái từ chối (`MCP Security Boundary Status`) khi Agent AI cố gắng kích hoạt công cụ làm thay đổi trạng thái hạ tầng (Mutating Tool) mà không có quyền hạn, hoặc truyền tham số URL vi phạm ranh giới phòng vệ SSRF (hướng tới AWS Metadata Service `169.254.169.254` hoặc Loopback `127.0.0.1`).
+* `mcp: role <role> not authorized for mutating tool restart_service`
+* `unapproved target_id <id>: blocked by SSRF allowlist policy`
+Trạng thái từ chối theo policy của lab Chương 28 khi role không được phép thay đổi hoặc `target_id` không nằm trong danh bạ. Đây là message ứng dụng, không phải diagnostic chuẩn MCP. Lab không nhận URL từ caller và không kiểm tra từng IP sau DNS/redirect; không trình bày nó như bộ chặn mọi địa chỉ private/metadata.
 ! Schema kiểm tra cấu trúc và constraint đã khai báo, không thay authorization, kiểm soát destination hay phòng prompt injection. Handler, gateway hoặc lớp mạng phải thực thi policy phù hợp; không phải yêu cầu bắt buộc dùng Go.
 → Kiểm tra role của Agent trong phiên MCP, cấu hình whitelist URL cho công cụ mạng, hoặc cấp token ủy quyền (Change Request ID) trước khi gọi các tool gây đột biến. [Ch28]
 

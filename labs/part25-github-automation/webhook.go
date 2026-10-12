@@ -81,7 +81,7 @@ func (l *DeliveryLedger) Fail(id string) {
 // VerifyHMACSHA256 validates the X-Hub-Signature-256 header using constant-time comparison
 // to prevent side-channel timing attacks.
 func VerifyHMACSHA256(payload []byte, signatureHeader string, secret []byte) bool {
-	if !strings.HasPrefix(signatureHeader, "sha256=") {
+	if len(secret) == 0 || !strings.HasPrefix(signatureHeader, "sha256=") {
 		return false
 	}
 	actualHex := strings.TrimPrefix(signatureHeader, "sha256=")

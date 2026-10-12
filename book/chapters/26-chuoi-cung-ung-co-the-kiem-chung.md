@@ -64,7 +64,7 @@ Xét một tình huống: dự án dùng `golang.org/x/crypto`, và phiên bản
 Ở chế độ mã nguồn (`source`), `govulncheck` còn phân tích khả năng vươn tới của ký hiệu, thay vì chỉ báo mô-đun có lỗ hổng. Phải đọc chế độ scan và coverage của kết quả đang dùng.
 
 ![Phân biệt phụ thuộc có symbol và đường gọi có thể tới](../../assets/diagrams/vulnerability-call-reachability.png)
-@figure Trong ví dụ phân tích này, ứng dụng có đường gọi tới bcrypt nhưng không thấy đường gọi tới ssh.ParsePrivateKey. Kết quả phải được hiểu trong giới hạn của bộ phân tích và build đang xét.
+@figure Có phụ thuộc bị ảnh hưởng và tìm thấy đường gọi tới ký hiệu bị ảnh hưởng là hai mức bằng chứng khác nhau. Khả năng vươn tới theo phân tích tĩnh không chứng minh khai thác thực tế; không tìm thấy đường gọi cũng không chứng minh an toàn tuyệt đối.
 
 Dữ liệu JSON của `govulncheck` là một luồng thông điệp (*stream message*) tuân theo lược đồ (*schema*) của phiên bản sử dụng, chứa định danh OSV và phát hiện lỗ hổng kèm vết gọi (*trace*); không phải một đối tượng cố định chứa `Modules` và `Traces` viết hoa. Trong bài thực hành, `Severity` và `Reachable` là dữ liệu mẫu (*fixture*) đã được chuẩn hóa, không phải bóc tách trực tiếp từ đầu ra công cụ quét. Một phát hiện có vết gọi tới ký hiệu hàm chỉ là kết quả phân tích tĩnh về đường gọi có khả năng chạm tới, không chứng minh đường dẫn đó chắc chắn được kích hoạt hay khai thác thành công trong thực tế. Bộ tương thích (*adapter*) thực tế phải ghi rõ phiên bản/lược đồ, chế độ quét mã nguồn hay tệp nhị phân, độ bao phủ quét và quy tắc suy diễn chính sách từ các cảnh báo phát hiện.
 

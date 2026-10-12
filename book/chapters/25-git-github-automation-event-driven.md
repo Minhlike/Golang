@@ -22,7 +22,7 @@ Câu hỏi trung tâm của chương này là:
 
 ### Hai mô hình dữ liệu song hành
 
-Hệ thống Git cục bộ lưu trữ các commit, cây thư mục (`tree`) và khối dữ liệu (`blob`) trong một đồ thị định danh theo nội dung. Việc đọc các đối tượng sẵn có không đòi hỏi kết nối mạng, nhưng kho lưu trữ có thể nằm trên đĩa cứng hoặc trong bộ nhớ, trong khi các thao tác clone hay fetch luôn cần tầng truyền tải tới máy chủ từ xa. Siêu dữ liệu trên GitHub như Pull Request và các lượt đánh giá mã nguồn thuộc một ranh giới hoàn toàn độc lập, không nằm trong cây mã nguồn của commit.
+Git lưu commit, cây thư mục (`tree`) và khối dữ liệu (`blob`) trong một đồ thị định danh theo nội dung. Đọc object đã có không đòi hỏi mạng. Clone/fetch cần truy cập kho nguồn nhưng nguồn có thể là đường dẫn cục bộ; chỉ transport qua mạng mới cần kết nối tới máy chủ. Siêu dữ liệu GitHub như Pull Request và review không nằm trong cây mã nguồn của commit.
 
 Siêu dữ liệu về Pull Request, nhãn phân loại và đánh giá xét duyệt không nằm trong cây Git của commit. Bài thực hành sử dụng `go-github/v92` cho REST API và `go-git/v5` cho đối tượng Git cục bộ. Một bot chỉ cần dùng một trong hai thư viện cũng hoàn toàn hợp lệ; hãy lựa chọn dựa trên dữ liệu và thao tác thực tế cần xử lý.
 
@@ -44,7 +44,7 @@ Nếu bạn dùng toán tử thông thường để so sánh chữ ký:
 
 ~~~go
 // CẢNH BÁO: Rò rỉ thông tin qua thời gian thực thi!
-if actualSig == expectedSig { ... }
+if actualSig == expectedSig { /* so sánh sai */ }
 ~~~
 
 Toán tử so sánh chuỗi hoặc mảng byte mặc định trong hầu hết ngôn ngữ lập trình thường kết thúc sớm (early exit) ngay khi phát hiện byte không trùng khớp đầu tiên. Sự chênh lệch thời gian xử lý này vô tình tạo ra một kênh phụ (side-channel). Dù độ trễ biến thiên trên mạng Internet công cộng có thể làm nhiễu tín hiệu đo đạc, trong các môi trường nội bộ, mạng cục bộ tốc độ cao hoặc qua phương pháp phân tích thống kê trên lượng mẫu thử lớn, việc so sánh không hằng số thời gian vẫn có thể cung cấp manh mối để kẻ tấn công thu hẹp không gian tìm kiếm mã xác thực.
@@ -57,7 +57,8 @@ Trong Go, bạn bắt buộc phải dùng hàm `hmac.Equal` hoặc `subtle.Const
 func VerifyHMACSHA256(
 	payload []byte, signatureHeader string, secret []byte,
 ) bool {
-	if !strings.HasPrefix(signatureHeader, "sha256=") {
+	if len(secret) == 0 ||
+		!strings.HasPrefix(signatureHeader, "sha256=") {
 		return false
 	}
 	actualHex := strings.TrimPrefix(signatureHeader, "sha256=")
@@ -116,8 +117,14 @@ func (r *WebhookReceiver) Process(
 	payload []byte,
 	handle func() error,
 ) (bool, error) {
+	if deliveryID == "" {
+		return false, ErrMissingDelivery
+	}
 	if !VerifyHMACSHA256(payload, signature, r.secret) {
 		return false, ErrInvalidSignature
+	}
+	if handle == nil {
+		return false, errors.New("webhook handler is required")
 	}
 	if _, accepted := r.ledger.Begin(deliveryID); !accepted {
 		return true, nil
@@ -170,6 +177,10 @@ func ParseRateLimit(
 	header http.Header, now time.Time,
 ) RateLimitStatus {
 	status := RateLimitStatus{}
+	if limit, err := strconv.Atoi(
+		header.Get("X-RateLimit-Limit")); err == nil {
+		status.Limit = limit
+	}
 
 	remStr := header.Get("X-RateLimit-Remaining")
 	if remStr != "" {
@@ -195,14 +206,23 @@ func ParseRateLimit(
 	// Secondary rate limit dùng header Retry-After
 	retryStr := header.Get("Retry-After")
 	if retryStr != "" {
-		if sec, err := strconv.Atoi(retryStr); err == nil {
-			status.RetryAfter = time.Duration(sec) * time.Second
+		sec, err := strconv.ParseInt(retryStr, 10, 64)
+		if err == nil && sec >= 0 {
+			delay := time.Duration(math.MaxInt64)
+			if sec <= math.MaxInt64/int64(time.Second) {
+				delay = time.Duration(sec) * time.Second
+			}
+			if delay > status.RetryAfter {
+				status.RetryAfter = delay
+			}
 			status.IsExhausted = true
 		}
 	}
 	return status
 }
 ~~~
+
+Lab đọc `Retry-After` dạng số giây theo hướng dẫn GitHub, bỏ qua giá trị âm/sai định dạng và bão hòa nếu duration không biểu diễn được. Khi đồng thời có primary reset và Retry-After, giữ khoảng chờ dài hơn; không ghi đè ngân sách một giờ thành một giây. Đây là parser metadata, không phải bộ cho phép retry: thiếu header không chứng minh còn quota, và dạng HTTP-date chưa được hỗ trợ. Caller vẫn phải đọc status/thông báo lỗi và chọn policy chờ theo API.
 
 ---
 
@@ -289,8 +309,17 @@ func (r *InMemGitRepository) WriteFileAndCommit(
 	if err != nil {
 		return "", err
 	}
-	_, _ = f.Write(content)
-	_ = f.Close()
+	n, err := f.Write(content)
+	if err == nil && n != len(content) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		_ = f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
 
 	if _, err := wt.Add(filePath); err != nil {
 		return "", err
@@ -400,16 +429,22 @@ func CalculateBackoffWithJitter(
 	baseDelay time.Duration,
 	next func() float64,
 ) (time.Duration, error) {
+	if baseDelay < 0 {
+		return 0, errors.New("negative base backoff")
+	}
 	if next == nil {
 		return 0, errors.New("jitter source is required")
 	}
 	value := next() // contract: 0 <= value < 1
-	if value < 0 || value >= 1 {
+	if math.IsNaN(value) || value < 0 || value >= 1 {
 		return 0, errors.New("invalid jitter value")
 	}
-	return baseDelay + time.Duration(
-		float64(baseDelay)*(0.10+value*0.15),
-	), nil
+	fraction := 0.10 + value*0.15
+	jitter := time.Duration(float64(baseDelay) * fraction)
+	if baseDelay > time.Duration(math.MaxInt64)-jitter {
+		return 0, errors.New("backoff duration overflows")
+	}
+	return baseDelay + jitter, nil
 }
 ~~~
 
