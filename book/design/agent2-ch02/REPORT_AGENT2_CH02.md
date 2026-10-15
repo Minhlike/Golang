@@ -30,16 +30,38 @@ Thực hiện nhiệm vụ **AGENT 2 — CHƯƠNG 2: THIẾT KẾ, TRÌNH DUYỆ
 
 | Hạng mục đối chiếu | Bản cũ (Golang_Master.pdf trang 35–44) | Bản thiết kế mới (Agent 2 Prototype) |
 | :--- | :--- | :--- |
-| **Chapter Opener & Metadata** | Tiêu đề chương đơn giản, chưa có bảng tóm lược đặc tả thông số kỹ thuật đầu chương. | Banner định vị kiến trúc (`GOLANG ARCHITECTURAL SPECIFICATION`), Title 1 dòng thanh thoát cân đối (`CHƯƠNG 2 — KHI MỘT BẢN SAO VẪN CHIA SẺ DỮ LIỆU`), kèm **Bảng Đặc Tả Kiến Trúc Chương (Chapter 02 Specification)** tổng hợp 4 invariant cốt lõi ngay đầu bài học. |
-| **Sơ đồ Hình 1 (Array Bitwise Copy)** | PlantUML bitmap mờ hạt, styling cơ bản. | Vector ReportLab độ phân giải vô hạn: thể hiện biến `a` (@ 0x1040) và biến `b` (@ 0x1060) trên Stack độc lập, ô `[0]=99` đổi màu tương phản, chú thích callout chính xác. |
-| **Sơ đồ Hình 2 (Slice Aliasing)** | PlantUML dạng khối tĩnh. | Vector ReportLab: Áp dụng **Vertical Memory Struct Layout** (+0x00 Data, +0x08 Len, +0x10 Cap) đúng chuẩn bộ nhớ 64-bit; đường dẫn vector trực giao (orthogonal routing) nối từ Data cell sang Backing Array tại Heap (@ 0x8040), không đè chữ hay cắt ngang qua các trường khác. |
-| **Sơ đồ Hình 3 (Lát cắt 3D Axonometric)** | Chưa có trong bản cũ (chỉ có sơ đồ 2D). | **Bổ sung lát cắt không gian 3 chiều (3D Axonometric Memory Section)** theo chuẩn *Manual of Section*: Lát cắt phối cảnh trực quan hóa việc Stack Frame trỏ thẳng xuống ô nhớ Backing Array căn lề 8-byte word trên Heap. |
-| **Sơ đồ Hình 4 (Slice Window Geometry)** | Text vẽ bằng ký tự ASCII đơn giản trong code block. | Bản vẽ vector trực quan hóa cấu trúc `x := base[1:3]`: hiển thị dải ô nhớ `[10, 20, 30, 40, 50]`, thước đo trực quan `len(x) = 2` (vùng quan sát) và `cap(x) = 4` (vùng mở rộng tối đa không cần re-alloc). |
-| **Sơ đồ Hình 5 (Append Mechanics)** | Chưa có hình vẽ phân nhánh trực quan. | Sơ đồ phân nhánh nhị phân (Growth Contract): **Nhánh A** (Còn capacity: Zero-alloc in-place reuse) vs **Nhánh B** (Hết capacity: `growslice` cấp phát mảng mới độc lập). |
-| **Trình bày Code Block** | Khối nền xám thô ráp, không phân biệt code vs terminal. | Header bar chuẩn kỹ thuật: `CODE SPECIFICATION // PACKAGE MAIN // amd64 compiled` (nền `#F8F9FA`, viền trái solid 2.5pt) vs `TERMINAL OUTPUT // status: 0 (verified)` (nền `#F4F5F7`, viền slate). **TUYỆT ĐỐI 0 SỐ DÒNG.** |
+| **Chapter Opener & Metadata** | Tiêu đề chương đơn giản, chưa có bảng tóm lược đặc tả thông số kỹ thuật đầu chương. | Banner định vị kiến trúc (`GOLANG ARCHITECTURAL SPECIFICATION`), Title 1 dòng thanh thoát cân đối (`CHƯƠNG 2 — KHI MỘT BẢN SAO VẪN CHIA SẺ DỮ LIỆU`), kèm **Bảng Đặc Tả Kiến Trúc Chương (Chapter 02 Specification)** phân biệt rạch ròi giữa quy chuẩn Go spec và mô hình triển khai runtime gc 64-bit. |
+| **Sơ đồ Hình 1 (Array Bitwise Copy)** | PlantUML bitmap mờ hạt, styling cơ bản. | Vector ReportLab: Thể hiện biến `a` (@ 0x1040*) và biến `b` (@ 0x1060*) trên bộ nhớ độc lập theo đúng ngữ nghĩa Go spec; ghi rõ footnote: địa chỉ mang tính minh họa, vị trí Stack/Heap do escape analysis quyết định. Header: `BẢO ĐẢM TỪ GO SPEC`. |
+| **Sơ đồ Hình 2 (Slice Aliasing)** | PlantUML dạng khối tĩnh. | Vector ReportLab: Áp dụng **Vertical Memory Struct Layout** (+0x00 Data, +0x08 Len, +0x10 Cap) của gc runtime 64-bit; đường dẫn vector trực giao (orthogonal routing) nối từ Data cell sang Backing Array (@ 0x8040*); ghi rõ disclaimer cấu trúc 3 word là chi tiết triển khai gc, vị trí do escape analysis tối ưu. |
+| **Sơ đồ Hình 3 (Lát cắt 3D Axonometric)** | Chưa có trong bản cũ (chỉ có sơ đồ 2D). | **Bổ sung lát cắt không gian 3 chiều (3D Axonometric Memory Section)** theo chuẩn *Manual of Section*: Lát cắt phân tầng logic giữa Descriptor và mảng liên tiếp; loại bỏ nhãn kỹ thuật trang trí; chú thích rõ vị trí vật lý phụ thuộc escape analysis. |
+| **Sơ đồ Hình 4 (Slice Window Geometry)** | Text vẽ bằng ký tự ASCII đơn giản trong code block. | Bản vẽ vector trực quan hóa cấu trúc `x := base[1:3]` theo quy chuẩn Go Spec: dải ô nhớ `[10, 20, 30, 40, 50]`, thước đo `len(x) = 2` (vùng quan sát) và `cap(x) = 4` (vùng mở rộng tối đa không cần re-alloc). |
+| **Sơ đồ Hình 5 (Append Mechanics)** | Chưa có hình vẽ phân nhánh trực quan. | Phân định rạch ròi giữa ngữ nghĩa ngôn ngữ Go và cơ chế runtime: **Nhánh 1** (Đủ sức chứa `len+1 <= cap`: ngôn ngữ tái sử dụng mảng nền) vs **Nhánh 2** (Vượt sức chứa `len+1 > cap`: ngôn ngữ cấp phát mảng mới; runtime gc dùng `growslice` tính toán block size). |
+| **Trình bày Code Block** | Khối nền xám thô ráp, không phân biệt code vs terminal. | Header bar tối giản, trang nhã: Loại bỏ triệt để các nhãn kỹ thuật trang trí vô căn cứ (`amd64 compiled`, `status: 0 (verified)`). Phân biệt tinh tế giữa Go code (`#F8F9FA`, viền trái solid 2.5pt `#111111`) và Terminal output (`#F4F5F7`, viền `#555555`). **TUYỆT ĐỐI 0 SỐ DÒNG (NO LINE NUMBERS).** |
 | **Bảng biểu (Tables)** | Bảng mặc định viền dày. | Chuẩn mực **Booktabs**: Header thanh lịch nền đen `#1A1A1A` chữ trắng, đường kẻ hairline phân cách dữ liệu tinh tế, tỷ lệ cột tối ưu cho khổ in B5. Bổ sung bảng 3 bước `API BOUNDARY OWNERSHIP PROTOCOL` ở mục 2.9. |
 | **Khối bài tập & Giải mã hành vi** | Văn bản thông thường, dễ trôi mất điểm nhấn. | Đóng hộp chuyên biệt: `THỰC HÀNH // BUG HUNT CÓ KIỂM CHỨNG` (lab `part2-values`) và `ĐỐI CHIẾU KIẾN TRÚC // GIẢI MÃ BẢN CHẤT HÀNH VI`. |
-| **Phân trang & Recto/Verso Parity** | Header/Footer đối xứng đơn giản. | Phân trang sách in chuẩn quốc tế: Trang chẵn (Verso, lề trái mang tên sách/phần), Trang lẻ (Recto, lề phải mang tên chương), số trang đặt ở góc lề ngoài. 100% không có heading mồ côi (orphan heading) hay ngắt trang gãy đoạn. |
+| **Phân trang & Recto/Verso Parity** | Header/Footer đối xứng đơn giản. | Phân trang sách in chuẩn quốc tế: Trang chẵn (Verso, lề trái mang tên sách/phần), Trang lẻ (Recto, lề phải mang tên chương), số trang đặt ở góc lề ngoài. Trang 1 là Portal Opener độc lập; §2.1 khởi đầu trang 2. Toàn chương đúng 12 trang hoàn hảo, không có heading mồ côi. |
+
+---
+
+## 2.1 CÁC HIỆU CHỈNH CHÍNH XÁC KỸ THUẬT & DỌN DẸP METADATA (ROUND 2)
+
+Thực hiện chuẩn hóa kỹ thuật sâu theo chỉ đạo nghiêm ngặt từ User & Reviewer:
+1. **Quy chuẩn địa chỉ bộ nhớ & Escape Analysis (Memory Diagrams):**
+   - Không gắn nhãn tĩnh xem biến nằm cố định trên Stack hay Heap nếu không có bằng chứng phân tích thoát (escape analysis).
+   - Mọi địa chỉ bộ nhớ (@ 0x1040, @ 0x1060, @ 0x8040) đều được chú thích rõ là **địa chỉ minh họa logic**, không phải cam kết của Go spec.
+   - Thêm footnote và caption trên cả 5 sơ đồ nêu rõ: *Vị trí Stack/Heap do trình biên dịch quyết định thông qua escape analysis.*
+2. **Phân định Go Specification vs GC Runtime Implementation (Slice Internals):**
+   - Phân biệt rõ ngữ nghĩa cửa sổ quan sát mảng nền được Go Specification bảo đảm với cấu trúc thực thi cụ thể của compiler `gc` trên kiến trúc 64-bit (3 từ máy: `Data uintptr`, `len int`, `cap int`, tổng cộng 24 bytes).
+   - Ghi chú rõ ràng: Go specification chỉ chuẩn hóa ngữ nghĩa gán/tham chiếu, không áp đặt kích thước cố định cho mọi implementation.
+3. **Cơ chế Append (Append Mechanics):**
+   - Loại bỏ các khẳng định tuyệt đối hoặc gây nhầm lẫn về việc cấp phát bộ nhớ.
+   - Phân tách 2 nhánh minh bạch: Ngữ nghĩa ngôn ngữ (Language semantics: tái sử dụng mảng nền hiện tại vs cấp phát mảng mới khi vượt capacity) và Chi tiết hiện thực (Runtime implementation: `runtime.growslice` tính toán khối nhớ theo size class).
+4. **Loại bỏ Metadata trang trí giả hiệu (Faux Metadata Stripping):**
+   - Xóa bỏ triệt để các nhãn trang trí mang tính hình thức như `amd64 compiled` hay `status: 0 (verified)` ở các khối code block và terminal output.
+   - Giữ lại nhãn ngữ cảnh tự nhiên (`PACKAGE MAIN // VERIFIED SNIPPET` và `RUNTIME EXECUTION OUTPUT`).
+5. **Định dạng trang sách hoàn chỉnh (12 trang chuẩn mực):**
+   - Thêm `PageBreak()` chủ động trước `§ 2.1 — Một baseline để dự đoán`, biến Trang 1 thành **Chapter Opener Portal** bề thế, độc lập (gồm tiêu đề, bảng đặc tả kiến trúc, ví dụ khởi động, output và đoạn chuyển tiếp).
+   - Đảm bảo toàn bộ Chương 2 trải đều trên đúng 12 trang B5, kết thúc trọn vẹn tại Bảng Protocol 3 bước và Thư mục tài liệu tham chiếu chuẩn ở chân Trang 12.
 
 ---
 

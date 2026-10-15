@@ -267,76 +267,40 @@ def preview_header_footer_verso(canvas, doc):
 
 
 def build_code_block(code_text: str, s: dict[str, ParagraphStyle], is_terminal: bool = False,
-                     label: str = "SOURCE // GO 1.27.1") -> Table:
-    """Build a professional software specification code block with line gutters or terminal header."""
+                     label: str = "") -> Table:
+    """Build a clean, authentic technical code or terminal block (no fake decorative metadata)."""
     lines = code_text.strip("\n").split("\n")
     
     if is_terminal:
-        # Terminal styling
-        header_table = Table([[
-            Paragraph(f"<b>TERMINAL OUTPUT</b> // {label}", s["code_header"]),
-            Paragraph("status: 0 (verified)", s["code_header_right"])
-        ]], colWidths=[PRINTABLE_WIDTH - 120, 100], hAlign="LEFT")
-        header_table.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ]))
-        
+        # Terminal styling: slate left accent, subtle background, clean mono font
         body_p = Paragraph(html.escape("\n".join(lines)).replace("\n", "<br/>").replace(" ", "&nbsp;"),
                            s["terminal_content"])
         
-        main_table = Table([[header_table], [body_p]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
+        main_table = Table([[body_p]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
         main_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAECEF")),
-            ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F4F5F7")),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F4F5F7")),
             ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#C0C4CC")),
             ("LINEBEFORE", (0, 0), (0, -1), 2.5, colors.HexColor("#4A5568")),
-            ("TOPPADDING", (0, 0), (-1, 0), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-            ("LEFTPADDING", (0, 0), (-1, 0), 8),
-            ("RIGHTPADDING", (0, 0), (-1, 0), 8),
-            ("TOPPADDING", (0, 1), (-1, 1), 6),
-            ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
-            ("LEFTPADDING", (0, 1), (-1, 1), 10),
-            ("RIGHTPADDING", (0, 1), (-1, 1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ("LEFTPADDING", (0, 0), (-1, -1), 12),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
         ]))
         return main_table
     
-    # Source Code Styling (NO line numbers!)
+    # Source Code Styling: black left accent, clean background, clean mono font, NO line numbers
     code_html = html.escape("\n".join(lines)).replace("\n", "<br/>").replace(" ", "&nbsp;").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
-    
-    # Header bar
-    header_table = Table([[
-        Paragraph(f"<b>CODE SPECIFICATION</b> // {label}", s["code_header"]),
-        Paragraph("amd64 // compiled", s["code_header_right"])
-    ]], colWidths=[PRINTABLE_WIDTH - 120, 100], hAlign="LEFT")
-    header_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-    ]))
-    
     content_p = Paragraph(code_html, s["code_content"])
     
-    box = Table([[header_table], [content_p]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
+    box = Table([[content_p]], colWidths=[PRINTABLE_WIDTH], hAlign="LEFT")
     box.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EDEDED")),
-        ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F8F9FA")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
         ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#D0D0D0")),
         ("LINEBEFORE", (0, 0), (0, -1), 2.5, COLOR_BLACK),
-        ("TOPPADDING", (0, 0), (-1, 0), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 3),
-        ("LEFTPADDING", (0, 0), (-1, 0), 8),
-        ("RIGHTPADDING", (0, 0), (-1, 0), 8),
-        ("TOPPADDING", (0, 1), (-1, 1), 6),
-        ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
-        ("LEFTPADDING", (0, 1), (-1, 1), 10),
-        ("RIGHTPADDING", (0, 1), (-1, 1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
     ]))
     return box
 
@@ -347,11 +311,11 @@ def build_chapter_spec_card(s: dict[str, ParagraphStyle]) -> Table:
         [Paragraph("<b>BẢNG ĐẶC TẢ KIẾN TRÚC // CHAPTER 02 SPECIFICATION</b>", s["table_header"]),
          Paragraph("<b>QUY CHUẨN ĐỐI CHIẾU</b>", s["table_header"])],
         [Paragraph("<b>Ngữ nghĩa phép gán (Assignment)</b>", s["table_bold"]),
-         Paragraph("Sao chép theo giá trị (Copy by value); Go không tự sinh bản sao ngầm của mảng nền.", s["table_text"])],
+         Paragraph("Sao chép theo giá trị (Copy by value); Go spec bảo đảm không tự sinh bản sao ngầm của mảng nền.", s["table_text"])],
         [Paragraph("<b>Cấu trúc Slice Descriptor</b>", s["table_bold"]),
-         Paragraph("24 byte (amd64): <code>Data uintptr</code> (8B), <code>len int</code> (8B), <code>cap int</code> (8B).", s["table_text"])],
+         Paragraph("Triển khai runtime 64-bit (gc): <code>Data uintptr</code> (8B), <code>len int</code> (8B), <code>cap int</code> (8B). Go spec bảo đảm ngữ nghĩa cửa sổ quan sát mảng nền.", s["table_text"])],
         [Paragraph("<b>Ranh giới bộ nhớ (Backing Storage)</b>", s["table_bold"]),
-         Paragraph("Mảng nền liên tiếp trên Heap/Stack; hiện tượng Aliasing xảy ra khi nhiều descriptor cùng trỏ tới một vùng nhớ.", s["table_text"])],
+         Paragraph("Vị trí Stack/Heap do escape analysis quyết định; hiện tượng Aliasing xảy ra khi nhiều descriptor cùng trỏ tới một vùng mảng nền.", s["table_text"])],
         [Paragraph("<b>Quy tắc an toàn (Safety Invariant)</b>", s["table_bold"]),
          Paragraph("Dùng <i>Full Slice Expression</i> <code>s[:n:n]</code> hoặc <code>make + copy</code> khi trả về view ra khỏi ranh giới API.", s["table_text"])],
     ]
@@ -571,6 +535,8 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
         # Section Heading H2 (no trailing HRFlowable so keepWithNext=True binds cleanly to the next paragraph)
         if line.startswith("## "):
             section_count += 1
+            if section_count == 1:
+                story.append(PageBreak())
             current_sec_title = line[3:].strip()
             sec_heading = f"§ 2.{section_count} — {current_sec_title}"
             story.append(Paragraph(sec_heading, s["h2"]))
@@ -591,7 +557,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
             
             if "array-copy" in line:
                 figure_count += 1
-                diag = vd.build_array_copy_drawing(PRINTABLE_WIDTH, 120)
+                diag = vd.build_array_copy_drawing(PRINTABLE_WIDTH, 125)
                 if not cap_text:
                     cap_text = "Phép gán mảng (Array assignment) thực hiện sao chép toàn bộ các phần tử sang vùng nhớ độc lập."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
@@ -600,7 +566,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 continue
             elif "slice-sharing" in line:
                 figure_count += 1
-                diag = vd.build_slice_sharing_drawing(PRINTABLE_WIDTH, 160)
+                diag = vd.build_slice_sharing_drawing(PRINTABLE_WIDTH, 165)
                 if not cap_text:
                     cap_text = "b := a sao chép 24-byte descriptor (cùng con trỏ Data, len, cap). Cả hai descriptor cùng trỏ tới một backing array."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
@@ -608,10 +574,10 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 
                 # High-Value Non-Technical / Artistic Pedagogical Object: 3D Axonometric Section
                 figure_count += 1
-                iso_diag = vd.build_isometric_memory_section_drawing(PRINTABLE_WIDTH, 175)
+                iso_diag = vd.build_isometric_memory_section_drawing(PRINTABLE_WIDTH, 165)
                 iso_cap = Paragraph(
-                    f"<b>Hình {figure_count} (Lát cắt kiến trúc)</b> — Mô hình không gian 3 chiều (Axonometric Manual of Section): "
-                    "Descriptor 24-byte trên Stack Frame dẫn đường truyền con trỏ xuống vùng nhớ mảng nền liên tiếp trên Heap.",
+                    f"<b>Hình {figure_count} (Lát cắt kiến trúc)</b> — Mô hình không gian 3 chiều: "
+                    "Phân tầng logic giữa Descriptor và mảng nền liên tiếp. Vị trí vật lý (Stack/Heap) do escape analysis quyết định.",
                     s["caption"]
                 )
                 story.append(KeepTogether([Spacer(1, 6), iso_diag, Spacer(1, 3), iso_cap, Spacer(1, 8)]))
@@ -630,7 +596,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 figure_count += 1
                 diag = vd.build_append_storage_drawing(PRINTABLE_WIDTH, 145)
                 if not cap_text:
-                    cap_text = "Hai kịch bản của append: Còn sức chứa thì tái sử dụng mảng nền; hết sức chứa thì runtime cấp phát mảng nền mới."
+                    cap_text = "Quy tắc ngữ nghĩa của append: Tái sử dụng mảng nền khi đủ sức chứa; cấp phát mảng nền mới độc lập khi vượt sức chứa."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
                 story.append(KeepTogether([Spacer(1, 4), diag, Spacer(1, 3), caption, Spacer(1, 6)]))
                 i += 1
@@ -761,6 +727,12 @@ def build():
     
     # Render all pages to PNG specimens
     print("\nRendering specimen PNG images...")
+    for old_img in SPECIMENS_DIR.glob("ch02_page_*.png"):
+        try:
+            old_img.unlink()
+        except OSError:
+            pass
+
     pdf_doc = fitz.open(str(PREVIEW_PDF))
     total_pages = len(pdf_doc)
     print(f"Total preview pages: {total_pages}")

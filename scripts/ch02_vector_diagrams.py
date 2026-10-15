@@ -50,7 +50,7 @@ def draw_arrow(d: Drawing, x1: float, y1: float, x2: float, y2: float,
     d.add(Polygon([x2, y2, hx1, hy1, hx2, hy2], fillColor=color, strokeColor=color, strokeWidth=0.5))
 
 
-def build_array_copy_drawing(w: float = 476.22, h: float = 120.0) -> Drawing:
+def build_array_copy_drawing(w: float = 476.22, h: float = 125.0) -> Drawing:
     """Figure 1: Array Copy Semantics (Deep bitwise copy of elements)."""
     d = Drawing(w, h)
     
@@ -61,28 +61,28 @@ def build_array_copy_drawing(w: float = 476.22, h: float = 120.0) -> Drawing:
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
     d.add(String(12, h - 14, "ĐẶC TẢ BỘ NHỚ // PHÉP GÁN MẢNG: SAO CHÉP TOÀN BỘ GIÁ TRỊ (BITWISE COPY)",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 95, h - 14, "STACK STORAGE",
-                 fontName="BookMono", fontSize=8.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 115, h - 14, "BẢO ĐẢM TỪ GO SPEC",
+                 fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
     # Left Box: Array a: [3]int
-    bx1, by1, bw, bh = 24.0, 26.0, 155.0, 64.0
+    bx1, by1, bw, bh = 24.0, 32.0, 155.0, 60.0
     d.add(Rect(bx1, by1, bw, bh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(bx1, by1 + bh - 16, bw, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(bx1 + 8, by1 + bh - 12, "Biến a : [3]int (24B)", fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(bx1 + bw - 48, by1 + bh - 12, "@ 0x1040", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
+    d.add(String(bx1 + bw - 48, by1 + bh - 12, "@ 0x1040*", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
     # Elements of a: [10], [20], [30]
     cell_w = (bw - 16) / 3.0
     for i, val in enumerate(["10", "20", "30"]):
         cx = bx1 + 8 + i * cell_w
-        cy = by1 + 8
-        d.add(Rect(cx, cy, cell_w, 30, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.6))
-        d.add(String(cx + 4, cy + 20, f"[{i}]", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
-        d.add(String(cx + cell_w / 2 - 6, cy + 7, val, fontName="BookMono", fontSize=10.5, fillColor=COLOR_BLACK))
+        cy = by1 + 6
+        d.add(Rect(cx, cy, cell_w, 28, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.6))
+        d.add(String(cx + 4, cy + 18, f"[{i}]", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
+        d.add(String(cx + cell_w / 2 - 6, cy + 6, val, fontName="BookMono", fontSize=10.5, fillColor=COLOR_BLACK))
     
     # Middle: Copy transition arrow & note
     mid_x1, mid_x2 = bx1 + bw + 14, bx1 + bw + 95
-    arrow_y = by1 + bh / 2 + 6
+    arrow_y = by1 + bh / 2 + 4
     draw_arrow(d, mid_x1, arrow_y, mid_x2, arrow_y, color=COLOR_BLACK, width=1.2, head_size=5.5)
     d.add(String(mid_x1 + 10, arrow_y + 8, "b := a", fontName="BookMono", fontSize=10.0, fillColor=COLOR_BLACK))
     d.add(String(mid_x1 + 2, arrow_y - 12, "Sao chép 24B", fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MUTED))
@@ -93,30 +93,30 @@ def build_array_copy_drawing(w: float = 476.22, h: float = 120.0) -> Drawing:
     d.add(Rect(bx2, by1, bw, bh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(bx2, by1 + bh - 16, bw, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(bx2 + 8, by1 + bh - 12, "Biến b : [3]int (24B)", fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(bx2 + bw - 48, by1 + bh - 12, "@ 0x1060", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
+    d.add(String(bx2 + bw - 48, by1 + bh - 12, "@ 0x1060*", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
     # Elements of b: [99], [20], [30]
     for i, (val, is_mutated) in enumerate([("99", True), ("20", False), ("30", False)]):
         cx = bx2 + 8 + i * cell_w
-        cy = by1 + 8
+        cy = by1 + 6
         cell_bg = COLOR_SUBTLE if is_mutated else COLOR_BG_WHITE
-        d.add(Rect(cx, cy, cell_w, 30, fillColor=cell_bg, strokeColor=COLOR_INK_DARK if is_mutated else COLOR_INK_MID,
+        d.add(Rect(cx, cy, cell_w, 28, fillColor=cell_bg, strokeColor=COLOR_INK_DARK if is_mutated else COLOR_INK_MID,
                    strokeWidth=0.9 if is_mutated else 0.6))
-        d.add(String(cx + 4, cy + 20, f"[{i}]", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
-        d.add(String(cx + cell_w / 2 - 6, cy + 7, val, fontName="BookMono", fontSize=10.5, fillColor=COLOR_BLACK))
+        d.add(String(cx + 4, cy + 18, f"[{i}]", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
+        d.add(String(cx + cell_w / 2 - 6, cy + 6, val, fontName="BookMono", fontSize=10.5, fillColor=COLOR_BLACK))
     
-    # Bottom callout tags
-    d.add(String(bx1 + 8, 10, "• a[0] giữ nguyên 10 (vùng nhớ 0x1040 độc lập)", fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MID))
-    d.add(String(bx2 + 8, 10, "• b[0] = 99 chỉ biến đổi ô nhớ 0x1060", fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MID))
+    # Bottom callout tags & disclaimer
+    d.add(String(bx1 + 4, 18, "• a[0] giữ nguyên 10; b[0] = 99 chỉ biến đổi ô nhớ độc lập của biến b", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_MID))
+    d.add(String(bx1 + 4, 8, "* Địa chỉ (@ 0x1040, @ 0x1060) mang tính minh họa; vị trí Stack/Heap do escape analysis quyết định.", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
 
 
-def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
+def build_slice_sharing_drawing(w: float = 476.22, h: float = 165.0) -> Drawing:
     """Figure 2: Slice Sharing Semantics (Descriptor copied, Backing Array shared).
     
     Uses vertical struct word layout: Data pointer at +0x00 emerges cleanly from the right
-    edge directly into the shared heap backing array without intersecting any fields.
+    edge directly into the shared backing array without intersecting any fields.
     """
     d = Drawing(w, h)
     
@@ -125,10 +125,10 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
     
     # Header strip
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(12, h - 14, "ĐẶC TẢ KIẾN TRÚC // SLICE DESCRIPTOR VÀ MẢNG NỀN DÙNG CHUNG (ALIASING)",
+    d.add(String(12, h - 14, "MÔ HÌNH TRIỂN KHAI // SLICE DESCRIPTOR VÀ MẢNG NỀN DÙNG CHUNG (ALIASING)",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 115, h - 14, "GO RUNTIME AMD64",
-                 fontName="BookMono", fontSize=8.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 120, h - 14, "GC COMPILER (64-BIT)",
+                 fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
     # Left Column: Stack Descriptors (a and b) in Vertical Struct Word Layout
     ax, dw = 18.0, 160.0
@@ -137,14 +137,14 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
     val_w = dw - lbl_w
     
     # ----------------- Descriptor a (Top) -----------------
-    ay = 80.0
+    ay = 84.0
     dh = 14.0 + 3 * row_h  # 54.5 pt
     
     # Outer container for a
     d.add(Rect(ax, ay, dw, dh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     # Header bar for a
     d.add(Rect(ax, ay + dh - 14, dw, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(ax + 6, ay + dh - 10, "Descriptor a : []int (Stack 24B)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(ax + 6, ay + dh - 10, "Descriptor a : []int (runtime struct 24B)", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
     
     # 3 vertical rows for a (Data at top, Len, Cap)
     rows_a = [
@@ -159,16 +159,15 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
         d.add(String(ax + lbl_w + 6, ry + 3.5, val, fontName="BookMono", fontSize=8.0, fillColor=COLOR_BLACK))
     
     # ----------------- Copy Transition -----------------
-    # Between Descriptor a and Descriptor b
-    d.add(String(ax + 12, 71.0, "↓ b := a (Sao chép bitwise 24B descriptor)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_MUTED))
+    d.add(String(ax + 12, 73.0, "↓ b := a (Sao chép bitwise 24-byte descriptor)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_MUTED))
     
     # ----------------- Descriptor b (Bottom) -----------------
-    by = 12.0
+    by = 16.0
     # Outer container for b
     d.add(Rect(ax, by, dw, dh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     # Header bar for b
     d.add(Rect(ax, by + dh - 14, dw, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(ax + 6, by + dh - 10, "Descriptor b : []int (Stack 24B)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(ax + 6, by + dh - 10, "Descriptor b : []int (runtime struct 24B)", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
     
     # 3 vertical rows for b
     rows_b = [
@@ -182,12 +181,12 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
         d.add(String(ax + 5, ry + 3.5, lbl, fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_MUTED))
         d.add(String(ax + lbl_w + 6, ry + 3.5, val, fontName="BookMono", fontSize=8.0, fillColor=COLOR_BLACK))
     
-    # ----------------- Right Column: Shared Backing Array on Heap -----------------
-    sx, sy, sw, sh = 255.0, 48.0, 205.0, 66.0
+    # ----------------- Right Column: Shared Backing Array -----------------
+    sx, sy, sw, sh = 255.0, 52.0, 205.0, 66.0
     d.add(Rect(sx, sy, sw, sh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_BLACK, strokeWidth=1.0))
     d.add(Rect(sx, sy + sh - 18, sw, 18, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_BLACK, strokeWidth=0.5))
     d.add(String(sx + 8, sy + sh - 13, "Mảng nền (Backing Array)", fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(sx + sw - 8, sy + sh - 13, "@ 0x8040 (Heap)", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED, textAnchor="end"))
+    d.add(String(sx + sw - 8, sy + sh - 13, "@ 0x8040*", fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED, textAnchor="end"))
     
     # 3 Cells: [0]=99 (mutated), [1]=20, [2]=30
     scell_w = (sw - 20) / 3.0
@@ -201,35 +200,36 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 160.0) -> Drawing:
         d.add(String(cx + scell_w / 2 - 6, cy + 7, val, fontName="BookMono", fontSize=11.0, fillColor=COLOR_BLACK))
     
     # ----------------- Clean Orthogonal Pointer Vectors -----------------
-    # Both start from the right edge of +0x00 Data cell (ax + dw)
     src_a_x = ax + dw
-    src_a_y = ay + 2 * row_h + row_h * 0.5  # middle of a's Data row (y = 113.75)
+    src_a_y = ay + 2 * row_h + row_h * 0.5  # middle of a's Data row
     
     src_b_x = ax + dw
-    src_b_y = by + 2 * row_h + row_h * 0.5  # middle of b's Data row (y = 45.75)
+    src_b_y = by + 2 * row_h + row_h * 0.5  # middle of b's Data row
     
     # Circles at source
     d.add(Circle(src_a_x, src_a_y, 2.0, fillColor=COLOR_BLACK, strokeColor=COLOR_BLACK))
     d.add(Circle(src_b_x, src_b_y, 2.0, fillColor=COLOR_BLACK, strokeColor=COLOR_BLACK))
     
     # Target points at Backing Array's index [0] cell entry:
-    tgt_a_y = sy + sh - 28.0  # y = 86.0
-    tgt_b_y = sy + 18.0       # y = 66.0
+    tgt_a_y = sy + sh - 28.0
+    tgt_b_y = sy + 18.0
     
-    # Route A: (src_a_x, src_a_y) -> (mid_x, src_a_y) -> (mid_x, tgt_a_y) -> (sx, tgt_a_y)
+    # Route A
     mid_x = 218.0
     d.add(Line(src_a_x, src_a_y, mid_x, src_a_y, strokeColor=COLOR_BLACK, strokeWidth=1.0))
     d.add(Line(mid_x, src_a_y, mid_x, tgt_a_y, strokeColor=COLOR_BLACK, strokeWidth=1.0))
     draw_arrow(d, mid_x, tgt_a_y, sx, tgt_a_y, color=COLOR_BLACK, width=1.0, head_size=4.5)
     
-    # Route B: (src_b_x, src_b_y) -> (mid_x, src_b_y) -> (mid_x, tgt_b_y) -> (sx, tgt_b_y)
+    # Route B
     d.add(Line(src_b_x, src_b_y, mid_x, src_b_y, strokeColor=COLOR_BLACK, strokeWidth=1.0))
     d.add(Line(mid_x, src_b_y, mid_x, tgt_b_y, strokeColor=COLOR_BLACK, strokeWidth=1.0))
     draw_arrow(d, mid_x, tgt_b_y, sx, tgt_b_y, color=COLOR_BLACK, width=1.0, head_size=4.5)
     
-    # Mutation annotation on backing array
-    d.add(String(sx + 8, 25.0, "▲ b[0] = 99 ghi trực tiếp vào ô nhớ tại 0x8040", fontName="BookSansBold", fontSize=8.0, fillColor=COLOR_INK_DARK))
-    d.add(String(sx + 8, 13.0, "▲ a[0] quan sát thấy 99 vì cùng trỏ tới 0x8040", fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MUTED))
+    # Mutation annotation & disclaimer
+    d.add(String(sx + 8, 28.0, "▲ b[0] = 99 ghi trực tiếp vào mảng nền tại địa chỉ 0x8040", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(sx + 8, 17.0, "▲ a[0] quan sát thấy 99 vì cùng trỏ tới mảng nền chia sẻ", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_MUTED))
+    d.add(String(12, 6.0, "* Cấu trúc 3 word là chi tiết triển khai gc 64-bit; địa chỉ mang tính minh họa; vị trí Stack/Heap do escape analysis quyết định.",
+                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
 
@@ -245,23 +245,23 @@ def build_slice_window_drawing(w: float = 476.22, h: float = 145.0) -> Drawing:
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
     d.add(String(12, h - 14, "ĐẶC TẢ HÌNH HỌC CỬA SỔ // SLICE WINDOW: LENGTH VS CAPACITY (x := base[1:3])",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 110, h - 14, "INDEX & STRIDE",
-                 fontName="BookMono", fontSize=8.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 115, h - 14, "QUY CHUẨN GO SPEC",
+                 fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
     base_x = 42.0
-    base_y = 55.0
+    base_y = 52.0
     cell_w = 78.0
-    cell_h = 32.0
+    cell_h = 30.0
     
     # Backing array label above array (placed safely above pointer)
-    d.add(String(base_x, base_y + cell_h + 24, "Mảng nền gốc base: [5]int",
+    d.add(String(base_x, base_y + cell_h + 22, "Mảng nền gốc base: [5]int",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
     
     # Pointer marker to index 1: x.Data
     ptr_x = base_x + 1 * cell_w + cell_w / 2
-    ptr_y = base_y + cell_h + 16
+    ptr_y = base_y + cell_h + 14
     draw_arrow(d, ptr_x, ptr_y, ptr_x, base_y + cell_h + 1, color=COLOR_BLACK, width=1.1, head_size=4.5)
-    d.add(String(ptr_x + 8, ptr_y - 3, "x.Data trỏ tới &base[1]", fontName="BookMono", fontSize=7.5, fillColor=COLOR_BLACK))
+    d.add(String(ptr_x + 8, ptr_y - 3, "x trỏ tới phần tử chỉ số [1]", fontName="BookMono", fontSize=7.5, fillColor=COLOR_BLACK))
     
     values = ["10", "20", "30", "40", "50"]
     for i, val in enumerate(values):
@@ -276,28 +276,28 @@ def build_slice_window_drawing(w: float = 476.22, h: float = 145.0) -> Drawing:
     # Length Bracket: Covers indices 1 to 2 (width 2 * cell_w)
     len_x1 = base_x + 1 * cell_w
     len_x2 = base_x + 3 * cell_w
-    len_y = base_y - 12
+    len_y = base_y - 11
     d.add(Line(len_x1, len_y, len_x2, len_y, strokeColor=COLOR_BLACK, strokeWidth=1.3))
     d.add(Line(len_x1, len_y - 3, len_x1, len_y + 3, strokeColor=COLOR_BLACK, strokeWidth=1.3))
     d.add(Line(len_x2, len_y - 3, len_x2, len_y + 3, strokeColor=COLOR_BLACK, strokeWidth=1.3))
-    d.add(String((len_x1 + len_x2) / 2, len_y - 10, "len(x) = 2 (Cửa sổ quan sát trực tiếp: [20, 30])",
+    d.add(String((len_x1 + len_x2) / 2, len_y - 9, "len(x) = 2 (Cửa sổ quan sát trực tiếp: [20, 30])",
                  fontName="BookSansBold", fontSize=8.0, fillColor=COLOR_BLACK, textAnchor="middle"))
     
     # Capacity Bracket: Covers indices 1 to 4 (width 4 * cell_w)
     cap_x1 = base_x + 1 * cell_w
     cap_x2 = base_x + 5 * cell_w
-    cap_y = base_y - 32
+    cap_y = base_y - 29
     d.add(Line(cap_x1, cap_y, cap_x2, cap_y, strokeColor=COLOR_INK_MID, strokeWidth=0.9))
     d.add(Line(cap_x1, cap_y - 3, cap_x1, cap_y + 3, strokeColor=COLOR_INK_MID, strokeWidth=0.9))
     d.add(Line(cap_x2, cap_y - 3, cap_x2, cap_y + 3, strokeColor=COLOR_INK_MID, strokeWidth=0.9))
-    d.add(String((cap_x1 + cap_x2) / 2, cap_y - 10, "cap(x) = 4 (Phạm vi mở rộng tối đa mà không cần cấp phát lại)",
+    d.add(String((cap_x1 + cap_x2) / 2, cap_y - 9, "cap(x) = 4 (Phạm vi mở rộng tối đa mà không cần cấp phát lại)",
                  fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
     
     return d
 
 
 def build_append_storage_drawing(w: float = 476.22, h: float = 145.0) -> Drawing:
-    """Figure 4: Append Mechanics & Capacity Branching."""
+    """Figure 4: Append Mechanics & Capacity Branching (Language spec vs runtime)."""
     d = Drawing(w, h)
     
     # Outer frame
@@ -305,41 +305,41 @@ def build_append_storage_drawing(w: float = 476.22, h: float = 145.0) -> Drawing
     
     # Header strip
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(12, h - 14, "ĐẶC TẢ QUY TẮC CẤP PHÁT // append: PHÂN NHÁNH THEO SỨC CHỨA (CAPACITY)",
+    d.add(String(12, h - 14, "ĐẶC TẢ NGỮ NGHĨA append // PHÂN NHÁNH THEO SỨC CHỨA (CAPACITY)",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 115, h - 14, "GROWTH CONTRACT",
-                 fontName="BookMono", fontSize=8.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 130, h - 14, "NGÔN NGỮ & RUNTIME",
+                 fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
     
-    # Branch 1 (Left): Sức chứa còn đủ (Capacity >= len + 1)
+    # Branch 1 (Left): Đủ sức chứa (len + 1 <= cap)
     b1_x, b1_w = 16.0, 215.0
     by, bh = 14.0, 102.0
     d.add(Rect(b1_x, by, b1_w, bh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(b1_x, by + bh - 16, b1_w, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(b1_x + 8, by + bh - 12, "NHÁNH A: CÒN CAPACITY (len + 1 <= cap)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b1_x + 8, by + bh - 12, "NHÁNH 1: ĐỦ SỨC CHỨA (len + 1 <= cap)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
-    d.add(String(b1_x + 10, by + bh - 28, "• Tái sử dụng mảng nền hiện tại (Zero alloc)", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
-    d.add(String(b1_x + 10, by + bh - 39, "• Descriptor mới nhận len = len + 1", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
-    d.add(String(b1_x + 10, by + bh - 50, "• Ghi đè vào ô nhớ kế tiếp của backing array", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b1_x + 10, by + bh - 28, "• Ngôn ngữ: Tái sử dụng mảng nền hiện tại", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b1_x + 10, by + bh - 39, "• Ghi đè phần tử mới vào vị trí index len của mảng nền", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b1_x + 10, by + bh - 50, "• Trả về descriptor mới có len = len + 1", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
     # Visual mini array for Branch A
     d.add(Rect(b1_x + 10, by + 12, 195, 24, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.5))
     d.add(String(b1_x + 14, by + 19, "old: [99 20]  |  s = append: [99 20 30]", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK))
-    d.add(String(b1_x + 10, by + 3, "[CẢNH BÁO] old và s vẫn chung mảng nền!", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b1_x + 10, by + 3, "[HỆ QUẢ] old và s cùng tham chiếu mảng nền chung!", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
-    # Branch 2 (Right): Sức chứa đã hết (Capacity < len + 1)
+    # Branch 2 (Right): Vượt sức chứa (len + 1 > cap)
     b2_x = 245.0
     d.add(Rect(b2_x, by, b1_w, bh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(b2_x, by + bh - 16, b1_w, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(b2_x + 8, by + bh - 12, "NHÁNH B: HẾT CAPACITY (len + 1 > cap)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b2_x + 8, by + bh - 12, "NHÁNH 2: VƯỢT SỨC CHỨA (len + 1 > cap)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
-    d.add(String(b2_x + 10, by + bh - 28, "• runtime.growslice cấp phát mảng nền MỚI", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
-    d.add(String(b2_x + 10, by + bh - 39, "• Sao chép toàn bộ phần tử cũ sang mảng mới", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
-    d.add(String(b2_x + 10, by + bh - 50, "• Descriptor mới nhận con trỏ Data mới", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b2_x + 10, by + bh - 28, "• Ngôn ngữ: Cấp phát mảng nền mới đủ lớn và sao chép", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b2_x + 10, by + bh - 39, "• Runtime gc: growslice tính toán kích thước khối nhớ", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b2_x + 10, by + bh - 50, "• Trả về descriptor mới trỏ tới mảng nền vừa cấp phát", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
     # Visual mini array for Branch B
     d.add(Rect(b2_x + 10, by + 12, 195, 24, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.5))
     d.add(String(b2_x + 14, by + 19, "old trỏ mảng cũ  |  grown trỏ mảng MỚI", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK))
-    d.add(String(b2_x + 10, by + 3, "[ĐỘC LẬP] grown[0] = 99 KHÔNG đổi old[0]", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    d.add(String(b2_x + 10, by + 3, "[HỆ QUẢ] grown độc lập hoàn toàn, không đổi old", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
     
     return d
 
@@ -358,12 +358,12 @@ def build_isometric_memory_section_drawing(w: float = 476.22, h: float = 175.0) 
     
     # Title bar
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_INK_DARK, strokeColor=COLOR_BLACK, strokeWidth=0.5))
-    d.add(String(12, h - 14, "LÁT CẮT BỘ NHỚ KIẾN TRÚC // 3D AXONOMETRIC MEMORY SECTION (RUNTIME AMD64)",
+    d.add(String(12, h - 14, "LÁT CẮT KHÔNG GIAN BỘ NHỚ // MÔ HÌNH PHÂN TẦNG LOGIC",
                  fontName="BookSansBold", fontSize=8.0, fillColor=COLOR_BG_WHITE))
-    d.add(String(w - 110, h - 14, "MANUAL OF SECTION",
+    d.add(String(w - 110, h - 14, "MINH HỌA KIẾN TRÚC",
                  fontName="BookMono", fontSize=7.5, fillColor=COLOR_HAIRLINE))
     
-    # Axonometric projection: Level 1: STACK PLANE (Top-Left)
+    # Axonometric projection: Level 1: DESCRIPTOR PLANE (Top-Left)
     ox, oy = 35.0, 105.0
     dx, dy = 135.0, 30.0
     dz_x, dz_y = 40.0, 24.0
@@ -396,8 +396,8 @@ def build_isometric_memory_section_drawing(w: float = 476.22, h: float = 175.0) 
     d.add(String(ox + 5, oy + 11, "+0x00 Data", fontName="BookMono", fontSize=6.8, fillColor=COLOR_BLACK))
     d.add(String(ox + w3 + 5, oy + 11, "+0x08 Len", fontName="BookMono", fontSize=6.8, fillColor=COLOR_BLACK))
     d.add(String(ox + 2 * w3 + 5, oy + 11, "+0x10 Cap", fontName="BookMono", fontSize=6.8, fillColor=COLOR_BLACK))
-    d.add(String(ox + 6, oy - 10, "STACK FRAME // Slice Descriptor (24 bytes)",
-                 fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
+    d.add(String(ox + 6, oy - 10, "Khung bộ nhớ cục bộ // Slice Descriptor (3 words)",
+                 fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
     
     # Level 2: HEAP VOLUME (Bottom-Right)
     hx, hy = 230.0, 24.0
@@ -445,7 +445,7 @@ def build_isometric_memory_section_drawing(w: float = 476.22, h: float = 175.0) 
         d.add(String(cx, hy + h_depth + 4, f"[{i}]", fontName="BookMono", fontSize=6.5, fillColor=COLOR_INK_DARK))
         d.add(String(cx, hy + 8, "8B", fontName="BookMono", fontSize=6.5, fillColor=COLOR_INK_MUTED))
     
-    d.add(String(hx + 8, hy - 10, "HEAP MEMORY // Backing Array (Liên tiếp, căn lề 8-byte word)",
+    d.add(String(hx + 8, hy - 10, "Vùng nhớ mảng nền // Backing Array (Liên tiếp theo word 8B)",
                  fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
     
     # Connecting Axonometric Pointer Vector: Data (bottom-front edge) -> Heap origin
@@ -464,7 +464,11 @@ def build_isometric_memory_section_drawing(w: float = 476.22, h: float = 175.0) 
     d.add(String(badge_x + 55, badge_y + 4, "uintptr (Data pointer)", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK, textAnchor="middle"))
     
     # Technical plane indicators
-    d.add(String(16, oy + 4, "STACK", fontName="BookSansBold", fontSize=6.5, fillColor=COLOR_INK_MUTED))
-    d.add(String(w - 28, hy + 10, "HEAP", fontName="BookSansBold", fontSize=6.5, fillColor=COLOR_INK_MUTED))
+    d.add(String(14, oy + 4, "DESCRIPTOR", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 38, hy + 10, "STORAGE", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    
+    # Bottom note on escape analysis
+    d.add(String(12, 6.0, "* Sơ đồ minh họa mô hình phân tầng logic. Vị trí vật lý (Stack/Heap) do trình biên dịch tối ưu qua escape analysis.",
+                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
