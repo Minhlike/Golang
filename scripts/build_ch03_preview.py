@@ -116,26 +116,26 @@ def build_preview() -> Path:
     # Figure 3.1: Pass-by-value function call semantics
     story.append(Paragraph("HÌNH 3.1 — TRUYỀN THAM SỐ // LỜI GỌI HÀM SAO CHÉP GIÁ TRỊ (PASS-BY-VALUE)", fig_title_style))
     story.append(Paragraph("Lời gọi addBonus(balance) copy value 100 vào parameter x. Sơ đồ biểu diễn semantics của variable và value, không khẳng định vị trí vật lý trong RAM.", fig_caption_style))
-    story.append(Image(str(ROOT / "assets/diagrams/pointer-value-call.png"), width=DIAGRAM_WIDTH, height=162.0))
-    story.append(Spacer(1, 18))
+    story.append(Image(str(ROOT / "assets/diagrams/pointer-value-call.png"), width=DIAGRAM_WIDTH, height=168.0))
+    story.append(Spacer(1, 16))
 
     # Figure 3.2: Pointer value & pointee dereference
     story.append(Paragraph("HÌNH 3.2 — POINTER & POINTEE // GIẢI THAM CHIẾU VÀ ĐÍCH TRỎ BIẾN GỐC", fig_title_style))
     story.append(Paragraph("balance trong function là pointer value được truyền theo value. *balance truy cập pointee; sơ đồ không dùng địa chỉ số hay stack/heap runtime.", fig_caption_style))
-    story.append(Image(str(ROOT / "assets/diagrams/pointer-pointee.png"), width=DIAGRAM_WIDTH, height=168.0))
+    story.append(Image(str(ROOT / "assets/diagrams/pointer-pointee.png"), width=DIAGRAM_WIDTH, height=175.0))
 
     # ================= PAGE 2 =================
     story.append(PageBreak())
 
     # Figure 3.3: Field-by-field struct copy semantics
-    story.append(Paragraph("HÌNH 3.3 — PHÉP GÁN STRUCT // SAO CHÉP ĐỘC LẬP THEO TỪNG TRƯỜNG (FIELD-BY-FIELD COPY)", fig_title_style))
-    story.append(Paragraph("Hai struct value sau phép gán: field được copy, nên thay đổi field của candidate không quay lại billing (nếu field chứa reference thì tiếp tục phân tích reference).", fig_caption_style))
-    story.append(Image(str(ROOT / "assets/diagrams/struct-copy.png"), width=DIAGRAM_WIDTH, height=175.0))
-    story.append(Spacer(1, 22))
+    story.append(Paragraph("HÌNH 3.3 — PHÉP GÁN STRUCT // SAO CHÉP GIÁ TRỊ CÁC FIELD (VALUE SEMANTICS)", fig_title_style))
+    story.append(Paragraph("Hai struct value sau phép gán: field được copy theo giá trị, nên thay đổi field của candidate không quay lại billing (sao chép không đồng nghĩa deep copy).", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/struct-copy.png"), width=DIAGRAM_WIDTH, height=180.0))
+    story.append(Spacer(1, 18))
 
-    # Figure 3.4: Map assignment copies descriptor, shares storage
-    story.append(Paragraph("HÌNH 3.4 — PHÉP GÁN MAP // SAO CHÉP DESCRIPTOR, CHIA SẺ MAP STORAGE", fig_title_style))
-    story.append(Paragraph("Hai map value sau assignment: map descriptor được copy, còn map data được cả hai value dùng để lookup và cập nhật (sơ đồ khái niệm, không mô tả bucket).", fig_caption_style))
+    # Figure 3.4: Map assignment copies map value, shares storage
+    story.append(Paragraph("HÌNH 3.4 — PHÉP GÁN MAP // SAO CHÉP MAP VALUE, CHIA SẺ MAP DATA", fig_title_style))
+    story.append(Paragraph("Hai map value sau assignment: map value được copy, còn map data được cả hai value dùng để lookup và cập nhật (sơ đồ khái niệm, không mô tả bucket).", fig_caption_style))
     story.append(Image(str(ROOT / "assets/diagrams/map-sharing.png"), width=DIAGRAM_WIDTH, height=175.0))
 
     # ================= PAGE 3 =================
@@ -143,14 +143,14 @@ def build_preview() -> Path:
 
     # Figure 3.5: Method receiver trace (Value receiver vs Pointer receiver)
     story.append(Paragraph("HÌNH 3.5 — ĐIỀU PHỐI METHOD RECEIVER // VALUE RECEIVER VS POINTER RECEIVER", fig_title_style))
-    story.append(Paragraph("Hai lời gọi method trên cùng Service variable: Summary nhận bản sao value (chỉ đọc), Record đi qua &billing để mutate trực tiếp pointee.", fig_caption_style))
+    story.append(Paragraph("Hai lời gọi method trên cùng Service variable: Summary nhận bản sao value (đọc trong ví dụ), Record đi qua &billing để mutate trực tiếp pointee.", fig_caption_style))
     story.append(Image(str(ROOT / "assets/diagrams/method-receiver-trace.png"), width=DIAGRAM_WIDTH, height=188.0))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 16))
 
     # Figure 3.6: Interface contract & implicit satisfaction
     story.append(Paragraph("HÌNH 3.6 — KIỂU CẤU TRÚC // HỢP ĐỒNG INTERFACE NHỎ VÀ THỎA MÃN NGẦM ĐỊNH", fig_title_style))
-    story.append(Paragraph("Một consumer phụ thuộc vào contract SummarySource nhỏ; Service và StaticTarget độc lập thỏa contract bằng method set của chính chúng (không từ khóa implements).", fig_caption_style))
-    story.append(Image(str(ROOT / "assets/diagrams/interface-contract.png"), width=DIAGRAM_WIDTH, height=188.0))
+    story.append(Paragraph("renderSummary(source SummarySource) phụ thuộc vào contract nhỏ; Service và StaticTarget độc lập thỏa contract bằng method set của chính chúng (không từ khóa implements).", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/interface-contract.png"), width=DIAGRAM_WIDTH, height=196.0))
 
     # Build PDF
     doc.build(story)
