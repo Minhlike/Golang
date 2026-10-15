@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Independent Preview Renderer for Chapter 2 Redesign (Agent 2 Specification).
+"""Independent Preview Renderer for Chapter 2 Diagrams (Agent 2 Specification).
 
-Builds a standalone, publication-grade preview PDF of Chapter 2 using the
-EXACT engine, typography, layout, and styling of scripts/build_pdf.py,
-with only the 4 upgraded vector diagrams in assets/diagrams/.
+Builds a standalone, publication-grade preview PDF displaying ONLY the 4 diagrams
+at their full publication dimensions (448.22 pt), accompanied by identifying labels
+and captions, with zero chapter prose, tables, code blocks, or running headers/footers.
 
 Outputs:
 - book/design/agent2-ch02/ch02_preview.pdf
-- book/design/agent2-ch02/specimens/ch02_page_XX.png
+- book/design/agent2-ch02/specimens/ch02_diagrams_p01.png
+- book/design/agent2-ch02/specimens/ch02_diagrams_p02.png
 """
 
 from __future__ import annotations
@@ -21,37 +22,33 @@ SCRIPTS_DIR = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import pymupdf
-from reportlab.platypus.doctemplate import PageTemplate
-from reportlab.platypus.frames import Frame
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+)
 
-from book_style import (
-    MARGIN_BOTTOM,
-    MARGIN_INSIDE,
-    MARGIN_OUTSIDE,
-    MARGIN_TOP,
-    PAGE_SIZE,
-    PRINTABLE_HEIGHT,
-    PRINTABLE_WIDTH,
-    MirroredDocTemplate,
-    footer_recto,
-    footer_verso,
-    get_book_styles,
-)
-from build_pdf import (
-    add_markdown,
-    keep_headings_with_content,
-    register_fonts,
-)
+from build_pdf import register_fonts
 import ch02_vector_diagrams as vd
 
-CHAPTER_FILE = ROOT / "book/chapters/02-gia-tri-slice-va-aliasing.md"
 OUT_DIR = ROOT / "book/design/agent2-ch02"
 PREVIEW_PDF = OUT_DIR / "ch02_preview.pdf"
 SPECIMENS_DIR = OUT_DIR / "specimens"
 
+PAGE_WIDTH, PAGE_HEIGHT = A4
+DIAGRAM_WIDTH = 448.22
+MARGIN_H = (PAGE_WIDTH - DIAGRAM_WIDTH) / 2.0  # 73.53 pt, perfectly centered
+MARGIN_TOP = 50.0
+MARGIN_BOTTOM = 46.0
+
 
 def build_preview() -> Path:
-    """Build Chapter 2 preview PDF using the exact book layout and renderer."""
+    """Build Chapter 2 preview PDF containing only the 4 technical diagrams."""
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     SPECIMENS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -59,72 +56,114 @@ def build_preview() -> Path:
     vd.export_diagrams_to_png()
 
     # 2. Register standard book fonts
-    body, body_bold, heading, heading_bold, mono = register_fonts()
-    s = get_book_styles()
+    register_fonts()
 
-    # 3. Setup Mirrored Layout matching scripts/build_pdf.py
-    frame_recto = Frame(
-        MARGIN_INSIDE, MARGIN_BOTTOM, PRINTABLE_WIDTH, PRINTABLE_HEIGHT,
-        id="frame_book_recto", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    # 3. Typography Styles
+    title_style = ParagraphStyle(
+        "SpecimenDocTitle",
+        fontName="BookSansBold",
+        fontSize=10.5,
+        leading=14.0,
+        textColor=colors.HexColor("#1A1A1A"),
+        spaceAfter=2,
     )
-    template_recto = PageTemplate(id="book_recto", frames=[frame_recto], onPage=footer_recto)
-
-    frame_verso = Frame(
-        MARGIN_OUTSIDE, MARGIN_BOTTOM, PRINTABLE_WIDTH, PRINTABLE_HEIGHT,
-        id="frame_book_verso", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    subtitle_style = ParagraphStyle(
+        "SpecimenDocSubtitle",
+        fontName="BookSans",
+        fontSize=7.5,
+        leading=10.5,
+        textColor=colors.HexColor("#555555"),
+        spaceAfter=12,
     )
-    template_verso = PageTemplate(id="book_verso", frames=[frame_verso], onPage=footer_verso)
+    fig_title_style = ParagraphStyle(
+        "SpecimenFigTitle",
+        fontName="BookSansBold",
+        fontSize=8.5,
+        leading=11.5,
+        textColor=colors.HexColor("#1A1A1A"),
+        spaceAfter=2,
+    )
+    fig_caption_style = ParagraphStyle(
+        "SpecimenFigCaption",
+        fontName="BookSerif",
+        fontSize=7.8,
+        leading=10.5,
+        textColor=colors.HexColor("#444444"),
+        spaceAfter=5,
+    )
 
-    doc = MirroredDocTemplate(
+    doc = SimpleDocTemplate(
         str(PREVIEW_PDF),
-        pagesize=PAGE_SIZE,
-        title="GOLANG - CHƯƠNG 02 (PREVIEW)",
+        pagesize=A4,
+        title="GOLANG - CHƯƠNG 02 (DIAGRAM SPECIMEN)",
         author="Đoàn Ngọc Hoàng Minh",
-        subject="Chương 2: Giá trị, Slice và Aliasing",
-        leftMargin=MARGIN_INSIDE,
-        rightMargin=MARGIN_OUTSIDE,
+        subject="Chương 2: Bản duyệt 4 sơ đồ kỹ thuật",
+        leftMargin=MARGIN_H,
+        rightMargin=MARGIN_H,
         topMargin=MARGIN_TOP,
         bottomMargin=MARGIN_BOTTOM,
     )
-    doc.addPageTemplates([template_recto, template_verso])
 
-    # 4. Parse Chapter 2 markdown using standard book parser
     story = []
-    numbering = {"table": 0, "figure": 0}
-    add_markdown(story, CHAPTER_FILE, s, mono, page_break_before=False, numbering=numbering)
-    story = keep_headings_with_content(story)
 
-    # 5. Build PDF
+    # ================= PAGE 1 =================
+    # Document Header
+    story.append(Paragraph("CHƯƠNG 02: BẢN DUYỆT SƠ ĐỒ KỸ THUẬT (TECHNICAL DIAGRAM SPECIMEN)", title_style))
+    story.append(Paragraph("Hiển thị 100% kích thước xuất bản (448.22 pt) • Phong cách đen trắng tối giản • Chuẩn Go spec vs gc runtime", subtitle_style))
+    story.append(Spacer(1, 4))
+
+    # Figure 2.1: Array Copy Semantics
+    story.append(Paragraph("HÌNH 2.1 — MÔ HÌNH BỘ NHỚ // PHÉP GÁN MẢNG: SAO CHÉP TOÀN BỘ GIÁ TRỊ", fig_title_style))
+    story.append(Paragraph("Hai array value sau assignment: phần tử được copy vào vùng dữ liệu riêng (bảo đảm ngữ nghĩa giá trị độc lập từ Go spec).", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/array-copy.png"), width=DIAGRAM_WIDTH, height=148.0))
+    story.append(Spacer(1, 20))
+
+    # Figure 2.2: Slice Sharing Semantics
+    story.append(Paragraph("HÌNH 2.2 — MÔ HÌNH TRIỂN KHAI // SLICE DESCRIPTOR VÀ CHIA SẺ MẢNG NỀN (ALIASING)", fig_title_style))
+    story.append(Paragraph("Hai slice value sau assignment: descriptor được copy theo giá trị, backing storage được chia sẻ (mô hình gc 64-bit).", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/slice-sharing.png"), width=DIAGRAM_WIDTH, height=196.0))
+
+    # ================= PAGE 2 =================
+    story.append(PageBreak())
+
+    # Figure 2.3: Slice Window Geometry
+    story.append(Paragraph("HÌNH 2.3 — HÌNH HỌC CỬA SỔ SLICE // ĐỘ DÀI (LEN) VÀ SỨC CHỨA (CAP)", fig_title_style))
+    story.append(Paragraph("Một slice window trên mảng nền của lát cắt gốc base : []int; vùng thấy được là len(x) = 2; sức chứa tối đa là cap(x) = 4.", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/slice-window.png"), width=DIAGRAM_WIDTH, height=195.0))
+    story.append(Spacer(1, 20))
+
+    # Figure 2.4: Append Mechanics & Capacity Branching
+    story.append(Paragraph("HÌNH 2.4 — ĐẶC TẢ PHÂN NHÁNH append // ĐIỂM QUYẾT ĐỊNH THEO SỨC CHỨA (CAPACITY)", fig_title_style))
+    story.append(Paragraph("Hai kết quả của append: còn capacity (len(s) + số_phần_tử_thêm <= cap(s)) thì tái sử dụng mảng nền; vượt capacity thì cấp mảng mới (growslice).", fig_caption_style))
+    story.append(Image(str(ROOT / "assets/diagrams/append-storage.png"), width=DIAGRAM_WIDTH, height=220.0))
+
+    # Build PDF
     doc.build(story)
-    print(f"Generated Chapter 2 preview: {PREVIEW_PDF}")
+    print(f"Generated Chapter 2 diagrams preview: {PREVIEW_PDF}")
 
-    # 6. Render specimens for every page
+    # Render specimens
     render_specimens(PREVIEW_PDF)
     return PREVIEW_PDF
 
 
-def render_specimens(pdf_path: Path, dpi: int = 150) -> list[Path]:
-    """Render all pages of the preview PDF to specimen PNGs."""
+def render_specimens(pdf_path: Path, dpi: int = 200) -> list[Path]:
+    """Render all pages of the preview PDF to specimen PNGs and clean up obsolete ones."""
     SPECIMENS_DIR.mkdir(parents=True, exist_ok=True)
-    doc = pymupdf.open(str(pdf_path))
-    num_pages = len(doc)
-    specimen_paths = []
-
-    # Clean up obsolete specimen images if page count changed
+    
+    # Clean up obsolete 12-page specimens from previous runs
     for old_file in SPECIMENS_DIR.glob("ch02_page_*.png"):
-        try:
-            p_idx = int(old_file.stem.split("_")[-1])
-            if p_idx > num_pages:
-                old_file.unlink()
-        except ValueError:
-            pass
+        old_file.unlink()
+        print(f"  Cleaned up obsolete specimen: {old_file.name}")
+
+    doc = pymupdf.open(str(pdf_path))
+    specimen_paths = []
 
     for page_idx, page in enumerate(doc, start=1):
         pix = page.get_pixmap(dpi=dpi)
-        out_path = SPECIMENS_DIR / f"ch02_page_{page_idx:02d}.png"
+        out_path = SPECIMENS_DIR / f"ch02_diagrams_p{page_idx:02d}.png"
         pix.save(str(out_path))
         specimen_paths.append(out_path)
-        print(f"  Specimen page {page_idx:02d}: {out_path.name} ({pix.width}x{pix.height})")
+        print(f"  Diagram specimen page {page_idx:02d}: {out_path.name} ({pix.width}x{pix.height})")
 
     doc.close()
     print(f"Rendered {len(specimen_paths)} specimen pages to {SPECIMENS_DIR}")
