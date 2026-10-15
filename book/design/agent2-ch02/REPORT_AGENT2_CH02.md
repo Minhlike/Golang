@@ -37,7 +37,7 @@ Thực hiện nhiệm vụ **AGENT 2 — CHƯƠNG 2: THIẾT KẾ, TRÌNH DUYỆ
 | **Sơ đồ Hình 4 (Slice Window Geometry)** | Text vẽ bằng ký tự ASCII đơn giản trong code block. | Bản vẽ vector trực quan hóa cấu trúc `x := base[1:3]` theo quy chuẩn Go Spec: dải ô nhớ `[10, 20, 30, 40, 50]`, thước đo `len(x) = 2` (vùng quan sát) và `cap(x) = 4` (vùng mở rộng tối đa không cần re-alloc). |
 | **Sơ đồ Hình 5 (Append Mechanics)** | Chưa có hình vẽ phân nhánh trực quan. | Phân định rạch ròi giữa ngữ nghĩa ngôn ngữ Go và cơ chế runtime: **Nhánh 1** (Đủ sức chứa `len+1 <= cap`: ngôn ngữ tái sử dụng mảng nền) vs **Nhánh 2** (Vượt sức chứa `len+1 > cap`: ngôn ngữ cấp phát mảng mới; runtime gc dùng `growslice` tính toán block size). |
 | **Trình bày Code Block** | Khối nền xám thô ráp, không phân biệt code vs terminal. | Header bar tối giản, trang nhã: Loại bỏ triệt để các nhãn kỹ thuật trang trí vô căn cứ (`amd64 compiled`, `status: 0 (verified)`). Phân biệt tinh tế giữa Go code (`#F8F9FA`, viền trái solid 2.5pt `#111111`) và Terminal output (`#F4F5F7`, viền `#555555`). **TUYỆT ĐỐI 0 SỐ DÒNG (NO LINE NUMBERS).** |
-| **Bảng biểu (Tables)** | Bảng mặc định viền dày. | Chuẩn mực **Booktabs**: Header thanh lịch nền đen `#1A1A1A` chữ trắng, đường kẻ hairline phân cách dữ liệu tinh tế, tỷ lệ cột tối ưu cho khổ in B5. Bổ sung bảng 3 bước `API BOUNDARY OWNERSHIP PROTOCOL` ở mục 2.9. |
+| **Bảng biểu (Tables)** | Bảng mặc định viền dày. | Phong cách **Technical Grid** thanh lịch chuẩn sách kỹ thuật chuyên nghiệp: Header nền xám rất nhạt (`#F0F2F5`), chữ đen (`COLOR_BLACK`), viền hộp ngoài (`BOX` 0.6pt `#777777`), lưới chia trong đầy đủ cạnh dọc và ngang (`INNERGRID` 0.4pt `#D0D0D0`), phân cách header 1.0pt `#444444`. 100% đầy đủ cạnh dọc, loại bỏ hoàn toàn tương phản nặng nề của nền đen, tối ưu khi in ấn đen trắng. |
 | **Khối bài tập & Giải mã hành vi** | Văn bản thông thường, dễ trôi mất điểm nhấn. | Đóng hộp chuyên biệt: `THỰC HÀNH // BUG HUNT CÓ KIỂM CHỨNG` (lab `part2-values`) và `ĐỐI CHIẾU KIẾN TRÚC // GIẢI MÃ BẢN CHẤT HÀNH VI`. |
 | **Phân trang & Recto/Verso Parity** | Header/Footer đối xứng đơn giản. | Phân trang sách in chuẩn quốc tế: Trang chẵn (Verso, lề trái mang tên sách/phần), Trang lẻ (Recto, lề phải mang tên chương), số trang đặt ở góc lề ngoài. Trang 1 là Portal Opener độc lập; §2.1 khởi đầu trang 2. Toàn chương đúng 12 trang hoàn hảo, không có heading mồ côi. |
 
@@ -51,17 +51,40 @@ Thực hiện chuẩn hóa kỹ thuật sâu theo chỉ đạo nghiêm ngặt t�
    - Mọi địa chỉ bộ nhớ (@ 0x1040, @ 0x1060, @ 0x8040) đều được chú thích rõ là **địa chỉ minh họa logic**, không phải cam kết của Go spec.
    - Thêm footnote và caption trên cả 5 sơ đồ nêu rõ: *Vị trí Stack/Heap do trình biên dịch quyết định thông qua escape analysis.*
 2. **Phân định Go Specification vs GC Runtime Implementation (Slice Internals):**
-   - Phân biệt rõ ngữ nghĩa cửa sổ quan sát mảng nền được Go Specification bảo đảm với cấu trúc thực thi cụ thể của compiler `gc` trên kiến trúc 64-bit (3 từ máy: `Data uintptr`, `len int`, `cap int`, tổng cộng 24 bytes).
+   - Phân biệt rõ ngữ nghĩa cửa sổ quan sát mảng nền được Go Specification bảo đảm với cấu trúc thực thi cụ thể của compiler `gc` trên kiến trúc 64-bit (3 từ máy: `Data pointer`, `len int`, `cap int`, tổng cộng 24 bytes).
    - Ghi chú rõ ràng: Go specification chỉ chuẩn hóa ngữ nghĩa gán/tham chiếu, không áp đặt kích thước cố định cho mọi implementation.
 3. **Cơ chế Append (Append Mechanics):**
    - Loại bỏ các khẳng định tuyệt đối hoặc gây nhầm lẫn về việc cấp phát bộ nhớ.
    - Phân tách 2 nhánh minh bạch: Ngữ nghĩa ngôn ngữ (Language semantics: tái sử dụng mảng nền hiện tại vs cấp phát mảng mới khi vượt capacity) và Chi tiết hiện thực (Runtime implementation: `runtime.growslice` tính toán khối nhớ theo size class).
 4. **Loại bỏ Metadata trang trí giả hiệu (Faux Metadata Stripping):**
    - Xóa bỏ triệt để các nhãn trang trí mang tính hình thức như `amd64 compiled` hay `status: 0 (verified)` ở các khối code block và terminal output.
-   - Giữ lại nhãn ngữ cảnh tự nhiên (`PACKAGE MAIN // VERIFIED SNIPPET` và `RUNTIME EXECUTION OUTPUT`).
 5. **Định dạng trang sách hoàn chỉnh (12 trang chuẩn mực):**
    - Thêm `PageBreak()` chủ động trước `§ 2.1 — Một baseline để dự đoán`, biến Trang 1 thành **Chapter Opener Portal** bề thế, độc lập (gồm tiêu đề, bảng đặc tả kiến trúc, ví dụ khởi động, output và đoạn chuyển tiếp).
    - Đảm bảo toàn bộ Chương 2 trải đều trên đúng 12 trang B5, kết thúc trọn vẹn tại Bảng Protocol 3 bước và Thư mục tài liệu tham chiếu chuẩn ở chân Trang 12.
+
+---
+
+## 2.2 HOÀN THIỆN HIỆU CHỈNH THỊ GIÁC & KỸ THUẬT (ROUND 3: FINAL CORRECTIONS)
+
+1. **Khôi phục đầy đủ cạnh dọc và chuẩn hóa bảng biểu (Table Redesign):**
+   - Loại bỏ hoàn toàn hàng tiêu đề nền đen đặc, chữ trắng vì tương phản quá nặng, thiếu tính hài hòa thị giác.
+   - Thiết kế lại toàn bộ 3 bảng (Bảng Đặc tả Kiến trúc Trang 1, Bảng 1 Đối chiếu Giá trị Trang 4, Bảng Protocol 3 bước Trang 12) theo phong cách **Technical Grid** chuẩn mực sách kỹ thuật:
+     - Header nền xám rất nhạt (`#F0F2F5`), chữ đen đậm (`COLOR_BLACK`).
+     - Khôi phục 100% các **cạnh dọc** (cả đường biên ngoài bên trái/phải qua `BOX 0.6pt #777777` và đường chia dọc giữa các cột qua `INNERGRID 0.4pt #D0D0D0`).
+     - Đường kẻ ngăn cách header rõ nét (`1.0pt #444444`).
+     - Các hàng dữ liệu xen kẽ nền trắng và nền `#F8F9FA`, padding thoáng đãng (5.5pt trên/dưới, 7pt trái/phải), tối ưu độ sắc nét và tương phản khi in ấn đen trắng.
+2. **Loại bỏ nhãn `VERIFIED SNIPPET`:**
+   - Xóa bỏ hoàn toàn nhãn `VERIFIED SNIPPET` khỏi engine render code block; không sử dụng bất kỳ nhãn kỹ thuật giả hiệu nào để trang trí.
+   - Code block hiển thị mã nguồn Go và Terminal thuần khiết, thanh lịch với viền trái tinh tế và nền sáng chuẩn mực.
+3. **Chuẩn hóa triệt để Slice Descriptor:**
+   - Phân biệt rõ ràng giữa đặc tả ngôn ngữ Go (ngữ nghĩa cửa sổ quan sát), mô hình giải thích (pointer, len, cap) và cấu trúc triển khai của compiler `gc` 64-bit (3 từ máy 24B với con trỏ theo dõi bởi GC).
+   - Tuyệt đối không trình bày `Data uintptr` như một cam kết ngôn ngữ (thay thế toàn bộ nhãn `uintptr` trong sơ đồ Hình 2, Hình 3 và bảng đặc tả thành `con trỏ mảng (array pointer)`).
+4. **Làm rõ kịch bản minh họa & Escape Analysis trên mọi sơ đồ:**
+   - Bổ sung footnote và disclaimer trên cả 5 sơ đồ vector: Làm rõ Stack/Heap và địa chỉ bộ nhớ (`@ 0x1040`, `@ 0x8040`...) chỉ là kịch bản minh họa ước lệ; không mặc định mọi slice đều có cách phân bổ bộ nhớ giống nhau, mà phụ thuộc hoàn toàn vào escape analysis của trình biên dịch.
+5. **Bảo toàn Hiến pháp cấm số dòng:**
+   - Tuyệt đối 0 số dòng (NO LINE NUMBERS) trong toàn bộ code block và terminal block.
+6. **Kiểm tra chất lượng trực quan 12 trang:**
+   - Xuất và kiểm tra thực tế 12 ảnh specimen PNG 150 DPI; tất cả các bảng, sơ đồ, code block đều hiển thị sắc nét, không tràn lề, không ngắt dòng xấu.
 
 ---
 

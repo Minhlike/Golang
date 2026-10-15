@@ -107,7 +107,7 @@ def build_array_copy_drawing(w: float = 476.22, h: float = 125.0) -> Drawing:
     
     # Bottom callout tags & disclaimer
     d.add(String(bx1 + 4, 18, "• a[0] giữ nguyên 10; b[0] = 99 chỉ biến đổi ô nhớ độc lập của biến b", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_MID))
-    d.add(String(bx1 + 4, 8, "* Địa chỉ (@ 0x1040, @ 0x1060) mang tính minh họa; vị trí Stack/Heap do escape analysis quyết định.", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
+    d.add(String(bx1 + 4, 8, "* Kịch bản minh họa: Địa chỉ (@ 0x1040, @ 0x1060) mang tính ước lệ; vị trí vật lý (Stack/Heap) do escape analysis quyết định tùy ngữ cảnh.", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
 
@@ -127,8 +127,8 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 165.0) -> Drawing:
     d.add(Rect(0, h - 20, w, 20, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
     d.add(String(12, h - 14, "MÔ HÌNH TRIỂN KHAI // SLICE DESCRIPTOR VÀ MẢNG NỀN DÙNG CHUNG (ALIASING)",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 120, h - 14, "GC COMPILER (64-BIT)",
-                 fontName="BookMono", fontSize=7.5, fillColor=COLOR_INK_MUTED))
+    d.add(String(w - 120, h - 14, "MÔ HÌNH TRIỂN KHAI // GC 64-BIT",
+                 fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
     
     # Left Column: Stack Descriptors (a and b) in Vertical Struct Word Layout
     ax, dw = 18.0, 160.0
@@ -148,7 +148,7 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 165.0) -> Drawing:
     
     # 3 vertical rows for a (Data at top, Len, Cap)
     rows_a = [
-        ("+0x00 Data (uintptr)", "0x8040", ay + 2 * row_h),
+        ("+0x00 Data (pointer)", "0x8040", ay + 2 * row_h),
         ("+0x08 Len  (int)",     "3",      ay + 1 * row_h),
         ("+0x10 Cap  (int)",     "3",      ay + 0 * row_h),
     ]
@@ -171,7 +171,7 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 165.0) -> Drawing:
     
     # 3 vertical rows for b
     rows_b = [
-        ("+0x00 Data (uintptr)", "0x8040", by + 2 * row_h),
+        ("+0x00 Data (pointer)", "0x8040", by + 2 * row_h),
         ("+0x08 Len  (int)",     "3",      by + 1 * row_h),
         ("+0x10 Cap  (int)",     "3",      by + 0 * row_h),
     ]
@@ -228,7 +228,7 @@ def build_slice_sharing_drawing(w: float = 476.22, h: float = 165.0) -> Drawing:
     # Mutation annotation & disclaimer
     d.add(String(sx + 8, 28.0, "▲ b[0] = 99 ghi trực tiếp vào mảng nền tại địa chỉ 0x8040", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
     d.add(String(sx + 8, 17.0, "▲ a[0] quan sát thấy 99 vì cùng trỏ tới mảng nền chia sẻ", fontName="BookSans", fontSize=7.5, fillColor=COLOR_INK_MUTED))
-    d.add(String(12, 6.0, "* Cấu trúc 3 word là chi tiết triển khai gc 64-bit; địa chỉ mang tính minh họa; vị trí Stack/Heap do escape analysis quyết định.",
+    d.add(String(12, 6.0, "* Kịch bản minh họa: Cấu trúc 3 word là mô hình triển khai của gc 64-bit (Data pointer, len, cap). Go spec bảo đảm ngữ nghĩa cửa sổ; vị trí Stack/Heap do escape analysis quyết định.",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
@@ -292,6 +292,8 @@ def build_slice_window_drawing(w: float = 476.22, h: float = 145.0) -> Drawing:
     d.add(Line(cap_x2, cap_y - 3, cap_x2, cap_y + 3, strokeColor=COLOR_INK_MID, strokeWidth=0.9))
     d.add(String((cap_x1 + cap_x2) / 2, cap_y - 9, "cap(x) = 4 (Phạm vi mở rộng tối đa mà không cần cấp phát lại)",
                  fontName="BookSans", fontSize=8.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(12, 5.0, "* Quy chuẩn Go spec: [1:3] định nghĩa len = 2; khoảng mở rộng tới cuối mảng nền cho cap = 4.",
+                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
 
@@ -312,7 +314,7 @@ def build_append_storage_drawing(w: float = 476.22, h: float = 145.0) -> Drawing
     
     # Branch 1 (Left): Đủ sức chứa (len + 1 <= cap)
     b1_x, b1_w = 16.0, 215.0
-    by, bh = 14.0, 102.0
+    by, bh = 18.0, 98.0
     d.add(Rect(b1_x, by, b1_w, bh, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(b1_x, by + bh - 16, b1_w, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(b1_x + 8, by + bh - 12, "NHÁNH 1: ĐỦ SỨC CHỨA (len + 1 <= cap)", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
@@ -340,6 +342,9 @@ def build_append_storage_drawing(w: float = 476.22, h: float = 145.0) -> Drawing
     d.add(Rect(b2_x + 10, by + 12, 195, 24, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.5))
     d.add(String(b2_x + 14, by + 19, "old trỏ mảng cũ  |  grown trỏ mảng MỚI", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK))
     d.add(String(b2_x + 10, by + 3, "[HỆ QUẢ] grown độc lập hoàn toàn, không đổi old", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
+    
+    # Bottom note
+    d.add(String(16, 5.0, "* Kịch bản phân nhánh append: Ngôn ngữ đảm bảo tính độc lập khi vượt sức chứa; runtime gc cấp phát mảng mới qua growslice.", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d
 
@@ -458,17 +463,17 @@ def build_isometric_memory_section_drawing(w: float = 476.22, h: float = 175.0) 
     draw_arrow(d, src_px, src_py, tgt_px, tgt_py, color=COLOR_BLACK, width=1.3, head_size=5.5)
     
     # Coordinate callout badge placed safely in open space above the vector
-    badge_x = 220.0
+    badge_x = 205.0
     badge_y = 100.0
-    d.add(Rect(badge_x, badge_y, 110, 15, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.5))
-    d.add(String(badge_x + 55, badge_y + 4, "uintptr (Data pointer)", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK, textAnchor="middle"))
+    d.add(Rect(badge_x, badge_y, 135, 15, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_MID, strokeWidth=0.5))
+    d.add(String(badge_x + 67.5, badge_y + 4, "con trỏ mảng (array pointer)", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK, textAnchor="middle"))
     
     # Technical plane indicators
     d.add(String(14, oy + 4, "DESCRIPTOR", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     d.add(String(w - 38, hy + 10, "STORAGE", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     
     # Bottom note on escape analysis
-    d.add(String(12, 6.0, "* Sơ đồ minh họa mô hình phân tầng logic. Vị trí vật lý (Stack/Heap) do trình biên dịch tối ưu qua escape analysis.",
+    d.add(String(12, 6.0, "* Kịch bản minh họa phân tầng logic: Vị trí vật lý (Stack/Heap) phụ thuộc escape analysis; không mặc định mọi slice đều phân bổ giống nhau.",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_LIGHT))
     
     return d

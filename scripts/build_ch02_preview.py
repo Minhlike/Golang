@@ -193,7 +193,7 @@ def get_preview_styles() -> dict[str, ParagraphStyle]:
         ),
         "table_header": ParagraphStyle(
             "TableHeader", parent=base["BodyText"], fontName=FONT_SANS_BOLD,
-            fontSize=10.0, leading=14.0, textColor=colors.HexColor("#FFFFFF"),
+            fontSize=10.0, leading=14.0, textColor=COLOR_BLACK,
         ),
         "table_caption": ParagraphStyle(
             "TableCaption", parent=base["BodyText"], fontName=FONT_SANS_BOLD, fontSize=9.5,
@@ -266,8 +266,7 @@ def preview_header_footer_verso(canvas, doc):
     canvas.restoreState()
 
 
-def build_code_block(code_text: str, s: dict[str, ParagraphStyle], is_terminal: bool = False,
-                     label: str = "") -> Table:
+def build_code_block(code_text: str, s: dict[str, ParagraphStyle], is_terminal: bool = False) -> Table:
     """Build a clean, authentic technical code or terminal block (no fake decorative metadata)."""
     lines = code_text.strip("\n").split("\n")
     
@@ -306,62 +305,64 @@ def build_code_block(code_text: str, s: dict[str, ParagraphStyle], is_terminal: 
 
 
 def build_chapter_spec_card(s: dict[str, ParagraphStyle]) -> Table:
-    """Build the Chapter 02 Architecture Specification Card (Mental Model Spec)."""
+    """Build the Chapter 02 Architecture Specification Card (Booktabs style)."""
     rows = [
         [Paragraph("<b>BẢNG ĐẶC TẢ KIẾN TRÚC // CHAPTER 02 SPECIFICATION</b>", s["table_header"]),
          Paragraph("<b>QUY CHUẨN ĐỐI CHIẾU</b>", s["table_header"])],
         [Paragraph("<b>Ngữ nghĩa phép gán (Assignment)</b>", s["table_bold"]),
          Paragraph("Sao chép theo giá trị (Copy by value); Go spec bảo đảm không tự sinh bản sao ngầm của mảng nền.", s["table_text"])],
         [Paragraph("<b>Cấu trúc Slice Descriptor</b>", s["table_bold"]),
-         Paragraph("Triển khai runtime 64-bit (gc): <code>Data uintptr</code> (8B), <code>len int</code> (8B), <code>cap int</code> (8B). Go spec bảo đảm ngữ nghĩa cửa sổ quan sát mảng nền.", s["table_text"])],
+         Paragraph("Mô hình giải thích gồm 3 trường: con trỏ mảng (array pointer), độ dài (<code>len</code>) và sức chứa (<code>cap</code>). Trong runtime <code>gc</code> 64-bit, descriptor gồm 3 word (24B) với con trỏ theo dõi bởi GC (không phải <code>uintptr</code> trần). Go spec chỉ bảo đảm ngữ nghĩa cửa sổ nhìn vào mảng nền, không cam kết biểu diễn nhị phân cố định cho mọi implementation.", s["table_text"])],
         [Paragraph("<b>Ranh giới bộ nhớ (Backing Storage)</b>", s["table_bold"]),
-         Paragraph("Vị trí Stack/Heap do escape analysis quyết định; hiện tượng Aliasing xảy ra khi nhiều descriptor cùng trỏ tới một vùng mảng nền.", s["table_text"])],
+         Paragraph("Vị trí vật lý (Stack/Heap) do escape analysis quyết định tùy ngữ cảnh; không mặc định mọi slice đều phân bổ giống nhau. Hiện tượng Aliasing xảy ra khi nhiều descriptor cùng trỏ tới một vùng mảng nền.", s["table_text"])],
         [Paragraph("<b>Quy tắc an toàn (Safety Invariant)</b>", s["table_bold"]),
          Paragraph("Dùng <i>Full Slice Expression</i> <code>s[:n:n]</code> hoặc <code>make + copy</code> khi trả về view ra khỏi ranh giới API.", s["table_text"])],
     ]
     t = Table(rows, colWidths=[130, PRINTABLE_WIDTH - 130], hAlign="LEFT")
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1A1A1A")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F0F2F5")),
         ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#FFFFFF")),
         ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#F8F9FA")),
         ("BACKGROUND", (0, 3), (-1, 3), colors.HexColor("#FFFFFF")),
         ("BACKGROUND", (0, 4), (-1, 4), colors.HexColor("#F8F9FA")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D0D0D0")),
-        ("LINEBELOW", (0, 0), (-1, 0), 1.0, COLOR_BLACK),
-        ("TOPPADDING", (0, 0), (-1, -1), 4.5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#777777")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D0D0")),
+        ("LINEBELOW", (0, 0), (-1, 0), 1.0, colors.HexColor("#444444")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     return t
 
 
 def build_api_boundary_card(s: dict[str, ParagraphStyle]) -> Table:
-    """Build the Section 2.9 API Boundary Decision Protocol Card."""
+    """Build the Section 2.9 API Boundary Decision Protocol Card (Technical Grid style)."""
     rows = [
         [Paragraph("<b>QUY TRÌNH ĐIỀU TRA 3 BƯỚC // API BOUNDARY OWNERSHIP PROTOCOL</b>", s["table_header"]),
          Paragraph("<b>MỤC TIÊU XÁC ĐỊNH</b>", s["table_header"])],
         [Paragraph("<b>Bước 1: Giá trị nào được gán?</b>", s["table_bold"]),
-         Paragraph("Xác định biến nhận được copy toàn bộ giá trị (như <code>int</code>, <code>[3]int</code>) hay chỉ nhận slice descriptor 24-byte.", s["table_text"])],
+         Paragraph("Xác định biến nhận được copy toàn bộ giá trị (như <code>int</code>, <code>[3]int</code>) hay chỉ nhận slice descriptor (gồm con trỏ mảng, len, cap).", s["table_text"])],
         [Paragraph("<b>Bước 2: Tham chiếu vùng nhớ nào?</b>", s["table_bold"]),
-         Paragraph("Kiểm tra con trỏ <code>Data</code> dẫn tới backing array nào; <code>cap</code> còn lại bao nhiêu trước khi thực hiện <code>append</code>.", s["table_text"])],
+         Paragraph("Kiểm tra con trỏ mảng dẫn tới backing array nào; <code>cap</code> còn lại bao nhiêu trước khi thực hiện <code>append</code>.", s["table_text"])],
         [Paragraph("<b>Bước 3: Ai còn quyền chạm storage?</b>", s["table_bold"]),
          Paragraph("Xác định tuổi thọ và quyền mutation giữa Caller và Callee. Nếu cần dữ liệu độc lập, bắt buộc dùng <code>make + copy</code> hoặc <code>bytes.Clone</code>.", s["table_text"])],
     ]
     t = Table(rows, colWidths=[150, PRINTABLE_WIDTH - 150], hAlign="LEFT")
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1A1A1A")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F0F2F5")),
         ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#FFFFFF")),
         ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#F8F9FA")),
         ("BACKGROUND", (0, 3), (-1, 3), colors.HexColor("#FFFFFF")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D0D0D0")),
-        ("LINEBELOW", (0, 0), (-1, 0), 1.0, COLOR_BLACK),
-        ("TOPPADDING", (0, 0), (-1, -1), 4.5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#777777")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D0D0")),
+        ("LINEBELOW", (0, 0), (-1, 0), 1.0, colors.HexColor("#444444")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     return t
 
@@ -450,18 +451,22 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
             data.append([Paragraph(inline(c), st) for c in r])
         
         t = Table(data, colWidths=[140, PRINTABLE_WIDTH - 140], hAlign="LEFT")
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1A1A1A")),
-            ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#FFFFFF")),
-            ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#F8F9FA")),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D0D0D0")),
-            ("LINEBELOW", (0, 0), (-1, 0), 1.0, COLOR_BLACK),
-            ("TOPPADDING", (0, 0), (-1, -1), 4.5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        num_rows = len(data)
+        t_style = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F0F2F5")),
+            ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#777777")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D0D0")),
+            ("LINEBELOW", (0, 0), (-1, 0), 1.0, colors.HexColor("#444444")),
+            ("TOPPADDING", (0, 0), (-1, -1), 5.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
+        ]
+        for r_i in range(1, num_rows):
+            bg = colors.HexColor("#FFFFFF") if r_i % 2 == 1 else colors.HexColor("#F8F9FA")
+            t_style.append(("BACKGROUND", (0, r_i), (-1, r_i), bg))
+        t.setStyle(TableStyle(t_style))
         
         elements = []
         if table_caption:
@@ -479,8 +484,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
         code_text = "\n".join(code_lines)
         is_terminal = (code_fence in ("text", "bash", "sh")) or ("fmt.Println" not in code_text and "func" not in code_text and ":=" not in code_text and "[" in code_text)
         
-        label = "RUNTIME EXECUTION OUTPUT" if is_terminal else "PACKAGE MAIN // VERIFIED SNIPPET"
-        box = build_code_block(code_text, s, is_terminal=is_terminal, label=label)
+        box = build_code_block(code_text, s, is_terminal=is_terminal)
         story.append(KeepTogether([Spacer(1, 3), box, Spacer(1, 8)]))
         code_lines = []
         code_fence = ""
@@ -559,7 +563,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 figure_count += 1
                 diag = vd.build_array_copy_drawing(PRINTABLE_WIDTH, 125)
                 if not cap_text:
-                    cap_text = "Phép gán mảng (Array assignment) thực hiện sao chép toàn bộ các phần tử sang vùng nhớ độc lập."
+                    cap_text = "Phép gán mảng (Array assignment) sao chép toàn bộ các phần tử sang vùng nhớ độc lập theo đặc tả Go specification (địa chỉ minh họa logic)."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
                 story.append(KeepTogether([Spacer(1, 4), diag, Spacer(1, 3), caption, Spacer(1, 6)]))
                 i += 1
@@ -568,7 +572,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 figure_count += 1
                 diag = vd.build_slice_sharing_drawing(PRINTABLE_WIDTH, 165)
                 if not cap_text:
-                    cap_text = "b := a sao chép 24-byte descriptor (cùng con trỏ Data, len, cap). Cả hai descriptor cùng trỏ tới một backing array."
+                    cap_text = "b := a sao chép descriptor (con trỏ mảng, len, cap) theo mô hình triển khai gc 64-bit. Cả hai descriptor cùng tham chiếu chung một mảng nền (aliasing)."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
                 story.append(KeepTogether([Spacer(1, 4), diag, Spacer(1, 3), caption, Spacer(1, 6)]))
                 
@@ -577,7 +581,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 iso_diag = vd.build_isometric_memory_section_drawing(PRINTABLE_WIDTH, 165)
                 iso_cap = Paragraph(
                     f"<b>Hình {figure_count} (Lát cắt kiến trúc)</b> — Mô hình không gian 3 chiều: "
-                    "Phân tầng logic giữa Descriptor và mảng nền liên tiếp. Vị trí vật lý (Stack/Heap) do escape analysis quyết định.",
+                    "Phân tầng logic giữa Descriptor và mảng nền liên tiếp. Vị trí vật lý (Stack/Heap) do escape analysis quyết định, không mặc định mọi slice đều phân bổ giống nhau.",
                     s["caption"]
                 )
                 story.append(KeepTogether([Spacer(1, 6), iso_diag, Spacer(1, 3), iso_cap, Spacer(1, 8)]))
@@ -587,7 +591,7 @@ def parse_and_build_chapter_story(s: dict[str, ParagraphStyle]) -> list:
                 figure_count += 1
                 diag = vd.build_slice_window_drawing(PRINTABLE_WIDTH, 145)
                 if not cap_text:
-                    cap_text = "x nhìn thấy hai phần tử đầu của cửa sổ [20, 30]. cap(x) = 4 giới hạn phạm vi mở rộng trong mảng nền hiện tại."
+                    cap_text = "x nhìn thấy hai phần tử đầu của cửa sổ [20, 30]. cap(x) = 4 giới hạn phạm vi mở rộng trong mảng nền hiện tại theo chuẩn Go spec."
                 caption = Paragraph(f"<b>Hình {figure_count}</b> — {inline(cap_text)}", s["caption"])
                 story.append(KeepTogether([Spacer(1, 4), diag, Spacer(1, 3), caption, Spacer(1, 6)]))
                 i += 1
