@@ -54,6 +54,9 @@ Tuân thủ nghiêm ngặt tinh thần **Master Prompt** và các chỉ đạo k
   - Mô phỏng cấu trúc bảng trường dữ liệu rõ ràng cho `billing : Service` và `candidate : Service`.
   - Phép gán `candidate := billing` sao chép giá trị các field theo ngữ nghĩa Go (không bắt buộc copy vật lý từng lệnh).
   - Phép gán `candidate.Healthy = false` chỉ biến đổi trường trên bản sao `candidate`; trường `Healthy` của `billing` vẫn giữ `true`.
+  - **Micro-Fix Bố cục & Nhãn:**
+    - Thẻ chú thích `candidate.Healthy = false` (rộng 110 pt, cao 36 pt) đặt căn giữa tại khoảng trống 128.22 pt, chừa khoảng cách an toàn ~9.1 pt với cả 2 khối struct.
+    - Nhãn tóm tắt đáy khung struct tinh chỉnh thành `[BẢO TOÀN] billing.Healthy = true` và `[MUTATED] candidate.Healthy = false` (`BookSansBold 7.0 pt`), chừa biên >26 pt bên trong khung, tuyệt đối không chạm viền hay tràn lề.
   - Footnote: Sao chép struct không đồng nghĩa deep copy; nếu có field chứa pointer/slice/map, chúng vẫn chia sẻ dữ liệu tham chiếu.
 
 ### Hình 3.4: Ngữ Nghĩa Gán Map // Sao Chép Map Value, Chia Sẻ Map Data
@@ -72,7 +75,10 @@ Tuân thủ nghiêm ngặt tinh thần **Master Prompt** và các chỉ đạo k
 - **Nội dung kỹ thuật:**
   - Biến gốc `billing : Service` là biến addressable (lấy được địa chỉ `&billing`).
   - Nhánh 1 (Value Receiver `Summary`): `func (service Service) Summary() string` nhận bản sao struct value; trong ví dụ này chỉ đọc `service.Name`, không mutate trực tiếp `billing` gốc.
-  - Nhánh 2 (Pointer Receiver `Record`): `func (service *Service) Record(bool)` được Go tự động chuyển cú pháp thành `(&billing).Record(false)` và truyền pointer value; sửa trực tiếp pointee `Healthy=false, Retries=1`.
+  - Nhánh 2 (Pointer Receiver `Record`): Đồng bộ chữ ký chuẩn xác 100% với bài giảng: `func (service *Service) Record(healthy bool)`. Go tự động chuyển cú pháp thành `(&billing).Record(false)` và truyền pointer value; sửa trực tiếp pointee `Healthy=false, Retries=1`.
+  - **Micro-Fix Bố cục & Nhãn:**
+    - Tái cân đối bề rộng hai bên: khối `billing` trái rộng 122 pt, khối receiver phải mở rộng lên 206 pt; chữ ký `func (service *Service) Record(healthy bool)` in bằng `BookMono 6.5 pt` chừa lề an toàn tới 18.6 pt trước viền phải.
+    - Khoảng hở trung tâm 92.22 pt chứa mũi tên `Record(false)` chạy thẳng ngang tại `arrow_y = 57.0`; nhãn `billing.Record(false)` đặt phía trên mũi tên 8 pt (chừa biên 5.16 pt so với cả hai khối hộp), nhãn phụ `(Truyền &billing)` đặt phía dưới mũi tên 9 pt; triệt để loại bỏ mọi hiện tượng chồng chữ hoặc cắt nét.
   - Footnote: `Summary` chỉ đọc field trong ví dụ này; value receiver không bảo đảm không có side effect (nếu struct chứa reference hoặc thực hiện I/O). Go tự lấy `(&billing)` khi gọi pointer receiver trên biến addressable.
 
 ### Hình 3.6: Kiểu Cấu Trúc // Hợp Đồng Interface Nhỏ và Thỏa Mãn Ngầm Định

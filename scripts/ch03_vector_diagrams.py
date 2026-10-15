@@ -229,7 +229,8 @@ def build_struct_copy_drawing(w: float = 448.22, h: float = 180.0) -> Drawing:
     d.add(String(w - 120, h - 14, "VALUE SEMANTICS",
                  fontName="BookMono", fontSize=7.4, fillColor=COLOR_INK_MUTED))
 
-    box_w, box_h = 160.0, 118.0
+    # Balanced width for struct containers leaving 128.22 pt gap in middle
+    box_w, box_h = 146.0, 118.0
     y_pos = 32.0
 
     # Left Container: billing (Original Struct)
@@ -254,10 +255,10 @@ def build_struct_copy_drawing(w: float = 448.22, h: float = 180.0) -> Drawing:
         d.add(String(b_x + box_w - 14, f_y + 5, fval, fontName="BookMono", fontSize=7.4, fillColor=COLOR_BLACK, textAnchor="end"))
         f_y -= 19
 
-    d.add(String(b_x + 8, y_pos + 7, "[BẢO TOÀN] billing.Healthy vẫn là true", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
+    d.add(String(b_x + 8, y_pos + 7, "[BẢO TOÀN] billing.Healthy = true", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
 
     # Right Container: candidate (Copy Struct)
-    c_x = 274.0
+    c_x = w - 14.0 - box_w  # 288.22
     d.add(Rect(c_x, y_pos, box_w, box_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(c_x, y_pos + box_h - 18, box_w, 18, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(c_x + 8, y_pos + box_h - 13, "BẢN SAO: candidate : Service", fontName="BookSansBold", fontSize=7.5, fillColor=COLOR_INK_DARK))
@@ -278,20 +279,21 @@ def build_struct_copy_drawing(w: float = 448.22, h: float = 180.0) -> Drawing:
         d.add(String(c_x + box_w - 14, f_y + 5, fval, fontName="BookMono", fontSize=7.4, fillColor=COLOR_BLACK, textAnchor="end"))
         f_y -= 19
 
-    d.add(String(c_x + 8, y_pos + 7, "[MUTATED] candidate.Healthy đổi thành false", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
+    d.add(String(c_x + 8, y_pos + 7, "[MUTATED] candidate.Healthy = false", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
 
-    # Center Copy Arrow & Clear Annotations (100 pt gap between 174 and 274)
-    mid_x = (b_x + box_w + c_x) / 2
-    draw_arrow(d, b_x + box_w + 4, y_pos + box_h - 38, c_x - 4, y_pos + box_h - 38, color=COLOR_BLACK, width=1.0, head_size=4.5)
+    # Center Copy Arrow & Clear Annotations (128.22 pt gap between 160.0 and 288.22)
+    mid_x = (b_x + box_w + c_x) / 2  # 224.11
+    draw_arrow(d, b_x + box_w + 6, y_pos + box_h - 38, c_x - 6, y_pos + box_h - 38, color=COLOR_BLACK, width=1.0, head_size=4.5)
     d.add(String(mid_x, y_pos + box_h - 30, "candidate := billing", fontName="BookMono", fontSize=7.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(mid_x, y_pos + box_h - 48, "Sao chép giá trị", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MUTED, textAnchor="middle"))
     d.add(String(mid_x, y_pos + box_h - 58, "các field hiện tại", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MUTED, textAnchor="middle"))
 
-    # Middle explanatory note (zero collision)
-    d.add(Rect(mid_x - 46, y_pos + 12, 92, 32, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(mid_x, y_pos + 33, "candidate.Healthy = false", fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # Middle explanatory note card (Width 110 pt, ample ~9.1 pt clearance on both sides!)
+    card_w = 110.0
+    d.add(Rect(mid_x - card_w / 2, y_pos + 10, card_w, 36, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(mid_x, y_pos + 34, "candidate.Healthy = false", fontName="BookMono", fontSize=6.6, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(mid_x, y_pos + 23, "Chỉ đổi field trên bản sao,", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED, textAnchor="middle"))
-    d.add(String(mid_x, y_pos + 15, "struct billing gốc độc lập", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(mid_x, y_pos + 14, "struct billing gốc độc lập", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Footnote - 2 lines, strictly fitting width
     d.add(String(12, 17.0, "* Go spec: Phép gán struct sao chép giá trị các field theo ngữ nghĩa Go (không bắt buộc copy vật lý từng lệnh).",
@@ -391,55 +393,65 @@ def build_method_receiver_trace_drawing(w: float = 448.22, h: float = 188.0) -> 
                  fontName="BookMono", fontSize=7.4, fillColor=COLOR_INK_MUTED))
 
     # Left Container: billing : Service (Addressable variable)
-    b_x, b_y, b_w, b_h = 14.0, 32.0, 146.0, 122.0
+    b_x, b_y, b_w, b_h = 14.0, 32.0, 122.0, 122.0
     d.add(Rect(b_x, b_y, b_w, b_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(b_x, b_y + b_h - 18, b_w, 18, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(b_x + 8, b_y + b_h - 13, "BIẾN GỐC: billing : Service", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
+    d.add(String(b_x + 8, b_y + b_h - 13, "BIẾN GỐC: billing", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
 
-    d.add(String(b_x + 8, b_y + b_h - 30, "Biến addressable (lấy được &):", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(b_x + 8, b_y + b_h - 30, "Biến addressable (Service):", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
 
     # Inner state box (Height 52 pt from b_y + 30 to b_y + 82, zero collision)
-    d.add(Rect(b_x + 8, b_y + 30, b_w - 16, 52, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_MID, strokeWidth=0.6))
-    d.add(String(b_x + 12, b_y + 70, "Trạng thái ban đầu:", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
-    d.add(String(b_x + 12, b_y + 59, "Healthy: true | Retries: 0", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_DARK))
-    d.add(String(b_x + 12, b_y + 46, "Sau Record(false):", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
-    d.add(String(b_x + 12, b_y + 35, "Healthy: false | Retries: 1", fontName="BookMono", fontSize=7.0, fillColor=COLOR_BLACK))
+    d.add(Rect(b_x + 6, b_y + 30, b_w - 12, 52, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_MID, strokeWidth=0.6))
+    d.add(String(b_x + 9, b_y + 70, "Trạng thái ban đầu:", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
+    d.add(String(b_x + 9, b_y + 59, "Healthy: true | Retries: 0", fontName="BookMono", fontSize=6.4, fillColor=COLOR_INK_DARK))
+    d.add(String(b_x + 9, b_y + 46, "Sau Record(false):", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
+    d.add(String(b_x + 9, b_y + 35, "Healthy: false | Retries: 1", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
 
-    d.add(String(b_x + 8, b_y + 17, "• billing là biến có địa chỉ", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_DARK))
-    d.add(String(b_x + 8, b_y + 7, "• Cho phép tự động lấy &billing", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
+    d.add(String(b_x + 8, b_y + 17, "• billing là biến có địa chỉ", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(b_x + 8, b_y + 7, "• Tự động lấy được &billing", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+
+    # Right Containers: width 206 pt, positioned at x = 228.22
+    # This leaves 228.22 - 136.0 = 92.22 pt of clear space in the middle!
+    r_w = 206.0
+    r_x = w - 14.0 - r_w  # 228.22
 
     # Right Container 1 (Top): Value Receiver func (service Service) Summary()
-    v_x, v_y, v_w, v_h = 242.0, 96.0, 192.0, 58.0
-    d.add(Rect(v_x, v_y, v_w, v_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(v_x, v_y + v_h - 16, v_w, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(v_x + 8, v_y + v_h - 11, "NHÁNH 1: VALUE RECEIVER (Summary)", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
+    v_y, v_h = 96.0, 58.0
+    d.add(Rect(r_x, v_y, r_w, v_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
+    d.add(Rect(r_x, v_y + v_h - 16, r_w, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(r_x + 8, v_y + v_h - 11, "NHÁNH 1: VALUE RECEIVER (Summary)", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
 
-    d.add(String(v_x + 8, v_y + 28, "• func (service Service) Summary() string", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_DARK))
-    d.add(String(v_x + 8, v_y + 16, "• Nhận bản sao struct value của billing", fontName="BookSans", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(v_x + 8, v_y + 5, "• Trong ví dụ này, Summary chỉ đọc service.Name", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(r_x + 8, v_y + 28, "• func (service Service) Summary() string", fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(r_x + 8, v_y + 16, "• Nhận bản sao struct value của billing", fontName="BookSans", fontSize=7.2, fillColor=COLOR_INK_DARK))
+    d.add(String(r_x + 8, v_y + 5, "• Trong ví dụ này, Summary chỉ đọc service.Name", fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MUTED))
 
-    # Right Container 2 (Bottom): Pointer Receiver func (service *Service) Record(...)
-    p_x, p_y, p_w, p_h = 242.0, 32.0, 192.0, 58.0
-    d.add(Rect(p_x, p_y, p_w, p_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(p_x, p_y + p_h - 16, p_w, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(p_x + 8, p_y + p_h - 11, "NHÁNH 2: POINTER RECEIVER (Record)", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
+    # Right Container 2 (Bottom): Pointer Receiver func (service *Service) Record(healthy bool)
+    p_y, p_h = 32.0, 58.0
+    d.add(Rect(r_x, p_y, r_w, p_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
+    d.add(Rect(r_x, p_y + p_h - 16, r_w, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(r_x + 8, p_y + p_h - 11, "NHÁNH 2: POINTER RECEIVER (Record)", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
 
-    d.add(String(p_x + 8, p_y + 28, "• func (service *Service) Record(bool)", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_DARK))
-    d.add(String(p_x + 8, p_y + 16, "• Go tự động lấy địa chỉ: &billing", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(p_x + 8, p_y + 5, "• SỬA POINTEE: Healthy=false, Retries=1", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_BLACK))
+    # Exact signature from lecture: func (service *Service) Record(healthy bool)
+    # BookMono 6.5 pt has width 179.4 pt, leaving a generous 18.6 pt right margin before r_w=206!
+    d.add(String(r_x + 8, p_y + 28, "• func (service *Service) Record(healthy bool)", fontName="BookMono", fontSize=6.5, fillColor=COLOR_INK_DARK))
+    d.add(String(r_x + 8, p_y + 16, "• Go tự động lấy địa chỉ: &billing", fontName="BookMono", fontSize=7.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(r_x + 8, p_y + 5, "• SỬA POINTEE: Healthy=false, Retries=1", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_BLACK))
 
-    # Middle 86 pt gap between left and right
-    mid_gap_x = (b_x + b_w + v_x) / 2
+    # Middle gap is from 136.0 to 228.22 (width 92.22 pt, mid_gap_x = 182.11)
+    mid_gap_x = (b_x + b_w + r_x) / 2  # 182.11
 
-    # Branch 1 (Top)
-    draw_arrow(d, b_x + b_w + 4, b_y + b_h - 30, v_x - 4, v_y + v_h / 2, color=COLOR_BLACK, width=1.0, head_size=4.5)
-    d.add(String(mid_gap_x, v_y + v_h / 2 + 5, "billing.Summary()", fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(mid_gap_x, v_y + v_h / 2 - 7, "(Truyền copy value)", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED, textAnchor="middle"))
+    # Branch 1 (Top) - Arrow at y = 125.0
+    draw_arrow(d, b_x + b_w + 4, v_y + v_h / 2, r_x - 4, v_y + v_h / 2, color=COLOR_BLACK, width=1.0, head_size=4.5)
+    d.add(String(mid_gap_x, v_y + v_h / 2 + 6, "billing.Summary()", fontName="BookMono", fontSize=6.5, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(mid_gap_x, v_y + v_h / 2 - 8, "(Truyền copy value)", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED, textAnchor="middle"))
 
-    # Branch 2 (Bottom)
-    draw_arrow(d, b_x + b_w + 4, b_y + 35, p_x - 4, p_y + p_h / 2, color=COLOR_BLACK, width=1.0, head_size=4.5)
-    d.add(String(mid_gap_x, p_y + p_h / 2 + 5, "billing.Record(false)", fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(mid_gap_x, p_y + p_h / 2 - 7, "(Truyền &billing)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # Branch 2 (Bottom) - Arrow perfectly horizontal at y = 57.0 (zero collision with text!)
+    arrow_y = p_y + p_h / 2 - 4.0  # 57.0
+    draw_arrow(d, b_x + b_w + 4, arrow_y, r_x - 4, arrow_y, color=COLOR_BLACK, width=1.0, head_size=4.5)
+    # Label 8 pt ABOVE the arrow line (ample 5.16 pt clearance to both left and right boxes!)
+    d.add(String(mid_gap_x, arrow_y + 8.0, "billing.Record(false)", fontName="BookMono", fontSize=6.5, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # Label 9 pt BELOW the arrow line
+    d.add(String(mid_gap_x, arrow_y - 9.0, "(Truyền &billing)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Footnote - 2 lines, strictly fitting width
     d.add(String(12, 17.0, "* Sơ đồ trace ngữ nghĩa: Summary chỉ đọc field trong ví dụ này; value receiver không bảo đảm không có side effect",
