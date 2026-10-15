@@ -77,8 +77,8 @@ Tuân thủ nghiêm ngặt chỉ thị từ người dùng tại vòng rà soát
   - **Nhánh 2: Vượt sức chứa (`len(s) + số_phần_tử_thêm > cap(s)`)**:
     - Ngôn ngữ: Cấp phát mảng mới và sao chép phần tử cũ sang.
     - Runtime: `gc/growslice` tính toán dung lượng và phân bổ bộ nhớ mới.
-    - Kết quả: Trả về descriptor mới trỏ tới mảng nền mới; hệ quả phân tách mảng nền (không đổi mảng cũ).
-  - **Cảnh báo phân biệt Shallow vs Deep copy:** Footnote nêu rõ: *Nhánh 2 tách biệt mảng nền độc lập cho phần tử kiểu giá trị cơ bản. Nếu phần tử chứa con trỏ hoặc struct lồng tham chiếu, đây là shallow copy mảng nền, không phải deep copy dữ liệu đích.*
+    - Kết quả: Trả về descriptor mới trỏ tới mảng nền mới; hệ quả mảng nền mới tách biệt (không đồng nghĩa deep copy).
+  - **Đặc tả mảng nền tách biệt vs Deep copy:** Footnote nêu rõ: *Nhánh 2 luôn cấp phát một mảng nền mới tách biệt (bất kể kiểu phần tử). Tuy nhiên không đồng nghĩa deep copy dữ liệu được tham chiếu; growslice là chi tiết triển khai của gc runtime.*
 - **Nâng cấp thị giác & Typography (Zero Collision Routing):**
   - **Khắc phục triệt để lỗi chồng chữ giữa 2 nhánh:** Căn giữa nhãn điều kiện `[Có] len(s) + số_phần_tử_thêm <= cap(s)` và `[Không] len(s) + số_phần_tử_thêm > cap(s)` trực tiếp phía trên từng hộp nhánh tương ứng, tạo khoảng cách an toàn rộng tới 68 pt ở giữa, hoàn toàn không cắt hoặc đè lên trục phân nhánh thẳng đứng.
 
@@ -101,6 +101,7 @@ Tuân thủ nghiêm ngặt chỉ thị từ người dùng tại vòng rà soát
      - [Trang 2: Hình 2.3 (Slice Window) & Hình 2.4 (Append Branching)](specimens/ch02_diagrams_p02.png)
 4. **Vệ sinh repository:**
    - Đã xóa sạch 12 file specimen `ch02_page_01.png` .. `ch02_page_12.png` của đợt preview cũ.
+   - Không tạo thêm bất kỳ file, báo cáo hoặc thư mục mới nào.
 
 ---
 
@@ -112,10 +113,10 @@ Tuân thủ nghiêm ngặt chỉ thị từ người dùng tại vòng rà soát
 | **Code Block: 0 Line Numbers** | **PASS** | Tuyệt đối không thêm số dòng vào bất kỳ code block nào. |
 | **Code Width Preflight** | **PASS** | `python scripts/validate_code_width.py`: 0 dòng tràn lề (usable width 448.22 pt). |
 | **Publication Contracts** | **PASS** | `python scripts/test_publication_contracts.py`: 16/16 tests passed. |
-| **Visual QA Zoom 100%** | **PASS** | Đã kiểm tra trực quan cả 4 ảnh sơ đồ và 2 trang preview: không chồng chữ, không cắt nhãn, tương phản cao. |
+| **Visual QA Zoom 100%** | **PASS** | Tăng font footnote lên 7.5pt, mực đậm `#262626`, không chồng chữ, không cắt nhãn. |
 | **Unified Append Condition** | **PASS** | Toàn bộ sơ đồ dùng đồng nhất `len(s) + số_phần_tử_thêm <= cap(s)`. |
 | **Distinction: base vs backing array** | **PASS** | Hình 2.3 phân biệt rõ `base : []int` và mảng nền 5 phần tử. |
-| **Memory Disclaimer** | **PASS** | Phân định rõ Go spec vs mô hình `gc` 64-bit; disclaimer shallow vs deep copy đầy đủ. |
+| **Append Backing Array vs Deep Copy** | **PASS** | Làm rõ mảng nền mới tách biệt bất kể kiểu phần tử; không deep copy; growslice là chi tiết gc runtime. |
 
 ---
 

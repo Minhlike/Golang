@@ -134,7 +134,7 @@ def build_preview() -> Path:
 
     # Figure 2.4: Append Mechanics & Capacity Branching
     story.append(Paragraph("HÌNH 2.4 — ĐẶC TẢ PHÂN NHÁNH append // ĐIỂM QUYẾT ĐỊNH THEO SỨC CHỨA (CAPACITY)", fig_title_style))
-    story.append(Paragraph("Hai kết quả của append: còn capacity (len(s) + số_phần_tử_thêm <= cap(s)) thì tái sử dụng mảng nền; vượt capacity thì cấp mảng mới (growslice).", fig_caption_style))
+    story.append(Paragraph("Hai kết quả của append: còn capacity (len(s) + số_phần_tử_thêm <= cap(s)) thì tái sử dụng mảng nền; vượt capacity thì cấp mảng mới tách biệt (không đồng nghĩa deep copy; growslice là chi tiết runtime).", fig_caption_style))
     story.append(Image(str(ROOT / "assets/diagrams/append-storage.png"), width=DIAGRAM_WIDTH, height=220.0))
 
     # Build PDF
