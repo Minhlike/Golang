@@ -110,13 +110,16 @@ def draw_arrow(
 # 1. Figure 4.1: error-boundary-trace.png (Aspect ratio ~0.8026, 340 x 423.6 pt)
 # ----------------------------------------------------------------------
 def build_error_boundary_trace_drawing(w: float = 340.0, h: float = 423.6) -> Drawing:
-    """Figure 4.1: Error wrapping chain and inspection at caller boundary.
+    """Figure 4.1: Error boundary trace separating missing service vs probe failure.
     
-    Vertical 4-level chain:
-    1. ProbeFunc (underlying cause)
-    2. *ProbeFailure (structured context struct + Unwrap())
-    3. applyProbe (operation wrapping with %w)
-    4. Caller decision fork: errors.Is (sentinel) vs errors.As (data extraction).
+    Layout structure:
+    - Top dispatch block: applyProbe(registry, name, run) inspecting service existence.
+    - Two distinct, independent parallel branches:
+      * Branch 1 (Left): Service not found (!found) -> probe is NOT run -> wraps sentinel
+        ErrUnknownService -> Caller uses errors.Is to match sentinel and branch logic.
+      * Branch 2 (Right): Service found -> runs run(service.Endpoint) -> fails -> wraps
+        into *ProbeFailure with Unwrap() returning Cause -> wraps %w at operation boundary ->
+        Caller uses errors.As to extract structured metadata (*ProbeFailure) without string parsing.
     """
     d = Drawing(w, h)
 
@@ -125,9 +128,9 @@ def build_error_boundary_trace_drawing(w: float = 340.0, h: float = 423.6) -> Dr
 
     # Header strip
     d.add(Rect(0, h - 22, w, 22, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(10, h - 15, "RANH GIỚI LỖI // BẢO TOÀN NGUYÊN NHÂN & DỮ LIỆU CẤU TRÚC",
-                 fontName="BookSansBold", fontSize=7.6, fillColor=COLOR_INK_DARK))
-    d.add(String(w - 110, h - 15, "ERROR WRAPPING CHAIN",
+    d.add(String(10, h - 15, "RANH GIỚI LỖI // PHÂN TÁCH 2 NHÁNH XỬ LÝ TRONG applyProbe",
+                 fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
+    d.add(String(w - 110, h - 15, "ERROR BOUNDARY",
                  fontName="BookMono", fontSize=6.8, fillColor=COLOR_INK_MUTED))
 
     # Layout constants
@@ -135,113 +138,135 @@ def build_error_boundary_trace_drawing(w: float = 340.0, h: float = 423.6) -> Dr
     block_w = 312.0
     center_x = x_left + block_w / 2.0  # 170.0
 
-    # 1. Level 1: Underlying Root Cause (ProbeFunc)
-    y1_top = 394.0
-    h1 = 44.0
-    d.add(Rect(x_left, y1_top - h1, block_w, h1, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(x_left, y1_top - 14, block_w, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(x_left + 8, y1_top - 10, "1. NGUYÊN NHÂN NGUYÊN THỦY (ProbeFunc)",
-                 fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8, y1_top - 25, "var ErrRoot = syscall.ECONNREFUSED  // hoặc lỗi mạng / OS",
+    # Top Dispatch Box: Entry point applyProbe
+    y_top_box = 394.0
+    h_top_box = 42.0
+    y_top_bot = y_top_box - h_top_box  # 352.0
+    d.add(Rect(x_left, y_top_bot, block_w, h_top_box, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
+    d.add(Rect(x_left, y_top_box - 14, block_w, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(x_left + 8, y_top_box - 10, "ĐIỂM VÀO BIÊN THAO TÁC: func applyProbe(registry, name, run) error",
+                 fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x_left + 8, y_top_box - 24, "service, found := registry[name]",
                  fontName="BookMono", fontSize=6.7, fillColor=COLOR_BLACK))
-    d.add(String(x_left + 8, y1_top - 36, "• Tầng thấp nhất trả về error nguyên nhân; chưa có ngữ cảnh nghiệp vụ",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_left + 8, y_top_box - 35, "• Rẽ nhánh dứt khoát: service có tồn tại trong cấu hình hay không",
+                 fontName="BookSans", fontSize=6.6, fillColor=COLOR_INK_MUTED))
 
-    # Arrow L1 -> L2
-    y_arr1_start = y1_top - h1
-    y_arr1_end = 320.0
-    draw_arrow(d, center_x, y_arr1_start, center_x, y_arr1_end, color=COLOR_BLACK, width=1.0, head_size=4.0)
-    # Badge on arrow
-    badge1_y = (y_arr1_start + y_arr1_end) / 2.0
-    d.add(Rect(center_x - 52, badge1_y - 7, 104, 14, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(center_x, badge1_y - 3, "bọc vào field Cause", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    # Two column dimensions
+    gap_col = 14.0
+    col_w = (block_w - gap_col) / 2.0  # (312 - 14) / 2 = 149.0 pt
+    x_col1 = x_left                     # 14.0 to 163.0
+    x_col2 = x_left + col_w + gap_col   # 177.0 to 326.0
 
-    # 2. Level 2: Custom Structured Error (*ProbeFailure)
-    y2_top = y_arr1_end
-    h2 = 72.0
-    d.add(Rect(x_left, y2_top - h2, block_w, h2, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(x_left, y2_top - 14, block_w, 14, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(x_left + 8, y2_top - 10, "2. ĐÓNG GÓI DỮ LIỆU CÓ CẤU TRÚC (*ProbeFailure)",
-                 fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8, y2_top - 26, "failed := &ProbeFailure{Service: name, Endpoint: ep, Cause: err}",
-                 fontName="BookMono", fontSize=6.7, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8, y2_top - 38, "func (f *ProbeFailure) Unwrap() error { return f.Cause }",
-                 fontName="BookMono", fontSize=6.7, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8, y2_top - 51, "• Giữ nguyên vẹn identity của Cause qua Unwrap(); gắn Service & Endpoint",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_left + 8, y2_top - 63, "• Không nối chuỗi thủ công; bảo toàn dữ liệu phục vụ điều tra sự cố",
-                 fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_MID))
+    c1_center = x_col1 + col_w / 2.0   # 88.5
+    c2_center = x_col2 + col_w / 2.0   # 251.5
 
-    # Arrow L2 -> L3
-    y_arr2_start = y2_top - h2
-    y_arr2_end = 216.0
-    draw_arrow(d, center_x, y_arr2_start, center_x, y_arr2_end, color=COLOR_BLACK, width=1.0, head_size=4.0)
-    # Badge on arrow
-    badge2_y = (y_arr2_start + y_arr2_end) / 2.0
-    d.add(Rect(center_x - 52, badge2_y - 7, 104, 14, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(center_x, badge2_y - 3, "bọc bằng động từ %w", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    # Branching arrows from Top Box down to columns
+    y_branch_top = y_top_bot
+    y_branch_end = 324.0
 
-    # 3. Level 3: Operation Boundary (applyProbe)
-    y3_top = y_arr2_end
-    h3 = 54.0
-    d.add(Rect(x_left, y3_top - h3, block_w, h3, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(x_left, y3_top - 14, block_w, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(x_left + 8, y3_top - 10, "3. BIÊN THAO TÁC NGHIỆP VỤ (applyProbe)",
-                 fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8, y3_top - 26, 'return fmt.Errorf("probe %q: %w", name, failed)',
-                 fontName="BookMono", fontSize=6.7, fillColor=COLOR_BLACK))
-    d.add(String(x_left + 8, y3_top - 38, "• Bổ sung bối cảnh operation mà không phá vỡ chuỗi Unwrap() bên dưới",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_left + 8, y3_top - 48, "• Cho phép caller lột từng lớp bối cảnh về nguyên nhân sâu nhất",
-                 fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_MID))
+    # Left branch arrow (!found)
+    draw_arrow(d, c1_center, y_branch_top, c1_center, y_branch_end, color=COLOR_BLACK, width=1.0, head_size=4.0)
+    badge1_y = (y_branch_top + y_branch_end) / 2.0
+    d.add(Rect(c1_center - 54, badge1_y - 7, 108, 14, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(c1_center, badge1_y - 3, "if !found (không chạy probe)", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    # Fork Arrow from L3 down to Caller Stage (4a & 4b)
-    fork_y_start = y3_top - h3
-    badge3_y = 138.0
-    d.add(Line(center_x, fork_y_start, center_x, badge3_y + 8, strokeColor=COLOR_BLACK, strokeWidth=1.0))
+    # Right branch arrow (found)
+    draw_arrow(d, c2_center, y_branch_top, c2_center, y_branch_end, color=COLOR_BLACK, width=1.0, head_size=4.0)
+    badge2_y = (y_branch_top + y_branch_end) / 2.0
+    d.add(Rect(c2_center - 54, badge2_y - 7, 108, 14, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(c2_center, badge2_y - 3, "if found (gọi run(endpoint))", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    # Badge "err trả về Caller"
-    d.add(Rect(center_x - 45, badge3_y - 7, 90, 15, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.7))
-    d.add(String(center_x, badge3_y - 3, "err trả về Caller", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # ================== COLUMN 1: NHÁNH THIẾU CẤU HÌNH (!found) ==================
+    y_col_top = y_branch_end
+    y_col_bot = 38.0
+    h_col = y_col_top - y_col_bot  # 286.0 pt
 
-    # Stage 4: Two side-by-side Decision Boxes
-    gap4 = 14.0
-    w4 = (block_w - gap4) / 2.0  # 149.0 pt
-    x4a = x_left
-    x4b = x_left + w4 + gap4
-    y4_top = 114.0
-    h4 = 78.0
+    d.add(Rect(x_col1, y_col_bot, col_w, h_col, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
+    d.add(Rect(x_col1, y_col_top - 18, col_w, 18, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(x_col1 + 6, y_col_top - 12, "NHÁNH 1: THIẾU CẤU HÌNH", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
 
-    # Diverging arrows from badge bottom to top center of each box
-    arrow_fork_y = badge3_y - 7
-    draw_arrow(d, center_x - 10, arrow_fork_y, x4a + w4 / 2.0, y4_top, color=COLOR_BLACK, width=1.0, head_size=4.0)
-    draw_arrow(d, center_x + 10, arrow_fork_y, x4b + w4 / 2.0, y4_top, color=COLOR_BLACK, width=1.0, head_size=4.0)
+    # Box 1.1: Trả lỗi sớm tại applyProbe
+    b11_y = y_col_top - 114.0
+    b11_h = 90.0
+    d.add(Rect(x_col1 + 5, b11_y, col_w - 10, b11_h, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(x_col1 + 9, b11_y + 76, "1. Trả lỗi sớm tại applyProbe:", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 9, b11_y + 63, "// probe KHÔNG được gọi", fontName="BookMono", fontSize=6.3, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 9, b11_y + 51, "return fmt.Errorf(", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b11_y + 39, '  "unknown %q: %w",', fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b11_y + 27, "  name, ErrUnknownService,", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b11_y + 16, ")", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b11_y + 5,  "• Không mutate state registry", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
 
-    # 4A. errors.Is (SENTINEL MATCHING)
-    d.add(Rect(x4a, y4_top - h4, w4, h4, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(x4a, y4_top - 16, w4, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(x4a + 6, y4_top - 11, "4a. errors.Is (SENTINEL)", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(x4a + 6, y4_top - 28, "if errors.Is(err, target)", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(x4a + 6, y4_top - 40, "• Duyệt toàn bộ chuỗi Unwrap()", fontName="BookSans", fontSize=6.5, fillColor=COLOR_INK_MUTED))
-    d.add(String(x4a + 6, y4_top - 51, "• So khớp identity sentinel", fontName="BookSans", fontSize=6.5, fillColor=COLOR_INK_MUTED))
-    d.add(String(x4a + 6, y4_top - 63, "• Dùng để rẽ nhánh quyết định", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(x4a + 6, y4_top - 73, "• Không phụ thuộc số lớp bọc", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_MUTED))
+    # Arrow down within Column 1
+    y_c1_arr_top = b11_y
+    y_c1_arr_bot = y_col_bot + 120.0
+    draw_arrow(d, c1_center, y_c1_arr_top, c1_center, y_c1_arr_bot, color=COLOR_BLACK, width=1.0, head_size=4.0)
+    badge_c1_y = (y_c1_arr_top + y_c1_arr_bot) / 2.0
+    d.add(Rect(c1_center - 40, badge_c1_y - 6, 80, 13, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(c1_center, badge_c1_y - 3, "err trả về Caller", fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    # 4B. errors.As (DATA CONTEXT EXTRACTION)
-    d.add(Rect(x4b, y4_top - h4, w4, h4, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
-    d.add(Rect(x4b, y4_top - 16, w4, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
-    d.add(String(x4b + 6, y4_top - 11, "4b. errors.As (DATA CONTEXT)", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
-    d.add(String(x4b + 6, y4_top - 28, "var f *ProbeFailure", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(x4b + 6, y4_top - 39, "if errors.As(err, &f)", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(x4b + 6, y4_top - 51, "• Trích xuất struct an toàn kiểu", fontName="BookSans", fontSize=6.5, fillColor=COLOR_INK_MUTED))
-    d.add(String(x4b + 6, y4_top - 63, "• Lấy Service/Endpoint có cấu trúc", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(x4b + 6, y4_top - 73, "• Tuyệt đối không parse chuỗi", fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_INK_DARK))
+    # Box 1.2: Caller xử lý bằng errors.Is
+    b12_y = y_col_bot + 6.0
+    b12_h = 108.0
+    d.add(Rect(x_col1 + 5, b12_y, col_w - 10, b12_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.7))
+    d.add(Rect(x_col1 + 5, b12_y + b12_h - 16, col_w - 10, 16, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(x_col1 + 9, b12_y + b12_h - 11, "CALLER: errors.Is (SENTINEL)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    
+    d.add(String(x_col1 + 9, b12_y + 77, "if errors.Is(err,", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b12_y + 65, "   ErrUnknownService) {", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 9, b12_y + 53, '  // thêm vào config...', fontName="BookMono", fontSize=6.3, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 9, b12_y + 42, "}", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    
+    d.add(String(x_col1 + 9, b12_y + 28, "• Duyệt chuỗi unwrap so khớp sentinel", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 9, b12_y + 17, "• Phục vụ rẽ nhánh logic bên gọi", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 9, b12_y + 6,  "• KHÔNG chứa struct ProbeFailure", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_BLACK))
+
+    # ================== COLUMN 2: NHÁNH PROBE THẤT BẠI (run lỗi) ==================
+    d.add(Rect(x_col2, y_col_bot, col_w, h_col, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
+    d.add(Rect(x_col2, y_col_top - 18, col_w, 18, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(x_col2 + 6, y_col_top - 12, "NHÁNH 2: PROBE THẤT BẠI", fontName="BookSansBold", fontSize=7.2, fillColor=COLOR_INK_DARK))
+
+    # Box 2.1: Chạy probe & bọc struct
+    b21_y = y_col_top - 114.0
+    b21_h = 90.0
+    d.add(Rect(x_col2 + 5, b21_y, col_w - 10, b21_h, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(x_col2 + 9, b21_y + 76, "1. Chạy probe & đóng gói struct:", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col2 + 9, b21_y + 64, "err := run(service.Endpoint)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b21_y + 53, "service.Record(false)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col2 + 9, b21_y + 41, "failed := &ProbeFailure{", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b21_y + 30, "  Service, Endpoint, Cause: err}", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b21_y + 18, 'return fmt.Errorf("...: %w", failed)', fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b21_y + 5,  "• Unwrap() trả về Cause: err", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+
+    # Arrow down within Column 2
+    y_c2_arr_top = b21_y
+    y_c2_arr_bot = y_col_bot + 120.0
+    draw_arrow(d, c2_center, y_c2_arr_top, c2_center, y_c2_arr_bot, color=COLOR_BLACK, width=1.0, head_size=4.0)
+    badge_c2_y = (y_c2_arr_top + y_c2_arr_bot) / 2.0
+    d.add(Rect(c2_center - 40, badge_c2_y - 6, 80, 13, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
+    d.add(String(c2_center, badge_c2_y - 3, "err trả về Caller", fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MID, textAnchor="middle"))
+
+    # Box 2.2: Caller xử lý bằng errors.As
+    b22_y = y_col_bot + 6.0
+    b22_h = 108.0
+    d.add(Rect(x_col2 + 5, b22_y, col_w - 10, b22_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.7))
+    d.add(Rect(x_col2 + 5, b22_y + b22_h - 16, col_w - 10, 16, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
+    d.add(String(x_col2 + 9, b22_y + b22_h - 11, "CALLER: errors.As (DATA CONTEXT)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+
+    d.add(String(x_col2 + 9, b22_y + 77, "var failure *ProbeFailure", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b22_y + 65, "if errors.As(err, &failure) {", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 9, b22_y + 53, '  fmt.Printf("%s lỗi tại %s",', fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col2 + 9, b22_y + 42, "    failure.Service, ...)", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col2 + 9, b22_y + 31, "}", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+
+    d.add(String(x_col2 + 9, b22_y + 17, "• Trích xuất struct có dữ liệu cụ thể", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col2 + 9, b22_y + 6,  "• KHÔNG chứa ErrUnknownService", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_BLACK))
 
     # Footnote - 2 lines, strictly fitting width with good bottom margin
-    d.add(String(12, 19.0, "* Go error wrapping: Mỗi tầng dùng %w để bổ sung bối cảnh operation mà không phá vỡ định danh lỗi gốc.",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MID))
-    d.add(String(12, 9.0, "  Caller dùng errors.Is để phân loại nhánh quyết định, errors.As để lấy dữ liệu struct; không bao giờ parse chuỗi lỗi.",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MID))
+    d.add(String(12, 19.0, "* Hai nhánh độc lập: errors.Is nhận diện sentinel ErrUnknownService khi thiếu config (probe không chạy);",
+                 fontName="BookSans", fontSize=6.7, fillColor=COLOR_INK_MID))
+    d.add(String(12, 9.0, "  errors.As trích xuất dữ liệu từ *ProbeFailure khi probe thất bại. Hai nhánh không dùng chung một error chain.",
+                 fontName="BookSans", fontSize=6.7, fillColor=COLOR_INK_MID))
 
     return d
 
@@ -286,7 +311,7 @@ def build_cancellation_cleanup_trace_drawing(w: float = 476.0, h: float = 323.8)
     d.add(String(col1_x + 8, box_y_top - 14, "ĐƯỜNG 1: HUỶ TRƯỚC MỞ", fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
 
     d.add(String(col1_x + 8, box_y_top - 36, "1. Kiểm tra context:", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
-    
+
     # Code box
     cbox1_y = box_y_top - 82
     d.add(Rect(col1_x + 6, cbox1_y, col_w - 12, 42, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
@@ -304,10 +329,10 @@ def build_cancellation_cleanup_trace_drawing(w: float = 476.0, h: float = 323.8)
 
     # Conclusion box at bottom
     c1_concl_y = box_y_bot + 8
-    d.add(Rect(col1_x + 6, c1_concl_y, col_w - 12, 48, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.6))
-    d.add(String(col1_x + 10, c1_concl_y + 34, "[KẾT QUẢ]", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10, c1_concl_y + 22, "• Zero resource leak", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
-    d.add(String(col1_x + 10, c1_concl_y + 11, "• Không dọn rác tài nguyên rỗng", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(col1_x + 6, c1_concl_y, col_w - 12, 44, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.6))
+    d.add(String(col1_x + 10, c1_concl_y + 30, "[KẾT QUẢ]", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10, c1_concl_y + 19, "• Zero resource leak", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
+    d.add(String(col1_x + 10, c1_concl_y + 9,  "• Không dọn rác tài nguyên rỗng", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
 
     # ------------------ COLUMN 2: ACQUISITION FAILURE ------------------
     d.add(Rect(col2_x, box_y_bot, col_w, box_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
@@ -323,20 +348,20 @@ def build_cancellation_cleanup_trace_drawing(w: float = 476.0, h: float = 323.8)
     d.add(String(col2_x + 10, cbox2_y + 16, "if err != nil {", fontName="BookMono", fontSize=6.7, fillColor=COLOR_BLACK))
     d.add(String(col2_x + 10, cbox2_y + 5,  '    return fmt.Errorf(...)', fontName="BookMono", fontSize=6.7, fillColor=COLOR_BLACK))
 
-    # State bullets
+    # State bullets according to contract of runWithSession
     y_b2 = cbox2_y - 18
-    d.add(String(col2_x + 8, y_b2,      "• open() trả về lỗi kết nối", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8, y_b2 - 13, "• Không có session hợp lệ", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8, y_b2 - 26, "• Scope chưa nhận ownership", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_MUTED))
-    d.add(String(col2_x + 8, y_b2 - 39, "• KHÔNG gọi Close()", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_BLACK))
-    d.add(String(col2_x + 8, y_b2 - 50, "  (tránh nil pointer dereference)", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 8, y_b2,      "• open() trả về lỗi khởi tạo", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 8, y_b2 - 13, "• Scope chưa nhận session hợp lệ", fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 8, y_b2 - 26, "• Theo contract runWithSession:", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 8, y_b2 - 38, "  chỉ đăng ký sau khi acquire ok", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 8, y_b2 - 50, "• Thoát ngay; KHÔNG gọi Close()", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_BLACK))
 
     # Conclusion box at bottom
     c2_concl_y = box_y_bot + 8
-    d.add(Rect(col2_x + 6, c2_concl_y, col_w - 12, 48, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.6))
-    d.add(String(col2_x + 10, c2_concl_y + 34, "[KẾT QUẢ]", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10, c2_concl_y + 22, "• Bảo toàn lỗi khởi tạo ban đầu", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
-    d.add(String(col2_x + 10, c2_concl_y + 11, "• Không gọi dọn dẹp vô nghĩa", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(col2_x + 6, c2_concl_y, col_w - 12, 44, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.6))
+    d.add(String(col2_x + 10, c2_concl_y + 30, "[KẾT QUẢ]", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10, c2_concl_y + 19, "• Bảo toàn lỗi mở ban đầu", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
+    d.add(String(col2_x + 10, c2_concl_y + 9,  "• Không gọi Close() trên đối tượng lỗi", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_MUTED))
 
     # ------------------ COLUMN 3: ACQUISITION SUCCEEDED (DEFER CLOSE) ------------------
     d.add(Rect(col3_x, box_y_bot, col_w, box_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
@@ -345,16 +370,17 @@ def build_cancellation_cleanup_trace_drawing(w: float = 476.0, h: float = 323.8)
 
     d.add(String(col3_x + 8, box_y_top - 36, "3. Nhận ownership & defer:", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
 
-    # Code snippet box
+    # Code snippet box with logic excerpt indicator
     cbox3_y = box_y_top - 120
     cbox3_h = 78.0
     d.add(Rect(col3_x + 6, cbox3_y, col_w - 12, cbox3_h, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(col3_x + 10, cbox3_y + 63, "session, err := open(ep)", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, cbox3_y + 51, "defer func() {", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, cbox3_y + 39, "  if cErr := session.Close();", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, cbox3_y + 27, "     cErr != nil && err == nil {", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, cbox3_y + 16, "    err = fmt.Errorf(...)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, cbox3_y + 6,  "  }", fontName="BookMono", fontSize=6.6, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 64, "// logic excerpt (named return)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 10, cbox3_y + 53, "session, err := open(ep)", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 42, "defer func() {", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 31, "  if cErr := session.Close();", fontName="BookMono", fontSize=6.2, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 20, "     cErr != nil && err == nil {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 10, "    err = fmt.Errorf(...)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, cbox3_y + 1,  "  }", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
 
     # Middle execution bullet
     d.add(String(col3_x + 8, cbox3_y - 12, "• return run(ctx, ep, session)", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
@@ -364,22 +390,22 @@ def build_cancellation_cleanup_trace_drawing(w: float = 476.0, h: float = 323.8)
     pbox_h = 48.0
     d.add(Rect(col3_x + 6, pbox_y, col_w - 12, pbox_h, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_BLACK, strokeWidth=0.8))
     d.add(Rect(col3_x + 6, pbox_y + pbox_h - 14, col_w - 12, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_BLACK, strokeWidth=0.5))
-    d.add(String(col3_x + 10, pbox_y + pbox_h - 10, "CHÍNH SÁCH BẢO TOÀN LỖI:", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, pbox_y + 20, "• run() lỗi: GIỮ LỖI CHÍNH (không nuốt)", fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, pbox_y + 8,  "• run() ok: trả lỗi Close() hoặc nil", fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10, pbox_y + pbox_h - 10, "CHÍNH SÁCH LỖI (NAMED RETURN):", fontName="BookSansBold", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, pbox_y + 20, "• run() lỗi: GIỮ LỖI RUN (lỗi chính)", fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(col3_x + 10, pbox_y + 8,  "• run() ok: TRẢ LỖI CLOSE (khi err==nil)", fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_INK_DARK))
 
     # Conclusion box at bottom (aligned with Col 1 and Col 2)
     c3_concl_y = box_y_bot + 8
     d.add(Rect(col3_x + 6, c3_concl_y, col_w - 12, 44, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.6))
     d.add(String(col3_x + 10, c3_concl_y + 30, "[KẾT QUẢ]", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
     d.add(String(col3_x + 10, c3_concl_y + 19, "• Close() luôn chạy khi thoát", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_BLACK))
-    d.add(String(col3_x + 10, c3_concl_y + 9,  "• Không nuốt sự cố nghiệp vụ chính", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10, c3_concl_y + 9,  "• Lỗi Close không đè lỗi run chính", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_DARK))
 
     # Footnote - 2 lines, strictly fitting width with good bottom margin
-    d.add(String(12, 21.0, "* Quy tắc defer: Chỉ đăng ký defer ngay sau khi acquire tài nguyên thành công; không đăng ký khi chưa sở hữu session.",
-                 fontName="BookSans", fontSize=7.2, fillColor=COLOR_INK_MID))
+    d.add(String(12, 21.0, "* Quy tắc defer: Theo contract của runWithSession, Close() chỉ đăng ký sau khi acquire thành công; open() lỗi sẽ return ngay.",
+                 fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MID))
     d.add(String(12, 10.0, "  Chính sách lỗi: Named return (err error) bảo toàn failure chính từ run(), ngăn không cho lỗi dọn dẹp che giấu sự cố gốc.",
-                 fontName="BookSans", fontSize=7.2, fillColor=COLOR_INK_MID))
+                 fontName="BookSans", fontSize=7.0, fillColor=COLOR_INK_MID))
 
     return d
 
