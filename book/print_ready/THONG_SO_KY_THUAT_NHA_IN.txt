@@ -45,8 +45,8 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 3. MÃ KIỂM TRA TỆP (CHECKSUMS)
 --------------------------------------------------------------------------------
 - SHA-256 (01_BIA_TRAI...):
-  64882fd270fdbe0dd986d24e9afe59aec90003d3bfe4b5e203268555b85da856
+  b6b93a095380714e6897dabf27161aea2526d8eb5c08c1340f3547807210f59b
 - SHA-256 (02_RUOT_SACH...):
-  7dfedd9825d36ccfb57515311829bc163bb6eb746423487488419400c36d8b68
+  cec829b9a70a4edaaced0b9026576334e3e0fef03a482cd5dcb2f996fed9d8a2
 
 ================================================================================
