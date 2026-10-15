@@ -96,8 +96,9 @@ Không cần bóc tách token-by-token mọi dòng code trong sách, nhưng BẮ
 7. NO-AUTO-PROSE-REPLACEMENT:
    Cấm tuyệt đối việc sử dụng script find-replace tự động hoặc regex trên toàn bộ văn bản mà không soát lỗi từng dòng, nhằm ngăn ngừa triệt để nguy cơ làm biến dạng mã nguồn, kiểu dữ liệu hay cú pháp lệnh.
 
-8. CODE-WIDTH-PREFLIGHT:
-   Mọi khối mã nguồn (code block) phải được kiểm tra tự động bằng `scripts/validate_code_width.py` trước khi biên dịch PDF. Đảm bảo 100% dòng code không tràn ra ngoài hộp in (`CODE_LINES_OVERFLOWING = 0`).
+8. CODE-WIDTH-PREFLIGHT & NO-LINE-NUMBERS:
+   - Mọi khối mã nguồn (code block) phải được kiểm tra tự động bằng `scripts/validate_code_width.py` trước khi biên dịch PDF. Đảm bảo 100% dòng code không tràn ra ngoài hộp in (`CODE_LINES_OVERFLOWING = 0`).
+   - TUYỆT ĐỐI KHÔNG ĐƯỢC THÊM SỐ DÒNG VÀO CÁC ĐOẠN CODE (NO LINE NUMBERS): Tuyệt đối cấm đánh số dòng (line numbers / line numbering / gutter numbering) vào bên trong, bên cạnh hay trên header của các khối code, terminal output, hoặc verification snippets trong toàn bộ cuốn sách. Code phải được trình bày nguyên bản, sạch sẽ, tối giản để người học đọc liền mạch, đối chiếu trực tiếp và không bị nhiễu thị giác.
 
 9. TABLE-READABILITY-PREFLIGHT:
    Mọi bảng biểu phải được căn chỉnh độ rộng cột hợp lý, không tràn lề trang, không che lấp chữ, đảm bảo khả năng đọc hoàn hảo trên bản in.
@@ -548,7 +549,7 @@ Cần có khi phù hợp:
 - header/footer hợp lý;
 - page number;
 - syntax highlighting;
-- code block dễ đọc;
+- code block dễ đọc, rõ ràng (TUYỆT ĐỐI KHÔNG THÊM SỐ DÒNG vào các khối code; giữ mã nguồn nguyên bản, sạch sẽ);
 - caption hình/bảng;
 - cross-reference;
 - glossary;
@@ -2163,6 +2164,10 @@ BÀI HỌC VỀ TÍNH CHÍNH XÁC VÀ KIỂM CHỨNG (VERIFICATION LESSONS LEARN
    - Loại bỏ hoàn toàn các đại từ giật gân, quảng cáo: "sống còn", "tử huyệt", "triệt tiêu hoàn toàn", "kiên cố", "tối thượng", "nghiêm trọng bậc nhất", "chuẩn mực tuyệt đối", "đập tan ngộ nhận", "làm chủ hoàn toàn", "cấp doanh nghiệp".
    - Mở đầu chương bằng vấn đề thật, câu hỏi trung tâm và mental model (không mở bằng bullet "Bạn sẽ học").
    - Kết thúc chương bằng đúc kết kỹ thuật điềm đạm và giới hạn thực tế (không kết bằng "Bạn đã chinh phục").
+
+7. TUYỆT ĐỐI KHÔNG THÊM SỐ DÒNG VÀO CODE (NO LINE NUMBERS IN CODE BLOCKS):
+   - Tuyệt đối cấm đánh số dòng (line numbers / line numbering / gutter numbering) vào bên trong, bên lề hay phía trên của các khối mã nguồn (code blocks), kết quả terminal output, hoặc verification snippets trong toàn bộ cuốn sách.
+   - Giữ mã nguồn nguyên bản, thụt lề chuẩn mực để người học đọc liền mạch, dễ sao chép/đối chiếu và không bị nhiễu thị giác.
 
 ==================================================
 41. FOUNDATION DEPTH CONTRACT
