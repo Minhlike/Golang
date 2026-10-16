@@ -180,29 +180,29 @@ def build_error_boundary_trace_drawing(w: float = 291.21, h: float = 362.83) -> 
 
     # ================== COLUMN 1: NHÁNH THIẾU CẤU HÌNH (!found) ==================
     y_col_top = y_branch_end
-    y_col_bot = 24.0
-    h_col = y_col_top - y_col_bot  # 252.0 pt
+    y_col_bot = 22.0
+    h_col = y_col_top - y_col_bot  # 254.0 pt
 
     d.add(Rect(x_col1, y_col_bot, col_w, h_col, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
     d.add(Rect(x_col1, y_col_top - 15, col_w, 15, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(x_col1 + 6, y_col_top - 10.5, "NHÁNH 1: THIẾU CẤU HÌNH", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
 
     # Shared tier heights for perfect symmetry across Column 1 and Column 2
-    b_top_box_y = 134.0
-    b_top_box_h = 122.0
-    b_bot_box_y = 28.0
-    b_bot_box_h = 88.0
+    b_top_box_y = 132.0
+    b_top_box_h = 124.0
+    b_bot_box_y = 24.0
+    b_bot_box_h = 92.0
 
     # Box 1.1: Trả lỗi sớm tại applyProbe
     d.add(Rect(x_col1 + 4, b_top_box_y, col_w - 8, b_top_box_h, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(x_col1 + 8, b_top_box_y + 110, "1. Trả lỗi sớm tại applyProbe:", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
-    d.add(String(x_col1 + 8, b_top_box_y + 97,  "// probe KHÔNG được gọi", fontName="BookMono", fontSize=6.3, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_col1 + 8, b_top_box_y + 84,  "return fmt.Errorf(", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
-    d.add(String(x_col1 + 8, b_top_box_y + 72,  '  "unknown %q: %w",', fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
-    d.add(String(x_col1 + 8, b_top_box_y + 60,  "  name, ErrUnknownService)", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(x_col1 + 8, b_top_box_y + 42,  "• Không mutate state registry", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_DARK))
-    d.add(String(x_col1 + 8, b_top_box_y + 29,  "• %w bọc trực tiếp sentinel", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_col1 + 8, b_top_box_y + 16,  "  Caller rẽ nhánh bằng errors.Is", fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 8, b_top_box_y + 112, "1. Trả lỗi sớm tại applyProbe:", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 8, b_top_box_y + 99,  "// probe KHÔNG được gọi", fontName="BookMono", fontSize=6.3, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 8, b_top_box_y + 86,  "return fmt.Errorf(", fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_top_box_y + 74,  '  "unknown %q: %w",', fontName="BookMono", fontSize=6.5, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_top_box_y + 62,  "  name, ErrUnknownService)", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_top_box_y + 44,  "• Không mutate state registry", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 8, b_top_box_y + 30,  "• %w bọc trực tiếp sentinel", fontName="BookSans", fontSize=6.4, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 8, b_top_box_y + 17,  "  Caller rẽ nhánh bằng errors.Is", fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MUTED))
 
     # Arrow down within Column 1 (aligned with Column 2)
     y_c1_arr_top = b_top_box_y
@@ -217,13 +217,13 @@ def build_error_boundary_trace_drawing(w: float = 291.21, h: float = 362.83) -> 
     d.add(Rect(x_col1 + 4, b_bot_box_y + b_bot_box_h - 14, col_w - 8, 14, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(x_col1 + 8, b_bot_box_y + b_bot_box_h - 10, "CALLER: errors.Is (SENTINEL)", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
 
-    d.add(String(x_col1 + 8, b_bot_box_y + 60, "if errors.Is(err,", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(x_col1 + 8, b_bot_box_y + 49, "   ErrUnknownService) {", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(x_col1 + 8, b_bot_box_y + 39, "  // rẽ nhánh logic", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_col1 + 8, b_bot_box_y + 29, "}", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_bot_box_y + 64, "if errors.Is(err,", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_bot_box_y + 53, "   ErrUnknownService) {", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_bot_box_y + 42, "  // rẽ nhánh logic", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col1 + 8, b_bot_box_y + 31, "}", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
 
-    d.add(String(x_col1 + 8, b_bot_box_y + 16, "• So khớp identity sentinel", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(x_col1 + 8, b_bot_box_y + 5,  "• KHÔNG chứa struct ProbeFailure", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col1 + 8, b_bot_box_y + 17, "• So khớp identity sentinel", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col1 + 8, b_bot_box_y + 6,  "• KHÔNG chứa struct ProbeFailure", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_BLACK))
 
     # ================== COLUMN 2: NHÁNH PROBE THẤT BẠI (run lỗi) ==================
     d.add(Rect(x_col2, y_col_bot, col_w, h_col, fillColor=COLOR_BG_WHITE, strokeColor=COLOR_INK_DARK, strokeWidth=0.8))
@@ -232,18 +232,18 @@ def build_error_boundary_trace_drawing(w: float = 291.21, h: float = 362.83) -> 
 
     # Box 2.1: Chạy probe & bọc struct (exact Go syntax matching lines 127-135)
     d.add(Rect(x_col2 + 4, b_top_box_y, col_w - 8, b_top_box_h, fillColor=COLOR_BG_BLOCK, strokeColor=COLOR_HAIRLINE, strokeWidth=0.5))
-    d.add(String(x_col2 + 8, b_top_box_y + 110, "1. Cập nhật state & bọc struct:", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
-    d.add(String(x_col2 + 8, b_top_box_y + 98,  "err := run(service.Endpoint)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 88,  "service.Record(false)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 78,  "registry[name] = service", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 69,  "  // ghi bản sao đã sửa vào map", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_col2 + 8, b_top_box_y + 59,  "failed := &ProbeFailure{", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 50,  "  Service:  service.Name,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 41,  "  Endpoint: service.Endpoint,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 32,  "  Cause:    err,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 23,  "}", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 13,  "return fmt.Errorf(", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_top_box_y + 4,   '  "probe: %w", failed)', fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 112, "1. Cập nhật state & bọc struct:", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col2 + 8, b_top_box_y + 100, "err := run(service.Endpoint)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 90,  "service.Record(false)", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 80,  "registry[name] = service", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 71,  "  // ghi bản sao đã sửa vào map", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col2 + 8, b_top_box_y + 61,  "failed := &ProbeFailure{", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 52,  "  Service:  service.Name,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 43,  "  Endpoint: service.Endpoint,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 34,  "  Cause:    err,", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 25,  "}", fontName="BookMono", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 15,  "return fmt.Errorf(", fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_top_box_y + 5,   '  "probe %q: %w", name, failed)', fontName="BookMono", fontSize=6.1, fillColor=COLOR_BLACK))
 
     # Arrow down within Column 2 (aligned with Column 1)
     y_c2_arr_top = b_top_box_y
@@ -258,19 +258,20 @@ def build_error_boundary_trace_drawing(w: float = 291.21, h: float = 362.83) -> 
     d.add(Rect(x_col2 + 4, b_bot_box_y + b_bot_box_h - 14, col_w - 8, 14, fillColor=COLOR_BG_ACCENT, strokeColor=COLOR_INK_DARK, strokeWidth=0.5))
     d.add(String(x_col2 + 8, b_bot_box_y + b_bot_box_h - 10, "CALLER: errors.As (METADATA)", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
 
-    d.add(String(x_col2 + 8, b_bot_box_y + 60, "var failure *ProbeFailure", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_bot_box_y + 49, "if errors.As(err, &failure) {", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
-    d.add(String(x_col2 + 8, b_bot_box_y + 39, "  log(failure.Service, ...)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_MUTED))
-    d.add(String(x_col2 + 8, b_bot_box_y + 29, "}", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 64, "var failure *ProbeFailure", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 53, "if errors.As(err, &failure) {", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 42, "  log(failure.Service, ...)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_MUTED))
+    d.add(String(x_col2 + 8, b_bot_box_y + 31, "}", fontName="BookMono", fontSize=6.4, fillColor=COLOR_BLACK))
 
-    d.add(String(x_col2 + 8, b_bot_box_y + 16, "• Trích xuất struct metadata", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(x_col2 + 8, b_bot_box_y + 5,  "• KHÔNG chứa ErrUnknownService", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 19, "• Trích xuất struct metadata", fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 10, "• Không tự tạo ErrUnknownService", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_BLACK))
+    d.add(String(x_col2 + 8, b_bot_box_y + 2,  "  (nguyên nhân run() vẫn có thể chứa)", fontName="BookSans", fontSize=5.9, fillColor=COLOR_INK_MUTED))
 
     # Footnote - 2 lines, strictly fitting width with good bottom margin
-    d.add(String(8, 13.5, "* Hai nhánh độc lập: errors.Is nhận diện sentinel ErrUnknownService khi thiếu config (probe không chạy);",
-                 fontName="BookSans", fontSize=6.1, fillColor=COLOR_INK_MID))
-    d.add(String(8, 4.5,  "  errors.As trích xuất dữ liệu từ *ProbeFailure khi probe thất bại. Hai nhánh không dùng chung một error chain.",
-                 fontName="BookSans", fontSize=6.1, fillColor=COLOR_INK_MID))
+    d.add(String(8, 11.5, "* Nhánh thiếu config: probe không chạy, caller dùng errors.Is nhận diện sentinel ErrUnknownService.",
+                 fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(8, 3.5,  "  Nhánh probe thất bại: errors.As trích xuất *ProbeFailure; applyProbe không tự sinh ErrUnknownService.",
+                 fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     return d
 
