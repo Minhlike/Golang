@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """High-precision vector technical diagram for Chapter 5: Package Boundaries & One-Way DAG.
 
-Matches Master Prompt specifications:
-- Pure monochrome black & white / grayscale palette with restrained alert accents.
-- Embedded fonts: BookSans, BookSansBold, BookMono.
-- Strict technical accuracy based on Go specification vs runtime.
-- Zero text collisions, balanced layout, clear typographic hierarchy.
+Refined based on actual implementation in labs/part5-package-design/:
+- Pure monochrome black & white / grayscale palette (NO red details).
+- Accurate file list: probe has check.go, doc.go (NO probe.go).
+- Accurate runner description: stub runner returning nil.
+- Accurate output separation: config error writes stderr & exits 2; probe error writes stdout & continues.
+- Synchronized config input: os.LookupEnv passed to config.LoadTargets (no CLI flags).
+- Exact Go type declaration: type Result struct { Service string }.
+- Explicit distinction: Mandatory Go rules (internal/, import cycle) vs Project architectural policy.
 - Exact publication dimensions (1:1 with Master PDF):
   * Figure 19 (Page 104, xref 246): 369.13 x 362.83 pt (Aspect Ratio = 1.01735)
 """
@@ -34,7 +37,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 # Root directory
 ROOT = Path(__file__).resolve().parents[1]
 
-# Palette definitions matching book_style
+# Pure monochrome & grayscale palette matching book_style
 COLOR_BLACK = colors.HexColor("#000000")
 COLOR_INK_DARK = colors.HexColor("#1A1A1A")
 COLOR_INK_MID = colors.HexColor("#262626")
@@ -45,9 +48,9 @@ COLOR_BORDER_SUBTLE = colors.HexColor("#CBD5E1")
 COLOR_BG_HEADER = colors.HexColor("#F0F2F5")
 COLOR_BG_CARD = colors.HexColor("#FFFFFF")
 COLOR_BG_SUBTLE = colors.HexColor("#F8F9FA")
-COLOR_ALERT_BG = colors.HexColor("#FFF5F5")
-COLOR_ALERT_BORDER = colors.HexColor("#FEB2B2")
-COLOR_ALERT_TEXT = colors.HexColor("#9B1C1C")
+COLOR_POLICY_BG = colors.HexColor("#F1F5F9")
+COLOR_POLICY_BORDER = colors.HexColor("#CBD5E1")
+COLOR_POLICY_TEXT = colors.HexColor("#2D3748")
 COLOR_TAG_BG = colors.HexColor("#EDF2F7")
 
 
@@ -110,8 +113,8 @@ def draw_arrow(
     d.add(poly)
 
 
-def draw_vector_x(d: Drawing, cx: float, cy: float, r: float = 3.0, color=COLOR_ALERT_TEXT, width: float = 1.2):
-    """Draw crisp vector X mark without depending on font glyphs."""
+def draw_vector_x(d: Drawing, cx: float, cy: float, r: float = 2.8, color=COLOR_INK_DARK, width: float = 1.1):
+    """Draw crisp vector X mark in pure monochrome."""
     d.add(Line(cx - r, cy - r, cx + r, cy + r, strokeColor=color, strokeWidth=width))
     d.add(Line(cx - r, cy + r, cx + r, cy - r, strokeColor=color, strokeWidth=width))
 
@@ -131,7 +134,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     box_w = w - 24.0  # 345.13 pt
 
     # ------------------------------------------------------------------
-    # 1. TOP HEADER BANNER: Architecture context (Clean separation)
+    # 1. TOP HEADER BANNER: Architecture context
     # ------------------------------------------------------------------
     d.add(String(x_left, h - 16.0, "RANH GIỚI GÓI // ĐỒ THỊ PHỤ THUỘC MỘT CHIỀU",
                  fontName="BookSansBold", fontSize=7.4, fillColor=COLOR_INK_DARK))
@@ -152,7 +155,6 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     # Header bar
     d.add(Rect(x_left, top_box_y + top_box_h - 22.0, box_w, 22.0,
                fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=1.0, rx=3, ry=3))
-    # Cover bottom corners of header to make square inner seam
     d.add(Rect(x_left, top_box_y + top_box_h - 22.0, box_w, 4.0,
                fillColor=COLOR_BG_HEADER, strokeColor=None))
     d.add(Line(x_left, top_box_y + top_box_h - 22.0, x_left + box_w, top_box_y + top_box_h - 22.0,
@@ -170,28 +172,28 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     col_split_x = x_left + (box_w / 2.0)
 
     # Column 1: Config Coordination & Data Mapping
-    d.add(String(x_left + 8.0, top_box_y + 53.0, "• Tiếp nhận cờ lệnh CLI & biến môi trường os.LookupEnv",
+    d.add(String(x_left + 8.0, top_box_y + 53.0, "• Nạp cấu hình: config.LoadTargets(os.LookupEnv)",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 8.0, top_box_y + 40.0, "• Nạp cấu hình: config.DefaultTargets() / LoadTargets()",
-                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
+    d.add(String(x_left + 8.0, top_box_y + 40.0, "• Lỗi config: Ghi stderr, thoát os.Exit(2)",
+                 fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
     d.add(String(x_left + 8.0, top_box_y + 27.0, "• Ánh xạ ranh giới kiểu: config.Target → probe.Service",
                  fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(x_left + 14.0, top_box_y + 15.0, "(Chuyển Name, Host, Port; ngăn config rò rỉ vào domain)",
+    d.add(String(x_left + 14.0, top_box_y + 15.0, "(Gán Name, Host, Port; ngăn config rò rỉ vào domain)",
                  fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MUTED))
 
     # Vertical divider between columns
     d.add(Line(col_split_x, top_box_y + 6.0, col_split_x, top_box_y + top_box_h - 26.0,
                strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, strokeDashArray=[2, 2]))
 
-    # Column 2: Execution & Presentation Ownership
-    d.add(String(col_split_x + 8.0, top_box_y + 53.0, "• Khởi tạo hàm thực thi mạng (probe.Runner)",
+    # Column 2: Execution & Output Separation
+    d.add(String(col_split_x + 8.0, top_box_y + 53.0, "• Khởi tạo stub runner: func(...) error { return nil }",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col_split_x + 8.0, top_box_y + 40.0, "• Điều phối vòng lặp gọi probe.Check(ctx, service, runner)",
+    d.add(String(col_split_x + 8.0, top_box_y + 40.0, "• Vòng lặp kiểm tra: probe.Check(ctx, service, run)",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col_split_x + 8.0, top_box_y + 27.0, "• Sở hữu tầng hiển thị (Presentation Layer):",
+    d.add(String(col_split_x + 8.0, top_box_y + 27.0, "• Lỗi probe: Ghi stdout (\"%s: %v\"), tiếp tục vòng lặp",
                  fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col_split_x + 14.0, top_box_y + 15.0, "In healthy=true ra stdout; ghi lỗi ra stderr; thoát exit code",
-                 fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MUTED))
+    d.add(String(col_split_x + 8.0, top_box_y + 15.0, "• Thành công: Ghi stdout (\"%s healthy=true\")",
+                 fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
 
     # ------------------------------------------------------------------
     # 3. INTERACTION ZONE: Two Downward Dependency Arrows & Badges
@@ -261,7 +263,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
 
     d.add(String(cfg_x + 6.0, bot_box_y + col_h - 15.0, "internal/config",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(cfg_x + col_w - 6.0, bot_box_y + col_h - 15.0, "[RANH GIỚI CẤU HÌNH]",
+    d.add(String(cfg_x + col_w - 6.0, bot_box_y + col_h - 15.0, "[QUY TẮC: internal/]",
                  fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
     # Toolchain boundary notice tag
@@ -291,13 +293,13 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(String(cfg_x + 12.0, bot_box_y + 22.0, "- Inject LookupEnv func để test không sửa env máy",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Alert footer on left box
+    # Policy footer on left box (Monochrome style)
     d.add(Rect(cfg_x + 6.0, bot_box_y + 5.5, col_w - 12.0, 12.5,
-               fillColor=COLOR_ALERT_BG, strokeColor=COLOR_ALERT_BORDER, strokeWidth=0.6, rx=2, ry=2))
-    draw_vector_x(d, cfg_x + 13.0, bot_box_y + 11.5, r=2.6, color=COLOR_ALERT_TEXT, width=1.1)
-    d.add(String(cfg_x + 20.0, bot_box_y + 8.5,
-                 "CẤM import probe  •  CẤM import ngược cmd",
-                 fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_ALERT_TEXT))
+               fillColor=COLOR_POLICY_BG, strokeColor=COLOR_POLICY_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    draw_vector_x(d, cfg_x + 14.0, bot_box_y + 11.5, r=2.6, color=COLOR_INK_DARK, width=1.1)
+    d.add(String(cfg_x + 21.0, bot_box_y + 8.5,
+                 "CHÍNH SÁCH: Không import probe hay cmd",
+                 fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_POLICY_TEXT))
 
     # --- RIGHT PACKAGE: probe ---
     prb_x = x_left + col_w + 14.0
@@ -314,7 +316,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
 
     d.add(String(prb_x + 6.0, bot_box_y + col_h - 15.0, "probe",
                  fontName="BookSansBold", fontSize=8.5, fillColor=COLOR_INK_DARK))
-    d.add(String(prb_x + col_w - 6.0, bot_box_y + col_h - 15.0, "[THƯ VIỆN NGHIỆP VỤ LÕI]",
+    d.add(String(prb_x + col_w - 6.0, bot_box_y + col_h - 15.0, "[PUBLIC API CONTRACT]",
                  fontName="BookSansBold", fontSize=6.4, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
     # Public boundary notice tag
@@ -324,47 +326,47 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
                  "Thư viện tái sử dụng (Public API contract)",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    # Domain details
-    d.add(String(prb_x + 6.0, bot_box_y + 100.0, "• Tệp: probe.go, doc.go, check.go",
+    # Domain details (strictly check.go & doc.go, no probe.go)
+    d.add(String(prb_x + 6.0, bot_box_y + 100.0, "• Tệp: check.go, doc.go  |  Mô hình: Service, Endpoint",
                  fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_DARK))
 
-    d.add(String(prb_x + 6.0, bot_box_y + 87.0, "• Result{Service}:",
+    d.add(String(prb_x + 6.0, bot_box_y + 87.0, "• type Result struct { Service string }:",
                  fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
-    d.add(String(prb_x + 12.0, bot_box_y + 76.0, "- Thu hẹp tối giản: KHÔNG chứa Healthy bool giả",
+    d.add(String(prb_x + 12.0, bot_box_y + 76.0, "- Chỉ định danh service đã kiểm tra thành công",
                  fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(prb_x + 12.0, bot_box_y + 66.0, "- Thành công trả Result; sự cố đi qua error chain",
+    d.add(String(prb_x + 12.0, bot_box_y + 66.0, "- Không chứa Healthy bool giả; lỗi qua error chain",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     d.add(String(prb_x + 6.0, bot_box_y + 53.0, "• Check(ctx, Service, Runner) (Result, error):",
                  fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
-    d.add(String(prb_x + 12.0, bot_box_y + 42.0, "- Kiểm tra ctx.Err(), không kích hoạt runner nếu huỷ",
+    d.add(String(prb_x + 12.0, bot_box_y + 42.0, "- Kiểm tra ctx.Err(), huỷ ngay nếu context huỷ",
                  fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_DARK))
     d.add(String(prb_x + 12.0, bot_box_y + 32.0, "- Hoàn toàn độc lập thiết bị đầu ra (output device)",
                  fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(prb_x + 12.0, bot_box_y + 22.0, "- Tuyệt đối không chứa fmt.Println hay cờ lệnh CLI",
+    d.add(String(prb_x + 12.0, bot_box_y + 22.0, "- Tuyệt đối không chứa fmt.Println hay cờ CLI",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Alert footer on right box
+    # Policy footer on right box (Monochrome style)
     d.add(Rect(prb_x + 6.0, bot_box_y + 5.5, col_w - 12.0, 12.5,
-               fillColor=COLOR_ALERT_BG, strokeColor=COLOR_ALERT_BORDER, strokeWidth=0.6, rx=2, ry=2))
-    draw_vector_x(d, prb_x + 13.0, bot_box_y + 11.5, r=2.6, color=COLOR_ALERT_TEXT, width=1.1)
-    d.add(String(prb_x + 20.0, bot_box_y + 8.5,
-                 "CẤM import config  •  CẤM import ngược cmd",
-                 fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_ALERT_TEXT))
+               fillColor=COLOR_POLICY_BG, strokeColor=COLOR_POLICY_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    draw_vector_x(d, prb_x + 14.0, bot_box_y + 11.5, r=2.6, color=COLOR_INK_DARK, width=1.1)
+    d.add(String(prb_x + 21.0, bot_box_y + 8.5,
+                 "CHÍNH SÁCH: Không import config hay cmd",
+                 fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_POLICY_TEXT))
 
     # --- CENTRAL BARRIER (Between config and probe) ---
     mid_barrier_x = x_left + col_w + 7.0
     d.add(Line(mid_barrier_x, bot_box_y + 18.0, mid_barrier_x, bot_box_y + col_h - 18.0,
                strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.9, strokeDashArray=[2, 2]))
 
-    # Small circular forbidden sign in the center
+    # Small circular forbidden sign in the center (Monochrome)
     barrier_cy = bot_box_y + (col_h / 2.0)
     d.add(Circle(mid_barrier_x, barrier_cy, 6.0,
-                 fillColor=COLOR_ALERT_BG, strokeColor=COLOR_ALERT_BORDER, strokeWidth=0.8))
-    draw_vector_x(d, mid_barrier_x, barrier_cy, r=2.8, color=COLOR_ALERT_TEXT, width=1.2)
+                 fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8))
+    draw_vector_x(d, mid_barrier_x, barrier_cy, r=2.8, color=COLOR_INK_DARK, width=1.2)
 
     # ------------------------------------------------------------------
-    # 5. BOTTOM TECHNICAL FOOTER: Import DAG Rules & Invariants
+    # 5. BOTTOM TECHNICAL FOOTER: Mandatory Rules vs Architectural Policy
     # ------------------------------------------------------------------
     foot_y = 10.0
     foot_h = 48.0
@@ -373,18 +375,18 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
                fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.8, rx=3, ry=3))
 
     d.add(String(x_left + 8.0, foot_y + foot_h - 12.0,
-                 "RÀNG BUỘC ĐỒ THỊ NHẬP KHẨU (IMPORT DAG RULES & BOUNDARIES)",
-                 fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
+                 "RÀNG BUỘC ĐỒ THỊ NHẬP KHẨU // QUY TẮC BẮT BUỘC VS CHÍNH SÁCH KIẾN TRÚC",
+                 fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
 
-    d.add(String(x_left + 8.0, foot_y + foot_h - 23.5,
-                 "• Phụ thuộc một chiều (One-Way): cmd/opsprobe là composition root, phối hợp config và probe mà không rò rỉ presentation.",
-                 fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_MID))
-    d.add(String(x_left + 8.0, foot_y + foot_h - 33.5,
-                 "• Độc lập tuyệt đối: probe không biết CLI hay config source; có thể đọc, viết test và thay thế runner mà không kéo presentation theo.",
-                 fontName="BookSans", fontSize=6.3, fillColor=COLOR_INK_MID))
-    d.add(String(x_left + 8.0, foot_y + foot_h - 43.5,
-                 "• Đồ thị phi chu trình (DAG): Go compiler từ chối mọi chu trình import (lỗi diagnostic: import cycle not allowed).",
-                 fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(x_left + 8.0, foot_y + foot_h - 23.0,
+                 "• Quy tắc bắt buộc của Go: internal/ giới hạn import theo cây thư mục cha; compiler từ chối mọi chu trình (import cycle not allowed).",
+                 fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MID))
+    d.add(String(x_left + 8.0, foot_y + foot_h - 33.0,
+                 "• Chính sách kiến trúc dự án: Dependency đi một chiều từ cmd; probe và config độc lập hoàn toàn, không import ngược hoặc chéo.",
+                 fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MID))
+    d.add(String(x_left + 8.0, foot_y + foot_h - 43.0,
+                 "• Phân định luồng lỗi: Config lỗi ghi stderr và thoát exit 2; probe lỗi ghi stdout (\"%s: %v\") và tiếp tục vòng lặp.",
+                 fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
 
     return d
 
