@@ -2,8 +2,9 @@
 """Independent Preview Renderer for Chapter 4 Diagrams (Agent 2 Specification).
 
 Builds a standalone, publication-grade preview PDF displaying the 2 Chapter 4 diagrams
-at their true publication aspect ratios, accompanied by identifying labels
-and captions, with zero chapter prose, tables, code blocks, or running headers/footers.
+at their exact publication dimensions (1:1 with Master PDF):
+- Figure 4.1: 291.21 x 362.83 pt (Page 88, xref 212)
+- Figure 4.2: 476.22 x 323.91 pt (Page 99, xref 235)
 
 Outputs:
 - book/design/agent2-ch04/ch04_preview.pdf
@@ -41,10 +42,9 @@ PREVIEW_PDF = OUT_DIR / "ch04_preview.pdf"
 SPECIMENS_DIR = OUT_DIR / "specimens"
 
 PAGE_WIDTH, PAGE_HEIGHT = A4
-DIAGRAM_WIDTH = 448.22
-MARGIN_H = (PAGE_WIDTH - DIAGRAM_WIDTH) / 2.0  # 73.53 pt, perfectly centered
-MARGIN_TOP = 46.0
-MARGIN_BOTTOM = 42.0
+MARGIN_H = (PAGE_WIDTH - 476.22) / 2.0  # 59.53 pt, fits full 476.22 pt width
+MARGIN_TOP = 42.0
+MARGIN_BOTTOM = 38.0
 
 
 def build_preview() -> Path:
@@ -105,23 +105,23 @@ def build_preview() -> Path:
 
     story = [
         Paragraph("CHƯƠNG 04: BẢN DUYỆT SƠ ĐỒ KỸ THUẬT (TECHNICAL DIAGRAM SPECIMEN)", title_style),
-        Paragraph("Hiển thị tỉ lệ xuất bản thực tế • Phong cách đen trắng tối giản • Chuẩn Go spec vs runtime", subtitle_style),
+        Paragraph("Hiển thị 100% kích thước xuất bản thực tế (1:1 với Master PDF) • Phong cách đen trắng tối giản • Chuẩn Go spec vs runtime", subtitle_style),
     ]
 
     diagram_items = [
         (
             "HÌNH 4.1 — RANH GIỚI LỖI // BẢO TOÀN ĐỊNH DANH GỐC VÀ DỮ LIỆU CÓ CẤU TRÚC",
-            "Mỗi tầng kiến trúc chỉ thêm bối cảnh operation bằng %w; caller chọn errors.Is để phân loại theo loại lỗi sentinel hoặc errors.As để trích xuất dữ liệu từ struct ProbeFailure.",
+            "Mỗi tầng kiến trúc chỉ thêm bối cảnh operation bằng %w; caller chọn errors.Is để phân loại theo loại lỗi sentinel hoặc errors.As để trích xuất dữ liệu từ struct ProbeFailure. Kích thước xuất bản thực tế: 291.21 x 362.83 pt.",
             ROOT / "assets/diagrams/error-boundary-trace.png",
-            340.0,
-            423.6,
+            291.21,
+            362.83,
         ),
         (
             "HÌNH 4.2 — VÒNG ĐỜI TÀI NGUYÊN & DEFER CLEANUP // 3 ĐƯỜNG ĐI TRONG runWithSession",
-            "defer ràng buộc dọn dẹp trực tiếp với scope đã nhận ownership. Error từ Close() chỉ thay result khi run() chưa có failure để bảo toàn nguyên nhân chính.",
+            "defer ràng buộc dọn dẹp trực tiếp với scope đã nhận ownership. Error từ Close() chỉ thay result khi run() chưa có failure để bảo toàn nguyên nhân chính. Kích thước xuất bản thực tế: 476.22 x 323.91 pt.",
             ROOT / "assets/diagrams/cancellation-cleanup-trace.png",
-            DIAGRAM_WIDTH,
-            DIAGRAM_WIDTH / (476.0 / 323.8),
+            476.22,
+            323.91,
         ),
     ]
 
