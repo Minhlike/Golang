@@ -2,9 +2,9 @@
 """High-precision vector technical diagram for Chapter 5: Package Boundaries & One-Way DAG.
 
 Refined based on actual implementation in labs/part5-package-design/:
-- Pure monochrome black & white / grayscale palette (NO red details).
-- Accurate file list: probe has check.go, doc.go (NO probe.go).
-- Accurate runner description: stub runner returning nil.
+- Strict pure grayscale palette (R=G=B everywhere; no blue, red, or color tints).
+- Conceptual label for runner: "Runner giả lập: luôn trả nil (mô phỏng kiểm tra)" (no pseudo-code).
+- Accurate file list: probe has check.go, doc.go (strictly NO probe.go).
 - Accurate output separation: config error writes stderr & exits 2; probe error writes stdout & continues.
 - Synchronized config input: os.LookupEnv passed to config.LoadTargets (no CLI flags).
 - Exact Go type declaration: type Result struct { Service string }.
@@ -37,21 +37,21 @@ from reportlab.pdfbase.ttfonts import TTFont
 # Root directory
 ROOT = Path(__file__).resolve().parents[1]
 
-# Pure monochrome & grayscale palette matching book_style
+# Strict pure grayscale palette (R=G=B everywhere, zero color tint)
 COLOR_BLACK = colors.HexColor("#000000")
 COLOR_INK_DARK = colors.HexColor("#1A1A1A")
-COLOR_INK_MID = colors.HexColor("#262626")
-COLOR_INK_MUTED = colors.HexColor("#4A5568")
-COLOR_INK_LIGHT = colors.HexColor("#718096")
+COLOR_INK_MID = colors.HexColor("#2E2E2E")
+COLOR_INK_MUTED = colors.HexColor("#555555")
+COLOR_INK_LIGHT = colors.HexColor("#777777")
 COLOR_BORDER = colors.HexColor("#1A1A1A")
-COLOR_BORDER_SUBTLE = colors.HexColor("#CBD5E1")
-COLOR_BG_HEADER = colors.HexColor("#F0F2F5")
+COLOR_BORDER_SUBTLE = colors.HexColor("#CCCCCC")
+COLOR_BG_HEADER = colors.HexColor("#EAEAEA")
 COLOR_BG_CARD = colors.HexColor("#FFFFFF")
-COLOR_BG_SUBTLE = colors.HexColor("#F8F9FA")
-COLOR_POLICY_BG = colors.HexColor("#F1F5F9")
-COLOR_POLICY_BORDER = colors.HexColor("#CBD5E1")
-COLOR_POLICY_TEXT = colors.HexColor("#2D3748")
-COLOR_TAG_BG = colors.HexColor("#EDF2F7")
+COLOR_BG_SUBTLE = colors.HexColor("#F5F5F5")
+COLOR_POLICY_BG = colors.HexColor("#F0F0F0")
+COLOR_POLICY_BORDER = colors.HexColor("#CCCCCC")
+COLOR_POLICY_TEXT = colors.HexColor("#2E2E2E")
+COLOR_TAG_BG = colors.HexColor("#EEEEEE")
 
 
 def register_fonts():
@@ -155,6 +155,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     # Header bar
     d.add(Rect(x_left, top_box_y + top_box_h - 22.0, box_w, 22.0,
                fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=1.0, rx=3, ry=3))
+    # Cover bottom corners of header to make square inner seam
     d.add(Rect(x_left, top_box_y + top_box_h - 22.0, box_w, 4.0,
                fillColor=COLOR_BG_HEADER, strokeColor=None))
     d.add(Line(x_left, top_box_y + top_box_h - 22.0, x_left + box_w, top_box_y + top_box_h - 22.0,
@@ -185,8 +186,8 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(Line(col_split_x, top_box_y + 6.0, col_split_x, top_box_y + top_box_h - 26.0,
                strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, strokeDashArray=[2, 2]))
 
-    # Column 2: Execution & Output Separation
-    d.add(String(col_split_x + 8.0, top_box_y + 53.0, "• Khởi tạo stub runner: func(...) error { return nil }",
+    # Column 2: Execution & Output Separation (Conceptual label for runner, no pseudo-code)
+    d.add(String(col_split_x + 8.0, top_box_y + 53.0, "• Runner giả lập: luôn trả nil (mô phỏng kiểm tra)",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
     d.add(String(col_split_x + 8.0, top_box_y + 40.0, "• Vòng lặp kiểm tra: probe.Check(ctx, service, run)",
                  fontName="BookSans", fontSize=6.8, fillColor=COLOR_INK_DARK))
@@ -293,7 +294,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(String(cfg_x + 12.0, bot_box_y + 22.0, "- Inject LookupEnv func để test không sửa env máy",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Policy footer on left box (Monochrome style)
+    # Policy footer on left box (Strict pure grayscale)
     d.add(Rect(cfg_x + 6.0, bot_box_y + 5.5, col_w - 12.0, 12.5,
                fillColor=COLOR_POLICY_BG, strokeColor=COLOR_POLICY_BORDER, strokeWidth=0.8, rx=2, ry=2))
     draw_vector_x(d, cfg_x + 14.0, bot_box_y + 11.5, r=2.6, color=COLOR_INK_DARK, width=1.1)
@@ -346,7 +347,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(String(prb_x + 12.0, bot_box_y + 22.0, "- Tuyệt đối không chứa fmt.Println hay cờ CLI",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Policy footer on right box (Monochrome style)
+    # Policy footer on right box (Strict pure grayscale)
     d.add(Rect(prb_x + 6.0, bot_box_y + 5.5, col_w - 12.0, 12.5,
                fillColor=COLOR_POLICY_BG, strokeColor=COLOR_POLICY_BORDER, strokeWidth=0.8, rx=2, ry=2))
     draw_vector_x(d, prb_x + 14.0, bot_box_y + 11.5, r=2.6, color=COLOR_INK_DARK, width=1.1)
@@ -359,7 +360,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(Line(mid_barrier_x, bot_box_y + 18.0, mid_barrier_x, bot_box_y + col_h - 18.0,
                strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.9, strokeDashArray=[2, 2]))
 
-    # Small circular forbidden sign in the center (Monochrome)
+    # Small circular forbidden sign in the center (Strict pure grayscale)
     barrier_cy = bot_box_y + (col_h / 2.0)
     d.add(Circle(mid_barrier_x, barrier_cy, 6.0,
                  fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8))
