@@ -263,7 +263,7 @@ def build_probe_observation_path_drawing(w: float = 476.22, h: float = 264.46) -
             "01",
             "LOG (JSON)",
             "STDERR",
-            'logger.Info("completed", ...)',
+            "Structured Log Record:",
             '• mode: "timeout"',
             '• outcome: "timeout"',
             '• status: 504',
@@ -277,11 +277,11 @@ def build_probe_observation_path_drawing(w: float = 476.22, h: float = 264.46) -
             "02",
             "TRACE (SPANS)",
             "OTEL",
-            "Server: probe.request",
-            "Child: probe.dependency",
-            "Event: RecordError(err)",
-            "Status: codes.Error",
-            "Attr: probe.mode",
+            "Span Hierarchy:",
+            "• Server: probe.request",
+            "• Child: probe.dependency",
+            "• Error: codes.Error",
+            "• Attr: probe.mode",
             "• Cây Span cha - con",
             "• Bắt điểm nghẽn boundary",
             "• Ghi nhận event timeout",
@@ -291,11 +291,11 @@ def build_probe_observation_path_drawing(w: float = 476.22, h: float = 264.46) -
             "03",
             "COUNTER (RATE)",
             "PROMETHEUS",
-            "m.requests.WithLabel...",
-            "  Values(out).Inc()",
-            "Metric name:",
+            "Ghi nhận Counter Inc:",
             "  probe_requests_total",
-            'Label: outcome="timeout"',
+            '  outcome="timeout"',
+            "• Phương thức: Inc()",
+            "• Tăng bộ đếm theo nhãn",
             "• Đếm số lần hoàn tất",
             "• Bounded label outcome",
             "• Tính toán Availability SLI",
@@ -305,13 +305,13 @@ def build_probe_observation_path_drawing(w: float = 476.22, h: float = 264.46) -
             "04",
             "HISTOGRAM (LATENCY)",
             "PROMETHEUS",
-            "m.duration.WithLabel...",
-            "  Values(out).Observe(sec)",
-            "Metric name:",
+            "Ghi nhận Histogram Observe:",
             "  probe_request_",
             "  duration_seconds",
+            "• Đo: Observe(seconds)",
+            "• Buckets: 5ms..250ms",
             "• Phân bố thời gian chạy",
-            "• Buckets: 5ms, 10ms..250ms",
+            "• Nhận diện đuôi chậm p99",
             "• Không nghẽn cardinality",
             "• Đánh giá SLO thời gian",
         ),
@@ -392,25 +392,25 @@ def build_reconciliation_loop_drawing(w: float = 335.89, h: float = 362.83) -> D
     # ------------------------------------------------------------------
     # Card 1: TRẠNG THÁI MONG MUỐN (DESIRED STATE / SPEC) - Top
     # ------------------------------------------------------------------
-    c1_h = 56.0
-    c1_y = header_y - c1_h - 8.0
+    c1_h = 66.0
+    c1_y = 258.0
     d.add(Rect(card_x, c1_y, card_w, c1_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(card_x + 4.0, c1_y + c1_h - 13.0, 16.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 12.0, c1_y + c1_h - 10.5, "01", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 24.0, c1_y + c1_h - 10.5, "TRẠNG THÁI MONG MUỐN (DESIRED STATE / SPEC)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, c1_y + 32.5, "Khai báo bền vững qua YAML manifest / API Server:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 10.0, c1_y + 22.5, "spec.replicas: 1 (lab manifest) · image: probe-api:dev", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, c1_y + 12.5, "• Kịch bản mở rộng: replicas: 3; health probes /livez, /readyz", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, c1_y + 4.5, "• Đầu vào bền vững; áp dụng declarative configuration thay cho mệnh lệnh.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, c1_y + 41.5, "Khai báo bền vững qua YAML manifest / API Server:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 10.0, c1_y + 30.5, "spec.replicas: 1 (lab manifest) · image: probe-api:dev", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, c1_y + 19.5, "• Kịch bản mở rộng: replicas: 3; health probes /livez, /readyz", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, c1_y + 8.5, "• Đầu vào bền vững; áp dụng declarative configuration thay cho mệnh lệnh.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Downward arrow to Controller
-    draw_arrow(d, card_x + card_w * 0.25, c1_y, card_x + card_w * 0.25, c1_y - 8.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    draw_arrow(d, card_x + card_w * 0.25, c1_y, card_x + card_w * 0.25, 248.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # ------------------------------------------------------------------
     # Card 2: BỘ ĐIỀU KHIỂN KHÁI NIỆM & HÀM LAB NEXTACTION - Middle
     # ------------------------------------------------------------------
-    c2_h = 138.0
-    c2_y = c1_y - c2_h - 10.0
+    c2_h = 156.0
+    c2_y = 92.0
     d.add(Rect(card_x, c2_y, card_w, c2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.9, rx=2, ry=2))
     d.add(Rect(card_x + 4.0, c2_y + c2_h - 13.0, 16.0, 9.0, fillColor=COLOR_TAG_ACTIVE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 12.0, c2_y + c2_h - 10.5, "02", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
@@ -419,50 +419,53 @@ def build_reconciliation_loop_drawing(w: float = 335.89, h: float = 362.83) -> D
     # Sub-card 2A: OBSERVE
     s_w = card_w - 12.0
     s_x = card_x + 6.0
-    d.add(Rect(s_x, c2_y + 82.0, s_w, 40.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(s_x + 6.0, c2_y + 110.5, "BƯỚC 1: QUAN SÁT (OBSERVE) // Đọc qua Kubernetes API Server", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 10.0, c2_y + 100.5, "obs := Describe(deployment); current := int(obs.Available)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 6.0, c2_y + 90.5, "• Thu nhận ObservedGeneration, Desired, Available replicas", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(s_x + 6.0, c2_y + 83.5, "• Lưu ý bất biến: Observation có thể trễ so với trạng thái cụm thực tế.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    s2a_y = c2_y + 98.0
+    d.add(Rect(s_x, s2a_y, s_w, 42.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(String(s_x + 6.0, s2a_y + 32.5, "BƯỚC 1: QUAN SÁT (OBSERVE) // Đọc qua Kubernetes API Server", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 10.0, s2a_y + 23.5, "obs := Describe(deployment); current := int(obs.Available)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 6.0, s2a_y + 14.5, "• Thu nhận ObservedGeneration, Desired, Available replicas", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(s_x + 6.0, s2a_y + 5.5, "• Lưu ý bất biến: Observation có thể trễ so với trạng thái cụm thực tế.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Sub-card 2B: DIFF (NextAction)
-    d.add(Rect(s_x, c2_y + 38.0, s_w, 40.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(s_x + 6.0, c2_y + 66.5, "BƯỚC 2: PHÁN ĐOÁN // act, err := fixed.NextAction(desired, current)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 10.0, c2_y + 57.5, "• current < desired => Action{Kind: ActionCreate, Count: desired-current}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 10.0, c2_y + 48.5, "• current > desired => Action{Kind: ActionDelete, Count: current-desired}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 10.0, c2_y + 39.5, "• current == desired => Action{Kind: ActionNone} (Chưa cần đổi số replica)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    s2b_y = c2_y + 46.0
+    d.add(Rect(s_x, s2b_y, s_w, 46.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(String(s_x + 6.0, s2b_y + 36.5, "BƯỚC 2: PHÁN ĐOÁN // act, err := fixed.NextAction(desired, current)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 10.0, s2b_y + 27.5, "• current < desired => Action{Kind: ActionCreate, Count: desired-current}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 10.0, s2b_y + 18.0, "• current > desired => Action{Kind: ActionDelete, Count: current-desired}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 10.0, s2b_y + 8.5, "• current == desired => Action{Kind: ActionNone} (Chưa cần đổi số replica)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Sub-card 2C: ACT
-    d.add(Rect(s_x, c2_y + 6.0, s_w, 28.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(s_x + 6.0, c2_y + 24.5, "BƯỚC 3: HÀNH ĐỘNG (ACT) // Controller thực thi từng bước", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(s_x + 6.0, c2_y + 14.5, "• NextAction là hàm thuần túy (pure function); không trực tiếp tạo/xóa Pod.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(s_x + 6.0, c2_y + 6.5, "• ActionNone chưa đồng nghĩa toàn bộ hội tụ (rollout có thể đang cập nhật).", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    s2c_y = c2_y + 6.0
+    d.add(Rect(s_x, s2c_y, s_w, 34.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(String(s_x + 6.0, s2c_y + 25.5, "BƯỚC 3: HÀNH ĐỘNG (ACT) // Controller thực thi từng bước", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(s_x + 6.0, s2c_y + 15.5, "• NextAction là hàm thuần túy (pure function); không trực tiếp tạo/xóa Pod.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(s_x + 6.0, s2c_y + 5.5, "• ActionNone chưa đồng nghĩa toàn bộ hội tụ (rollout có thể đang cập nhật).", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Bidirectional connection arrows between Controller and Workload
     act_arrow_x = card_x + card_w * 0.35
     obs_arrow_x = card_x + card_w * 0.75
-    draw_arrow(d, act_arrow_x, c2_y, act_arrow_x, c2_y - 8.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    draw_arrow(d, obs_arrow_x, c2_y - 8.0, obs_arrow_x, c2_y, color=COLOR_INK_DARK, width=0.8, head_size=3.0, dashed=True)
+    draw_arrow(d, act_arrow_x, c2_y, act_arrow_x, 84.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    draw_arrow(d, obs_arrow_x, 84.0, obs_arrow_x, c2_y, color=COLOR_INK_DARK, width=0.8, head_size=3.0, dashed=True)
 
     # ------------------------------------------------------------------
     # Card 3: WORKLOAD ĐƯỢC ĐIỀU KHIỂN (CONTROLLED WORKLOAD) - Bottom
     # ------------------------------------------------------------------
-    c3_h = 60.0
-    c3_y = c2_y - c3_h - 10.0
+    c3_h = 56.0
+    c3_y = 28.0
     d.add(Rect(card_x, c3_y, card_w, c3_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(card_x + 4.0, c3_y + c3_h - 13.0, 16.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 12.0, c3_y + c3_h - 10.5, "03", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(card_x + 24.0, c3_y + c3_h - 10.5, "WORKLOAD ĐƯỢC ĐIỀU KHIỂN (CONTROLLED WORKLOAD / PODS)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, c3_y + 34.0, "Các tiến trình Pod thực tế chạy trên các Node máy chủ:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 10.0, c3_y + 24.5, "Runtime: probe-api instances (PID 1) · Kubelet livez / readyz checks", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, c3_y + 14.5, "• Trạng thái biến động: Pod có thể bị OOM kill, restart, hoặc mất mạng.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, c3_y + 6.0, "• Pod Running chưa đồng nghĩa mọi container đều Ready nhận traffic.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 24.0, c3_y + c3_h - 10.5, "WORKLOAD TRÊN NODE (CONTROLLED WORKLOAD / PODS)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, c3_y + 32.5, "Các tiến trình Pod thực tế chạy trên các Node máy chủ:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 10.0, c3_y + 22.5, "Runtime: probe-api instances (PID 1) · Kubelet livez / readyz checks", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, c3_y + 13.5, "• Trạng thái biến động: Pod có thể bị OOM kill, restart, hoặc mất mạng.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, c3_y + 5.5, "• Pod Running chưa đồng nghĩa mọi container đều Ready nhận traffic.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Bottom Invariant Footer Banner
-    footer_h = 20.0
+    footer_h = 18.0
     footer_y = 4.0
     d.add(Rect(4.0, footer_y, w - 8.0, footer_h, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(8.0, footer_y + 11.5, "• Invariant: Một vòng lặp không cam kết đạt trạng thái cuối ngay tức thì.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(8.0, footer_y + 10.5, "• Invariant: Một vòng lặp không cam kết đạt trạng thái cuối ngay tức thì.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(8.0, footer_y + 4.5, "• Reconciliation là quá trình hội tụ liên tục qua các chu kỳ Reconcile độc lập.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
@@ -553,24 +556,24 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     d.add(String(col2_x + 10.0, b2b_y + 14.5, "• Nhận trực tiếp SIGTERM graceful drain; không shell parent", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(col2_x + 10.0, b2b_y + 5.0, "• Bất biến: Pod Running != mọi container đều Ready nhận traffic", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Box 2C: Service - Bottom Box (h = 42.0 pt)
-    b2c_y = body_y + 6.0
-    d.add(Rect(col2_x + 6.0, b2c_y, col2_w - 12.0, 42.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(col2_x + 10.0, b2c_y + 30.5, "SERVICE // Định tuyến lưu lượng (Traffic Routing)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2c_y + 20.5, "• selector: app.kubernetes.io/name: probe-api", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2c_y + 11.5, "• Chỉ mở Endpoint khi kubelet xác nhận probe /readyz (200 OK)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2c_y + 4.5, "• Không tạo/quản lý Pod; chỉ lọc đích đến cho external traffic", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    # Box 2C: Service - Bottom Box (h = 44.0 pt)
+    b2c_y = body_y + 5.0
+    d.add(Rect(col2_x + 6.0, b2c_y, col2_w - 12.0, 44.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(String(col2_x + 10.0, b2c_y + 33.5, "SERVICE // Định tuyến lưu lượng (Traffic Routing)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.0, b2c_y + 24.5, "• selector: app.kubernetes.io/name: probe-api", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.0, b2c_y + 15.0, "• Service chỉ định tuyến traffic tới Pod có condition Ready", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.0, b2c_y + 5.5, "• (EndpointSlice vẫn lưu Pod; Service chỉ gửi traffic khi readyz OK)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrows in Section 2:
     # 1. Deployment (Top) down to Pod Runtime (Middle) -> Reconcile Pods
     draw_arrow(d, col2_x + 60.0, b2a_y, col2_x + 60.0, b2b_y + 46.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
     # 2. Service (Bottom) UP to Pod Runtime (Middle) -> Selector filters Endpoint & routes traffic
-    draw_arrow(d, col2_x + 140.0, b2c_y + 42.0, col2_x + 140.0, b2b_y, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    draw_arrow(d, col2_x + 140.0, b2c_y + 44.0, col2_x + 140.0, b2b_y, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Arrow from Image (Section 1) to Pod Runtime (Section 2)
     draw_arrow(d, col1_x + col1_w, b2b_y + 23.0, col2_x, b2b_y + 23.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
-    # Dashed Arrow from Deployment to Section 3 Observer
+    # Dashed Arrow from Deployment to Section 3 Observer (Query via Kube-API Server)
     draw_arrow(d, col2_x + col2_w, b2a_y + 22.0, col3_x, b2a_y + 22.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0, dashed=True)
 
     # ------------------------------------------------------------------
@@ -579,7 +582,7 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     d.add(Rect(col3_x, body_y, col3_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(col3_x + 4.0, body_y + body_h - 13.0, 16.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(col3_x + 12.0, body_y + body_h - 10.5, "03", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(col3_x + 24.0, body_y + body_h - 10.5, "OBSERVER Go", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 24.0, body_y + body_h - 10.5, "OBSERVER Go (VIA KUBE-API)", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
 
     d.add(String(col3_x + 6.0, body_y + 144.0, "client-go Observer:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(col3_x + 6.0, body_y + 134.5, "type Observation struct {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
@@ -590,9 +593,9 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     d.add(String(col3_x + 10.0, body_y + 89.5, "Available          int32", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(col3_x + 6.0, body_y + 80.5, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(col3_x + 6.0, body_y + 68.0, "• Ranh giới chỉ đọc (Read-only):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 6.0, body_y + 58.5, "• Chỉ gọi Get / Watch qua API Server", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 6.0, body_y + 49.0, "• Không can thiệp node / container", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(col3_x + 6.0, body_y + 39.5, "• Chẩn đoán rollout độc lập", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 6.0, body_y + 58.5, "• Truy vấn qua Kube-API Server (Get/Watch)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 6.0, body_y + 49.0, "• Không nhận push; chủ động thăm dò", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 6.0, body_y + 39.5, "• Không can thiệp node / container", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     d.add(Rect(col3_x + 4.0, body_y + 6.0, col3_w - 8.0, 28.0, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_LIGHT, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(col3_x + 8.0, body_y + 22.0, "Observation có thể trễ so với", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
@@ -603,7 +606,7 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     footer_h = 16.0
     footer_y = 4.0
     d.add(Rect(4.0, footer_y, w - 8.0, footer_h, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(8.0, footer_y + 5.0, "• Invariant: Observer chỉ chẩn đoán trạng thái qua API; Pod chỉ được nhận traffic khi probe /readyz được kubelet xác nhận đạt chuẩn.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(8.0, footer_y + 5.0, "• Invariant: Observer chỉ chẩn đoán trạng thái qua API (Get/Watch); Pod chỉ được nhận traffic khi probe /readyz được kubelet xác nhận đạt chuẩn.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     return d
 
@@ -614,10 +617,11 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
 def build_delivery_evidence_chain_drawing(w: float = 476.22, h: float = 216.73) -> Drawing:
     """Figure 32: Chuỗi bằng chứng của một quy trình phân phối (Delivery Evidence Chain).
 
-    Quy trình phân phối là chuỗi khế ước thu hẹp:
-    Bố cục 2 hàng thác quyết định:
-    Hàng 1 (Left to Right): 1. Source Revision -> 2. Build Digest -> 3. Evidence Gathering
-    Hàng 2 (Left to Right): 4. Policy Gate -> 5. Desired State -> 6. Rollout Observe.
+    Quy trình phân phối là chuỗi khế ước thu hẹp liên tục:
+    Bố cục zíc-zắc (Boustrophedon) 2 hàng, dòng chảy 1 chiều không giao cắt:
+    Hàng 1 (trên, Trái sang Phải): [01] Source Revision -> [02] Build Artifact -> [03] Kiểm thử
+    Chuyển hàng: [03] rẽ xuống [04]
+    Hàng 2 (dưới, Phải sang Trái): [04] Cổng chính sách -> [05] Desired State -> [06] Quan sát rollout.
     Exact dimensions: 476.22 x 216.73 pt (Page 321, xref 371).
     """
     register_fonts()
@@ -635,15 +639,15 @@ def build_delivery_evidence_chain_drawing(w: float = 476.22, h: float = 216.73) 
     d.add(String(110.0, header_y + 13.0, "CHUỖI BẰNG CHỨNG CỦA MỘT QUY TRÌNH PHÂN PHỐI (DELIVERY EVIDENCE CHAIN)", fontName="BookSansBold", fontSize=7.0, fillColor=COLOR_INK_DARK))
     d.add(String(110.0, header_y + 5.5, "Một delivery đáng tin cậy là chuỗi khế ước thu hẹp: mỗi gate chỉ xác minh bằng chứng thuộc phạm vi của nó.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
-    # 2 Rows of 3 Cards each (Spacious, 100% typography >= 6.0 pt)
+    # 2 Rows of 3 Cards each (Continuous Zic-zac flow, strictly >= 6.0 pt)
     card_gap_x = 8.0
-    card_w = (w - 16.0 - 2 * card_gap_x) / 3.0  # 144.74 pt each
-    row_h = 74.0
-    row1_y = header_y - row_h - 6.0   # 184 - 74 - 6 = 104.0 pt
-    row2_y = row1_y - row_h - 6.0     # 104 - 74 - 6 = 24.0 pt
+    card_w = (w - 16.0 - 2 * card_gap_x) / 3.0  # 148.07 pt each
+    row_h = 72.0
+    row1_y = 106.0
+    row2_y = 24.0
 
     cards_info = [
-        # Row 1: Left to Right
+        # Row 1: Left to Right (Col 0 -> Col 1 -> Col 2)
         (
             0, row1_y, "01", "SOURCE REVISION", "GIT COMMIT",
             "commitSHA (Git Commit SHA)",
@@ -668,9 +672,9 @@ def build_delivery_evidence_chain_drawing(w: float = 476.22, h: float = 216.73) 
             "[CHƯA NÓI] Chưa chứng minh hành vi",
             "khi chạy thực tế trên production.",
         ),
-        # Row 2: Left to Right
+        # Row 2: Right to Left (Col 2 -> Col 1 -> Col 0)
         (
-            0, row2_y, "04", "CỔNG CHÍNH SÁCH", "ADMISSION",
+            2, row2_y, "04", "CỔNG CHÍNH SÁCH", "ADMISSION",
             "Evaluate(candidate) -> Decision",
             "• Kiểm tra format digest & revision",
             "• Chỉ cấp Allowed khi đủ cờ boolean",
@@ -679,19 +683,19 @@ def build_delivery_evidence_chain_drawing(w: float = 476.22, h: float = 216.73) 
         ),
         (
             1, row2_y, "05", "CẬP NHẬT DESIRED STATE", "SPEC.IMAGE",
-            "spec.containers[0].image: Digest",
+            "Pod template image ← Digest",
             "• Gán Digest bất biến vào Spec Pod",
             "• Lab: replicas=1; mở rộng: 3/3",
             "[CHƯA NÓI] Chưa chứng minh traffic",
             "người dùng thật đã được phục vụ.",
         ),
         (
-            2, row2_y, "06", "QUAN SÁT PHÁT HÀNH", "ROLLOUT OK",
-            "Rollout: Available == Desired",
-            "• Controller hội tụ (1/1 lab, 3/3)",
-            "• Pod vượt qua probe /readyz",
-            "[CHƯA NÓI] Không thay thế cam kết SLO",
-            "24h hay chi phí tài nguyên thực tế.",
+            0, row2_y, "06", "QUAN SÁT PHÁT HÀNH", "ROLLOUT OK",
+            "Available == Desired (Controller)",
+            "• Kèm: Updated==Desired & Gen khớp",
+            "• Pod vượt qua probe /readyz (200)",
+            "[CHƯA NÓI] Chỉ kết luận controller hội tụ;",
+            "không thay thế cam kết SLO 24h & lỗi trễ.",
         ),
     ]
 
@@ -713,38 +717,40 @@ def build_delivery_evidence_chain_drawing(w: float = 476.22, h: float = 216.73) 
         d.add(Rect(tag_box_x, ry + row_h - 13.0, tag_box_w, 9.0, fillColor=COLOR_TAG_ACTIVE, strokeColor=COLOR_BORDER, strokeWidth=0.4, rx=1.0, ry=1.0))
         d.add(String(tag_box_x + tag_box_w / 2.0, ry + row_h - 10.5, tag, fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-        # Identifier line
-        d.add(String(cx + 5.0, ry + 49.0, code_line, fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+        # Identifier / Concept line
+        d.add(String(cx + 5.0, ry + 48.0, code_line, fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
         # Bullets
-        d.add(String(cx + 5.0, ry + 39.5, b1, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-        d.add(String(cx + 5.0, ry + 30.0, b2, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+        d.add(String(cx + 5.0, ry + 38.5, b1, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+        d.add(String(cx + 5.0, ry + 29.5, b2, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
         # Limitation Box
         lim_h = 22.0
-        lim_y = ry + 5.0
+        lim_y = ry + 4.5
         d.add(Rect(cx + 3.0, lim_y, card_w - 6.0, lim_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_LIGHT, strokeWidth=0.5, rx=1.5, ry=1.5))
         d.add(String(cx + 6.0, lim_y + 13.5, lim1, fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-        d.add(String(cx + 6.0, lim_y + 5.5, lim2, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+        d.add(String(cx + 6.0, lim_y + 5.0, lim2, fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Flow arrows
-    # Row 1: 01 -> 02 -> 03
+    # Flow arrows: Continuous Boustrophedon / Zíc-zắc pipeline
+    # Row 1 (Left to Right): 01 -> 02 -> 03
     draw_arrow(d, 8.0 + card_w, row1_y + row_h / 2.0, 8.0 + card_w + card_gap_x, row1_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
     draw_arrow(d, 8.0 + 2 * card_w + card_gap_x, row1_y + row_h / 2.0, 8.0 + 2 * card_w + 2 * card_gap_x, row1_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
-    # Downward turn arrow from Row 1 to Row 2
-    turn_x = 8.0 + 3 * card_w + 2 * card_gap_x - 15.0
+    # Downward turn arrow: From Card 03 (Col 2, Row 1) down into Card 04 (Col 2, Row 2)
+    turn_x = 8.0 + 2 * card_w + 2 * card_gap_x + card_w / 2.0
     draw_arrow(d, turn_x, row1_y, turn_x, row2_y + row_h, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
-    # Row 2: 04 -> 05 -> 06
-    draw_arrow(d, 8.0 + card_w, row2_y + row_h / 2.0, 8.0 + card_w + card_gap_x, row2_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    draw_arrow(d, 8.0 + 2 * card_w + card_gap_x, row2_y + row_h / 2.0, 8.0 + 2 * card_w + 2 * card_gap_x, row2_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    # Row 2 (Right to Left): 04 -> 05 -> 06
+    # From Card 04 (Col 2) left edge to Card 05 (Col 1) right edge
+    draw_arrow(d, 8.0 + 2 * card_w + 2 * card_gap_x, row2_y + row_h / 2.0, 8.0 + 2 * card_w + card_gap_x, row2_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    # From Card 05 (Col 1) left edge to Card 06 (Col 0) right edge
+    draw_arrow(d, 8.0 + card_w + card_gap_x, row2_y + row_h / 2.0, 8.0 + card_w, row2_y + row_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Bottom Invariant Footer Banner
     footer_h = 16.0
     footer_y = 4.0
     d.add(Rect(4.0, footer_y, w - 8.0, footer_h, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(8.0, footer_y + 5.0, "• Invariant: Mũi tên tiến trình không biến một bài test pass thành lời hứa bảo đảm trước mọi dạng sự cố; mỗi gate chỉ xác minh contract của nó.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(8.0, footer_y + 5.0, "• Invariant: Chuỗi phân phối là khế ước thu hẹp liên tục (01→06); controller hội tụ xác nhận Pod đạt desired state, không thay thế cam kết SLO 24h.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     return d
 
