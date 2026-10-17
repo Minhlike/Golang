@@ -404,6 +404,58 @@ NGUYÊN TẮC SOURCE-FIRST VÀ BẢO BÌNH TRÌNH TỰ
 4. Mọi nhãn human-facing trong sơ đồ phải ưu tiên tiếng Việt tự nhiên, chuyên ngành, trừ exact code identifiers được bảo tồn theo whitelist. Không đo bằng tỷ lệ phần trăm cơ học.
 
 --------------------------------------------------
+SCIENTIFIC DIAGRAM QUALITY CONTRACT — TIÊU CHUẨN SƠ ĐỒ KHOA HỌC
+--------------------------------------------------
+Mọi sơ đồ kỹ thuật trong sách phải tuân thủ nghiêm ngặt 12 nguyên tắc chất lượng khoa học và sư phạm:
+
+1. MENTAL MODEL FIRST:
+   Mỗi sơ đồ phải trả lời một câu hỏi kỹ thuật trung tâm. Xác định rõ người học cần nắm cơ chế nào, quan hệ nhân quả nào hoặc ngộ nhận nào cần loại bỏ. Tuyệt đối không vẽ sơ đồ chỉ để tóm tắt văn xuôi, lấp chỗ trống trang in hay trang trí trực quan.
+
+2. SCIENTIFIC CORRECTNESS:
+   Mọi đối tượng, mũi tên, điều kiện rẽ nhánh, trạng thái và kết luận phải có căn cứ xác thực từ bài giảng, mã nguồn lab, kiểm thử thực tế hoặc tài liệu kỹ thuật chính thức. Phân định rạch ròi giữa:
+   - Sự thật theo Go Specification;
+   - Hợp đồng API của thư viện chuẩn (Go standard library contract);
+   - Chi tiết triển khai runtime (implementation details);
+   - Chính sách xử lý riêng của ứng dụng (caller policy).
+   Không biến điều kiện thường gặp hoặc mặc định cục bộ thành khẳng định tuyệt đối mang tính phổ quát.
+
+3. SEMANTIC COMPLETENESS:
+   Khi mô tả một quy trình kỹ thuật, phải biểu diễn đầy đủ và chuẩn xác các đường thực thi trọng yếu: đường thành công (happy path), đường thất bại (error path), return sớm (early exit), timeout / cancel và cleanup / resource release khi có liên quan. Mỗi mũi tên phải tương ứng với một quan hệ nhân quả hoặc chuyển trạng thái có thật trong mã nguồn. Tuyệt đối không vẽ mũi tên nối tiếp từ một nhánh đã return; không làm biến mất các điều kiện có thể thay đổi kết quả thực thi.
+
+4. RIGHT ABSTRACTION LEVEL:
+   Lựa chọn đúng tầng trừu tượng phù hợp với mục tiêu sư phạm:
+   - Sơ đồ khái niệm (conceptual diagram) sử dụng nhãn khái niệm và cơ chế trừu tượng;
+   - Sơ đồ luồng thực thi (execution flow) sử dụng bước tuần tự, guard conditions và outcomes;
+   - Sơ đồ kiến trúc (architecture diagram) biểu diễn thành phần, ranh giới và phụ thuộc.
+   Tuyệt đối không trộn lẫn tùy tiện giữa mô hình khái niệm với mã Go thực thi, tránh khiến người học lầm tưởng pseudocode hoặc mô hình minh họa là mã nguồn biên dịch được.
+
+5. CODE IS NOT THE DIAGRAM:
+   Sơ đồ không phải là nơi sao chép mã nguồn. Tuyệt đối không cố nhồi toàn bộ khối code dài vào các khung hình hẹp rồi cắt xén tùy tiện. Nếu bắt buộc trích dẫn mã Go, phải bảo đảm cú pháp chuẩn xác, các định danh tồn tại, biến được khai báo/định nghĩa đầy đủ và giá trị trả về/lỗi được xử lý đúng hợp đồng Go. Nếu không đủ diện tích in ấn, phải chuyển dịch sang nhãn khái niệm trung thực và chính xác.
+
+6. INFORMATION ECONOMY:
+   Mỗi hình ảnh chỉ lưu giữ lượng thông tin tối thiểu cần thiết để làm sáng tỏ mô hình tư duy trung tâm. Không sao chép lặp lại nội dung đã trình bày trong văn xuôi; không chèn metadata kỹ thuật trang trí rườm rà; không thêm footer dài dòng, cảnh báo thừa thãi hoặc các hộp ghi chú không giúp cải thiện khả năng tiếp thu. Tiêu chí tối thượng: Một sơ đồ xuất sắc phải dễ đọc và sáng sủa hơn đoạn mã mà nó diễn giải.
+
+7. VISUAL HIERARCHY:
+   Lựa chọn loại hình trực quan phù hợp tuyệt đối với bản chất thông tin (sequence, activity, state, architecture, memory layout, dependency hoặc conceptual diagram). Đường nối phải có hướng, điểm bắt đầu, điểm kết thúc và phân nhánh rõ ràng. Bố cục không gian phải phản ánh trực quan thứ tự thời gian, quyền sở hữu (ownership), ranh giới trách nhiệm (boundaries), điều kiện rẽ nhánh và kết quả cuối cùng mà không đòi hỏi người đọc phải phỏng đoán.
+
+8. PUBLICATION QUALITY:
+   Đảm bảo phong cách đồ họa kỹ thuật trưởng thành, mực in đơn sắc (pure grayscale: R=G=B 100%, 0 tint), hỗ trợ đầy đủ dấu tiếng Việt, nguồn vector có thể tái tạo tự động ở độ phân giải in ấn (>= 300 DPI), không đánh số dòng trong khối mã. Kiểm tra nghiêm ngặt ở kích thước in thật 1:1: tỷ lệ font chữ, chiều rộng glyph thực tế, khoảng đệm an toàn theo bounding box (safe padding >= 4.0 pt từ text baseline đến viền khung) và triệt tiêu mọi va chạm giữa chữ với đường nối. Ngưỡng 6.0 pt là giới hạn kỹ thuật tối thiểu tuyệt đối, không phải mục tiêu thẩm mỹ; nếu chữ khó đọc ở tỷ lệ 100%, bắt buộc phải giảm mật độ thông tin hoặc tái cấu trúc bố cục.
+
+9. PEDAGOGICAL SELF-CONTAINMENT:
+   Một sơ đồ hoàn chỉnh phải giúp người học tự lực nắm bắt: sơ đồ biểu diễn điều gì, đọc theo hướng nào, khi nào rẽ nhánh và kết quả mang ý nghĩa kiến trúc gì. Sơ đồ đóng vai trò củng cố và làm sâu sắc thêm bài giảng, không thay thế bài giảng; tuyệt đối không tự ý đưa thêm các khái niệm nằm ngoài phạm vi chương sách khi không có yêu cầu sư phạm.
+
+10. SOURCE TRACEABILITY:
+    Trước khi vẽ hoặc hiệu chỉnh sơ đồ, phải lập bảng đối chiếu (preflight mapping) từng thành phần, nhãn chữ, hàm gọi và quan hệ nhân quả với dòng mã nguồn hoặc test case tương ứng. Xác định trước các bất biến kỹ thuật (invariants) và các ca biên (edge cases) cần chứng minh. Kiểm chứng sơ đồ bằng bằng chứng kỹ thuật thực tế, không dựa vào việc script render thành công mà bỏ qua việc rà soát ngữ nghĩa.
+
+11. TWO-STAGE QUALITY GATE:
+    Quy trình kiểm thử hai tầng bắt buộc:
+    - Tầng 1 (Semantic Preflight): Kiểm toán ngữ nghĩa, tính logic của các nhánh rẽ, tính hợp lệ của biến và cú pháp trước khi kết xuất đồ họa.
+    - Tầng 2 (Visual & Physical Audit): Kiểm toán độc lập bằng công cụ đo lường và quan sát trực quan bằng mắt người ở kích thước trang in 1:1. Tự lần theo từng đường thực thi để phát hiện nhánh thiếu, biến mồ côi, kết luận tuyệt đối hóa sai lệch, mũi tên định hướng gây hiểu lầm, lỗi hiển thị tiếng Việt và lỗi va chạm layout. Việc vượt qua test tự động (Publication tests PASS) là điều kiện cần nhưng không đủ để khẳng định sơ đồ đúng kỹ thuật và đạt giá trị sư phạm.
+
+12. ACCEPTANCE RULE:
+    Sơ đồ chỉ được nghiệm thu khi thỏa mãn đồng thời 4 trụ cột: Đúng kỹ thuật (technical accuracy) — Đúng mô hình tư duy (sound mental model) — Dễ học (pedagogical clarity) — Đạt chuẩn xuất bản in ấn (print-ready quality). Sau khoảng 3 vòng hiệu chỉnh mà chưa đạt nghiệm thu, bắt buộc phải dừng lại để đánh giá lại mô hình thiết kế nền tảng và phương pháp kiểm chứng, không tiếp tục vá víu vi chỉnh cục bộ. Tuyệt đối không hạ thấp tiêu chuẩn kỹ thuật hoặc tự ý merge nhánh để hoàn thành công việc hình thức.
+
+--------------------------------------------------
 LỰA CHỌN LOẠI SƠ ĐỒ ĐÚNG BẢN CHẤT THÔNG TIN
 --------------------------------------------------
 - Sequence Diagram: Dùng khi trọng tâm là thứ tự thời gian và tương tác giữa các thành phần ("Ai gọi ai? Theo thứ tự nào? Message nào đi trước/sau?"). Ví dụ: HTTP request path, TLS handshake, Controller API loop.
