@@ -539,123 +539,134 @@ def build_client_go_controller_flow_drawing(w: float = 476.22, h: float = 301.61
         subtitle="Reflector -> DeltaFIFO -> Cập nhật Indexer Cache -> Handler -> Workqueue -> Worker.",
     )
 
-    body_y = 26.0
-    body_h = header_y - body_y - 6.0
+    draw_footer_banner(d, w, "• Invariant: Reflector -> DeltaFIFO -> cập nhật Indexer Cache -> Handler phát key vào Workqueue; Worker đọc observation từ cache cục bộ.")
 
-    # Row 1: API Server -> Reflector -> DeltaFIFO
-    row1_y = body_y + body_h - 64.0
-    row1_h = 64.0
+    # 3-Row Layout:
+    # Row 1: API Server (left) -> Reflector (mid) -> DeltaFIFO (right)
+    # Row 2: Indexer Cache (left) -> Event Handler (right) with 52 pt middle gap
+    # Row 3: Worker Pool (left) <- Workqueue (right) with 52 pt middle gap
+    row1_h = 56.0
+    row1_y = 212.0
 
     r1_w = 120.0
-    r2_w = 130.0
-    r3_w = 190.0
-
-    gap_top = (w - 16.0 - (r1_w + r2_w + r3_w)) / 2.0
+    r2_w = 126.0
+    r3_w = 186.0
     x1 = 8.0
-    x2 = x1 + r1_w + gap_top
-    x3 = x2 + r2_w + gap_top
+    x2 = 142.0
+    x3 = 282.0
 
     # Box 1: API Server
     d.add(Rect(x1, row1_y, r1_w, row1_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(x1 + r1_w / 2.0, row1_y + row1_h - 12.0, "KUBE-API SERVER", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(x1 + r1_w / 2.0, row1_y + row1_h - 22.0, "Authoritative Cluster Store", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
-    d.add(String(x1 + 6.0, row1_y + 26.0, "• Nguồn chân lý cụm (etcd)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x1 + 6.0, row1_y + 14.0, "• Phục vụ List & Watch HTTP", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x1 + 6.0, row1_y + 4.0, "• ResourceVersion mốc tuần tự", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(x1 + r1_w / 2.0, row1_y + row1_h - 11.0, "KUBE-API SERVER", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(x1 + r1_w / 2.0, row1_y + row1_h - 20.0, "Cluster Store (etcd)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(x1 + 6.0, row1_y + 24.0, "• Nguồn chân lý của cụm", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x1 + 6.0, row1_y + 13.0, "• Cung cấp List & Watch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x1 + 6.0, row1_y + 3.0, "• ResourceVersion mốc", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     draw_arrow(d, x1 + r1_w, row1_y + row1_h / 2.0, x2, row1_y + row1_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Box 2: Reflector
     d.add(Rect(x2, row1_y, r2_w, row1_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(x2 + r2_w / 2.0, row1_y + row1_h - 12.0, "REFLECTOR", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(x2 + r2_w / 2.0, row1_y + row1_h - 22.0, "ListWatch Controller Loop", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
-    d.add(String(x2 + 6.0, row1_y + 26.0, "• List lấy mốc snapshot RV", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x2 + 6.0, row1_y + 14.0, "• Watch nhận delta sự kiện", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x2 + 6.0, row1_y + 4.0, "• Tự động re-list khi 410 Gone", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(x2 + r2_w / 2.0, row1_y + row1_h - 11.0, "REFLECTOR", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(x2 + r2_w / 2.0, row1_y + row1_h - 20.0, "ListWatch Controller Loop", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(x2 + 6.0, row1_y + 24.0, "• List nạp snapshot RV", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x2 + 6.0, row1_y + 13.0, "• Watch nhận delta sự kiện", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x2 + 6.0, row1_y + 3.0, "• Re-list khi 410 Gone", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     draw_arrow(d, x2 + r2_w, row1_y + row1_h / 2.0, x3, row1_y + row1_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Box 3: DeltaFIFO
     d.add(Rect(x3, row1_y, r3_w, row1_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(x3 + r3_w / 2.0, row1_y + row1_h - 12.0, "DeltaFIFO", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(x3 + r3_w / 2.0, row1_y + row1_h - 22.0, "Deduplicating FIFO Queue", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
-    d.add(String(x3 + 6.0, row1_y + 26.0, "• Hợp nhất các delta theo khóa đối tượng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x3 + 6.0, row1_y + 14.0, "• Lưu trữ delta: Added, Updated, Deleted", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(x3 + 6.0, row1_y + 4.0, "• Pop() cập nhật cache trước khi dispatch", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x3 + r3_w / 2.0, row1_y + row1_h - 11.0, "DeltaFIFO", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(x3 + r3_w / 2.0, row1_y + row1_h - 20.0, "Deduplicating FIFO Queue", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(x3 + 6.0, row1_y + 24.0, "• Hợp nhất delta theo khóa đối tượng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x3 + 6.0, row1_y + 13.0, "• Lưu delta: Added, Updated, Deleted", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(x3 + 6.0, row1_y + 3.0, "• Pop() cập nhật cache trước khi dispatch", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
-    # Row 2: Informer (Indexer Cache [left] -> Event Handler [right])
-    row2_y = row1_y - 12.0 - 72.0
-    row2_h = 72.0
+    # Stepped arrow: DeltaFIFO (Box 3) -> Indexer Cache (Row 2 Left)
+    # Routes through the 24 pt gap (y=188 to 212) with a dedicated horizontal segment at y=200
+    line_pop_v1 = Line(320.0, 212.0, 320.0, 200.0)
+    line_pop_v1.strokeColor = COLOR_INK_DARK
+    line_pop_v1.strokeWidth = 0.8
+    d.add(line_pop_v1)
+    line_pop_h = Line(320.0, 200.0, 110.0, 200.0)
+    line_pop_h.strokeColor = COLOR_INK_DARK
+    line_pop_h.strokeWidth = 0.8
+    d.add(line_pop_h)
+    draw_arrow(d, 110.0, 200.0, 110.0, 188.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    # Centered label above horizontal segment: y=203.5 (4.0 pt clearance to Row 1 bottom, 12.0 pt clearance to Row 2 top)
+    d.add(String(215.0, 203.5, "Pop() cập nhật cache", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    mid_w = (w - 24.0) / 2.0  # 226.11 pt each
+    # Row 2: Informer Components (Indexer Cache [left] -> Event Handler [right])
+    row2_h = 66.0
+    row2_y = 122.0
+    col_w = 204.0
     m1_x = 8.0
-    m2_x = m1_x + mid_w + 8.0
-
-    # Down-left arrow from DeltaFIFO to Indexer Cache (Pop updates cache)
-    draw_arrow(d, x3 + 20.0, row1_y, m1_x + mid_w - 20.0, row2_y + row2_h, color=COLOR_INK_DARK, width=0.8, head_size=3.2)
-    d.add(String((x3 + 20.0 + m1_x + mid_w - 20.0) / 2.0 + 8.0, (row1_y + row2_y + row2_h) / 2.0 - 2.0, "Pop() cập nhật cache", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    m2_x = 264.0  # 52 pt middle gap from 212 to 264
 
     # Mid 1: Indexer Cache (Local Store)
-    d.add(Rect(m1_x, row2_y, mid_w, row2_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
+    d.add(Rect(m1_x, row2_y, col_w, row2_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(m1_x + 6.0, row2_y + row2_h - 13.0, 85.0, 9.0, fillColor=COLOR_TAG_ACTIVE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
     d.add(String(m1_x + 48.5, row2_y + row2_h - 10.5, "1. INDEXER CACHE", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(m1_x + 98.0, row2_y + row2_h - 10.5, "In-Memory Thread-Safe Store", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(m1_x + 98.0, row2_y + row2_h - 10.5, "In-Memory Store", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
 
-    d.add(String(m1_x + 6.0, row2_y + 44.0, "• Cập nhật đồng bộ TRƯỚC khi gọi Event Handler", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row2_y + 32.0, "• Lưu trữ toàn bộ snapshot đối tượng của cụm", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row2_y + 20.0, "• Tra cứu nhanh theo Index Key (Namespace/Name)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row2_y + 8.0, "• Giải phóng hoàn toàn etcd khỏi các lệnh đọc lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(m1_x + 6.0, row2_y + 40.0, "• Cập nhật đồng bộ TRƯỚC callback", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row2_y + 29.0, "• Lưu trữ snapshot đối tượng của cụm", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row2_y + 18.0, "• Tra cứu nhanh theo Key (Namespace/Name)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row2_y + 7.0, "• Giải phóng etcd khỏi các lệnh đọc lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Arrow from Mid 1 (Indexer) to Mid 2 (Handler) - cache updated first, then dispatch
-    draw_arrow(d, m1_x + mid_w, row2_y + row2_h / 2.0, m2_x, row2_y + row2_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((m1_x + mid_w + m2_x) / 2.0, row2_y + row2_h / 2.0 + 3.0, "phát event", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # Arrow from Mid 1 (Indexer) to Mid 2 (Handler) across the 52 pt gap
+    draw_arrow(d, m1_x + col_w, row2_y + row2_h / 2.0, m2_x, row2_y + row2_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    # Label "phát event" centered in 52 pt gap: 9.5 pt clearance to both box borders
+    d.add(String(238.0, row2_y + row2_h / 2.0 + 3.5, "phát event", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Mid 2: ResourceEventHandler
-    d.add(Rect(m2_x, row2_y, mid_w, row2_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    d.add(Rect(m2_x, row2_y, col_w, row2_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(m2_x + 6.0, row2_y + row2_h - 13.0, 96.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
     d.add(String(m2_x + 54.0, row2_y + row2_h - 10.5, "2. EVENT HANDLER", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(m2_x + 106.0, row2_y + row2_h - 10.5, "Callbacks Dispatcher", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
 
-    d.add(String(m2_x + 6.0, row2_y + 44.0, "• Nhận callback: OnAdd, OnUpdate, OnDelete", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row2_y + 32.0, "• Trích xuất khóa định danh (Namespace/Name)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row2_y + 20.0, "• KHÔNG đưa toàn bộ payload đối tượng vào queue", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row2_y + 8.0, "• Chỉ enqueue khóa công việc (Level-triggered)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(m2_x + 6.0, row2_y + 40.0, "• Nhận callback: OnAdd, OnUpdate, OnDelete", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row2_y + 29.0, "• Trích xuất khóa định danh Namespace/Name", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row2_y + 18.0, "• KHÔNG đưa toàn bộ payload vào queue", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row2_y + 7.0, "• Chỉ enqueue khóa (Level-triggered)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+
+    # Gap between Row 2 and Row 3: 26 pt (y=96.0 to 122.0)
+    # Right: Arrow down from Handler to Workqueue
+    draw_arrow(d, 366.0, 122.0, 366.0, 96.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    d.add(String(372.0, 106.0, "queue.Add(key)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+
+    # Left: Dashed arrow straight up from Worker Pool to Indexer Cache (Read Observation)
+    draw_arrow(d, 48.0, 96.0, 48.0, 122.0, color=COLOR_INK_MID, width=0.8, head_size=3.0, dashed=True)
+    d.add(String(54.0, 106.0, "đọc observation từ cache", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Row 3: Worker Pool [left] <--- Workqueue [right]
-    row3_y = body_y
-    row3_h = row2_y - row3_y - 12.0  # 79.0 pt
-
-    # Arrow down from Mid 2 (Handler) to Bot 2 (Workqueue)
-    draw_arrow(d, m2_x + mid_w / 2.0, row2_y, m2_x + mid_w / 2.0, row3_y + row3_h, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String(m2_x + mid_w / 2.0 + 4.0, (row2_y + row3_y + row3_h) / 2.0, "queue.Add(key)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-
-    # Bot 2 (Right): WorkQueue
-    d.add(Rect(m2_x, row3_y, mid_w, row3_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(m2_x + 6.0, row3_y + row3_h - 12.0, "3. WORKQUEUE (RATELIMITINGQUEUE)", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row3_y + 50.0, "• Hàng đợi công việc chứa khóa Namespace/Name", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row3_y + 38.0, "• Deduplication: Tự động gom sự kiện trùng lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row3_y + 26.0, "• Rate Limiting: Giới hạn tần suất retry khi lỗi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row3_y + 14.0, "• Processing set: Ngăn xử lý song song cùng khóa", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m2_x + 6.0, row3_y + 4.0, "• Done(key): Đánh dấu hoàn tất một chu kỳ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-
-    # Arrow from Bot 2 (Workqueue) to Bot 1 (Worker Pool)
-    draw_arrow(d, m2_x, row3_y + row3_h / 2.0, m1_x + mid_w, row3_y + row3_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((m1_x + mid_w + m2_x) / 2.0, row3_y + row3_h / 2.0 + 3.0, "Get()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    row3_h = 72.0
+    row3_y = 24.0
 
     # Bot 1 (Left): Worker Pool
-    d.add(Rect(m1_x, row3_y, mid_w, row3_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
+    d.add(Rect(m1_x, row3_y, col_w, row3_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(m1_x + 6.0, row3_y + row3_h - 12.0, "4. WORKER POOL & RECONCILE LOOP", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row3_y + 50.0, "• Goroutine worker lấy khóa từ Workqueue", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row3_y + 38.0, "• Đọc observation từ Indexer Cache (mũi tên đứt)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row3_y + 26.0, "• Thực thi logic điều hòa: Desired vs Current", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row3_y + 14.0, "• Áp dụng thay đổi vào cluster nếu có sai lệch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(m1_x + 6.0, row3_y + 4.0, "• Báo Done(key) và Forget(key) khi thành công", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(m1_x + 6.0, row3_y + 46.0, "• Goroutine worker lấy khóa từ Workqueue", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row3_y + 35.0, "• Đọc observation từ Indexer Cache (mũi tên đứt)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row3_y + 24.0, "• Thực thi logic điều hòa: Desired vs Current", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row3_y + 13.0, "• Áp dụng thay đổi vào cluster nếu có sai lệch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m1_x + 6.0, row3_y + 3.0, "• Báo Done(key) và Forget(key) khi thành công", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Dashed arrow straight up from Worker Pool to Indexer Cache (Read Observation)
-    draw_arrow(d, m1_x + mid_w / 2.0, row3_y + row3_h, m1_x + mid_w / 2.0, row2_y, color=COLOR_INK_MID, width=0.8, head_size=3.0, dashed=True)
-    d.add(String(m1_x + mid_w / 2.0 + 4.0, (row3_y + row3_h + row2_y) / 2.0 - 2.0, "đọc observation từ cache", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    # Bot 2 (Right): WorkQueue
+    d.add(Rect(m2_x, row3_y, col_w, row3_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    d.add(String(m2_x + 6.0, row3_y + row3_h - 12.0, "3. WORKQUEUE (RATELIMITINGQUEUE)", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row3_y + 46.0, "• Hàng đợi công việc chứa khóa Namespace/Name", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row3_y + 35.0, "• Deduplication: Tự động gom sự kiện trùng lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row3_y + 24.0, "• Rate Limiting: Giới hạn tần suất retry khi lỗi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row3_y + 13.0, "• Processing set: Ngăn xử lý song song cùng khóa", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(m2_x + 6.0, row3_y + 3.0, "• Done(key): Đánh dấu hoàn tất một chu kỳ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    draw_footer_banner(d, w, "• Invariant: Reflector -> DeltaFIFO -> cập nhật Indexer Cache -> Handler phát key vào Workqueue; Worker đọc observation từ cache cục bộ.")
+    # Arrow from Bot 2 (Workqueue) to Bot 1 (Worker Pool) across the 52 pt gap
+    draw_arrow(d, m2_x, row3_y + row3_h / 2.0, m1_x + col_w, row3_y + row3_h / 2.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    # Label "Get()" centered in 52 pt gap: 17.0 pt clearance to both box borders
+    d.add(String(238.0, row3_y + row3_h / 2.0 + 3.5, "Get()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+
     return d
 
 # ======================================================================
@@ -1395,7 +1406,7 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     body_h = header_y - body_y - 6.0
 
     actor1_x = 75.0    # GitHub Dispatcher
-    actor2_x = 295.0   # Go Webhook Server
+    actor2_x = 285.0   # Go Webhook Server
 
     act_box_w = 110.0
     act_box_h = 20.0
@@ -1418,8 +1429,8 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
         line.strokeDashArray = [3, 2]
         d.add(line)
 
-    box_w = 160.0
-    box_left = actor2_x - box_w / 2.0  # 215 to 375, margin to 407.82 is 32.82 pt
+    box_w = 210.0
+    box_left = actor2_x - box_w / 2.0  # 180.0 to 390.0, margin to 407.82 is 17.82 pt
 
     # 1. GitHub computes HMAC
     sy1 = act_box_y - 28.0
@@ -1434,7 +1445,7 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
 
     # 3. Step A: Check prefix & Decode hex
     sy3 = sy2 - 32.0
-    d.add(Rect(box_left, sy3 - 10.0, box_w, 26.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(Rect(box_left, sy3 - 11.0, box_w, 28.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(actor2_x, sy3 + 5.0, "1. strings.HasPrefix(sigHeader, \"sha256=\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor2_x, sy3 - 5.0, "2. actualMAC, err := hex.DecodeString(hexSig)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
@@ -1444,17 +1455,18 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     d.add(String((actor1_x + actor2_x) / 2.0, sy4 + 6.0, "KHÔNG UNMARSHAL RỒI MARSHAL LẠI JSON TRƯỚC KHI TÍNH HMAC", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String((actor1_x + actor2_x) / 2.0, sy4 - 3.0, "Phải hash trực tiếp trên raw bytes; re-marshal làm đổi key order và whitespace.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    # 5. Step B: Compute expected HMAC
-    sy5 = sy4 - 30.0
-    d.add(Rect(box_left, sy5 - 10.0, box_w, 24.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(actor2_x, sy5 + 4.0, "mac := hmac.New(sha256.New, []byte(secret))", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, sy5 - 6.0, "mac.Write(rawBody); expectedMAC := mac.Sum(nil)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    # 5. Step B: Compute expected HMAC (3 separate lines, 0 semicolon cramming)
+    sy5 = sy4 - 36.0
+    d.add(Rect(box_left, sy5 - 15.0, box_w, 36.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(actor2_x, sy5 + 8.0, "mac := hmac.New(sha256.New, []byte(secret))", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy5 - 1.0, "mac.Write(rawBody)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy5 - 10.0, "expectedMAC := mac.Sum(nil)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # 6. Step C: hmac.Equal constant time
-    sy6 = sy5 - 30.0
-    d.add(Rect(box_left, sy6 - 10.0, box_w, 24.0, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
-    d.add(String(actor2_x, sy6 + 4.0, "return hmac.Equal(actualMAC, expectedMAC)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, sy6 - 6.0, "So sánh hằng thời gian (chống Timing Side-Channel)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    sy6 = sy5 - 34.0
+    d.add(Rect(box_left, sy6 - 11.0, box_w, 28.0, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
+    d.add(String(actor2_x, sy6 + 5.0, "return hmac.Equal(actualMAC, expectedMAC)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy6 - 5.0, "So sánh hằng thời gian (constant-time, chống timing attack)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # 7. Two Decisions
     sy7 = sy6 - 32.0
@@ -1468,7 +1480,7 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     d.add(Rect(actor2_x - 50.0, sy7 - 10.0, 100.0, 22.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
     d.add(String(actor2_x, sy7 + 3.0, "HỢP LỆ (TRUE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor2_x, sy7 - 6.0, "Chuyển sang xử lý payload", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    draw_arrow(d, actor2_x, sy6 - 10.0, actor2_x, sy7 + 12.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    draw_arrow(d, actor2_x, sy6 - 11.0, actor2_x, sy7 + 12.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     draw_footer_banner(d, w, "• Invariant: VerifyHMACSHA256 so sánh hằng thời gian qua hmac.Equal; raw payload giữ nguyên vẹn trước khi decode JSON.")
     return d
@@ -1499,12 +1511,12 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     body_h = header_y - body_y - 6.0
 
     # 4 Actors
-    actor1_x = 55.0   # GitHub Dispatcher
-    actor2_x = 175.0  # WebhookReceiver
-    actor3_x = 295.0  # DeliveryLedger (sync.Mutex)
-    actor4_x = 415.0  # Business Handler
+    actor1_x = 50.0   # GitHub Dispatcher
+    actor2_x = 170.0  # WebhookReceiver
+    actor3_x = 320.0  # DeliveryLedger (sync.Mutex)
+    actor4_x = 420.0  # Business Handler
 
-    act_box_w = 95.0
+    act_box_w = 90.0
     act_box_h = 20.0
     act_box_y = header_y - act_box_h - 6.0
 
@@ -1520,8 +1532,8 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     d.add(String(actor3_x, act_box_y + 11.5, "DeliveryLedger", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor3_x, act_box_y + 4.5, "sync.Mutex + map in-memory", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    d.add(Rect(actor4_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(actor4_x, act_box_y + 11.5, "BUSINESS HANDLER", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(actor4_x - 35.0, act_box_y, 70.0, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    d.add(String(actor4_x, act_box_y + 11.5, "HANDLER", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor4_x, act_box_y + 4.5, "handle() error", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     lifeline_bot = body_y + 6.0
@@ -1533,46 +1545,45 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
         line.strokeDashArray = [3, 2]
         d.add(line)
 
-    # 1. Delivery 1
+    # 1. Delivery 1 (between Actor 1 and Actor 2: 120 pt gap)
     y1 = act_box_y - 22.0
     draw_arrow(d, actor1_x, y1, actor2_x, y1, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor1_x + actor2_x) / 2.0, y1 + 3.0, "1. POST (ID: \"7a1b...\", sig, payload)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor1_x + actor2_x) / 2.0, y1 + 3.0, "1. POST (ID: \"7a1b...\", payload)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # 2. Verify HMAC
     y2 = y1 - 18.0
-    d.add(Rect(actor2_x - 55.0, y2 - 7.0, 110.0, 16.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(Rect(actor2_x - 50.0, y2 - 7.0, 100.0, 16.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(actor2_x, y2 - 2.5, "VerifyHMACSHA256() == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    # 3. ledger.Begin
+    # 3. ledger.Begin (between Actor 2 and Actor 3: 150 pt gap)
     y3 = y2 - 20.0
     draw_arrow(d, actor2_x, y3, actor3_x, y3, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor2_x + actor3_x) / 2.0, y3 + 3.0, "2. ledger.Begin(\"7a1b...\") [Lock map]", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor2_x + actor3_x) / 2.0, y3 + 3.0, "2. ledger.Begin(\"7a1b...\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     y4 = y3 - 18.0
     draw_arrow(d, actor3_x, y4, actor2_x, y4, color=COLOR_INK_MID, width=0.8, head_size=3.0)
     d.add(String((actor2_x + actor3_x) / 2.0, y4 + 3.0, "accepted=true (state: processing)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    # 4. Invoke handle() - bridge over Actor 3
+    # 4. Invoke handle() - bridge over Actor 3 (between Actor 3 and Actor 4: 100 pt gap)
     y5 = y4 - 20.0
-    # draw white bridge over actor3 lifeline
     d.add(Rect(actor3_x - 4.0, y5 - 4.0, 8.0, 8.0, fillColor=COLOR_WHITE, strokeColor=None))
     draw_arrow(d, actor2_x, y5, actor4_x, y5, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    # place label between actor 3 and actor 4 so it never collides with actor 3
-    d.add(String((actor3_x + actor4_x) / 2.0, y5 + 3.0, "3. execute handle()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor3_x + actor4_x) / 2.0, y5 + 3.0, "3. handle()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     y6 = y5 - 18.0
     d.add(Rect(actor3_x - 4.0, y6 - 4.0, 8.0, 8.0, fillColor=COLOR_WHITE, strokeColor=None))
     draw_arrow(d, actor4_x, y6, actor2_x, y6, color=COLOR_INK_MID, width=0.8, head_size=3.0)
     d.add(String((actor3_x + actor4_x) / 2.0, y6 + 3.0, "return nil", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    # 5. ledger.Complete
+    # 5. ledger.Complete (between Actor 2 and Actor 3: 150 pt gap)
     y7 = y6 - 20.0
     draw_arrow(d, actor2_x, y7, actor3_x, y7, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor2_x + actor3_x) / 2.0, y7 + 3.0, "4. ledger.Complete(\"7a1b...\") -> completed", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor2_x + actor3_x) / 2.0, y7 + 3.0, "4. ledger.Complete(\"7a1b...\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
+    # HTTP 200 OK
     y8 = y7 - 18.0
     draw_arrow(d, actor2_x, y8, actor1_x, y8, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor1_x + actor2_x) / 2.0, y8 + 3.0, "HTTP 200 OK (isDuplicate=false)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor1_x + actor2_x) / 2.0, y8 + 3.0, "HTTP 200 (isDuplicate=false)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Break: Redelivery
     y_break = y8 - 22.0
@@ -1585,24 +1596,24 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     draw_arrow(d, actor1_x, y9, actor2_x, y9, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
     d.add(String((actor1_x + actor2_x) / 2.0, y9 + 3.0, "5. POST (CÙNG ID: \"7a1b...\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    # 7. ledger.Begin check duplicate
+    # 7. ledger.Begin check duplicate (between Actor 2 and Actor 3: 150 pt gap)
     y10 = y9 - 18.0
     draw_arrow(d, actor2_x, y10, actor3_x, y10, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
     d.add(String((actor2_x + actor3_x) / 2.0, y10 + 3.0, "6. ledger.Begin(\"7a1b...\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     y11 = y10 - 18.0
     draw_arrow(d, actor3_x, y11, actor2_x, y11, color=COLOR_INK_MID, width=0.8, head_size=3.0)
-    d.add(String((actor2_x + actor3_x) / 2.0, y11 + 3.0, "accepted=false (đã tồn tại trong map)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String((actor2_x + actor3_x) / 2.0, y11 + 3.0, "accepted=false (duplicate)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     # 8. Duplicate suppressed
     y12 = y11 - 22.0
-    d.add(Rect(actor2_x - 65.0, y12 - 7.0, 130.0, 18.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
+    d.add(Rect(actor2_x - 55.0, y12 - 7.0, 110.0, 18.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
     d.add(String(actor2_x, y12 + 3.0, "DUPLICATE SUPPRESSION", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor2_x, y12 - 5.0, "Bỏ qua handle(); không chạy lặp side effect", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     y13 = y12 - 20.0
     draw_arrow(d, actor2_x, y13, actor1_x, y13, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor1_x + actor2_x) / 2.0, y13 + 3.0, "7. HTTP 200 OK (isDuplicate=true)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor1_x + actor2_x) / 2.0, y13 + 3.0, "7. HTTP 200 (isDuplicate=true)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     draw_footer_banner(d, w, "• Invariant: DeliveryLedger reserve trạng thái trong map RAM (sync.Mutex); không phải distributed lease có TTL và reset khi restart.")
     return d
@@ -1970,20 +1981,20 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
     body_h = header_y - body_y - 6.0
 
     # 3 Columns Layout:
-    # Col 1: ĐẦU VÀO ĐỘC LẬP (Independent Inputs) - w = 125 pt
-    # Col 2: POLICY.CHECK (Pure Evaluation) - w = 202 pt
-    # Col 3: RANH GIỚI BÊN NGOÀI (External Boundaries) - w = 121 pt
-    c1_w = 125.0
-    c2_w = 202.0
-    c3_w = 121.0
+    # Col 1: ĐẦU VÀO ĐỘC LẬP (Independent Inputs) - w = 142 pt (inner = 130 pt)
+    # Col 2: POLICY.CHECK (Pure Evaluation) - w = 188 pt (inner = 172 pt)
+    # Col 3: RANH GIỚI BÊN NGOÀI (External Boundaries) - w = 118 pt (inner = 106 pt)
+    c1_w = 142.0
+    c2_w = 188.0
+    c3_w = 118.0
     c1_x = 8.0
-    c2_x = c1_x + c1_w + 7.0   # 140.0
-    c3_x = c2_x + c2_w + 7.0   # 349.0
+    c2_x = c1_x + c1_w + 8.0   # 158.0
+    c3_x = c2_x + c2_w + 8.0   # 354.0
 
     # Col 1: INPUTS
     d.add(Rect(c1_x, body_y, c1_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(Rect(c1_x + 6.0, body_y + body_h - 13.0, 105.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
-    d.add(String(c1_x + 58.5, body_y + body_h - 10.5, "1. ĐẦU VÀO ĐỘC LẬP", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(c1_x + 6.0, body_y + body_h - 13.0, 115.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
+    d.add(String(c1_x + 63.5, body_y + body_h - 10.5, "1. ĐẦU VÀO ĐỘC LẬP", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Box 1: Plan & Principal
     d.add(Rect(c1_x + 6.0, body_y + body_h - 70.0, c1_w - 12.0, 52.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
@@ -1998,8 +2009,8 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
     d.add(String(c1_x + 10.0, body_y + body_h - 82.0, "Evidence (Verifier độc lập):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c1_x + 10.0, body_y + body_h - 93.0, "• PlanDigest: hex(sha256(Plan))", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c1_x + 10.0, body_y + body_h - 104.0, "• Passed: true (CI/Test)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 114.0, "• CheckedAt: timestamp thẩm định", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c1_x + 10.0, body_y + body_h - 123.0, "  (Không tự khai báo từ payload)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c1_x + 10.0, body_y + body_h - 114.0, "• CheckedAt: timestamp kiểm định", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c1_x + 10.0, body_y + body_h - 123.0, "  (Độc lập, không tin payload)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3: Approval
     d.add(Rect(c1_x + 6.0, body_y + 8.0, c1_w - 12.0, 48.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
@@ -2013,13 +2024,13 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
 
     # Col 2: POLICY.CHECK
     d.add(Rect(c2_x, body_y, c2_w, body_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=1.0, rx=2, ry=2))
-    d.add(Rect(c2_x + 6.0, body_y + body_h - 13.0, 185.0, 9.0, fillColor=COLOR_TAG_ACTIVE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
-    d.add(String(c2_x + 98.5, body_y + body_h - 10.5, "2. POLICY.CHECK (EVALUATION ONLY)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(c2_x + 6.0, body_y + body_h - 13.0, 176.0, 9.0, fillColor=COLOR_TAG_ACTIVE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
+    d.add(String(c2_x + 94.0, body_y + body_h - 10.5, "2. POLICY.CHECK (EVALUATION ONLY)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     d.add(String(c2_x + 8.0, body_y + body_h - 25.0, "Nhận: (now, who, plan, evidence, approval)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c2_x + 8.0, body_y + body_h - 35.0, "6 Điều kiện kiểm tra khế ước (gate.go):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
-    # 6 checks list formatted to fit strictly within c2_w = 202 pt (max string width <= 186 pt)
+    # 6 checks list formatted to fit strictly within c2_w = 188 pt (inner width = 172 pt)
     checks = [
         "1. who.ID != \"\" && who.Operator == true",
         "2. plan.Action == \"restart-demo\" (whitelist)",
@@ -2048,8 +2059,8 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
 
     # Col 3: EXTERNAL BOUNDARIES
     d.add(Rect(c3_x, body_y, c3_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(Rect(c3_x + 6.0, body_y + body_h - 13.0, 108.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
-    d.add(String(c3_x + 60.0, body_y + body_h - 10.5, "3. RANH GIỚI BÊN NGOÀI", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(c3_x + 6.0, body_y + body_h - 13.0, 106.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
+    d.add(String(c3_x + 59.0, body_y + body_h - 10.5, "3. RANH GIỚI BÊN NGOÀI", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Box 1: Dispatcher
     d.add(Rect(c3_x + 6.0, body_y + body_h - 70.0, c3_w - 12.0, 52.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
@@ -3188,10 +3199,12 @@ def export_all_diagrams(output_dir: Path | None = None, dpi: int = 320) -> list[
 def verify_all_diagram_typography() -> bool:
     """Audit all 26 diagrams for font size and bounding-box rules."""
     all_ok = True
-    print(f"\nAuditing typography across all {len(DIAGRAM_SPECS)} technical diagrams...")
+    print(f"\nAuditing typography and geometry across all {len(DIAGRAM_SPECS)} technical diagrams...")
 
     for filename, spec in DIAGRAM_SPECS.items():
-        drawing = spec["builder"](w=spec["w_pt"], h=spec["h_pt"])
+        w_pt = spec["w_pt"]
+        h_pt = spec["h_pt"]
+        drawing = spec["builder"](w=w_pt, h=h_pt)
         strings = []
 
         def walk(node):
@@ -3208,12 +3221,40 @@ def verify_all_diagram_typography() -> bool:
             continue
 
         min_font = min(s.fontSize for s in strings)
-        if min_font < 6.0:
+        font_ok = min_font >= 6.0
+
+        # Geometry bounding box check
+        geom_failures = []
+        for s in strings:
+            txt = s.text
+            f_name = s.fontName
+            f_size = s.fontSize
+            txt_w = stringWidth(txt, f_name, f_size)
+            anchor = getattr(s, "textAnchor", "start")
+            if anchor == "middle":
+                x_left = s.x - txt_w / 2.0
+                x_right = s.x + txt_w / 2.0
+            elif anchor == "end":
+                x_left = s.x - txt_w
+                x_right = s.x
+            else:
+                x_left = s.x
+                x_right = s.x + txt_w
+
+            if x_left < 2.0 or x_right > w_pt - 2.0:
+                geom_failures.append(f"'{txt}' at [{x_left:.1f}, {x_right:.1f}] exceeds [2.0, {w_pt - 2.0:.1f}]")
+
+        if not font_ok:
             print(f"  [FAIL] {filename}: min fontSize = {min_font:.2f} pt (< 6.0 pt)")
+            all_ok = False
+        elif geom_failures:
+            print(f"  [FAIL] {filename}: {len(geom_failures)} text elements overflow canvas width ({w_pt:.1f} pt):")
+            for gf in geom_failures[:3]:
+                print(f"    - {gf}")
             all_ok = False
         else:
             ch_str = f"Ch {spec['chapter']:02d}" if spec['chapter'] <= 29 else "App B"
-            print(f"  [OK] Figure {spec['figure']:02d} ({ch_str}): {filename:<36} -> {len(strings):2d} text nodes, min font: {min_font:.2f} pt")
+            print(f"  [OK] Figure {spec['figure']:02d} ({ch_str}): {filename:<36} -> {len(strings):2d} text nodes, min font: {min_font:.2f} pt, 0 overflow")
 
     return all_ok
 

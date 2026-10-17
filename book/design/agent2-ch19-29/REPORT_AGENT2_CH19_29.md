@@ -44,38 +44,39 @@ Toàn bộ đường dẫn thư mục lab và mã nguồn đối chiếu dưới
 
 ## 2. BẰNG CHỨNG XỬ LÝ TOÀN DIỆN CÁC YÊU CẦU PHẢN BIỆN (CORRECTIVE ACTIONS AUDIT)
 
-### 2.1. Hình 36 (`client-go-controller-flow.png`): Sửa luồng Informer chuẩn xác
-- **Lỗi trước:** Mũi tên đi từ Event Handler sang Indexer Cache với nhãn `update` gây hiểu lầm Handler cập nhật cache.
+### 2.1. Hình 36 (`client-go-controller-flow.png`): Định tuyến luồng Informer & Cô lập khoảng trống nhãn
+- **Lỗi trước:** Mũi tên từ Handler sang Cache; khoảng trống giữa các hộp ở Row 2/3 quá hẹp (8 pt) khiến nhãn `phát event` và `Get()` đè ranh giới hộp; mũi tên Pop->Cache chéo dốc; đường đọc cache áp sát biên.
 - **Hiệu chỉnh:**
-  - Thứ tự luồng dữ liệu chuẩn Kubernetes `client-go`: `Reflector -> DeltaFIFO -> Cập nhật Indexer Cache -> Event Handler -> Workqueue -> Worker`.
-  - Khi DeltaFIFO `Pop()` lấy đối tượng, Informer thực hiện cập nhật cache cục bộ (Indexer) **trước khi** phát callback tới ResourceEventHandler.
-  - Event Handler nhận callback (`OnAdd`, `OnUpdate`, `OnDelete`) chỉ trích xuất khóa (`Namespace/Name`) và đẩy vào Workqueue qua `queue.Add(key)`.
-  - Worker lấy key từ Workqueue và đọc observation trực tiếp từ Indexer Cache qua mũi tên nét đứt thẳng đứng, không giao cắt bất kỳ thành phần nào.
+  - Thứ tự luồng chuẩn: `Reflector -> DeltaFIFO -> Cập nhật Indexer Cache -> Handler -> Workqueue -> Worker`.
+  - Mở rộng khoảng cách giữa Cột 1 (trái) và Cột 2 (phải) ở Hàng 2 và 3 lên $52.0\text{ pt}$.
+  - Nhãn `phát event` (chiều rộng $33.0\text{ pt}$) căn giữa khoảng trống $52\text{ pt}$, đạt khoảng đệm an toàn $9.5\text{ pt}$ tới cả 2 viền hộp.
+  - Nhãn `Get()` (chiều rộng $18.0\text{ pt}$) căn giữa khoảng trống $52\text{ pt}$, đạt khoảng đệm an toàn $17.0\text{ pt}$ tới cả 2 viền hộp.
+  - Mũi tên `Pop() cập nhật cache` được định tuyến vuông góc (stepped routing) qua dải trống $24\text{ pt}$ giữa Hàng 1 và Hàng 2, nhãn đặt trên đoạn ngang cách viền trên $4.0\text{ pt}$ và viền dưới $12.0\text{ pt}$.
+  - Mũi tên nét đứt đọc cache từ Worker và mũi tên `queue.Add(key)` nằm trọn vẹn trong dải trống $26\text{ pt}$ giữa Hàng 2 và Hàng 3 với khoảng đệm $\ge 10.0\text{ pt}$.
 
-### 2.2. Hình 44 (`webhook-hmac-verification.png`): Cú pháp hợp lệ và bố cục không tràn viền
-- **Lỗi trước:** Đoạn mã giả `actualSig, err := hex.DecodeString(hex)` và `mac.Write(payload) -> expectedSig` gây hiểu lầm cú pháp; khoảng cách lề phải áp sát ranh giới canvas ($5\text{ pt}$).
+### 2.2. Hình 44 (`webhook-hmac-verification.png`): Tăng không gian code & Triệt tiêu monospace tràn viền
+- **Lỗi trước:** Hộp code quanh Actor 2 hẹp ($160\text{ pt}$) khiến chuỗi monospace `actualMAC, err := hex.DecodeString(hexSig)` và `mac.Write(rawBody); expectedMAC := mac.Sum(nil)` áp sát hoặc tràn viền card.
 - **Hiệu chỉnh:**
-  - Chuyển `actor2_x` về $295.0\text{ pt}$ (cách ranh giới canvas phải $37.82\text{ pt}$, biên an toàn rộng rãi).
-  - Sử dụng biểu thức Go hợp lệ khớp `webhook.go`:
-    - `1. strings.HasPrefix(sigHeader, "sha256=")`
-    - `2. actualMAC, err := hex.DecodeString(hexSig)`
-    - `3. mac := hmac.New(sha256.New, []byte(secret)); mac.Write(rawBody); expectedMAC := mac.Sum(nil)`
-    - `4. return hmac.Equal(actualMAC, expectedMAC)`
-  - Giữ nguyên biểu ngữ bảo mật: "KHÔNG UNMARSHAL RỒI MARSHAL LẠI JSON TRƯỚC KHI TÍNH HMAC".
+  - Mở rộng chiều rộng hộp quanh Actor 2 lên $210.0\text{ pt}$ (tọa độ $[180.0, 390.0]$, lề phải an toàn $17.82\text{ pt}$).
+  - Tách `mac.Write(rawBody)` và `expectedMAC := mac.Sum(nil)` thành 2 dòng riêng biệt, không dùng dấu chấm phẩy dồn ép lệnh.
+  - Mọi chuỗi monospace (kích thước chuẩn $6.0\text{ pt}$) đều đạt khoảng đệm thực tế $\ge 27.6\text{ pt}$ so với viền hộp, triệt tiêu 100% border collision.
 
-### 2.3. Hình 45 (`webhook-delivery-deduplication.png`): Sửa nhãn giao nhau & Làm rõ ngữ nghĩa Ledger
-- **Lỗi trước:** Mũi tên từ WebhookReceiver gọi Business Handler đi xuyên qua lifeline và nhãn của DeliveryLedger; chưa phân biệt in-memory reservation với distributed lease.
+### 2.3. Hình 45 (`webhook-delivery-deduplication.png`): Phân bổ lại Actor & Cô lập các nhãn Sequence
+- **Lỗi trước:** Khoảng cách giữa WebhookReceiver và DeliveryLedger chỉ có $120\text{ pt}$, trong khi các nhãn `ledger.Begin`, `accepted=true`, `ledger.Complete`, `accepted=false` dài tới $122–151\text{ pt}$ cắt ngang cả 2 lifeline.
 - **Hiệu chỉnh:**
-  - Tạo cầu nối trắng (white bridge) trên lifeline DeliveryLedger tại tọa độ gọi `handle()`; nhãn được đặt trọn trong khoảng trống giữa Actor 3 và Actor 4, triệt tiêu hoàn toàn sự giao cắt chữ và nét.
-  - Diễn đạt chính xác ngữ nghĩa: `ledger.Begin(id)` thực hiện reserve trạng thái `processing` trong map RAM cục bộ được bảo vệ bởi `sync.Mutex`.
-  - Ghi chú rõ ràng: "LƯU Ý: Đây là in-memory map trong 1 tiến trình, KHÔNG PHẢI distributed lease có TTL; không bảo đảm khử trùng lặp bền vững qua restart hoặc trên cụm nhiều pod."
+  - Tái phân bổ tọa độ 4 Actor: Actor 1 ($50\text{ pt}$), Actor 2 ($170\text{ pt}$), Actor 3 ($320\text{ pt}$), Actor 4 ($420\text{ pt}$).
+  - Khoảng trống giữa Actor 2 và Actor 3 được mở rộng lên $150.0\text{ pt}$.
+  - Toàn bộ nhãn `ledger.Begin("7a1b...")`, `accepted=true (state: processing)`, `ledger.Complete("7a1b...")` và `accepted=false (duplicate)` nằm gọn giữa 2 lifeline với khoảng cách an toàn $\ge 13.8\text{ pt}$ mỗi bên, $0$ giao cắt.
+  - Nhãn `3. handle()` và `return nil` đặt trong khoảng trống $100\text{ pt}$ giữa Actor 3 và Actor 4; lifeline Actor 3 có cầu nối trắng che chắn.
+  - Khẳng định chuẩn xác: DeliveryLedger là in-memory map được bảo vệ bằng `sync.Mutex`, không phải distributed lease có TTL.
 
-### 2.4. Hình 50 (`change-evidence-gate.png`): Thu gọn điều kiện trong cột & Phân định ranh giới ngoài
-- **Lỗi trước:** Các chuỗi monospace của 6 điều kiện trong Cột 2 quá dài, tràn sang Cột 3; các thành phần ngoài (rollback, lock) được trình bày như tính năng sẵn có.
+### 2.4. Hình 50 (`change-evidence-gate.png`): Cân đối 3 cột & Bảo toàn 100% điều kiện Policy.Check
+- **Lỗi trước:** Cột 1 ($125\text{ pt}$) bị hẹp khiến `Plan & Principal` và `Evidence` bị tràn viền card; Cột 2 có nguy cơ lấn sang Cột 3.
 - **Hiệu chỉnh:**
-  - Mở rộng Cột 2 lên $202.0\text{ pt}$. Toàn bộ 6 điều kiện được định dạng lại thành các dòng ngắn $\le 42$ ký tự, kiểm tra tự động xác nhận $0$ ký tự tràn ra ngoài Cột 2 (Internal containment fails: 0).
-  - Cột 3 được đổi tiêu đề thành: `3. RANH GIỚI BÊN NGOÀI (Không triển khai trong lab)`.
-  - Ghi chú rõ ràng: `Policy.Check` chỉ là hàm lượng giá thuần túy trả về `nil` (hợp lệ) hoặc `ErrDenied` (từ chối); tác vụ dispatch, distributed lock, executor và auto-rollback không thuộc phạm vi `labs/part29-change-evidence/gate.go`.
+  - Tái phân bổ chiều rộng 3 cột: Cột 1 ($142.0\text{ pt}$, lọt lòng $130.0\text{ pt}$), Cột 2 ($188.0\text{ pt}$, lọt lòng $172.0\text{ pt}$), Cột 3 ($118.0\text{ pt}$, lọt lòng $106.0\text{ pt}$).
+  - Cột 1: Mọi dòng đều có khoảng đệm thực tế $\ge 14.8\text{ pt}$ tới viền card (chuỗi dài nhất $115.2\text{ pt}$).
+  - Cột 2: Toàn bộ 6 điều kiện kỹ thuật của `Policy.Check` (khớp `labs/part29-change-evidence/gate.go`) được bảo toàn 100%, dòng dài nhất $158.4\text{ pt}$ đạt khoảng đệm $\ge 13.6\text{ pt}$.
+  - Cột 3: Được gắn nhãn minh định `3. RANH GIỚI BÊN NGOÀI`, làm rõ dispatcher, distributed lock, executor và rollback là kiến trúc ngoài, lab không triển khai. Khoảng đệm $\ge 31.4\text{ pt}$.
 
 ### 2.5. Hình 51 (`library-informer-data-path.png`): Sửa đường đọc Indexer Cache
 - **Lỗi trước:** Mũi tên nét đứt đọc cache từ Worker cắt chéo qua hộp Workqueue và văn bản bên trong.
