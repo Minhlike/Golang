@@ -163,8 +163,8 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     # Heights of 5 stages (Total stages = 262.0 pt)
     s1_h = 44.0
     s2_h = 38.0
-    s3_h = 56.0
-    s4_h = 68.0
+    s3_h = 58.0
+    s4_h = 66.0
     s5_h = 56.0
     total_stages_h = s1_h + s2_h + s3_h + s4_h + s5_h  # 262.0 pt
     gap = (body_top - body_bot - total_stages_h) / 4.0  # (291.83 - 262.0) / 4 = 7.4575 pt
@@ -205,12 +205,35 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     d.add(Rect(card_x + 4.0, y3 + s3_h - 11.0, 15.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 11.5, y3 + s3_h - 9.0, "03", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 23.0, y3 + s3_h - 9.0, "3. SELECT BAN ĐẦU (fixed/server.go)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y3 + 37.5, "select { // Chờ 1 trong 2 sự kiện:", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y3 + 29.5, "• case err := <-serveErr: (LỖI SỚM)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 12.0, y3 + 22.0, "Lỗi mạng/port -> return \"serve: %w\"", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, y3 + 13.5, "• case <-ctx.Done(): (TÍN HIỆU DỪNG)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 12.0, y3 + 5.0, "Nhận SIGINT/cancel -> vào Shutdown", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    draw_arrow(d, card_x + card_w / 2.0, y3, card_x + card_w / 2.0, y3 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
+
+    sub_gap = 4.0
+    sub_w = (card_w - 8.0 - sub_gap) / 2.0  # 81.9 pt each
+    sub_h = 42.0
+    sub_y = y3 + 4.0
+
+    # Left sub-card: Nhánh 1 (Lỗi sớm trước signal -> Thoát sớm, KHÔNG xuống Shutdown)
+    sub_left_x = card_x + 4.0
+    d.add(Rect(sub_left_x, sub_y, sub_w, sub_h, fillColor=COLOR_POLICY_BG, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(Rect(sub_left_x, sub_y + sub_h - 10.0, sub_w, 10.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(Rect(sub_left_x, sub_y + sub_h - 10.0, sub_w, 2.0, fillColor=COLOR_TAG_BG, strokeColor=None))
+    d.add(String(sub_left_x + sub_w / 2.0, sub_y + sub_h - 7.5, "err := <-serveErr", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(sub_left_x + 4.0, sub_y + 22.5, "• Lỗi trước khi có signal", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(sub_left_x + 4.0, sub_y + 13.5, "  Closed: nil / khác: lỗi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(sub_left_x + 4.0, sub_y + 4.5, "=> THOÁT SỚM (RETURN)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+
+    # Right sub-card: Nhánh 2 (Tín hiệu dừng -> Tiếp tục quy trình Shutdown)
+    sub_right_x = sub_left_x + sub_w + sub_gap
+    d.add(Rect(sub_right_x, sub_y, sub_w, sub_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.7, rx=1.5, ry=1.5))
+    d.add(Rect(sub_right_x, sub_y + sub_h - 10.0, sub_w, 10.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.7, rx=1.5, ry=1.5))
+    d.add(Rect(sub_right_x, sub_y + sub_h - 10.0, sub_w, 2.0, fillColor=COLOR_BG_HEADER, strokeColor=None))
+    d.add(String(sub_right_x + sub_w / 2.0, sub_y + sub_h - 7.5, "<-ctx.Done()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(sub_right_x + 4.0, sub_y + 22.5, "• Nhận OS signal (SIGINT)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(sub_right_x + 4.0, sub_y + 13.5, "• Hoặc caller hủy context", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(sub_right_x + 4.0, sub_y + 4.5, "=> VÀO SHUTDOWN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+
+    # Downward arrow originates ONLY from the Right sub-card down to Stage 4!
+    arrow_x = sub_right_x + sub_w / 2.0
+    draw_arrow(d, arrow_x, y3, arrow_x, y3 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
 
     # ------------------------------------------------------------------
     # Stage 4: Graceful Shutdown (Điều phối Server.Shutdown)
@@ -220,13 +243,13 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     d.add(Rect(card_x + 4.0, y4 + s4_h - 11.0, 15.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 11.5, y4 + s4_h - 9.0, "04", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 23.0, y4 + s4_h - 9.0, "4. ĐIỀU PHỐI Server.Shutdown", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 51.0, "shutdownCtx, cancel := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 12.0, y4 + 43.5, "context.Background(), grace); defer cancel()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 35.0, "1. srv.Shutdown(shutdownCtx): đóng listener & pool", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 27.0, "2. Lỗi Shutdown: bọc \"shutdown: %w\"", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, y4 + 19.5, "3. Đồng bộ <-serveErr: đợi ErrServerClosed", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, y4 + 12.0, "4. Cả hai khớp chuẩn => return nil (sạch)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 5.0, "   (nếu serveErr khác ErrServerClosed: bọc lỗi)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(card_x + 6.0, y4 + 49.5, "shutdownCtx, cancel := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 12.0, y4 + 42.0, "context.Background(), grace); defer cancel()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 34.0, "1. srv.Shutdown(shutdownCtx): đóng listener & pool", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 26.5, "2. Lỗi Shutdown: bọc \"shutdown: %w\"", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y4 + 19.0, "3. Đồng bộ <-serveErr: đợi ErrServerClosed", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y4 + 11.5, "4. Cả hai khớp chuẩn => return nil (sạch)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 4.5, "   (nếu serveErr khác ErrServerClosed: bọc lỗi)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, card_x + card_w / 2.0, y4, card_x + card_w / 2.0, y4 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
 
     # ------------------------------------------------------------------
@@ -347,12 +370,13 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     d.add(Rect(box_x + 5.0, y_b2 + b2_h - 11.0, 16.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(box_x + 13.0, y_b2 + b2_h - 9.0, "S1", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(box_x + 25.0, y_b2 + b2_h - 9.0, "CÂU LỆNH 1: UPDATE checks // KIỂM TRA TARGET", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 52.0, "SQL: UPDATE checks SET enabled = 0 WHERE id = ?", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 42.5, "• Lỗi Exec: return fmt.Errorf(\"disable check: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 33.5, "changed, err := result.RowsAffected()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(box_x + 6.0, y_b2 + 24.0, "• Lỗi Count: return fmt.Errorf(\"count disabled checks: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 14.5, "• changed == 0: return ErrCheckNotFound (Không tìm thấy target)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 5.0, "• Lỗi bất kỳ -> return sớm -> defer tx.Rollback() hoàn nguyên", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(box_x + 6.0, y_b2 + 52.5, "SQL: UPDATE checks SET enabled = 0 WHERE id = ?", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 43.5, "• Tham số thực tế: checkID", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(box_x + 6.0, y_b2 + 35.0, "• Lỗi Exec: return fmt.Errorf(\"disable check: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 26.5, "changed, err := result.RowsAffected()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(box_x + 6.0, y_b2 + 18.0, "• Lỗi Count: return fmt.Errorf(\"count disabled checks: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 10.5, "• changed == 0: return ErrCheckNotFound (Không tìm thấy target)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 4.5, "• Lỗi bất kỳ -> return sớm -> defer tx.Rollback() hoàn nguyên", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, box_x + box_w / 2.0, y_b2, box_x + box_w / 2.0, y_b2 - gap_col1, color=COLOR_INK_DARK, width=1.0, head_size=3.8)
 
     # Box 3: Statement 2 (INSERT check_events)
@@ -361,8 +385,8 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     d.add(Rect(box_x + 5.0, y_b3 + b3_h - 11.0, 16.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(box_x + 13.0, y_b3 + b3_h - 9.0, "S2", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(box_x + 25.0, y_b3 + b3_h - 9.0, "CÂU LỆNH 2: INSERT check_events // GHI AUDIT EVENT", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b3 + 37.0, "SQL: INSERT INTO check_events(check_id, action)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 12.0, y_b3 + 28.5, "     VALUES (?, 'disabled')", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b3 + 37.0, "SQL: INSERT INTO check_events(check_id, action) VALUES (?, ?)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b3 + 28.5, "• Tham số thực tế: checkID, \"disabled\"", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(box_x + 6.0, y_b3 + 20.0, "• Lỗi Exec: return fmt.Errorf(\"record disable event: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(box_x + 6.0, y_b3 + 12.0, "• Ràng buộc DB: CHECK (action = 'disabled')", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(box_x + 6.0, y_b3 + 5.0, "• Vi phạm ràng buộc -> return -> defer tx.Rollback()", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
