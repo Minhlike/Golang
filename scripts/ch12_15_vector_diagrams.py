@@ -164,10 +164,10 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     s1_h = 48.0
     s2_h = 46.0
     s3_h = 38.0
-    s4_h = 66.0
+    s4_h = 70.0
     s5_h = 56.0
-    total_stages_h = s1_h + s2_h + s3_h + s4_h + s5_h  # 254.0 pt
-    gap = (body_top - body_bot - total_stages_h) / 4.0  # ~8.71 pt
+    total_stages_h = s1_h + s2_h + s3_h + s4_h + s5_h  # 258.0 pt
+    gap = (body_top - body_bot - total_stages_h) / 4.0  # ~8.96 pt
 
     # ------------------------------------------------------------------
     # Stage 1: Khởi tạo & Process Boundary (Startup)
@@ -218,11 +218,12 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     d.add(Rect(card_x + 4.0, y4 + s4_h - 11.0, 15.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 11.5, y4 + s4_h - 9.0, "04", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 23.0, y4 + s4_h - 9.0, "4. ĐIỀU PHỐI Server.Shutdown", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 46.0, "shutdownCtx, _ := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 16.0, y4 + 37.5, "base, grace) // Ngân sách rút lui mới", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 28.0, "srv.Shutdown(shutdownCtx)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 19.0, "1. Đóng listener => Serve trả ErrServerClosed", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, y4 + 10.5, "2. Đóng toàn bộ idle conns trong pool", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y4 + 50.5, "shutdownCtx, cancel := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 16.0, y4 + 42.0, "context.Background(), grace)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 34.0, "defer cancel(); srv.Shutdown(shutdownCtx)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 25.5, "• Context mới, tách biệt ctx nhận signal", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y4 + 17.5, "1. Đóng listener => Serve trả ErrServerClosed", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y4 + 9.5, "2. Đóng toàn bộ idle conns trong pool", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(card_x + 6.0, y4 + 2.5, "3. Chờ active handler hoàn tất hoặc timeout", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     draw_arrow(d, card_x + card_w / 2.0, y4, card_x + card_w / 2.0, y4 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.8)
 
@@ -320,19 +321,19 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     inner_top = c_head_y - 6.0
     inner_bot = body_y + 6.0
 
-    b1_h = 50.0  # Begin, err check & defer Rollback
-    b2_h = 58.0  # Statement 1: UPDATE checks & RowsAffected check
-    b3_h = 60.0  # Statement 2: INSERT check_events (VALUES (?, ?))
-    b4_h = 44.0  # Commit (with error wrap)
-    total_box_h = b1_h + b2_h + b3_h + b4_h  # 212.0 pt
+    b1_h = 48.0  # Begin, err check & defer Rollback
+    b2_h = 72.0  # Statement 1: UPDATE checks & RowsAffected check
+    b3_h = 66.0  # Statement 2: INSERT check_events (const query + ExecContext)
+    b4_h = 50.0  # Commit (with error wrap & closing brace)
+    total_box_h = b1_h + b2_h + b3_h + b4_h  # 236.0 pt
     gap_col1 = (inner_top - inner_bot - total_box_h) / 3.0
 
     # Box 1: Begin & Defer Rollback
     y_b1 = inner_top - b1_h
     d.add(Rect(box_x, y_b1, box_w, b1_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
-    d.add(String(box_x + 6.0, y_b1 + 39.0, "tx, err := db.BeginTx(ctx, nil)", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b1 + 30.0, "if err != nil { return fmt.Errorf(\"begin: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b1 + 20.5, "defer tx.Rollback() // ĐĂNG KÝ BẢO HIỂM AN TOÀN", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b1 + 37.5, "tx, err := db.BeginTx(ctx, nil)", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b1 + 29.0, "if err != nil { return fmt.Errorf(\"begin: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b1 + 20.0, "defer tx.Rollback() // ĐĂNG KÝ BẢO HIỂM AN TOÀN", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(box_x + 6.0, y_b1 + 11.5, "• Tự động hoàn nguyên nếu return sớm do lỗi hoặc panic", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(box_x + 6.0, y_b1 + 3.0, "• Nếu đã Commit thành công, Rollback() trả ErrTxDone vô hại", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, box_x + box_w / 2.0, y_b1, box_x + box_w / 2.0, y_b1 - gap_col1, color=COLOR_INK_DARK, width=1.0, head_size=3.8)
@@ -343,11 +344,13 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     d.add(Rect(box_x + 5.0, y_b2 + b2_h - 11.0, 16.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(box_x + 13.0, y_b2 + b2_h - 9.0, "S1", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(box_x + 25.0, y_b2 + b2_h - 9.0, "CÂU LỆNH 1: CẬP NHẬT TRẠNG THÁI TARGET", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 37.5, "UPDATE checks SET enabled = 0 WHERE id = ?", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 29.0, "changed, err := result.RowsAffected()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(box_x + 6.0, y_b2 + 20.5, "if err != nil { return fmt.Errorf(\"count: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 12.0, "if changed == 0 { return ErrCheckNotFound }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b2 + 3.5, "• Không tìm thấy target / DB lỗi -> return -> defer Rollback", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(box_x + 6.0, y_b2 + 52.0, "result, err := tx.ExecContext(ctx,", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 14.0, y_b2 + 43.5, "\"UPDATE checks SET enabled = 0 WHERE id = ?\", checkID)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 35.0, "if err != nil { return fmt.Errorf(\"update: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 26.5, "changed, err := result.RowsAffected()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(box_x + 6.0, y_b2 + 18.0, "if err != nil { return fmt.Errorf(\"count: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 9.5, "if changed == 0 { return ErrCheckNotFound }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b2 + 2.5, "• Target không tồn tại / DB lỗi -> return -> defer Rollback", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, box_x + box_w / 2.0, y_b2, box_x + box_w / 2.0, y_b2 - gap_col1, color=COLOR_INK_DARK, width=1.0, head_size=3.8)
 
     # Box 3: Statement 2 (INSERT check_events - VALUES (?, ?) matching source)
@@ -356,19 +359,21 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     d.add(Rect(box_x + 5.0, y_b3 + b3_h - 11.0, 16.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(box_x + 13.0, y_b3 + b3_h - 9.0, "S2", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(box_x + 25.0, y_b3 + b3_h - 9.0, "CÂU LỆNH 2: GHI NHẬT KÝ SỰ KIỆN (AUDIT EVENT)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b3 + 39.0, "INSERT INTO check_events(check_id, action) VALUES (?, ?)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b3 + 30.5, "tx.ExecContext(ctx, query, checkID, \"disabled\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b3 + 21.5, "if err != nil { return fmt.Errorf(\"event: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b3 + 12.0, "• Ràng buộc: CHECK (action = 'disabled')", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(box_x + 6.0, y_b3 + 46.5, "const query = \"INSERT INTO check_events\" +", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 14.0, y_b3 + 38.0, "\"(check_id, action) VALUES (?, ?)\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b3 + 29.5, "_, err = tx.ExecContext(ctx, query, checkID, \"disabled\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b3 + 21.0, "if err != nil { return fmt.Errorf(\"event: %w\", err) }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b3 + 11.5, "• Ràng buộc DB: CHECK (action = 'disabled')", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(box_x + 6.0, y_b3 + 3.0, "• Vi phạm ràng buộc / DB lỗi -> return -> defer Rollback", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, box_x + box_w / 2.0, y_b3, box_x + box_w / 2.0, y_b3 - gap_col1, color=COLOR_INK_DARK, width=1.0, head_size=3.8)
 
     # Box 4: Commit
     y_b4 = y_b3 - gap_col1 - b4_h
     d.add(Rect(box_x, y_b4, box_w, b4_h, fillColor=COLOR_POLICY_BG, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(box_x + 6.0, y_b4 + 32.0, "if err := tx.Commit(); err != nil {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b4 + 23.0, "    return fmt.Errorf(\"commit: %w\", err)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(box_x + 6.0, y_b4 + 13.0, "• err == nil: Cả hai thao tác cùng có hiệu lực nguyên tử", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b4 + 39.5, "if err := tx.Commit(); err != nil {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b4 + 31.0, "    return fmt.Errorf(\"commit: %w\", err)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b4 + 22.5, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(box_x + 6.0, y_b4 + 12.5, "• err == nil: Cả hai thao tác cùng có hiệu lực nguyên tử", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(box_x + 6.0, y_b4 + 3.5, "• err != nil: Không chắc chắn rollback (lỗi mạng/commit)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # ------------------------------------------------------------------
@@ -402,9 +407,9 @@ def build_transaction_boundary_drawing(w: float = 422.77, h: float = 362.83) -> 
     d.add(String(col2_x + 6.0, c2_y2 + 5.0, "=> Trạng thái DB quay về ban đầu", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Connecting arrow: Box 2/3 error points -> Card 2
-    d.add(Line(box_x + box_w, y_b2 + 16.0, box_x + box_w + 10.0, y_b2 + 16.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
-    d.add(Line(box_x + box_w, y_b3 + 10.0, box_x + box_w + 10.0, y_b3 + 10.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
-    d.add(Line(box_x + box_w + 10.0, y_b2 + 16.0, box_x + box_w + 10.0, c2_y2 + c2_h2 / 2.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
+    d.add(Line(box_x + box_w, y_b2 + 20.0, box_x + box_w + 10.0, y_b2 + 20.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
+    d.add(Line(box_x + box_w, y_b3 + 20.0, box_x + box_w + 10.0, y_b3 + 20.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
+    d.add(Line(box_x + box_w + 10.0, y_b2 + 20.0, box_x + box_w + 10.0, c2_y2 + c2_h2 / 2.0, strokeColor=COLOR_INK_MID, strokeWidth=0.9, strokeDashArray=[2, 2]))
     draw_arrow(d, box_x + box_w + 10.0, c2_y2 + c2_h2 / 2.0, col2_x, c2_y2 + c2_h2 / 2.0, color=COLOR_INK_MID, width=0.9, head_size=3.5, dashed=True)
 
     # Card 3: Technical Concept Separation (Atomicity vs Isolation & Side effects)
@@ -587,19 +592,20 @@ def build_incident_command_lifecycle_drawing(w: float = 444.69, h: float = 362.8
     d.add(Rect(c4_x, bot_y, col_w, bot_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(c4_x, bot_y + bot_h - 14.0, col_w, 14.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(c4_x, bot_y + bot_h - 14.0, col_w, 3.0, fillColor=COLOR_BG_HEADER, strokeColor=None))
-    d.add(String(c4_x + col_w / 2.0, bot_y + bot_h - 10.0, "4. LỖI KHỞI TẠO // NON-EXIT", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 25.0, "err != nil (!ExitError)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 35.0, "ExitCode: -1 (mặc định)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 45.0, "ProcessState == nil", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 58.0, "DỮ LIỆU THU ĐƯỢC:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 68.0, "• Stdout/Stderr: rỗng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 78.0, "• Lỗi start / setup pipe", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 91.0, "NGUYÊN NHÂN GỐC:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 101.0, "• File not found / perm;", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 110.5, "  lỗi trước khi hoàn tất.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 120.0, "• Không có ExitError.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 132.0, "=> Trả (Result, wrappedErr)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c4_x + 5.0, bot_y + bot_h - 141.0, "bọc start command: %w", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c4_x + col_w / 2.0, bot_y + bot_h - 10.0, "4. LỖI START / NON-EXIT", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 24.5, "err != nil (!ExitError)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 33.5, "• Lỗi start: ProcessState==nil", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 42.5, "  => ExitCode = -1", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 51.5, "• Đã start: ProcessState!=nil", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 60.5, "  (nhưng lỗi I/O copy / pipe)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 72.0, "DỮ LIỆU THU ĐƯỢC:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 81.0, "• Stdout/Stderr rỗng (start)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 90.0, "  hoặc một phần (nếu I/O)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 101.5, "HỢP ĐỒNG KỸ THUẬT:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 110.5, "• File not found, no perm...", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 119.5, "• Không có ExitError", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 131.5, "=> Trả (Result, wrappedErr)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c4_x + 5.0, bot_y + bot_h - 140.5, "bọc \"start command: %w\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
 
