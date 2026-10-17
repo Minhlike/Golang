@@ -546,7 +546,7 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     d.add(String(col2_x + 10.0, b2a_y + 32.5, "DEPLOYMENT // Khai báo Desired State (YAML Manifest)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(col2_x + 10.0, b2a_y + 22.5, "• spec.replicas: 1 · image: probe-api:dev (local tag)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(col2_x + 10.0, b2a_y + 13.5, "• Liveness: /livez (5s) · Readiness: /readyz (3s)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2a_y + 5.0, "• Quản lý lifecycle Pod; ví dụ replicas=3 là kịch bản mở rộng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 10.0, b2a_y + 5.0, "• API Server lưu spec & status; controller điều phối Pod", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2B: Pod Runtime on Nodes - Middle Box (h = 46.0 pt)
     b2b_y = b2a_y - 56.0
@@ -561,8 +561,8 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     d.add(Rect(col2_x + 6.0, b2c_y, col2_w - 12.0, 44.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
     d.add(String(col2_x + 10.0, b2c_y + 33.5, "SERVICE // Định tuyến lưu lượng (Traffic Routing)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(col2_x + 10.0, b2c_y + 24.5, "• selector: app.kubernetes.io/name: probe-api", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2c_y + 15.0, "• Service chỉ định tuyến traffic tới Pod có condition Ready", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2c_y + 5.5, "• (EndpointSlice vẫn lưu Pod; Service chỉ gửi traffic khi readyz OK)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 10.0, b2c_y + 15.0, "• Service định tuyến tới endpoint được đánh dấu ready=true", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.0, b2c_y + 5.5, "• EndpointSlice chứa cả Pod chưa Ready; trừ ngoại lệ policy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrows in Section 2:
     # 1. Deployment (Top) down to Pod Runtime (Middle) -> Reconcile Pods
@@ -573,8 +573,7 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     # Arrow from Image (Section 1) to Pod Runtime (Section 2)
     draw_arrow(d, col1_x + col1_w, b2b_y + 23.0, col2_x, b2b_y + 23.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
-    # Dashed Arrow from Deployment to Section 3 Observer (Query via Kube-API Server)
-    draw_arrow(d, col2_x + col2_w, b2a_y + 22.0, col3_x, b2a_y + 22.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0, dashed=True)
+    # (Observer reads cluster state via Kube-API Server independently; no direct push arrow from Deployment)
 
     # ------------------------------------------------------------------
     # Section 3: OBSERVER Go (CLIENT-GO / API BOUNDARY)
@@ -606,7 +605,7 @@ def build_container_cluster_observation_drawing(w: float = 476.22, h: float = 23
     footer_h = 16.0
     footer_y = 4.0
     d.add(Rect(4.0, footer_y, w - 8.0, footer_h, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(8.0, footer_y + 5.0, "• Invariant: Observer chỉ chẩn đoán trạng thái qua API (Get/Watch); Pod chỉ được nhận traffic khi probe /readyz được kubelet xác nhận đạt chuẩn.", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(8.0, footer_y + 5.0, "• Invariant: Observer độc lập đọc trạng thái qua API (Get/Watch); Service thông thường chuyển traffic tới endpoint có ready=true (trừ ngoại lệ policy).", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     return d
 

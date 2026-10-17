@@ -1,44 +1,33 @@
-# BÁO CÁO NGHIỆM THU KỸ THUẬT SƠ ĐỒ (BATCH 03 - ROUND 2 REVIEW)
+# BÁO CÁO NGHIỆM THU KỸ THUẬT SƠ ĐỒ (BATCH 03 - FINAL ACCEPTANCE)
 ## CHƯƠNG 16, 17, 18 — SÁCH CHUYÊN KHẢO GO
 
 **Dự án:** Sách Chuyên Khảo Go (Golang Master)  
 **Tác giả thiết kế:** Agent 2 (Technical Diagram Designer)  
-**Nhánh Git:** `design/ch16-18-agent2-redesign` (baseline: `545a15a7974b9ac9c4a2c11e30f8b701c8592ff7`)  
+**Nhánh Git:** `design/ch16-18-agent2-redesign` (baseline: `578e987205fb8ec5d945e55301f3efd65a9d3974`)  
 **Quy chuẩn áp dụng:** `MASTER PROMPT.txt` (Mục 7: `SCIENTIFIC DIAGRAM QUALITY CONTRACT`), in ấn grayscale thuần túy, 0 diff Markdown/PDF gốc.
 
 ---
 
 ## 1. Bảng Đối chiếu Preflight Bắt buộc (5 Sơ đồ Batch 03)
 
-| Chương | Số hình | Trang PDF | Xref PDF | Kích thước 1:1 (pt) | File Asset PNG | Trạng thái Round 2 |
+| Chương | Số hình | Trang PDF | Xref PDF | Kích thước 1:1 (pt) | File Asset PNG | Trạng thái Nghiệm thu |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Chương 16** | **Hình 27** | Trang 283 | xref 328 | $476.22 \times 312.02$ | `assets/diagrams/observability-projections.png` | **LOCKED (PASS Round 1)** |
-| **Chương 16** | **Hình 28** | Trang 292 | xref 338 | $476.22 \times 264.46$ | `assets/diagrams/probe-observation-path.png` | **REVISED (Clean Concept Labels)** |
-| **Chương 17** | **Hình 29** | Trang 300 | xref 347 | $335.89 \times 362.83$ | `assets/diagrams/reconciliation-loop.png` | **REVISED (Safe Bounding Box $\ge 4.3$ pt)** |
-| **Chương 17** | **Hình 31** | Trang 310 | xref 359 | $476.22 \times 238.11$ | `assets/diagrams/container-cluster-observation.png` | **REVISED (Readiness & Kube-API Query)** |
-| **Chương 18** | **Hình 32** | Trang 321 | xref 371 | $476.22 \times 216.73$ | `assets/diagrams/delivery-evidence-chain.png` | **REVISED (Zíc-zắc 1 chiều, Model Label)** |
+| **Chương 16** | **Hình 27** | Trang 283 | xref 328 | $476.22 \times 312.02$ | `assets/diagrams/observability-projections.png` | **PASSED & LOCKED (0 diff)** |
+| **Chương 16** | **Hình 28** | Trang 292 | xref 338 | $476.22 \times 264.46$ | `assets/diagrams/probe-observation-path.png` | **PASSED & LOCKED (0 diff)** |
+| **Chương 17** | **Hình 29** | Trang 300 | xref 347 | $335.89 \times 362.83$ | `assets/diagrams/reconciliation-loop.png` | **PASSED & LOCKED (0 diff)** |
+| **Chương 17** | **Hình 31** | Trang 310 | xref 359 | $476.22 \times 238.11$ | `assets/diagrams/container-cluster-observation.png` | **REVISED (Targeted Micro-Fix)** |
+| **Chương 18** | **Hình 32** | Trang 321 | xref 371 | $476.22 \times 216.73$ | `assets/diagrams/delivery-evidence-chain.png` | **PASSED & LOCKED (0 diff)** |
 
 *(Lưu ý: Hình 30 tại Trang 302, xref 350 là ảnh tư liệu NASA, bảo toàn 100%).*
 
 ---
 
-## 2. Các Điểm Hiệu chỉnh Kỹ thuật Round 2
+## 2. Chi tiết Vi chỉnh Có mục tiêu (Targeted Micro-Fix: Hình 31)
 
-1. **Hình 27 (Observability):** Giữ nguyên tuyệt đối 100% (đã PASS ở Round 1).
-2. **Hình 28 (Probe Observation Path):**
-   - Loại bỏ toàn bộ chuỗi mã giả có dấu chấm lửng (`...`) gây hiểu lầm là cú pháp thật (`m.requests.WithLabel...`, `Values(out).Inc()`).
-   - Chuẩn hóa thành các nhãn khái niệm rõ ràng: `Ghi nhận Counter Inc:` kèm `m.requests.WithLabelValues(out).Inc()` và `Ghi nhận Histogram Observe:` kèm `m.duration.WithLabelValues(out).Observe(sec)`.
-   - Giữ nguyên `duration_ms: ~20 (đo)` là thời gian thực thi đo bằng `time.Since(started)`, không khẳng định tất định.
-3. **Hình 29 (Reconciliation Loop):**
-   - Tái cấu trúc ngân sách tọa độ dọc của Card 2: nâng chiều cao lên $156.0\text{ pt}$, bố trí lại 3 sub-card $42.0\text{ pt}$, $46.0\text{ pt}$, $34.0\text{ pt}$.
-   - Khắc phục triệt để lỗi baseline sát đáy ở Bước 2B: khoảng đệm từ glyph bounds tới viền đạt $\ge 4.3\text{ pt}$ (vượt chuẩn tối thiểu $4.0\text{ pt}$).
-4. **Hình 31 (Container Cluster Observation):**
-   - Chuẩn hóa ngữ nghĩa Service readiness: Service chỉ định tuyến traffic tới Pod có condition Ready. EndpointSlice vẫn lưu Pod chưa ready (`ready=false`); Service chỉ gửi traffic khi `/readyz` đạt 200 OK.
-   - Sửa mũi tên và chú thích Section 3: Observer Go truy vấn trạng thái Deployment qua Kubernetes API Server (`Get`/`Watch`), không phải Deployment chủ động push.
-5. **Hình 32 (Delivery Evidence Chain):**
-   - Tái thiết kế toàn bộ luồng tiến trình thành chuỗi zíc-zắc (Boustrophedon) 1 chiều liên tục: Hàng 1 Left-to-Right (`01` $\to$ `02` $\to$ `03`), mũi tên rẽ xuống từ `03` sang `04`, Hàng 2 Right-to-Left (`04` $\to$ `05` $\to$ `06`). Zero giao cắt.
-   - Card 05: đổi mã giả thành nhãn mô hình khái niệm chuẩn: `Pod template image ← Digest`.
-   - Card 06: làm rõ giới hạn rollout: `Available == Desired` (kèm `UpdatedReplicas` & `Generation`) chỉ chứng minh controller đã hoàn tất chu kỳ cập nhật Pod; không đồng nghĩa hết lỗi tiềm ẩn và không thay thế cam kết SLO 24h.
+1. **Hình 27, 28, 29, 32:** Giữ nguyên vẹn tuyệt đối 100%, 0 thay đổi theo phê duyệt của Reviewer.
+2. **Hình 31 (Container Cluster Observation) — Vi chỉnh 2 điểm:**
+   - **Observer / Kubernetes API:** Loại bỏ mũi tên nét đứt đi từ Deployment sang Observer để triệt tiêu mọi khả năng hiểu lầm Deployment chủ động gửi trạng thái (push). Nêu rõ trong Box 2A và Section 3: API Server lưu spec & status, Observer Go độc lập đọc trạng thái qua API Server (`Get`/`Watch`), không tạo thêm luồng dữ liệu giả.
+   - **Readiness Semantics:** Chuẩn hóa phạm vi định tuyến của Service thông thường: Service định tuyến tới các endpoint được đánh dấu sẵn sàng (`ready=true`); EndpointSlice có thể chứa endpoint chưa Ready, và vẫn tồn tại các ngoại lệ về chính sách routing (không khẳng định tuyệt đối). Cập nhật đồng bộ cả Box 2C và Invariant footer.
 
 ---
 
