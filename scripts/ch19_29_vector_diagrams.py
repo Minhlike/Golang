@@ -34,6 +34,7 @@ from reportlab.graphics.shapes import (
     String,
 )
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from build_pdf import register_fonts
@@ -1438,7 +1439,7 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
 
     # 1. GitHub computes HMAC
     sy1 = act_box_y - 28.0
-    d.add(Rect(actor1_x - 55.0, sy1 - 8.0, 110.0, 22.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(Rect(actor1_x - 55.0, sy1 - 9.0, 110.0, 23.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(actor1_x, sy1 + 5.0, "HMAC-SHA256(secret, payload)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor1_x, sy1 - 4.5, "Tính chữ ký hex từ raw bytes", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
@@ -1481,16 +1482,16 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     false_box_x = 70.0
     d.add(Rect(false_box_x, sy7 - 16.0, dec_box_w, dec_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(false_box_x + dec_box_w / 2.0, sy7 + 7.5, "SAI CHỮ KÝ (FALSE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 1.5, "ErrInvalidSignature", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 10.0, "Từ chối (HTTP 401)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 1.5, "VerifyHMAC == false", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 10.0, "Process trả ErrInvalidSignature", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     draw_arrow(d, box_left, sy6 - 5.0, false_box_x + dec_box_w, sy7 + 8.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Right: True
     true_box_x = actor2_x - dec_box_w / 2.0  # 285.0 - 57.5 = 227.5
     d.add(Rect(true_box_x, sy7 - 16.0, dec_box_w, dec_box_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
     d.add(String(actor2_x, sy7 + 7.5, "HỢP LỆ (TRUE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, sy7 - 1.5, "hmac.Equal == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, sy7 - 10.0, "Chuyển xử lý payload", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy7 - 1.5, "VerifyHMAC == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy7 - 10.0, "Process: tiếp tục ledger.Begin", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     draw_arrow(d, actor2_x, sy6 - 11.0, actor2_x, sy7 + 16.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     draw_footer_banner(d, w, "• Invariant: VerifyHMACSHA256 so sánh hằng thời gian qua hmac.Equal; raw payload giữ nguyên vẹn trước khi decode JSON.")
@@ -1594,10 +1595,10 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     draw_arrow(d, actor2_x, y7, actor3_x, y7, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
     d.add(String((actor2_x + actor3_x) / 2.0, y7 + 3.0, "4. ledger.Complete(\"7a1b...\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
-    # HTTP 200 OK
+    # Process return on first delivery: (false, nil)
     y8 = y7 - 18.0
     draw_arrow(d, actor2_x, y8, actor1_x, y8, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor1_x + actor2_x) / 2.0, y8 + 3.0, "HTTP 200 (isDuplicate=false)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor1_x + actor2_x) / 2.0, y8 + 3.0, "return false, nil", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Break: Redelivery
     y_break = y8 - 22.0
@@ -1625,9 +1626,10 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     d.add(String(actor2_x, y12 + 3.5, "DUPLICATE SUPPRESSION", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor2_x, y12 - 5.5, "Bỏ qua handle(); không chạy side effect", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
+    # Process return on redelivery: (true, nil)
     y13 = y12 - 20.0
     draw_arrow(d, actor2_x, y13, actor1_x, y13, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
-    d.add(String((actor1_x + actor2_x) / 2.0, y13 + 3.0, "7. HTTP 200 (isDuplicate=true)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String((actor1_x + actor2_x) / 2.0, y13 + 3.0, "7. return true, nil", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     draw_footer_banner(d, w, "• Invariant: DeliveryLedger reserve trạng thái trong map RAM (sync.Mutex); không phải distributed lease có TTL và reset khi restart.")
     return d
@@ -3210,13 +3212,21 @@ def export_all_diagrams(output_dir: Path | None = None, dpi: int = 320) -> list[
 
 
 def verify_all_diagram_typography() -> bool:
-    """Audit all 26 diagrams for font size, 2-axis canvas bounds, and container box geometry."""
+    """Audit all 26 diagrams for typography, 2-axis canvas bounds, and discrete card padding."""
     all_ok = True
-    print(f"\nAuditing typography, 2-axis canvas boundaries, and container geometry across all {len(DIAGRAM_SPECS)} diagrams...")
-    print("  [SCOPE] Automated audit: font size >= 6.0 pt, 2-axis canvas bounds (margin >= 2.0 pt),")
-    print("          and containing box boundary verification. Visual inspection: arrow clearances & semantics.")
+    print(f"\nAuditing typography, 2-axis canvas boundaries, and card geometry across all {len(DIAGRAM_SPECS)} diagrams...")
+    print("  [SCOPE] Automated audit:")
+    print("          1. Minimum font size >= 6.0 pt across all 26 diagrams.")
+    print("          2. Canvas 2-axis containment (margin >= 2.0 pt) across all 26 diagrams.")
+    print("             - Horizontal glyph width: exact via TTFont advance metrics (pdfmetrics.stringWidth).")
+    print("             - Vertical glyph extent: computed using font face metrics (ascent/descent),")
+    print("               with visual cap-height approximated as 0.72 * fontSize.")
+    print("          3. Card padding check on active targets (Figures 44, 45, 50):")
+    print("             - Discrete container cards verified strictly for padding >= 4.0 pt on all 4 sides")
+    print("               (PadL >= 4.0 pt, PadR >= 4.0 pt, PadT(cap) >= 4.0 pt, PadB(baseline) >= 4.0 pt).")
+    print("             - No negative tolerance (-0.5 pt) is used.")
+    print("  [SCOPE] Visual inspection (manual QA): arrow clearances, sequence lifelines, line crossings, semantics.")
 
-    # Target diagrams under active review (strict box containment enforced)
     active_targets = {
         "webhook-hmac-verification.png",
         "webhook-delivery-deduplication.png",
@@ -3248,11 +3258,12 @@ def verify_all_diagram_typography() -> bool:
         min_font = min(s.fontSize for s in strings)
         font_ok = min_font >= 6.0
 
-        # Geometry checks
         canvas_failures = []
         box_failures = []
-        cand_rects = [r for r in rects if not (r.width >= w_pt - 12.0 or r.height >= h_pt - 12.0)]
+        cand_rects = [r for r in rects if r.width < w_pt - 12.0 and r.height < h_pt - 12.0 and r.width >= 40.0 and r.height >= 14.0]
 
+        # 1. Canvas 2-axis check for all strings
+        box_strings = {id(r): [] for r in cand_rects}
         for s in strings:
             txt = s.text
             f_name = s.fontName
@@ -3269,31 +3280,46 @@ def verify_all_diagram_typography() -> bool:
                 x_left = s.x
                 x_right = s.x + txt_w
 
-            # Vertical extent: baseline s.y, ascent ~0.80 * f_size, descent ~0.25 * f_size
-            y_bot = s.y - 0.25 * f_size
-            y_top = s.y + 0.80 * f_size
+            font = pdfmetrics.getFont(f_name)
+            descent = (font.face.descent / 1000.0) * f_size
+            ascent = (font.face.ascent / 1000.0) * f_size
 
-            # 1. Canvas 2-axis check (strict 2.0 pt safety margin)
+            y_bot = s.y + descent
+            y_top = s.y + ascent
+
+            # Canvas 2-axis check (margin >= 2.0 pt)
             if x_left < 2.0 or x_right > w_pt - 2.0:
                 canvas_failures.append(f"'{txt}' X=[{x_left:.1f}, {x_right:.1f}] exceeds canvas [2.0, {w_pt - 2.0:.1f}]")
             if y_bot < 2.0 or y_top > h_pt - 2.0:
                 canvas_failures.append(f"'{txt}' Y=[{y_bot:.1f}, {y_top:.1f}] exceeds canvas [2.0, {h_pt - 2.0:.1f}]")
 
-            # 2. Containing card/box check for active target diagrams
+            # Map to candidate box
             if filename in active_targets:
                 x_mid = (x_left + x_right) / 2.0
                 y_mid = s.y
                 enclosing = [r for r in cand_rects if r.x <= x_mid <= r.x + r.width and r.y <= y_mid <= r.y + r.height]
                 if enclosing:
                     enclosing.sort(key=lambda r: r.width * r.height)
-                    box = enclosing[0]
-                    if box.width >= 40.0 and box.height >= 14.0:
-                        pad_l = x_left - box.x
-                        pad_r = (box.x + box.width) - x_right
-                        pad_t = (box.y + box.height) - y_top
-                        pad_b = y_bot - box.y
-                        if pad_l < -0.5 or pad_r < -0.5 or pad_t < -0.5 or pad_b < -0.5:
-                            box_failures.append(f"'{txt}' protrudes box ({box.width:.1f}x{box.height:.1f} pt): L={pad_l:.1f}, R={pad_r:.1f}, T={pad_t:.1f}, B={pad_b:.1f}")
+                    box_strings[id(enclosing[0])].append((s, x_left, x_right))
+
+        # 2. Strict card padding check (>= 4.0 pt) for active targets
+        if filename in active_targets:
+            for box in cand_rects:
+                items = box_strings[id(box)]
+                if not items:
+                    continue
+                min_pad_l = min(xl - box.x for s, xl, xr in items)
+                min_pad_r = min((box.x + box.width) - xr for s, xl, xr in items)
+
+                top_item = max(items, key=lambda x: x[0].y)
+                bot_item = min(items, key=lambda x: x[0].y)
+
+                cap_h = 0.72 * top_item[0].fontSize
+                pad_t = (box.y + box.height) - (top_item[0].y + cap_h)
+                pad_b = bot_item[0].y - box.y
+
+                if min_pad_l < 4.0 or min_pad_r < 4.0 or pad_t < 4.0 or pad_b < 4.0:
+                    box_failures.append(f"Box ({box.x:.1f},{box.y:.1f}, {box.width:.1f}x{box.height:.1f} pt) pads: L={min_pad_l:.1f}, R={min_pad_r:.1f}, T={pad_t:.1f}, B={pad_b:.1f} pt (< 4.0 pt) | '{items[0][0].text[:30]}'")
 
         if not font_ok:
             print(f"  [FAIL] {filename}: min fontSize = {min_font:.2f} pt (< 6.0 pt)")
@@ -3304,13 +3330,13 @@ def verify_all_diagram_typography() -> bool:
                 print(f"    - {cf}")
             all_ok = False
         elif box_failures:
-            print(f"  [FAIL] {filename}: {len(box_failures)} containing box boundary violations:")
+            print(f"  [FAIL] {filename}: {len(box_failures)} card padding violations (< 4.0 pt):")
             for bf in box_failures[:3]:
                 print(f"    - {bf}")
             all_ok = False
         else:
             ch_str = f"Ch {spec['chapter']:02d}" if spec['chapter'] <= 29 else "App B"
-            target_mark = " [TARGET FIXED]" if filename in active_targets else ""
+            target_mark = " [STRICT PAD >= 4.0 pt PASS]" if filename in active_targets else ""
             print(f"  [OK] Figure {spec['figure']:02d} ({ch_str}): {filename:<36} -> {len(strings):2d} text nodes, min font: {min_font:.2f} pt, 2-axis canvas PASS{target_mark}")
 
     return all_ok
