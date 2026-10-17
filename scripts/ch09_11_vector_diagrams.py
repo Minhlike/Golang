@@ -175,7 +175,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
         String(
             12.0,
             footer_y + 15.5,
-            "BẤT BIẾN KỸ THUẬT: Chỉ sender mới được đóng kênh. Dispatcher đóng in; Coordinator đóng out sau WaitGroup.",
+            "BẤT BIẾN KỸ THUẬT: Chỉ đóng kênh khi bảo đảm không còn sender nào hoạt động. Dispatcher đóng in; Coordinator đóng out sau WaitGroup.",
             fontName="BookSansBold",
             fontSize=6.1,
             fillColor=COLOR_INK_DARK,
@@ -215,16 +215,16 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(Rect(col1_x, body_y + body_h - 18.0, col1_w, 4.0, fillColor=COLOR_BG_HEADER, strokeColor=None))
     d.add(Line(col1_x, body_y + body_h - 18.0, col1_x + col1_w, body_y + body_h - 18.0, strokeColor=COLOR_BORDER, strokeWidth=0.8))
     d.add(String(col1_x + 6.0, body_y + body_h - 12.5, "DISPATCHER", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + col1_w - 6.0, body_y + body_h - 12.5, "[Owner in]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
+    d.add(String(col1_x + col1_w - 6.0, body_y + body_h - 12.5, "[Độc quyền gửi in]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
     d1_x = col1_x + 6.0
     d1_w = col1_w - 12.0  # 102.0 pt
 
-    # Box 1: Ownership of in
+    # Box 1: Ownership of in (Created by Run(), Dispatcher has exclusive send)
     d1_y = body_y + body_h - 48.0
     d.add(Rect(d1_x, d1_y, d1_w, 24.0, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
     d.add(String(d1_x + 5.0, d1_y + 14.5, "in := make(chan Job)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 5.0, d1_y + 4.5, "Khởi tạo kênh nhận việc unbuffered", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(d1_x + 5.0, d1_y + 4.5, "Run() tạo in; Dispatcher gửi & đóng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow D1 -> D2
     draw_arrow(d, d1_x + d1_w / 2.0, d1_y, d1_x + d1_w / 2.0, d1_y - 6.0, color=COLOR_INK_DARK, width=0.9, head_size=3.5)
@@ -300,7 +300,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(String(w_box_x + 5.0, w2_y + 26.0, "result := Result{", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(w_box_x + 12.0, w2_y + 17.5, "Job: job, Err: work(ctx, job),", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(w_box_x + 5.0, w2_y + 9.5, "} ; if ctx.Err() != nil { return }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(w_box_x + 5.0, w2_y + 2.5, "Không bàn giao result nếu context bị hủy giữa chừng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w_box_x + 5.0, w2_y + 2.5, "Kiểm tra ctx.Err() trước gửi; giảm tối đa bàn giao dư thừa", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow W1 -> W2
     draw_arrow(d, w_box_x + w_box_w / 2.0, w1_y, w_box_x + w_box_w / 2.0, w2_y + w2_h, color=COLOR_INK_DARK, width=0.9, head_size=3.5)
@@ -313,7 +313,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(String(w_box_x + 5.0, w3_y + 24.0, "select {", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_MID))
     d.add(String(w_box_x + 12.0, w3_y + 15.5, "case out <- result:", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
     d.add(String(w_box_x + 12.0, w3_y + 8.0, "case <-ctx.Done(): return", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(w_box_x + 5.0, w3_y + 2.0, "} // Giải phóng goroutine khi consumer dừng nhận", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(w_box_x + 5.0, w3_y + 2.0, "} // Nếu out và Done cùng ready, Go chọn ngẫu nhiên", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow W2 -> W3
     draw_arrow(d, w_box_x + w_box_w / 2.0, w2_y, w_box_x + w_box_w / 2.0, w3_y + w3_h, color=COLOR_INK_DARK, width=0.9, head_size=3.5)
@@ -339,7 +339,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(Rect(col3_x, c_top_y + c_top_h - 18.0, col3_w, 4.0, fillColor=COLOR_BG_HEADER, strokeColor=None))
     d.add(Line(col3_x, c_top_y + c_top_h - 18.0, col3_x + col3_w, c_top_y + c_top_h - 18.0, strokeColor=COLOR_BORDER, strokeWidth=0.8))
     d.add(String(col3_x + 6.0, c_top_y + c_top_h - 12.5, "COORDINATOR", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + col3_w - 6.0, c_top_y + c_top_h - 12.5, "[Owner out]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
+    d.add(String(col3_x + col3_w - 6.0, c_top_y + c_top_h - 12.5, "[Sở hữu đóng out]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
     c_box_x = col3_x + 6.0
     c_box_w = col3_w - 12.0
@@ -370,7 +370,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(Rect(col3_x, c_bot_y + c_bot_h - 18.0, col3_w, 4.0, fillColor=COLOR_BG_HEADER, strokeColor=None))
     d.add(Line(col3_x, c_bot_y + c_bot_h - 18.0, col3_x + col3_w, c_bot_y + c_bot_h - 18.0, strokeColor=COLOR_BORDER, strokeWidth=0.8))
     d.add(String(col3_x + 6.0, c_bot_y + c_bot_h - 12.5, "CONSUMER (CALLER)", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + col3_w - 6.0, c_bot_y + c_bot_h - 12.5, "[Receiver]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
+    d.add(String(col3_x + col3_w - 6.0, c_bot_y + c_bot_h - 12.5, "[Nhận out]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
     # Consumer Content
     cb1_h = 32.0
@@ -671,15 +671,16 @@ def build_http_client_request_path_drawing(w: float = 275.97, h: float = 362.83)
     body_top = h - header_h - 7.0  # 335.83 pt
     center_x = w / 2.0  # 137.985 pt
 
-    # 1. Top Card: Request Initiation (Explicitly separates NewRequestWithContext vs WithClientTrace)
+    # 1. Top Card: Request Initiation & Context Binding
     r1_x = 8.0
     r1_w = w - 16.0  # 259.97 pt
-    r1_h = 34.0
+    r1_h = 42.0
     r1_y = body_top - r1_h
     d.add(Rect(r1_x, r1_y, r1_w, r1_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(r1_x + 6.0, r1_y + 22.5, "1. KHỞI TẠO REQUEST & GẮN TRACE HOOK", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
-    d.add(String(r1_x + 6.0, r1_y + 12.5, "http.NewRequestWithContext(ctx, method, url, nil): Ràng buộc context/deadline", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(r1_x + 6.0, r1_y + 3.5, "httptrace.WithClientTrace(req.Context(), trace): Gắn hook quan sát độc lập", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(r1_x + 6.0, r1_y + 31.5, "1. KHỞI TẠO REQUEST & GẮN TRACE HOOK", fontName="BookSansBold", fontSize=6.6, fillColor=COLOR_INK_DARK))
+    d.add(String(r1_x + 6.0, r1_y + 21.5, "req, _ := http.NewRequestWithContext(ctx, method, url, nil) // Ràng buộc deadline", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(r1_x + 6.0, r1_y + 12.0, "traceCtx := httptrace.WithClientTrace(req.Context(), trace)   // Tạo trace context", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(r1_x + 6.0, r1_y + 3.0, "req = req.WithContext(traceCtx) // BẮT BUỘC gán lại vào request để kích hoạt hook", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Arrow Down to Connection Decision
     draw_arrow(d, center_x, r1_y, center_x, r1_y - 8.0, color=COLOR_INK_DARK, width=1.0, head_size=4.0)
