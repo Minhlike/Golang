@@ -1,55 +1,45 @@
-# BÁO CÁO THIẾT KẾ SƠ ĐỒ KỸ THUẬT CHƯƠNG 08 (AGENT 2)
+# BÁO CÁO VI CHỈNH KỸ THUẬT SƠ ĐỒ CHƯƠNG 08 (AGENT 2)
 **Ngày thực hiện:** 17/10/2026  
-**Nhánh công việc:** `design/ch08-agent2-redesign` (baseline: `12e0723`)  
+**Nhánh công việc:** `design/ch08-agent2-redesign` (baseline: `4150c33`)  
 **Trạng thái:** `AWAITING_MANUAL_APPROVAL` (Chờ người dùng và reviewer kiểm tra độc lập trước khi phê duyệt tích hợp)
 
 ---
 
-## 1. Bối cảnh kiểm toán chuyển giao từ Chương 06 & 07 sang Chương 08
-- **Chương 06 (`06-thay-doi-khong-so-hai.md`)**: Kiểm toán toàn bộ văn bản và bản in Master PDF (trang 119–143) $\rightarrow$ **0 sơ đồ** (Không có hình ảnh).
-- **Chương 07 (`07-du-lieu-di-vao-va-di-ra.md`)**: Kiểm toán toàn bộ văn bản và bản in Master PDF (trang 144–157) $\rightarrow$ **0 sơ đồ** (Không có hình ảnh).
-- **Chương 08 (`08-mot-race-bat-dau-tu-dau.md`)**: Chương kế tiếp trong lộ trình có chứa hình ảnh kỹ thuật:
-  * **Hình 20 (Trang 163, xref 365):** `assets/diagrams/waitgroup-completion-proof.png`
-  * Bounding box trên Master PDF: `Width = 476.22 pt, Height = 277.31 pt` (Tỉ lệ khung hình AR = 1.71731, trọn vẹn bề ngang trang in A4).
-
----
-
-## 2. Mục tiêu thiết kế vector xuất bản Chương 08
+## 1. Mục tiêu vi chỉnh kỹ thuật theo yêu cầu phê duyệt
 1. **Strict Content Lock:** Giữ nguyên tuyệt đối 100% nội dung Markdown `book/chapters/08-mot-race-bat-dau-tu-dau.md`, toàn bộ code block, bảng biểu, caption, typography và file sách gốc `Golang_Master.pdf`.
-2. **Khớp 100% với mã nguồn lab thực tế (`labs/part8-ordering-proof/`):**
-   - Phản ánh chính xác tiến trình kiểm thử `TestRegistryKeepsCompletedReports`:
-     * Điều phối viên thiết lập `wg.Add(workers)` trước khi spawn bất kỳ worker nào.
-     * Mỗi worker goroutine gọi `defer wg.Done()` ngay khi vào hàm.
-     * Thao tác thêm kết quả `registry.Add(report)` thực hiện: `mu.Lock()` $\rightarrow$ `append` $\rightarrow$ `mu.Unlock()`.
-     * Khi hàm worker return, `defer` kích hoạt `wg.Done()`, giảm counter của WaitGroup.
-     * Bên điều phối treo thực thi tại `wg.Wait()` cho đến khi counter trở về 0.
-     * `wg.Wait()` giải phóng, bên điều phối gọi `registry.Snapshot()` với cơ chế `copy` an toàn, kiểm chứng `len(reports) == workers`.
-3. **Mô hình hóa quan hệ Happens-Before theo chuẩn Go Memory Model:**
-   - **Thứ tự lập trình (Program Order):** Các mũi tên liền dọc trong từng goroutine bảo toàn trật tự thực thi dòng lệnh.
-   - **Mốc hoàn tất WaitGroup (Completion Barrier):** Cạnh đứt ngang duy nhất từ `wg.Done()` sang `wg.Wait() giải phóng & trả về` với nhãn chú thích: `Done() mở khóa lượt Wait() này` (khớp chính xác từng từ trong caption và PUML gốc).
-   - **Tính bắc cầu của Happens-Before (Transitivity):**
-     $$\text{registry.Add(report)} \xrightarrow{\text{code}} \text{wg.Done()} \xrightarrow{\text{sync.WaitGroup}} \text{wg.Wait() trả về} \xrightarrow{\text{code}} \text{registry.Snapshot()}$$
-     $\implies$ Mọi thay đổi bộ nhớ trong `Add()` đều hiển thị một cách tất định đối với `Snapshot()`.
-4. **Phân biệt rạch ròi bản chất giữa `sync.WaitGroup` và `sync.Mutex`:**
-   - `WaitGroup` cung cấp tín hiệu hoàn tất công việc, **KHÔNG** tự bảo vệ bộ nhớ.
-   - `Mutex` bắt buộc để ngăn chặn data race giữa các worker khi ghi đồng thời vào slice `reports`.
-   - Cảnh báo rõ nguyên tắc cấm dùng `time.Sleep` thay cho cơ chế đồng bộ chính thức.
-5. **Kiến trúc bố cục 4 tầng song song (4-Row Parallel Lifecycle Layout):**
-   - Loại bỏ hoàn toàn các đường mũi tên chéo cắt nhau (loại bỏ mũi tên `Unlock -> Lock` thừa từng gây rối mắt ở bản nháp cũ).
-   - Tầng 1: Khởi động & Đăng ký (`defer wg.Done()` $\leftrightarrow$ `wg.Add(workers)`).
-   - Tầng 2: Thực thi & Treo chờ (`registry.Add(report)` $\leftrightarrow$ `wg.Wait() [TREO CHỜ]`).
-   - Tầng 3: Mốc hoàn tất (`wg.Done() thực thi` $\xrightarrow{\text{cạnh đứt ngang}}$ `wg.Wait() giải phóng & trả về`).
-   - Tầng 4: Kết thúc & Đọc bất biến (`Worker kết thúc` $\leftrightarrow$ `reports := registry.Snapshot()`).
-6. **Chuẩn hóa bảng màu Grayscale thuần túy (`R = G = B`):**
-   - 100% điểm ảnh có $R = G = B$ (0 pixel có màu hoặc sắc pha lệch).
-   - Độ tương phản sắc nét, tối ưu cho in ấn chất lượng cao.
-7. **Visual QA & Publication Match:**
-   - Kích thước xuất bản thực tế: **476.22 × 277.31 pt** (AR = 1.71731, khớp chính xác 1:1 với xref 365 Trang 163).
-   - Xuất bản ảnh 320 DPI (2117 × 1233 px), chữ rõ ràng từ 5.8 pt đến 7.8 pt, không có hiện tượng cắt chữ, đè nét hay tràn viền.
+2. **Chuẩn hóa cú pháp gán slice:**
+   - Sửa `append(r.reports, report)` thành biểu thức đầy đủ và chính xác theo Go spec:
+     `3. r.reports = append(r.reports, report)`
+   - Đúng từng ký tự với mã nguồn `fixed/registry.go`.
+3. **Mô hình hóa chi tiết 4 bước trong `registry.Add(report)`:**
+   - Bước 1: `1. r.mu.Lock()` $\rightarrow$ Chiếm khóa bảo vệ slice.
+   - Bước 2: `2. defer r.mu.Unlock()` $\rightarrow$ Đăng ký nhả khóa khi return.
+   - Bước 3: `3. r.reports = append(r.reports, report)` $\rightarrow$ Cập nhật slice dưới sự bảo vệ của lock.
+   - Bước 4: `4. Add() return` $\rightarrow$ Defer kích hoạt `r.mu.Unlock()`.
+4. **Loại bỏ khẳng định về giải phóng stack (Implementation Detail):**
+   - Không đánh đồng việc kết thúc hàm worker với giải phóng stack ngay lập tức của runtime.
+   - Chuẩn hóa theo API contract của `sync.WaitGroup`:
+     * `wg.Done() thực thi (tại return)`: Mỗi `Done()` giảm bộ đếm của WaitGroup.
+     * `Worker hoàn tất phần việc`: Kết thúc phạm vi công việc do WaitGroup theo dõi.
+5. **Chuẩn hóa nhãn WaitGroup và mốc hoàn tất:**
+   - Phân biệt rõ: Mỗi lần `Done()` chỉ giảm bộ đếm công việc còn chờ; **lượt `Done()` cuối cùng** đưa counter về 0 mới mở khóa cho `Wait()` trả về.
+   - Nhãn cạnh đứt ngang chuẩn hóa: `Lượt Done() cuối mở khóa Wait()` (happens-before synchronization barrier).
+6. **Tách biệt rạch ròi giữa Mutex và WaitGroup:**
+   - **`sync.Mutex`:** Bảo vệ truy cập đồng thời vào slice `reports` (loại trừ data race).
+   - **`sync.WaitGroup`:** Thiết lập mốc hoàn tất (bảo đảm mọi worker đã xong việc trước khi đọc snapshot).
+   - Tách kiểm tra `len(reports) == workers` thành kiểm tra bất biến nghiệp vụ, không đồng nhất nó với bằng chứng vắng mặt data race.
+7. **Chuẩn hóa khuyến nghị về `time.Sleep`:**
+   - Thay khẳng định tuyệt đối bằng:
+     `• Không dùng time.Sleep thay cho cơ chế đồng bộ: Sleep chỉ đoán thời gian, không công bố quan hệ thứ tự; đồng bộ phải dựa trên WaitGroup/channel.`
+   - Thừa nhận đầy đủ các cơ chế đồng bộ chính thức khác trong Go (channel, sync primitives).
+8. **Nâng cao khả năng đọc (Visual QA):**
+   - Toàn bộ nhãn nhỏ được nâng từ 5.8 pt lên 6.0 – 6.8 pt.
+   - 100% thuần Grayscale ($R = G = B$).
+   - Giữ nguyên bố cục 2 cột, 4 tầng song song không cắt nét.
 
 ---
 
-## 3. Kết quả kiểm định tự động (Verification Suite)
+## 2. Kết quả kiểm định tự động (Verification Suite)
 - `python scripts/test_publication_contracts.py`: **16/16 PASS (100%)**
 - `python scripts/validate_code_width.py`: **PASS (0 dòng tràn lề)**
 - `git diff main -- book/chapters/08-mot-race-bat-dau-tu-dau.md`: **0 DIFF (Tài liệu bài giảng hoàn toàn nguyên vẹn)**
@@ -59,10 +49,10 @@
 
 ---
 
-## 4. Danh mục tệp cập nhật trên branch `design/ch08-agent2-redesign`
+## 3. Danh mục tệp cập nhật trên branch `design/ch08-agent2-redesign`
 1. `assets/diagrams/waitgroup-completion-proof.png` (PNG vector xuất bản 320 DPI, 2117 × 1233 px, thuần grayscale R=G=B)
 2. `book/design/agent2-ch08/ch08_preview.pdf` (PDF preview độc lập 1 trang tại kích thước 1:1)
 3. `book/design/agent2-ch08/specimens/ch08_diagrams_p01.png` (Specimen trực quan của trang preview)
 4. `scripts/ch08_vector_diagrams.py` (Script ReportLab sinh vector diagram chuẩn xuất bản)
 5. `scripts/build_ch08_preview.py` (Script ReportLab + PyMuPDF sinh preview PDF và ảnh specimen)
-6. `book/design/agent2-ch08/REPORT_AGENT2_CH08.md` (Báo cáo thiết kế này)
+6. `book/design/agent2-ch08/REPORT_AGENT2_CH08.md` (Báo cáo vi chỉnh này)
