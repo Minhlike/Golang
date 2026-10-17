@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Independent Preview Renderer for Chapters 19-29 Diagrams (Agent 2 Final Book-wide Redesign).
+"""Independent Preview Renderer for Chapters 18-29 and Appendix B Diagrams (Agent 2 Final Book-wide Redesign).
 
-Builds a standalone, publication-grade preview PDF displaying each of the 18 diagrams
+Builds a standalone, publication-grade preview PDF displaying each of the 26 diagrams
 at its exact publication dimensions (1:1 with Golang_Master.pdf):
 - Page 01 (Chapter 18): Figure 33: 476.22 x 330.21 pt (Page 331, xref 382)
 - Page 02 (Chapter 19): Figure 34: 413.18 x 362.83 pt (Page 341, xref 393)
@@ -21,10 +21,18 @@ at its exact publication dimensions (1:1 with Golang_Master.pdf):
 - Page 16 (Chapter 26): Figure 48: 476.22 x 327.02 pt (Page 470, xref 536)
 - Page 17 (Chapter 27): Figure 49: 244.10 x 362.83 pt (Page 490, xref 557)
 - Page 18 (Chapter 29): Figure 50: 476.22 x 260.59 pt (Page 544, xref 612)
+- Page 19 (Appendix B): Figure 51: 476.22 x 265.65 pt (Page 551, xref 620)
+- Page 20 (Appendix B): Figure 52: 261.98 x 362.83 pt (Page 555, xref 625)
+- Page 21 (Appendix B): Figure 53: 337.01 x 362.83 pt (Page 560, xref 631)
+- Page 22 (Appendix B): Figure 54: 434.69 x 362.83 pt (Page 563, xref 635)
+- Page 23 (Appendix B): Figure 55: 476.22 x 255.70 pt (Page 572, xref 645)
+- Page 24 (Appendix B): Figure 56: 476.22 x 354.37 pt (Page 582, xref 656)
+- Page 25 (Appendix B): Figure 57: 414.95 x 362.83 pt (Page 584, xref 659)
+- Page 26 (Appendix B): Figure 58: 280.79 x 362.83 pt (Page 603, xref 679)
 
 Outputs:
 - book/design/agent2-ch19-29/ch19_29_preview.pdf
-- book/design/agent2-ch19-29/specimens/ch19_29_diagrams_p01.png to p18.png
+- book/design/agent2-ch19-29/specimens/ch19_29_diagrams_p01.png to p26.png
 """
 
 from __future__ import annotations
@@ -63,7 +71,7 @@ MARGIN_BOTTOM = 28.0
 
 
 def build_preview() -> Path:
-    """Build Chapters 19-29 preview PDF containing all 18 technical diagrams."""
+    """Build Chapters 18-29 and Appendix B preview PDF containing all 26 technical diagrams."""
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     SPECIMENS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +102,7 @@ def build_preview() -> Path:
     doc = SimpleDocTemplate(
         str(PREVIEW_PDF),
         pagesize=A4,
-        title="GOLANG - CHƯƠNG 19-29 (FINAL TECHNICAL DIAGRAM REDESIGN)",
+        title="GOLANG - CHƯƠNG 18-29 & PHỤ LỤC B (FINAL TECHNICAL DIAGRAM REDESIGN)",
         author="Đoàn Ngọc Hoàng Minh",
         leftMargin=MARGIN_H,
         rightMargin=MARGIN_H,
@@ -110,7 +118,8 @@ def build_preview() -> Path:
             story.append(PageBreak())
 
         img_path = ROOT / "assets/diagrams" / filename
-        fig_label = f"Chương {spec['chapter']:02d} — Hình {spec['figure']:02d}: {spec['title']} ({spec['w_pt']} x {spec['h_pt']} pt, Trang {spec['page']}, xref {spec['xref']})"
+        ch_label = f"Chương {spec['chapter']:02d}" if spec['chapter'] <= 29 else "Phụ lục B"
+        fig_label = f"{ch_label} — Hình {spec['figure']:02d}: {spec['title']} ({spec['w_pt']} x {spec['h_pt']} pt, Trang {spec['page']}, xref {spec['xref']})"
 
         story.append(Paragraph(f"BẢN DUYỆT SƠ ĐỒ KỸ THUẬT // AGENT 2 FINAL REDESIGN (TRANG {i+1:02d}/{total_figs:02d})", title_style))
         story.append(Paragraph(fig_label, fig_title_style))
@@ -118,7 +127,7 @@ def build_preview() -> Path:
         story.append(Image(str(img_path), width=spec['w_pt'], height=spec['h_pt'], hAlign="CENTER"))
 
     doc.build(story)
-    print(f"\nGenerated Chapters 19-29 preview PDF: {PREVIEW_PDF}")
+    print(f"\nGenerated preview PDF: {PREVIEW_PDF}")
 
     # Generate visual specimens from preview PDF
     pdf_doc = pymupdf.open(str(PREVIEW_PDF))

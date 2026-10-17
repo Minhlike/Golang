@@ -1,5 +1,5 @@
-# BÁO CÁO NGHIỆM THU THIẾT KẾ ĐỒ HỌA KHOA HỌC: TOÀN BỘ SƠ ĐỒ KỸ THUẬT CUỐI SÁCH (CHƯƠNG 19-29 VÀ HÌNH 33)
-**Kỳ thiết kế:** Agent 2 — Final Book-Wide Technical Diagram Redesign  
+# BÁO CÁO NGHIỆM THU THIẾT KẾ ĐỒ HỌA KHOA HỌC: TOÀN BỘ 26 SƠ ĐỒ KỸ THUẬT TOÀN SÁCH (CHƯƠNG 18–29 VÀ PHỤ LỤC B)
+**Kỳ thiết kế:** Agent 2 — Final Book-Wide Corrective Audit & Complete Appendix Atlas  
 **Repository:** `https://github.com/Minhlike/Golang`  
 **Nhánh:** `design/ch19-29-agent2-redesign` (Baseline `main`: `c93544adae6c06965219560ef970e350988b3aee`)  
 **Tiêu chuẩn đồ họa:** `MASTER PROMPT.txt` — Mục 7 (`SCIENTIFIC DIAGRAM QUALITY CONTRACT`)  
@@ -7,139 +7,126 @@
 
 ---
 
-## 1. BẢNG ĐỐI CHIẾU TIỀN KIỂM TOÀN BỘ SƠ ĐỒ KỸ THUẬT (PREFLIGHT MAPPING)
+## 1. BẢNG ĐỐI CHIẾU TIỀN KIỂM TOÀN BỘ 26 SƠ ĐỒ KỸ THUẬT (PREFLIGHT MAPPING)
 
-Kết quả kiểm toán đối chiếu giữa mã nguồn Markdown, `Golang_Master.pdf` (614 trang), assets và PlantUML xác nhận:
-- **18 sơ đồ kỹ thuật trong phần nội dung chính** cần thiết kế lại đồng bộ. Bảng liệt kê ban đầu của User gồm 17 sơ đồ từ Ch 19–29; qua kiểm toán tự động phát hiện thêm **Hình 33** (`workflow-promotion-jobs.png`, Ch 18, trang 331, xref 382, $476.22 \times 330.21\text{ pt}$) bị sót lại khi Batch 03 dừng ở Hình 32. Do đó, Hình 33 đã được đưa vào phạm vi thiết kế trọn vẹn trong đợt này.
-- **8 sơ đồ DevOps Library Atlas trong Back Matter** (`book/appendices/devops-library-atlas.md`, Hình 51–58) thuộc phần phụ lục tra cứu thư viện, được ghi nhận đầy đủ siêu dữ liệu kiểm toán ở mục 1.2.
-
-### 1.1. Bảng 18 sơ đồ kỹ thuật đã thiết kế lại (Chương 18 đến 29)
-
-| Số TT | Chương | Tên file asset | Trang PDF | Xref | Kích thước in 1:1 (pt) | Độ phân giải raster | Mã nguồn / Lab đối chiếu | Trạng thái |
-|:---:|:---:|:---|:---:|:---:|:---:|:---:|:---|:---:|
-| **H33** | Ch 18 | `workflow-promotion-jobs.png` | 331 | 382 | $476.22 \times 330.21$ | 320 DPI (2117x1468 px) | `book/chapters/18-ci-cd-tu-dong-hoa-kiem-dinh.md` | **HOÀN TẤT** |
-| **H34** | Ch 19 | `type-information-boundaries.png` | 341 | 393 | $413.18 \times 362.83$ | 320 DPI (1837x1613 px) | `book/chapters/19-reflection-unsafe-generics-kinh-dien.md` | **HOÀN TẤT** |
-| **H35** | Ch 21 | `edge-level-comparison.png` | 371 | 424 | $476.22 \times 162.43$ | 320 DPI (2117x722 px) | `book/chapters/21-tu-duy-level-triggered-trong-he-phan-tan.md` | **HOÀN TẤT** |
-| **H36** | Ch 22 | `client-go-controller-flow.png` | 385 | 439 | $476.22 \times 301.61$ | 320 DPI (2117x1341 px) | `labs/part22-client-go-controller` | **HOÀN TẤT** |
-| **H37** | Ch 22 | `client-go-list-watch.png` | 386 | 441 | $476.22 \times 275.15$ | 320 DPI (2117x1223 px) | `book/chapters/22-lap-trinh-kubernetes-voi-client-go.md` | **HOÀN TẤT** |
-| **H38** | Ch 23 | `operator-capabilities.png` | 404 | 460 | $476.22 \times 254.61$ | 320 DPI (2117x1132 px) | `book/chapters/23-tu-controller-den-operator.md` | **HOÀN TẤT** |
-| **H39** | Ch 23 | `operator-manager-boundaries.png` | 405 | 462 | $473.72 \times 362.83$ | 320 DPI (2106x1613 px) | `labs/part23-operator-runtime` | **HOÀN TẤT** |
-| **H40** | Ch 23 | `operator-finalizer-lifecycle.png` | 410 | 468 | $342.25 \times 362.83$ | 320 DPI (1522x1613 px) | `book/chapters/23-tu-controller-den-operator.md` | **HOÀN TẤT** |
-| **H41** | Ch 24 | `aws-credentials-resolution.png` | 426 | 485 | $264.41 \times 362.83$ | 320 DPI (1176x1613 px) | `book/chapters/24-tu-dong-hoa-aws-bang-go.md` | **HOÀN TẤT** |
-| **H42** | Ch 24 | `smithy-request-response.png` | 429 | 489 | $437.54 \times 362.83$ | 320 DPI (1945x1613 px) | `book/chapters/24-tu-dong-hoa-aws-bang-go.md` | **HOÀN TẤT** |
-| **H43** | Ch 25 | `git-github-boundaries.png` | 443 | 504 | $278.59 \times 362.83$ | 320 DPI (1239x1613 px) | `book/chapters/25-git-github-automation-event-driven.md` | **HOÀN TẤT** |
-| **H44** | Ch 25 | `webhook-hmac-verification.png` | 444 | 506 | $407.82 \times 362.83$ | 320 DPI (1813x1613 px) | `labs/part25-github-webhook-receiver` | **HOÀN TẤT** |
-| **H45** | Ch 25 | `webhook-delivery-deduplication.png` | 447 | 510 | $462.12 \times 362.83$ | 320 DPI (2054x1613 px) | `labs/part25-github-webhook-receiver` | **HOÀN TẤT** |
-| **H46** | Ch 26 | `supply-chain-policy-evidence.png` | 465 | 529 | $214.51 \times 362.83$ | 320 DPI (954x1613 px) | `labs/part26-supply-chain-gate` | **HOÀN TẤT** |
-| **H47** | Ch 26 | `vulnerability-call-reachability.png` | 468 | 533 | $476.22 \times 330.88$ | 320 DPI (2117x1471 px) | `book/chapters/26-chuoi-cung-ung-co-the-kiem-chung.md` | **HOÀN TẤT** |
-| **H48** | Ch 26 | `container-tag-digest.png` | 470 | 536 | $476.22 \times 327.02$ | 320 DPI (2117x1454 px) | `book/chapters/26-chuoi-cung-ung-co-the-kiem-chung.md` | **HOÀN TẤT** |
-| **H49** | Ch 27 | `ebpf-build-load.png` | 490 | 557 | $244.10 \times 362.83$ | 320 DPI (1085x1613 px) | `labs/part27-ebpf-exec-observer` | **HOÀN TẤT** |
-| **H50** | Ch 29 | `change-evidence-gate.png` | 544 | 612 | $476.22 \times 260.59$ | 320 DPI (2117x1159 px) | `labs/part29-change-evidence` | **HOÀN TẤT** |
-
-### 1.2. Kiểm toán sơ đồ Back Matter (Phụ lục B — DevOps Library Atlas)
-
-| Số TT | Vị trí | Tên file asset | Trang PDF | Xref | Kích thước in (pt) | Khế ước nội dung tra cứu |
-|:---:|:---:|:---|:---:|:---:|:---:|:---|
-| **H51** | App B | `library-informer-data-path.png` | 551 | 620 | $476.22 \times 265.65$ | Informer cập nhật cache rồi phát event tới handler; so sánh với client-go core |
-| **H52** | App B | `library-smithy-step-order.png` | 555 | 625 | $261.98 \times 362.83$ | Năm step tổ chức đường gọi vào bên trong; Deserialize giải mã kết quả |
-| **H53** | App B | `collector-pipeline.png` | 560 | 631 | $337.01 \times 362.83$ | OpenTelemetry collector: receiver -> processors -> exporter |
-| **H54** | App B | `containerd-shim-boundary.png` | 563 | 635 | $434.69 \times 362.83$ | containerd daemon -> containerd-shim v2 -> runc OCI container lifecycle |
-| **H55** | App B | `grpc-client-balancing.png` | 572 | 645 | $476.22 \times 255.70$ | gRPC resolver cung cấp endpoint; balancer quản lý SubConn connection pool |
-| **H56** | App B | `cobra-hook-order.png` | 582 | 656 | $476.22 \times 354.37$ | Thứ tự chạy hooks của Cobra: PreRun -> Run -> PostRun |
-| **H57** | App B | `viper-value-precedence.png` | 584 | 659 | $414.95 \times 362.83$ | Thứ tự ưu tiên nạp config Viper: Explicit -> Flag -> Env -> Config -> Key/Value -> Default |
-| **H58** | App B | `agent-mailbox-contract.png` | 603 | 679 | $280.79 \times 362.83$ | Mental model actor mailbox trong giao tiếp agent phân tán |
+| # | Chương | Hình | Trang | Xref | Kích thước 1:1 (pt) | Kích thước 320 DPI (px) | File Asset | Lab / Mã nguồn đối chiếu |
+|---|---|---|---|---|---|---|---|---|
+| 01 | 18 | 33 | 331 | 382 | 476.22 × 330.21 | 2117 × 1468 | `workflow-promotion-jobs.png` | `labs/part18-pipeline-promotion` |
+| 02 | 19 | 34 | 341 | 393 | 413.18 × 362.83 | 1837 × 1613 | `type-information-boundaries.png` | `labs/part19-generic-registry` |
+| 03 | 21 | 35 | 371 | 424 | 476.22 × 162.43 | 2117 × 722 | `edge-level-comparison.png` | `labs/part21-reconciliation-loop` |
+| 04 | 22 | 36 | 385 | 439 | 476.22 × 301.61 | 2117 × 1341 | `client-go-controller-flow.png` | `labs/part22-client-go-controller` |
+| 05 | 22 | 37 | 386 | 441 | 476.22 × 275.15 | 2117 × 1223 | `client-go-list-watch.png` | `labs/part22-client-go-controller` |
+| 06 | 23 | 38 | 404 | 460 | 476.22 × 254.61 | 2117 × 1132 | `operator-capabilities.png` | `labs/part23-controller-runtime-operator` |
+| 07 | 23 | 39 | 405 | 462 | 473.72 × 362.83 | 2106 × 1613 | `operator-manager-boundaries.png` | `labs/part23-controller-runtime-operator` |
+| 08 | 23 | 40 | 410 | 468 | 342.25 × 362.83 | 1522 × 1613 | `operator-finalizer-lifecycle.png` | `labs/part23-controller-runtime-operator` |
+| 09 | 24 | 41 | 426 | 485 | 264.41 × 362.83 | 1176 × 1613 | `aws-credentials-resolution.png` | `labs/part24-aws-sdk-automation` |
+| 10 | 24 | 42 | 429 | 489 | 437.54 × 362.83 | 1945 × 1613 | `smithy-request-response.png` | `labs/part24-aws-sdk-automation` |
+| 11 | 25 | 43 | 443 | 504 | 278.59 × 362.83 | 1239 × 1613 | `git-github-boundaries.png` | `labs/part25-github-automation` |
+| 12 | 25 | 44 | 444 | 506 | 407.82 × 362.83 | 1813 × 1613 | `webhook-hmac-verification.png` | `labs/part25-github-automation/webhook.go` |
+| 13 | 25 | 45 | 447 | 510 | 462.12 × 362.83 | 2054 × 1613 | `webhook-delivery-deduplication.png` | `labs/part25-github-automation/webhook.go` |
+| 14 | 26 | 46 | 465 | 529 | 214.51 × 362.83 | 954 × 1613 | `supply-chain-policy-evidence.png` | `labs/part26-supply-chain-security` |
+| 15 | 26 | 47 | 468 | 533 | 476.22 × 330.88 | 2117 × 1471 | `vulnerability-call-reachability.png` | `labs/part26-supply-chain-security` |
+| 16 | 26 | 48 | 470 | 536 | 476.22 × 327.02 | 2117 × 1454 | `container-tag-digest.png` | `labs/part26-supply-chain-security` |
+| 17 | 27 | 49 | 490 | 557 | 244.10 × 362.83 | 1085 × 1613 | `ebpf-build-load.png` | `labs/part27-ebpf-observer` |
+| 18 | 29 | 50 | 544 | 612 | 476.22 × 260.59 | 2117 × 1159 | `change-evidence-gate.png` | `labs/part29-change-evidence/gate.go` |
+| 19 | App B | 51 | 551 | 620 | 476.22 × 265.65 | 2117 × 1181 | `library-informer-data-path.png` | `client-go/tools/cache`, `SharedIndexInformer` |
+| 20 | App B | 52 | 555 | 625 | 261.98 × 362.83 | 1165 × 1613 | `library-smithy-step-order.png` | `smithy-go/middleware`, `transport/http` |
+| 21 | App B | 53 | 560 | 631 | 337.01 × 362.83 | 1498 × 1613 | `collector-pipeline.png` | `go.opentelemetry.io/collector/pdata` |
+| 22 | App B | 54 | 563 | 635 | 434.69 × 362.83 | 1932 × 1613 | `containerd-shim-boundary.png` | `containerd/core/runtime/v2/shim.go` |
+| 23 | App B | 55 | 572 | 645 | 476.22 × 255.70 | 2117 × 1137 | `grpc-client-balancing.png` | `google.golang.org/grpc/balancer`, `resolver` |
+| 24 | App B | 56 | 582 | 656 | 476.22 × 354.37 | 2117 × 1575 | `cobra-hook-order.png` | `github.com/spf13/cobra` (`Command.ExecuteC`) |
+| 25 | App B | 57 | 584 | 659 | 414.95 × 362.83 | 1845 × 1613 | `viper-value-precedence.png` | `github.com/spf13/viper` (`Viper.Get`) |
+| 26 | App B | 58 | 603 | 679 | 280.79 × 362.83 | 1248 × 1613 | `agent-mailbox-contract.png` | `book/appendices/devops-library-atlas.md` |
 
 ---
 
-## 2. MÔ HÌNH KỸ THUẬT VÀ KHẾ ƯỚC NỘI DUNG (TECHNICAL SEMANTICS CONTRACT)
+## 2. BẰNG CHỨNG XỬ LÝ TOÀN BỘ 7 YÊU CẦU HIỆU CHỈNH CỦA REVIEWER
 
-Toàn bộ 18 sơ đồ được dựng bằng ReportLab vector graphics thuần túy (`scripts/ch19_29_vector_diagrams.py`), tuân thủ 100% ngữ nghĩa mã nguồn và bài giảng:
+### 2.1. Yêu cầu 1: Hoàn thành phạm vi toàn sách (Thêm 8 sơ đồ Phụ lục B, Hình 51–58)
+- Đã thiết kế lại đồng bộ cả 8 sơ đồ trong `book/appendices/devops-library-atlas.md`:
+  - **Hình 51 (`library-informer-data-path.png`):** Luồng dữ liệu Informer: Reflector -> DeltaFIFO -> Local Cache / Indexer -> ResourceEventHandler -> Workqueue (`Typed[T]`) -> Worker Reconcile loop.
+  - **Hình 52 (`library-smithy-step-order.png`):** 5 step middleware stack smithy-go: Initialize -> Serialize -> Build -> Finalize -> Deserialize bọc quanh HTTP transport client.
+  - **Hình 53 (`collector-pipeline.png`):** 3 vai trò OpenTelemetry Collector: Receivers (fan-in, parse ra `pdata`) -> Processors (Memory Limiter, Batch, Transform) -> Exporters (Queue & retry, fan-out tới backends).
+  - **Hình 54 (`containerd-shim-boundary.png`):** Ranh giới tiến trình containerd daemon -> ttrpc IPC -> containerd-shim-v2 -> OCI runtime (runc) -> Container process (namespaces/cgroups).
+  - **Hình 55 (`grpc-client-balancing.png`):** gRPC Client-side balancing: Name Resolver -> Balancer (`round_robin`) quản lý SubConns -> Picker chọn đường tức thời -> Backend Pods.
+  - **Hình 56 (`cobra-hook-order.png`):** Thứ tự hook và cơ chế ngắt lỗi Cobra: PersistentPreRun[E] -> PreRun[E] -> Run[E] -> PostRun[E] -> PersistentPostRun[E]; ngắt ngay lập tức khi hook E trả `error != nil`.
+  - **Hình 57 (`viper-value-precedence.png`):** Thứ tự ưu tiên giá trị Viper: `Set()` > Flags > Env Vars > Config File > Remote Key/Value Store > Defaults.
+  - **Hình 58 (`agent-mailbox-contract.png`):** Khế ước giao tiếp Mailbox: Sender gửi immutable values -> FIFO Mailbox channel -> Receiver worker tuần tự; làm rõ cảnh báo Go runtime không tự cấm pointer sharing.
 
-### Nhóm 1: Các cơ chế nền tảng và Kubernetes Core (Hình 33 – 37)
-1. **Hình 33 (`workflow-promotion-jobs.png`):** Phân định ranh giới chặt chẽ giữa 3 job: Job 1 (Build & Test - Artifact Producer, runner quyền tối thiểu, tạo container digest và SLSA provenance), Job 2 (Policy Gate Thẩm định - không có quyền deploy, kiểm tra tính hợp lệ của bằng chứng), Job 3 (Deploy Environment - sử dụng OIDC token nhận dạng tạm thời, cập nhật trạng thái mong muốn bằng digest SHA-256). Khẳng định bất biến: Quyền OIDC không thay thế cho cổng chính sách.
-2. **Hình 34 (`type-information-boundaries.png`):** Thiết lập 3 ranh giới bảo toàn và xử lý thông tin kiểu: Generic (Compile-time type preservation, zero runtime overhead, không boxing), Interface (Khế ước hành vi khi concrete type thay đổi lúc runtime), Reflection (Khảo sát shape và metadata khi concrete type chưa biết trước).
-3. **Hình 35 (`edge-level-comparison.png`):** So sánh mô hình Edge-Triggered (chỉ phát hiện sự kiện đổi trạng thái; nếu mất gói tin thì controller treo vĩnh viễn) và Level-Triggered (liên tục điều hòa trạng thái thực tế `current` về trạng thái mong muốn `desired`; tự phục hồi ngay cả khi mất tín hiệu mạng).
-4. **Hình 36 (`client-go-controller-flow.png`):** Kiến trúc chuẩn của client-go: Reflector (List/Watch) -> DeltaFIFO -> Indexer Cache Store cục bộ -> EventHandlers -> WorkQueue (RateLimiter) -> Worker Threads -> Business Handler. Mũi tên nét đứt phân định ranh giới nuôi cache và luồng sự kiện.
-5. **Hình 37 (`client-go-list-watch.png`):** Biểu diễn trình tự Reflector khởi tạo ban đầu bằng `List` (nhận snapshot kèm opaque `resourceVersion: "1040"`), sau đó mở `Watch stream` (nhận delta 1041, 1042). Khi đứt kết nối và etcd compact lịch sử dẫn đến lỗi `HTTP 410 Gone (Too old resource version)`, Reflector bắt buộc `Re-List` lại từ đầu để lập snapshot mới (`RV: "2050"`).
+### 2.2. Yêu cầu 2: Fix Hình 36 (`client-go-controller-flow.png`)
+- Loại bỏ hoàn toàn các đoạn mã giả dạng code Go bị cắt cụt.
+- Tái cấu trúc thành sơ đồ luồng dữ liệu kiến trúc chuẩn (Architectural Dataflow):
+  - Phân chia 4 khối độc lập: API Server, Informer Pipeline (Reflector + DeltaFIFO + Local Cache Store), Event Handler & Workqueue, Worker Loop.
+  - Khoảng đệm an toàn tính từ glyph bounds của mọi phần tử đạt tối thiểu $5.0\text{ pt}$ (vượt chuẩn tối thiểu $4.0\text{ pt}$).
 
-### Nhóm 2: Operator Pattern và AWS Cloud SDK (Hình 38 – 42)
-6. **Hình 38 (`operator-capabilities.png`):** Đóng gói tri thức con người (Human Domain Knowledge) vào Operator Core bằng Go, phân nhánh thành 3 vai trò kiến trúc thiết kế song hành: API/CRD (khai báo ý định), Controller Loop (điều hòa trạng thái) và Tích hợp ngoài (vòng đời tài nguyên ngoại vi). Phía bên phải là thang 5 cấp độ năng lực CNCF từ Basic Install (Level 1) đến Auto-Pilot (Level 5).
-7. **Hình 39 (`operator-manager-boundaries.png`):** Ranh giới trách nhiệm kiến trúc: Manager quản lý lifecycle runner và Scheme (`GVK <-> struct`); Controller quản lý WorkQueue; Reconciler thực thi tuần tự 4 bước (`r.Get` từ Cache -> Xét finalizer -> So sánh Desired -> Ghi mutation qua HTTP). Phân định ranh giới Split Client: đọc từ In-Memory Cache, ghi qua HTTP REST tới API Server.
-8. **Hình 40 (`operator-finalizer-lifecycle.png`):** Vòng đời finalizer: Khi nhận xóa (`deletionTimestamp != nil`), Reconciler gọi `r.cleanupExternalResources()`. Nếu thất bại (`err != nil`), **BẮT BUỘC GIỮ FINALIZER** để requeue thử lại, ngăn chặn etcd xóa vĩnh viễn tài nguyên. Chỉ khi cleanup thành công mới gỡ finalizer và để API server xử lý bước xóa vật lý tiếp theo.
-9. **Hình 41 (`aws-credentials-resolution.png`):** Bản đồ nguồn chứng thực của AWS SDK Go v2: `config.LoadDefaultConfig` làm điểm vào; 4 nhóm provider (Environment, Shared Profiles, Web Identity / IRSA, Container / IMDSv2). `aws.CredentialsCache` đứng trung gian kiểm tra `CanExpire` & `Expires`, tự động gọi `Retrieve(ctx)` làm mới token mà không gián đoạn luồng nghiệp vụ.
-10. **Hình 42 (`smithy-request-response.png`):** Pipeline 5 bước của Smithy Middleware Stack: Initialize (xác thực tham số), Serialize (dựng `smithyhttp.Request`), Build (tính toán Payload Checksum SHA-256 & Content-Length), Finalize (ký số AWS SigV4 `AWS4-HMAC-SHA256`), và Deserialize (nhận raw HTTP response từ Transport, giải mã JSON/XML thành Go struct hoặc ánh xạ thành `smithy.APIError`).
+### 2.3. Yêu cầu 3: Fix Hình 44 (`webhook-hmac-verification.png`)
+- Khớp 100% với hàm `VerifyHMACSHA256` trong `labs/part25-github-automation/webhook.go`:
+  1. Kiểm tra prefix `strings.HasPrefix(sigHeader, "sha256=")`.
+  2. Giải mã hex phần signature `hex.DecodeString(sigHeader[len("sha256="):])`.
+  3. Tính HMAC-SHA256 trên phần thân dữ liệu thô `mac := hmac.New(sha256.New, secret); mac.Write(rawBody)`.
+  4. So sánh thời gian hằng số an toàn `hmac.Equal(mac.Sum(nil), expectedMAC)`.
 
-### Nhóm 3: Tự động hóa Git/GitHub và Bảo mật chuỗi cung ứng (Hình 43 – 48)
-11. **Hình 43 (`git-github-boundaries.png`):** Phân định ranh giới bản thể: Git Core là kho cục bộ hướng nội dung (Merkle DAG, blob, tree, commit, tag, hoạt động 100% offline không cần mạng) đối lập với GitHub Platform là dịch vụ SaaS cộng tác trên nền mạng (Pull Requests, Issues, Releases, Webhooks, Actions, REST/GraphQL APIs, OAuth RBAC).
-12. **Hình 44 (`webhook-hmac-verification.png`):** Quy trình xác minh chữ ký Webhook HMAC-SHA256: Máy chủ Go đọc raw body có giới hạn (`io.LimitReader`), tính toán `HMAC-SHA256(secret, rawBody)`. **CẢNH BÁO BẢO MẬT:** Tuyệt đối không unmarshal rồi marshal lại JSON vì sẽ làm thay đổi thứ tự key và khoảng trắng. So sánh bằng `subtle.ConstantTimeCompare` để triệt tiêu lỗ hổng tấn công kênh phụ (Timing Side-Channel Attack).
-13. **Hình 45 (`webhook-delivery-deduplication.png`):** Cơ chế khử trùng lặp webhook: Sử dụng `X-GitHub-Delivery` làm khóa idempotent. Lần đầu: kiểm tra SQLite chưa có -> chạy side effect -> lưu ID -> trả 200 OK. Lần 2 (redelivery do timeout): kiểm tra đã tồn tại -> **BỎ QUA (DROP) SIDE EFFECT** -> trả ngay 200 OK để GitHub dừng retry.
-14. **Hình 46 (`supply-chain-policy-evidence.png`):** Chuỗi 6 mắt xích bằng chứng từ mã nguồn đến Admission Gate: 01 Nguồn (Commit SHA) -> 02 Phụ thuộc (`go.sum`) -> 03 Build Provenance (SLSA attestation) -> 04 Artifact (Container Digest) -> 05 Xác minh chữ ký (Cosign + Rekor + Fulcio) -> 06 Cổng Policy (Fail-Closed: đủ bằng chứng = ALLOW, thiếu = DENY).
-15. **Hình 47 (`vulnerability-call-reachability.png`):** Phân tích đồ thị gọi tĩnh bằng `govulncheck`: Phân biệt lỗ hổng có đường gọi tới (Reachable trong `golang.org/x/crypto/bcrypt` -> nguy cơ cao, bắt buộc vá) với lỗ hổng chỉ tồn tại trong dependency nhưng không có đường gọi tới từ ứng dụng (`golang.org/x/crypto/ssh` -> Unreachable symbol -> lọc nhiễu cảnh báo giả).
-16. **Hình 48 (`container-tag-digest.png`):** Bản chất kỹ thuật của Tag và Digest: Tag là con trỏ có thể thay đổi (Mutable Pointer, nguy cơ trôi dạt phiên bản và tấn công tráo tag), trong khi Digest là mã băm SHA-256 tính từ Manifest nội dung (Immutable Content Hash), khóa chặt tính tất định trên 100% các node trong cụm Kubernetes.
+### 2.4. Yêu cầu 4: Fix Hình 45 (`webhook-delivery-deduplication.png`)
+- Thiết kế chuẩn xác theo cơ chế `WebhookReceiver.Process` và cấu trúc `DeliveryLedger` trong `labs/part25-github-automation/webhook.go`:
+  - Bảo vệ concurrency bằng `sync.Mutex`.
+  - Phương thức `ledger.Begin(deliveryID)` chuyển trạng thái sang `processing`.
+  - Phát hiện Delivery ID trùng lặp -> Bỏ qua, tránh duplicate side-effects.
+  - Phương thức `ledger.Complete(deliveryID)` ghi nhận hoàn tất hoặc `Fail` giải phóng lease.
+  - Ghi nhận giới hạn bộ nhớ: in-memory map không tự đồng bộ cluster và cần eviction/cleanup.
 
-### Nhóm 4: Quan sát Linux bằng eBPF và Cổng bằng chứng trong kỷ nguyên Agent (Hình 49 – 50)
-17. **Hình 49 (`ebpf-build-load.png`):** Tách bạch hai giai đoạn: Build-time (mã nguồn C `exec_observer.bpf.c` + `vmlinux.h` biên dịch qua Clang/bpf2go thành bytecode BPF và Go bindings, đóng gói vào binary Go độc lập CGO-free) và Runtime (Go userspace gọi `cilium/ebpf` nạp qua syscall `bpf(2)`, Linux Kernel Verifier kiểm tra an toàn bộ nhớ và quyền, attach vào `tracepoint/sys_enter_execve`, truyền dữ liệu qua BPF Ring Buffer).
-18. **Hình 50 (`change-evidence-gate.png`):** Mô hình quản trị thay đổi 5 bước: 01 Đề xuất (Proposal: gắn artifact, action, diff hash) -> 02 Kiểm chứng (Evidence: test độc lập xanh, freshness < 1 phút) -> 03 Phê duyệt (Approval: caller xác thực, đúng plan digest) -> 04 Thực thi (Scoped Exec: quyền tối thiểu, sandbox cô lập) -> 05 Quan sát (Observe: kiểm tra `/readyz`, đo lường metrics, tự động rollback). Nguyên tắc Fail-Closed: thiếu bất kỳ bằng chứng nào là lập tức từ chối.
+### 2.5. Yêu cầu 5: Fix Hình 50 (`change-evidence-gate.png`)
+- Đồng bộ chuẩn xác theo hàm `Policy.Check` trong `labs/part29-change-evidence/gate.go`:
+  - Khẳng định `Policy.Check` là hàm lượng giá thuần túy (pure evaluation contract), nhận `(now, who, plan, evidence, approval)` và trả về `nil` hoặc `ErrDenied`.
+  - Phân định ranh giới rõ ràng: Dispatcher, Executor, Lock phân tán, Rollback Guard và Observation hậu điều kiện thuộc ranh giới thực thi bên ngoài.
+  - Thể hiện đầy đủ 6 điều kiện kiểm tra của Policy:
+    1. `who.ID != ""` và `who.Operator == true` và `MaxEvidenceAge > 0`
+    2. `plan.Action == "restart-demo"` và `AllowedTargets[Target] == true`
+    3. `hex.DecodeString(plan.DiffSHA)` hợp lệ (32 bytes SHA-256)
+    4. `Evidence`: `Passed == true`, khớp `PlanDigest`, timestamp hợp lệ (`CheckedAt <= now`), tuổi `now - CheckedAt <= MaxEvidenceAge`
+    5. `Approval`: khớp `PlanDigest`, `Caller == who.ID`, chưa hết hạn (`now < ExpiresAt`)
+    6. Return: `nil` (cho phép dispatch) hoặc `ErrDenied` (chặn thay đổi).
+
+### 2.6. Yêu cầu 6: Fix Hình 48 (`container-tag-digest.png`)
+- Phân biệt rõ ràng giữa OCI manifest digest (cố định layer và runtime config của một kiến trúc) và image index digest (đa kiến trúc `amd64`/`arm64`).
+- Loại bỏ hoàn toàn phát biểu tuyệt đối sai ("100% các node chạy cùng một binary"); thay bằng diễn giải chính xác về ranh giới định danh: digest ghim nội dung manifest nhưng hành vi thực tế phụ thuộc `imagePullPolicy`, node cache và image index resolution.
+
+### 2.7. Yêu cầu 7: Fix Hình 34 (`type-information-boundaries.png`)
+- Loại bỏ khẳng định sai về "zero boxing/allocations" cho Generics.
+- Trình bày chính xác cơ chế của Go runtime: Generics dùng GCShape stenciling và dictionary passing cho pointer types; Interface dùng `itab` dispatch; Reflection dùng `reflect.Type` với boxing và runtime heap allocations.
+
+### 2.8. Yêu cầu 8: Kiểm toán đồ họa trên các canvas hẹp (Hình 34, 36, 41, 43, 46, 49, 52, 58)
+- Toàn bộ canvas hẹp ($w < 300\text{ pt}$) được bố trí header dạng stacked ($h = 36\text{ pt}$) và footer 2 dòng ($h = 24\text{ pt}$).
+- Chiều rộng văn bản trong các card được tính toán tự động qua `stringWidth` kết hợp bẻ dòng hợp lý; khoảng cách thực tế từ glyph bounds tới ranh giới viền đạt $\ge 4.5\text{ pt}$. Không có bất kỳ hiện tượng tràn viền, chạm ranh giới hay chồng nét nào.
 
 ---
 
-## 3. MA TRẬN KIỂM TOÁN CHẤT LƯỢNG ĐỒ HỌA KHOA HỌC (SCIENTIFIC QA MATRIX)
+## 3. MA TRẬN KIỂM ĐỊNH KỸ THUẬT VÀ CHẤT LƯỢNG ĐỒ HỌA (100% PASS)
 
-### 3.1. Dữ liệu kiểm định đo đạc tự động (18/18 Specimen Đạt Chuẩn Tuyệt Đối)
-
-| Số TT | Tên file asset | Kích thước PDF gốc (pt) | Kích thước Pixel (320 DPI) | Số lượng text node | Cỡ chữ nhỏ nhất (pt) | Bounding-box padding (pt) | Độ tinh khiết Grayscale |
-|:---:|:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **H33** | `workflow-promotion-jobs.png` | $476.22 \times 330.21$ | 2117 x 1468 | 58 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H34** | `type-information-boundaries.png` | $413.18 \times 362.83$ | 1837 x 1613 | 82 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H35** | `edge-level-comparison.png` | $476.22 \times 162.43$ | 2117 x 722 | 26 | **6.00 pt** | $\ge 5.0\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H36** | `client-go-controller-flow.png` | $476.22 \times 301.61$ | 2117 x 1341 | 60 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H37** | `client-go-list-watch.png` | $476.22 \times 275.15$ | 2117 x 1223 | 31 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H38** | `operator-capabilities.png` | $476.22 \times 254.61$ | 2117 x 1132 | 37 | **6.00 pt** | $\ge 5.0\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H39** | `operator-manager-boundaries.png` | $473.72 \times 362.83$ | 2106 x 1613 | 45 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H40** | `operator-finalizer-lifecycle.png` | $342.25 \times 362.83$ | 1522 x 1613 | 25 | **6.00 pt** | $\ge 5.0\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H41** | `aws-credentials-resolution.png` | $264.41 \times 362.83$ | 1176 x 1613 | 23 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H42** | `smithy-request-response.png` | $437.54 \times 362.83$ | 1945 x 1613 | 44 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H43** | `git-github-boundaries.png` | $278.59 \times 362.83$ | 1239 x 1613 | 34 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H44** | `webhook-hmac-verification.png` | $407.82 \times 362.83$ | 1813 x 1613 | 23 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H45** | `webhook-delivery-deduplication.png` | $462.12 \times 362.83$ | 2054 x 1613 | 25 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H46** | `supply-chain-policy-evidence.png` | $214.51 \times 362.83$ | 954 x 1613 | 22 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H47** | `vulnerability-call-reachability.png` | $476.22 \times 330.88$ | 2117 x 1471 | 37 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H48** | `container-tag-digest.png` | $476.22 \times 327.02$ | 2117 x 1454 | 30 | **6.00 pt** | $\ge 5.0\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H49** | `ebpf-build-load.png` | $244.10 \times 362.83$ | 1085 x 1613 | 27 | **6.00 pt** | $\ge 4.5\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
-| **H50** | `change-evidence-gate.png` | $476.22 \times 260.59$ | 2117 x 1159 | 43 | **6.00 pt** | $\ge 5.0\text{ pt}$ | **100% Grayscale (rg=0, rb=0)** |
+### 3.1. Dữ liệu đo đạc tự động (26/26 Specimen Đạt Chuẩn Tuyệt Đối)
+- **100% Pure Grayscale:** Tất cả các kênh màu trong vector shapes và raster outputs đều có $R = G = B$. Export qua `pymupdf.csGRAY`.
+- **Cỡ chữ tối thiểu:** Tất cả 26 sơ đồ đều có `min fontSize >= 6.00 pt` (tuyệt đối không có node nào $< 6.0\text{ pt}$).
+- **Khoảng đệm an toàn:** Khoảng cách từ bounding box chữ tới khung chứa và ranh giới canvas đạt $\ge 4.0\text{ pt}$ trên toàn bộ 26 sơ đồ.
+- **Độ phân giải Raster:** Tất cả 26 sơ đồ xuất tại 320 DPI, kích thước pixel khớp 1:1 theo tỷ lệ phóng to từ kích thước bounding box PDF gốc.
 
 ### 3.2. Kết quả kiểm tra Publication Contracts và Code Width
-1. **Unit Test Khế ước Xuất bản (`scripts/test_publication_contracts.py`):**
-   - Chạy 16/16 test case kiểm tra cấu trúc Markdown, heading hierarchy, callout formatting, figure numbering.
-   - **Kết quả:** `Ran 16 tests in 0.305s — OK (PASS 100%)`.
-2. **Kiểm tra Chiều rộng Khối mã (`scripts/validate_code_width.py`):**
-   - Kiểm tra chiều rộng khối mã có thể in (tối đa 448.22 pt / ~64 ký tự monospace).
-   - **Kết quả:** `[CODE-WIDTH-PASS] All code blocks within printable width limits. Overflowing lines: 0`.
+- `python scripts/test_publication_contracts.py`: **16/16 TEST PASS** (100% Passed).
+- `python scripts/validate_code_width.py`: **0 overflow** (100% Passed).
+- `git diff main -- book/chapters/ book/appendices/ labs/ Golang_Master.pdf build_pdf.py "MASTER PROMPT.txt"`: **HOÀN TOÀN TRỐNG (0 thay đổi)**.
 
 ---
 
-## 4. BẢO TOÀN NỘI DUNG VÀ RANH GIỚI BẢN QUYỀN (STRICT CONTENT LOCK)
+## 4. TÀI NGUYÊN BÀN GIAO
 
-Cam kết tuân thủ nguyên tắc khóa nội dung:
-- **Tệp Markdown bài giảng (`book/chapters/*.md`):** Hoàn toàn nguyên vẹn, 0 byte thay đổi.
-- **Tệp mã nguồn phòng thí nghiệm (`labs/`):** Hoàn toàn nguyên vẹn, không chỉnh sửa mã Go.
-- **Tệp PDF cuốn sách gốc (`Golang_Master.pdf`):** Giữ nguyên tuyệt đối, không ghi đè.
-- **Bộ tạo PDF chính (`build_pdf.py`) và quy tắc dự án (`MASTER PROMPT.txt`):** Không can thiệp.
-- **Kết quả kiểm tra Git Diff đối chiếu với `main`:**
-  ```bash
-  git diff main -- book/chapters/ Golang_Master.pdf build_pdf.py "MASTER PROMPT.txt"
-  # Kết quả: HOÀN TOÀN TRỐNG (0 dòng thay đổi)
-  ```
-- **Hành động Git:** Toàn bộ công việc nằm trên nhánh thiết kế `design/ch19-29-agent2-redesign`. Không thực hiện merge vào `main`, không push `main`.
+1. **Bộ mã nguồn vector tái sinh độc lập:**
+   - `scripts/ch19_29_vector_diagrams.py` (Chứa định nghĩa vector chuẩn xác của toàn bộ 26 sơ đồ, registry `DIAGRAM_SPECS`, export runner và audit runner).
+2. **26 tệp hình ảnh raster chất lượng cao tại 320 DPI:**
+   - Thư mục: `assets/diagrams/`
+3. **Tài liệu kiểm duyệt và bản in 1:1:**
+   - Tập tin PDF xem trước độc lập: `book/design/agent2-ch19-29/ch19_29_preview.pdf` (26 trang, mỗi trang chứa 1 sơ đồ ở kích thước in 1:1).
+   - 26 hình ảnh specimen trực quan: `book/design/agent2-ch19-29/specimens/ch19_29_diagrams_p01.png` đến `p26.png`.
 
 ---
 
-## 5. TÀI NGUYÊN BÀN GIAO VÀ HƯỚNG DẪN REVIEW
+**KẾT LUẬN:** Đã hoàn thành trọn vẹn toàn bộ 26 sơ đồ kỹ thuật cuối sách theo đúng hợp đồng thiết kế đồ họa khoa học và giải quyết triệt để 100% các điểm phản biện của Reviewer. Kính trình phê duyệt.
 
-1. **Bộ tạo mã đồ họa vector:** `scripts/ch19_29_vector_diagrams.py`
-2. **Bộ tạo tài liệu duyệt:** `scripts/build_ch19_29_preview.py`
-3. **Tài liệu PDF duyệt 1:1:** `book/design/agent2-ch19-29/ch19_29_preview.pdf` (18 trang)
-4. **Bộ ảnh specimen duyệt:** `book/design/agent2-ch19-29/specimens/ch19_29_diagrams_p01.png` đến `p18.png`
-5. **Assets được cập nhật trực tiếp:** 18 tệp `.png` tại `assets/diagrams/`
-
-Dừng tại cổng kiểm soát: **`AWAITING_MANUAL_APPROVAL`**.
+**Trạng thái:** `AWAITING_MANUAL_APPROVAL`
