@@ -22,6 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 from reportlab.graphics.shapes import (
     Drawing,
     Group,
@@ -1408,15 +1411,16 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     actor1_x = 75.0    # GitHub Dispatcher
     actor2_x = 285.0   # Go Webhook Server
 
-    act_box_w = 110.0
+    act_box_w1 = 110.0
+    act_box_w2 = 120.0
     act_box_h = 20.0
     act_box_y = header_y - act_box_h - 6.0
 
-    d.add(Rect(actor1_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    d.add(Rect(actor1_x - act_box_w1 / 2.0, act_box_y, act_box_w1, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor1_x, act_box_y + 11.5, "GITHUB DISPATCHER", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor1_x, act_box_y + 4.5, "Nguồn phát Webhook Event", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    d.add(Rect(actor2_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
+    d.add(Rect(actor2_x - act_box_w2 / 2.0, act_box_y, act_box_w2, act_box_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor2_x, act_box_y + 11.5, "GO WEBHOOK SERVER", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor2_x, act_box_y + 4.5, "labs/part25-github-automation", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
@@ -1451,8 +1455,8 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
 
     # 4. Security Invariant Banner
     sy4 = sy3 - 34.0
-    d.add(Rect(actor1_x - 30.0, sy4 - 6.0, (actor2_x - actor1_x) + 60.0, 22.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.6, rx=2, ry=2))
-    d.add(String((actor1_x + actor2_x) / 2.0, sy4 + 6.0, "KHÔNG UNMARSHAL RỒI MARSHAL LẠI JSON TRƯỚC KHI TÍNH HMAC", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(actor1_x - 30.0, sy4 - 8.0, (actor2_x - actor1_x) + 60.0, 24.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.6, rx=2, ry=2))
+    d.add(String((actor1_x + actor2_x) / 2.0, sy4 + 5.5, "KHÔNG UNMARSHAL RỒI MARSHAL LẠI JSON TRƯỚC KHI TÍNH HMAC", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String((actor1_x + actor2_x) / 2.0, sy4 - 3.0, "Phải hash trực tiếp trên raw bytes; re-marshal làm đổi key order và whitespace.", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     # 5. Step B: Compute expected HMAC (3 separate lines, 0 semicolon cramming)
@@ -1469,18 +1473,25 @@ def build_webhook_hmac_verification_drawing(w: float = 407.82, h: float = 362.83
     d.add(String(actor2_x, sy6 - 5.0, "So sánh hằng thời gian (constant-time, chống timing attack)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # 7. Two Decisions
-    sy7 = sy6 - 32.0
+    sy7 = sy6 - 36.0
+    dec_box_w = 115.0
+    dec_box_h = 32.0
+
     # Left: False
-    d.add(Rect(actor1_x + 10.0, sy7 - 10.0, 100.0, 22.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(actor1_x + 60.0, sy7 + 3.0, "SAI CHỮ KÝ (FALSE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor1_x + 60.0, sy7 - 6.0, "ErrInvalidSignature: Từ chối", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    draw_arrow(d, box_left, sy6 - 5.0, actor1_x + 110.0, sy7 + 5.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    false_box_x = 70.0
+    d.add(Rect(false_box_x, sy7 - 16.0, dec_box_w, dec_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(false_box_x + dec_box_w / 2.0, sy7 + 7.5, "SAI CHỮ KÝ (FALSE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 1.5, "ErrInvalidSignature", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(false_box_x + dec_box_w / 2.0, sy7 - 10.0, "Từ chối (HTTP 401)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    draw_arrow(d, box_left, sy6 - 5.0, false_box_x + dec_box_w, sy7 + 8.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     # Right: True
-    d.add(Rect(actor2_x - 50.0, sy7 - 10.0, 100.0, 22.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
-    d.add(String(actor2_x, sy7 + 3.0, "HỢP LỆ (TRUE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, sy7 - 6.0, "Chuyển sang xử lý payload", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    draw_arrow(d, actor2_x, sy6 - 11.0, actor2_x, sy7 + 12.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
+    true_box_x = actor2_x - dec_box_w / 2.0  # 285.0 - 57.5 = 227.5
+    d.add(Rect(true_box_x, sy7 - 16.0, dec_box_w, dec_box_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
+    d.add(String(actor2_x, sy7 + 7.5, "HỢP LỆ (TRUE)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy7 - 1.5, "hmac.Equal == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, sy7 - 10.0, "Chuyển xử lý payload", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    draw_arrow(d, actor2_x, sy6 - 11.0, actor2_x, sy7 + 16.0, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
 
     draw_footer_banner(d, w, "• Invariant: VerifyHMACSHA256 so sánh hằng thời gian qua hmac.Equal; raw payload giữ nguyên vẹn trước khi decode JSON.")
     return d
@@ -1516,23 +1527,26 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
     actor3_x = 320.0  # DeliveryLedger (sync.Mutex)
     actor4_x = 420.0  # Business Handler
 
-    act_box_w = 90.0
     act_box_h = 20.0
     act_box_y = header_y - act_box_h - 6.0
 
-    d.add(Rect(actor1_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    act1_w = 84.0
+    d.add(Rect(actor1_x - act1_w / 2.0, act_box_y, act1_w, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor1_x, act_box_y + 11.5, "GITHUB DISPATCHER", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor1_x, act_box_y + 4.5, "At-least-once delivery", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(actor1_x, act_box_y + 4.5, "At-least-once", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    d.add(Rect(actor2_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
+    act2_w = 108.0
+    d.add(Rect(actor2_x - act2_w / 2.0, act_box_y, act2_w, act_box_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor2_x, act_box_y + 11.5, "WebhookReceiver", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, act_box_y + 4.5, "Process(id, sig, payload)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(actor2_x, act_box_y + 4.5, "Process(deliveryID)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    d.add(Rect(actor3_x - act_box_w / 2.0, act_box_y, act_box_w, act_box_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
+    act3_w = 108.0
+    d.add(Rect(actor3_x - act3_w / 2.0, act_box_y, act3_w, act_box_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor3_x, act_box_y + 11.5, "DeliveryLedger", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor3_x, act_box_y + 4.5, "sync.Mutex + map in-memory", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(String(actor3_x, act_box_y + 4.5, "sync.Mutex (RAM map)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
-    d.add(Rect(actor4_x - 35.0, act_box_y, 70.0, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    act4_w = 72.0
+    d.add(Rect(actor4_x - act4_w / 2.0, act_box_y, act4_w, act_box_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(actor4_x, act_box_y + 11.5, "HANDLER", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(actor4_x, act_box_y + 4.5, "handle() error", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
@@ -1552,8 +1566,8 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
 
     # 2. Verify HMAC
     y2 = y1 - 18.0
-    d.add(Rect(actor2_x - 50.0, y2 - 7.0, 100.0, 16.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(actor2_x, y2 - 2.5, "VerifyHMACSHA256() == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(Rect(actor2_x - 55.0, y2 - 8.0, 110.0, 18.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(actor2_x, y2 - 2.0, "VerifyHMACSHA256() == true", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # 3. ledger.Begin (between Actor 2 and Actor 3: 150 pt gap)
     y3 = y2 - 20.0
@@ -1587,7 +1601,7 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
 
     # Break: Redelivery
     y_break = y8 - 22.0
-    d.add(Rect(actor1_x - 20.0, y_break - 6.0, (actor4_x - actor1_x) + 40.0, 18.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(Rect(actor1_x - 20.0, y_break - 9.0, (actor4_x - actor1_x) + 40.0, 22.0, fillColor=COLOR_BG_HEADER, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String((actor1_x + actor4_x) / 2.0, y_break + 4.0, "--- GITHUB GỬI LẠI CÙNG MỘT WEBHOOK (REDELIVERY: CÙNG ID \"7a1b...\") ---", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String((actor1_x + actor4_x) / 2.0, y_break - 4.0, "Map in-memory phát hiện đã completed; triệt tiêu duplicate mà không gọi lại handle()", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
@@ -1607,9 +1621,9 @@ def build_webhook_delivery_deduplication_drawing(w: float = 462.12, h: float = 3
 
     # 8. Duplicate suppressed
     y12 = y11 - 22.0
-    d.add(Rect(actor2_x - 55.0, y12 - 7.0, 110.0, 18.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
-    d.add(String(actor2_x, y12 + 3.0, "DUPLICATE SUPPRESSION", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(actor2_x, y12 - 5.0, "Bỏ qua handle(); không chạy lặp side effect", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    d.add(Rect(actor2_x - 65.0, y12 - 10.0, 130.0, 22.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=1.5, ry=1.5))
+    d.add(String(actor2_x, y12 + 3.5, "DUPLICATE SUPPRESSION", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(actor2_x, y12 - 5.5, "Bỏ qua handle(); không chạy side effect", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     y13 = y12 - 20.0
     draw_arrow(d, actor2_x, y13, actor1_x, y13, color=COLOR_INK_DARK, width=0.8, head_size=3.0)
@@ -1997,27 +2011,27 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
     d.add(String(c1_x + 63.5, body_y + body_h - 10.5, "1. ĐẦU VÀO ĐỘC LẬP", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Box 1: Plan & Principal
-    d.add(Rect(c1_x + 6.0, body_y + body_h - 70.0, c1_w - 12.0, 52.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c1_x + 10.0, body_y + body_h - 26.0, "Plan & Principal (Đề xuất):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(Rect(c1_x + 6.0, body_y + body_h - 72.0, c1_w - 12.0, 54.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c1_x + 10.0, body_y + body_h - 26.5, "Plan & Principal (Đề xuất):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c1_x + 10.0, body_y + body_h - 37.0, "• who: ID=\"ops-agent\", Operator", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 48.0, "• Action: \"restart-demo\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 58.0, "• Target: \"demo-service\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c1_x + 10.0, body_y + body_h - 67.0, "• DiffSHA: SHA-256 (32 byte hex)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c1_x + 10.0, body_y + body_h - 47.0, "• Action: \"restart-demo\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + body_h - 56.5, "• Target: \"demo-service\"", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c1_x + 10.0, body_y + body_h - 65.5, "• DiffSHA: SHA-256 (32 byte hex)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2: Evidence
-    d.add(Rect(c1_x + 6.0, body_y + body_h - 126.0, c1_w - 12.0, 50.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c1_x + 10.0, body_y + body_h - 82.0, "Evidence (Verifier độc lập):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 93.0, "• PlanDigest: hex(sha256(Plan))", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 104.0, "• Passed: true (CI/Test)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + body_h - 114.0, "• CheckedAt: timestamp kiểm định", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c1_x + 10.0, body_y + body_h - 123.0, "  (Độc lập, không tin payload)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(c1_x + 6.0, body_y + body_h - 132.0, c1_w - 12.0, 54.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c1_x + 10.0, body_y + body_h - 86.5, "Evidence (Verifier độc lập):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + body_h - 97.0, "• PlanDigest: hex(sha256(Plan))", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + body_h - 107.0, "• Passed: true (CI/Test)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + body_h - 116.5, "• CheckedAt: timestamp kiểm định", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c1_x + 10.0, body_y + body_h - 125.5, "  (Độc lập, không tin payload)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3: Approval
-    d.add(Rect(c1_x + 6.0, body_y + 8.0, c1_w - 12.0, 48.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c1_x + 10.0, body_y + 46.0, "Approval (Ký duyệt độc lập):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + 35.0, "• PlanDigest: khớp mã digest", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + 25.0, "• Caller: who.ID (\"ops-agent\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + 15.0, "• ExpiresAt: hạn chót hợp lệ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(Rect(c1_x + 6.0, body_y + 10.0, c1_w - 12.0, 50.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c1_x + 10.0, body_y + 51.5, "Approval (Ký duyệt độc lập):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + 40.5, "• PlanDigest: khớp mã digest", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + 30.0, "• Caller: who.ID (\"ops-agent\")", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c1_x + 10.0, body_y + 19.5, "• ExpiresAt: hạn chót hợp lệ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # Arrow from Col 1 to Col 2
     draw_arrow(d, c1_x + c1_w, body_y + body_h / 2.0, c2_x, body_y + body_h / 2.0, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2048,14 +2062,13 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
         cur_y -= 10.5
 
     # Decision box at bottom of Col 2
-    d.add(Rect(c2_x + 8.0, body_y + 8.0, c2_w - 16.0, 36.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.6, rx=1.5, ry=1.5))
-    d.add(String(c2_x + 14.0, body_y + 32.0, "KẾT QUẢ ĐÁNH GIÁ (RETURN VALUE):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c2_x + 14.0, body_y + 21.0, "• Thỏa mãn: return nil -> Cho phép dispatch", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c2_x + 14.0, body_y + 11.0, "• Vi phạm: return ErrDenied -> Chặn thay đổi", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(c2_x + 8.0, body_y + 8.0, c2_w - 16.0, 38.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.6, rx=1.5, ry=1.5))
+    d.add(String(c2_x + 14.0, body_y + 35.5, "KẾT QUẢ ĐÁNH GIÁ (RETURN VALUE):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c2_x + 14.0, body_y + 24.5, "• Thỏa mãn: return nil -> Cho phép dispatch", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c2_x + 14.0, body_y + 13.5, "• Vi phạm: return ErrDenied -> Chặn thay đổi", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    # Arrow from Col 2 to Col 3 (on nil return)
-    draw_arrow(d, c2_x + c2_w, body_y + 26.0, c3_x, body_y + 26.0, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
-    d.add(String(c2_x + c2_w + 2.0, body_y + 30.0, "nil", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    # Arrow from Col 2 to Col 3 (on nil return) - cleanly connects evaluation to external dispatcher
+    draw_arrow(d, c2_x + c2_w, body_y + 24.5, c3_x, body_y + 24.5, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
 
     # Col 3: EXTERNAL BOUNDARIES
     d.add(Rect(c3_x, body_y, c3_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
@@ -2063,27 +2076,27 @@ def build_change_evidence_gate_drawing(w: float = 476.22, h: float = 260.59) -> 
     d.add(String(c3_x + 59.0, body_y + body_h - 10.5, "3. RANH GIỚI BÊN NGOÀI", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
 
     # Box 1: Dispatcher
-    d.add(Rect(c3_x + 6.0, body_y + body_h - 70.0, c3_w - 12.0, 52.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c3_x + 10.0, body_y + body_h - 26.0, "Dispatcher & Lock:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(Rect(c3_x + 6.0, body_y + body_h - 72.0, c3_w - 12.0, 54.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c3_x + 10.0, body_y + body_h - 26.5, "Dispatcher & Lock:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c3_x + 10.0, body_y + body_h - 37.0, "• Chống replay, xếp hàng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + body_h - 48.0, "• Cấp phát lease / lock", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c3_x + 10.0, body_y + body_h - 58.0, "• Ghi nhật ký audit", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(c3_x + 10.0, body_y + body_h - 67.0, "  (Lab không triển khai)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c3_x + 10.0, body_y + body_h - 47.0, "• Cấp phát lease / lock", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c3_x + 10.0, body_y + body_h - 56.5, "• Ghi nhật ký audit", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c3_x + 10.0, body_y + body_h - 65.5, "  (Lab không triển khai)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2: Executor
-    d.add(Rect(c3_x + 6.0, body_y + body_h - 126.0, c3_w - 12.0, 50.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c3_x + 10.0, body_y + body_h - 82.0, "Executor (Tác nhân ngoài):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + body_h - 93.0, "• Thực thi vào cluster đích", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + body_h - 104.0, "• Áp dụng timeout/RBAC", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c3_x + 10.0, body_y + body_h - 114.0, "• Giới hạn quyền theo role", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(c3_x + 10.0, body_y + body_h - 123.0, "  (Lab không triển khai)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(c3_x + 6.0, body_y + body_h - 132.0, c3_w - 12.0, 54.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c3_x + 10.0, body_y + body_h - 86.5, "Executor (Tác nhân ngoài):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c3_x + 10.0, body_y + body_h - 97.0, "• Thực thi vào cluster đích", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c3_x + 10.0, body_y + body_h - 107.0, "• Áp dụng timeout/RBAC", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c3_x + 10.0, body_y + body_h - 116.5, "• Giới hạn quyền theo role", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c3_x + 10.0, body_y + body_h - 125.5, "  (Lab không triển khai)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3: Monitoring & Rollback
-    d.add(Rect(c3_x + 6.0, body_y + 8.0, c3_w - 12.0, 48.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(c3_x + 10.0, body_y + 46.0, "Hậu kiểm & Giám sát:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + 35.0, "• Đo đạc metric sau thay đổi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + 25.0, "• Rollback: cần hạ tầng riêng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c3_x + 10.0, body_y + 15.0, "  (Lab không có auto-rollback)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(Rect(c3_x + 6.0, body_y + 10.0, c3_w - 12.0, 50.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.5, rx=1.5, ry=1.5))
+    d.add(String(c3_x + 10.0, body_y + 51.5, "Hậu kiểm & Giám sát:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c3_x + 10.0, body_y + 40.5, "• Đo đạc metric sau thay đổi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(c3_x + 10.0, body_y + 30.0, "• Rollback: cần hạ tầng riêng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(c3_x + 10.0, body_y + 19.5, "  (Lab không có auto-rollback)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
 
@@ -3197,19 +3210,31 @@ def export_all_diagrams(output_dir: Path | None = None, dpi: int = 320) -> list[
 
 
 def verify_all_diagram_typography() -> bool:
-    """Audit all 26 diagrams for font size and bounding-box rules."""
+    """Audit all 26 diagrams for font size, 2-axis canvas bounds, and container box geometry."""
     all_ok = True
-    print(f"\nAuditing typography and geometry across all {len(DIAGRAM_SPECS)} technical diagrams...")
+    print(f"\nAuditing typography, 2-axis canvas boundaries, and container geometry across all {len(DIAGRAM_SPECS)} diagrams...")
+    print("  [SCOPE] Automated audit: font size >= 6.0 pt, 2-axis canvas bounds (margin >= 2.0 pt),")
+    print("          and containing box boundary verification. Visual inspection: arrow clearances & semantics.")
+
+    # Target diagrams under active review (strict box containment enforced)
+    active_targets = {
+        "webhook-hmac-verification.png",
+        "webhook-delivery-deduplication.png",
+        "change-evidence-gate.png",
+    }
 
     for filename, spec in DIAGRAM_SPECS.items():
         w_pt = spec["w_pt"]
         h_pt = spec["h_pt"]
         drawing = spec["builder"](w=w_pt, h=h_pt)
         strings = []
+        rects = []
 
         def walk(node):
             if isinstance(node, String):
                 strings.append(node)
+            elif isinstance(node, Rect):
+                rects.append(node)
             elif hasattr(node, "contents"):
                 for c in node.contents:
                     walk(c)
@@ -3223,8 +3248,11 @@ def verify_all_diagram_typography() -> bool:
         min_font = min(s.fontSize for s in strings)
         font_ok = min_font >= 6.0
 
-        # Geometry bounding box check
-        geom_failures = []
+        # Geometry checks
+        canvas_failures = []
+        box_failures = []
+        cand_rects = [r for r in rects if not (r.width >= w_pt - 12.0 or r.height >= h_pt - 12.0)]
+
         for s in strings:
             txt = s.text
             f_name = s.fontName
@@ -3241,20 +3269,49 @@ def verify_all_diagram_typography() -> bool:
                 x_left = s.x
                 x_right = s.x + txt_w
 
+            # Vertical extent: baseline s.y, ascent ~0.80 * f_size, descent ~0.25 * f_size
+            y_bot = s.y - 0.25 * f_size
+            y_top = s.y + 0.80 * f_size
+
+            # 1. Canvas 2-axis check (strict 2.0 pt safety margin)
             if x_left < 2.0 or x_right > w_pt - 2.0:
-                geom_failures.append(f"'{txt}' at [{x_left:.1f}, {x_right:.1f}] exceeds [2.0, {w_pt - 2.0:.1f}]")
+                canvas_failures.append(f"'{txt}' X=[{x_left:.1f}, {x_right:.1f}] exceeds canvas [2.0, {w_pt - 2.0:.1f}]")
+            if y_bot < 2.0 or y_top > h_pt - 2.0:
+                canvas_failures.append(f"'{txt}' Y=[{y_bot:.1f}, {y_top:.1f}] exceeds canvas [2.0, {h_pt - 2.0:.1f}]")
+
+            # 2. Containing card/box check for active target diagrams
+            if filename in active_targets:
+                x_mid = (x_left + x_right) / 2.0
+                y_mid = s.y
+                enclosing = [r for r in cand_rects if r.x <= x_mid <= r.x + r.width and r.y <= y_mid <= r.y + r.height]
+                if enclosing:
+                    enclosing.sort(key=lambda r: r.width * r.height)
+                    box = enclosing[0]
+                    if box.width >= 40.0 and box.height >= 14.0:
+                        pad_l = x_left - box.x
+                        pad_r = (box.x + box.width) - x_right
+                        pad_t = (box.y + box.height) - y_top
+                        pad_b = y_bot - box.y
+                        if pad_l < -0.5 or pad_r < -0.5 or pad_t < -0.5 or pad_b < -0.5:
+                            box_failures.append(f"'{txt}' protrudes box ({box.width:.1f}x{box.height:.1f} pt): L={pad_l:.1f}, R={pad_r:.1f}, T={pad_t:.1f}, B={pad_b:.1f}")
 
         if not font_ok:
             print(f"  [FAIL] {filename}: min fontSize = {min_font:.2f} pt (< 6.0 pt)")
             all_ok = False
-        elif geom_failures:
-            print(f"  [FAIL] {filename}: {len(geom_failures)} text elements overflow canvas width ({w_pt:.1f} pt):")
-            for gf in geom_failures[:3]:
-                print(f"    - {gf}")
+        elif canvas_failures:
+            print(f"  [FAIL] {filename}: {len(canvas_failures)} canvas boundary violations ({w_pt:.1f}x{h_pt:.1f} pt):")
+            for cf in canvas_failures[:3]:
+                print(f"    - {cf}")
+            all_ok = False
+        elif box_failures:
+            print(f"  [FAIL] {filename}: {len(box_failures)} containing box boundary violations:")
+            for bf in box_failures[:3]:
+                print(f"    - {bf}")
             all_ok = False
         else:
             ch_str = f"Ch {spec['chapter']:02d}" if spec['chapter'] <= 29 else "App B"
-            print(f"  [OK] Figure {spec['figure']:02d} ({ch_str}): {filename:<36} -> {len(strings):2d} text nodes, min font: {min_font:.2f} pt, 0 overflow")
+            target_mark = " [TARGET FIXED]" if filename in active_targets else ""
+            print(f"  [OK] Figure {spec['figure']:02d} ({ch_str}): {filename:<36} -> {len(strings):2d} text nodes, min font: {min_font:.2f} pt, 2-axis canvas PASS{target_mark}")
 
     return all_ok
 

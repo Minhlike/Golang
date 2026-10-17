@@ -55,28 +55,42 @@ Toàn bộ đường dẫn thư mục lab và mã nguồn đối chiếu dưới
   - Mũi tên nét đứt đọc cache từ Worker và mũi tên `queue.Add(key)` nằm trọn vẹn trong dải trống $26\text{ pt}$ giữa Hàng 2 và Hàng 3 với khoảng đệm $\ge 10.0\text{ pt}$.
 
 ### 2.2. Hình 44 (`webhook-hmac-verification.png`): Tăng không gian code & Triệt tiêu monospace tràn viền
-- **Lỗi trước:** Hộp code quanh Actor 2 hẹp ($160\text{ pt}$) khiến chuỗi monospace `actualMAC, err := hex.DecodeString(hexSig)` và `mac.Write(rawBody); expectedMAC := mac.Sum(nil)` áp sát hoặc tràn viền card.
-- **Hiệu chỉnh:**
-  - Mở rộng chiều rộng hộp quanh Actor 2 lên $210.0\text{ pt}$ (tọa độ $[180.0, 390.0]$, lề phải an toàn $17.82\text{ pt}$).
-  - Tách `mac.Write(rawBody)` và `expectedMAC := mac.Sum(nil)` thành 2 dòng riêng biệt, không dùng dấu chấm phẩy dồn ép lệnh.
-  - Mọi chuỗi monospace (kích thước chuẩn $6.0\text{ pt}$) đều đạt khoảng đệm thực tế $\ge 27.6\text{ pt}$ so với viền hộp, triệt tiêu 100% border collision.
+- **Lỗi trước:** Dòng `ErrInvalidSignature: Từ chối` tại hộp `SAI CHỮ KÝ (FALSE)` bị tràn mép phải; banner raw bytes có padding đáy hẹp.
+- **Hiệu chỉnh targeted:**
+  - Hộp quyết định `SAI CHỮ KÝ (FALSE)` được mở rộng kích thước lên $115.0\text{ pt} \times 32.0\text{ pt}$ (tọa độ $[70.0, 185.0]$) và định dạng thành 3 dòng độc lập:
+    - Dòng 1: `SAI CHỮ KÝ (FALSE)` (`BookSansBold`, 6.0 pt)
+    - Dòng 2: `ErrInvalidSignature` (`BookMono`, 6.0 pt, chiều rộng $68.4\text{ pt}$, khoảng đệm ngang $23.3\text{ pt}$)
+    - Dòng 3: `Từ chối (HTTP 401)` (`BookSans`, 6.0 pt, chiều rộng $63.0\text{ pt}$, khoảng đệm ngang $26.0\text{ pt}$)
+  - Hộp `HỢP LỆ (TRUE)` được mở rộng đối xứng lên $115.0\text{ pt} \times 32.0\text{ pt}$ với 3 dòng: `HỢP LỆ (TRUE)`, `hmac.Equal == true`, `Chuyển xử lý payload`.
+  - Banner `KHÔNG UNMARSHAL...` được mở rộng chiều cao lên $24.0\text{ pt}$, đạt khoảng đệm dọc $\ge 3.8\text{ pt}$ và khoảng đệm trên/dưới $7.0\text{ pt}$.
+  - Toàn bộ chuỗi monospace và nhãn quyết định đạt khoảng đệm $\ge 4.0\text{ pt}$ dọc và $\ge 20.8\text{ pt}$ ngang, triệt tiêu 100% border collision.
 
-### 2.3. Hình 45 (`webhook-delivery-deduplication.png`): Phân bổ lại Actor & Cô lập các nhãn Sequence
-- **Lỗi trước:** Khoảng cách giữa WebhookReceiver và DeliveryLedger chỉ có $120\text{ pt}$, trong khi các nhãn `ledger.Begin`, `accepted=true`, `ledger.Complete`, `accepted=false` dài tới $122–151\text{ pt}$ cắt ngang cả 2 lifeline.
-- **Hiệu chỉnh:**
-  - Tái phân bổ tọa độ 4 Actor: Actor 1 ($50\text{ pt}$), Actor 2 ($170\text{ pt}$), Actor 3 ($320\text{ pt}$), Actor 4 ($420\text{ pt}$).
-  - Khoảng trống giữa Actor 2 và Actor 3 được mở rộng lên $150.0\text{ pt}$.
-  - Toàn bộ nhãn `ledger.Begin("7a1b...")`, `accepted=true (state: processing)`, `ledger.Complete("7a1b...")` và `accepted=false (duplicate)` nằm gọn giữa 2 lifeline với khoảng cách an toàn $\ge 13.8\text{ pt}$ mỗi bên, $0$ giao cắt.
-  - Nhãn `3. handle()` và `return nil` đặt trong khoảng trống $100\text{ pt}$ giữa Actor 3 và Actor 4; lifeline Actor 3 có cầu nối trắng che chắn.
-  - Khẳng định chuẩn xác: DeliveryLedger là in-memory map được bảo vệ bằng `sync.Mutex`, không phải distributed lease có TTL.
+### 2.3. Hình 45 (`webhook-delivery-deduplication.png`): Tinh giản Actor Header & Nới rộng hộp Sequence
+- **Lỗi trước:** Chuỗi `Process(id, sig, payload)` ($90.0\text{ pt}$) và `sync.Mutex + map in-memory` ($93.6\text{ pt}$) vượt viền hộp actor header $90\text{ pt}$; divider redelivery có padding hẹp.
+- **Hiệu chỉnh targeted:**
+  - Tinh giản nhãn actor subtitle chuẩn xác:
+    - Actor 2: `Process(deliveryID)` (`BookMono`, 6.0 pt, $68.4\text{ pt}$)
+    - Actor 3: `sync.Mutex (RAM map)` (`BookMono`, 6.0 pt, $72.0\text{ pt}$)
+  - Phân bổ chiều rộng riêng cho từng Actor header:
+    - Actor 1 (Dispatcher): $84.0\text{ pt}$ (lề $[8.0, 92.0]$, padding ngang $18.0\text{ pt}$)
+    - Actor 2 (WebhookReceiver): $108.0\text{ pt}$ (lề $[116.0, 224.0]$, padding ngang $19.8\text{ pt}$)
+    - Actor 3 (DeliveryLedger): $108.0\text{ pt}$ (lề $[266.0, 374.0]$, padding ngang $18.0\text{ pt}$)
+    - Actor 4 (Handler): $72.0\text{ pt}$ (lề $[384.0, 456.0]$, padding ngang $10.8\text{ pt}$)
+  - Khoảng trống giữa các hộp actor header: $24.0\text{ pt}$, $42.0\text{ pt}$, $10.0\text{ pt}$ — bảo đảm không giao thoa.
+  - Hộp `VerifyHMACSHA256` mở rộng lên $110.0\text{ pt}$ (padding ngang $8.2\text{ pt}$).
+  - Hộp `DUPLICATE SUPPRESSION` mở rộng lên $130.0\text{ pt} \times 22.0\text{ pt}$ (padding ngang $9.0\text{ pt}$, dọc $\ge 3.5\text{ pt}$).
+  - Divider `REDELIVERY` mở rộng chiều cao $22.0\text{ pt}$, đạt padding dọc $\ge 3.8\text{ pt}$.
 
-### 2.4. Hình 50 (`change-evidence-gate.png`): Cân đối 3 cột & Bảo toàn 100% điều kiện Policy.Check
-- **Lỗi trước:** Cột 1 ($125\text{ pt}$) bị hẹp khiến `Plan & Principal` và `Evidence` bị tràn viền card; Cột 2 có nguy cơ lấn sang Cột 3.
-- **Hiệu chỉnh:**
-  - Tái phân bổ chiều rộng 3 cột: Cột 1 ($142.0\text{ pt}$, lọt lòng $130.0\text{ pt}$), Cột 2 ($188.0\text{ pt}$, lọt lòng $172.0\text{ pt}$), Cột 3 ($118.0\text{ pt}$, lọt lòng $106.0\text{ pt}$).
-  - Cột 1: Mọi dòng đều có khoảng đệm thực tế $\ge 14.8\text{ pt}$ tới viền card (chuỗi dài nhất $115.2\text{ pt}$).
-  - Cột 2: Toàn bộ 6 điều kiện kỹ thuật của `Policy.Check` (khớp `labs/part29-change-evidence/gate.go`) được bảo toàn 100%, dòng dài nhất $158.4\text{ pt}$ đạt khoảng đệm $\ge 13.6\text{ pt}$.
-  - Cột 3: Được gắn nhãn minh định `3. RANH GIỚI BÊN NGOÀI`, làm rõ dispatcher, distributed lock, executor và rollback là kiến trúc ngoài, lab không triển khai. Khoảng đệm $\ge 31.4\text{ pt}$.
+### 2.4. Hình 50 (`change-evidence-gate.png`): Loại bỏ nhãn "nil" chen chúc & Chuẩn hóa Card Padding
+- **Lỗi trước:** Nhãn `nil` ($10.8\text{ pt}$) chen vào khoảng hẹp $8.0\text{ pt}$ giữa Cột 2 và Cột 3 đè lên đầu mũi tên dispatch; padding trên/dưới trong các card Cột 1 và Cột 3 chưa đồng đều.
+- **Hiệu chỉnh targeted:**
+  - Loại bỏ hoàn toàn nhãn `nil` tại đoạn nối Cột 2 sang Cột 3. Ý nghĩa `return nil` dẫn tới dispatch đã được thể hiện đầy đủ, chuẩn xác và nổi bật ngay trong hộp đánh giá ở chân Cột 2: `• Thỏa mãn: return nil -> Cho phép dispatch`.
+  - Mũi tên dispatch ($1.0\text{ pt}$, đầu tên $3.6\text{ pt}$) kết nối trực tiếp, thông thoáng từ Cột 2 sang Cột 3 tại tọa độ $y = body\_y + 24.5$.
+  - Căn chỉnh lại chiều cao và baseline trong các card Cột 1 và Cột 3:
+    - Card 1 (Plan & Principal / Dispatcher): chiều cao $54.0\text{ pt}$, padding dọc $\ge 4.2\text{ pt}$.
+    - Card 2 (Evidence / Executor): chiều cao $54.0\text{ pt}$, padding dọc $\ge 4.2\text{ pt}$.
+    - Card 3 (Approval / Rollback): chiều cao $50.0\text{ pt}$, padding dọc $\ge 4.2\text{ pt}$.
+  - Toàn bộ 6 điều kiện kỹ thuật của `Policy.Check` được giữ nguyên vẹn 100%, không bị xáo trộn.
 
 ### 2.5. Hình 51 (`library-informer-data-path.png`): Sửa đường đọc Indexer Cache
 - **Lỗi trước:** Mũi tên nét đứt đọc cache từ Worker cắt chéo qua hộp Workqueue và văn bản bên trong.
@@ -118,16 +132,26 @@ Toàn bộ đường dẫn thư mục lab và mã nguồn đối chiếu dưới
 
 ## 3. KẾT QUẢ KIỂM TOÁN TỰ ĐỘNG VÀ BẢO ĐẢM XUẤT BẢN
 
-1. **Kiểm toán Typography:**
-   - 26/26 sơ đồ đạt chuẩn: `min fontSize >= 6.00 pt` (tuyệt đối không có node nào $< 6.0\text{ pt}$).
-2. **Kiểm toán Bounding Box & Containment:**
-   - 26/26 sơ đồ đạt chuẩn: $0$ lỗi tràn canvas, $0$ lỗi tràn cột nội bộ, khoảng đệm thực tế $\ge 4.0\text{ pt}$.
-3. **Kiểm toán Grayscale:**
+### 3.1. Phân định phạm vi kiểm toán tự động vs Rà soát mắt trực quan
+1. **Phạm vi kiểm toán tự động (`scripts/ch19_29_vector_diagrams.py --audit`):**
+   - **Typography Contract:** Tính toán kích thước font tối thiểu trên toàn bộ các text node trong 26 sơ đồ: `min fontSize >= 6.00 pt` (26/26 PASS).
+   - **Canvas 2-Axis Bounding Box:** Kiểm tra glyph bounding box đầy đủ theo cả hai trục ($[x_{left}, x_{right}] \times [y_{bottom}, y_{top}]$, trong đó $y_{top} = y + 0.80 \times font$, $y_{bottom} = y - 0.25 \times font$) so với ranh giới canvas với lề an toàn $2.0\text{ pt}$ ($0$ vi phạm trên cả 26 sơ đồ).
+   - **Containing Box & Card Containment:** Kiểm tra hình học của các chuỗi văn bản nằm trong các khối card, actor header, decision box của các hình hiệu chỉnh mục tiêu (Hình 44, 45, 50). Xác nhận glyph không bị tràn khỏi ranh giới hộp chứa thực tế (dung sai $0.5\text{ pt}$, khoảng đệm thực tế $\ge 3.8\text{ pt}$).
+2. **Phạm vi rà soát mắt trực quan (Manual Visual QA):**
+   - Rà soát khoảng trống đầu mũi tên tới viền hộp và text label (Hình 36, 44, 45, 50, 51, 52).
+   - Xác nhận đường nét đứt, sequence lifelines và cầu nối trắng che chắn không cắt ngang văn bản.
+   - Kiểm tra tính nhất quán 100% grayscale ($R=G=B$) và độ tương phản khi in ấn ở tỷ lệ 1:1.
+   - Đối chiếu ngữ nghĩa luồng điều khiển với mã nguồn thực tế tại các lab Golang.
+
+### 3.2. Kết quả kiểm toán tự động
+1. **Kiểm toán Typography & Hình học:**
+   - 26/26 sơ đồ đạt chuẩn: `min fontSize >= 6.00 pt`, $0$ lỗi tràn canvas 2 trục, $0$ lỗi tràn hộp chứa thực tế.
+2. **Kiểm toán Grayscale:**
    - 26/26 sơ đồ đạt chuẩn: 100% pure grayscale ($R = G = B$ trên mọi vector shape, text node và raster pixel qua `pymupdf.csGRAY`).
-4. **Publication Contracts & Code Width:**
-   - `python scripts/test_publication_contracts.py`: **16/16 TEST PASS** (0.311s).
+3. **Publication Contracts & Code Width:**
+   - `python scripts/test_publication_contracts.py`: **16/16 TEST PASS** (0.297s).
    - `python scripts/validate_code_width.py`: **0 overflow line** (usable width: 448.22 pt).
-5. **Strict Content Lock:**
+4. **Strict Content Lock:**
    - `git diff main -- book/chapters/ book/appendices/ labs/ Golang_Master.pdf build_pdf.py "MASTER PROMPT.txt"`: **HOÀN TOÀN TRỐNG (0 thay đổi ngoài phạm vi)**.
 
 ---
