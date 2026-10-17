@@ -222,7 +222,7 @@ def build_waitgroup_completion_proof_drawing(
         String(
             14.0,
             foot_y + foot_h - 40.5,
-            "• Không dùng time.Sleep thay cho cơ chế đồng bộ: Sleep chỉ đoán thời gian, không công bố quan hệ thứ tự; đồng bộ phải dựa trên WaitGroup/channel.",
+            "• Không dùng time.Sleep thay cho cơ chế đồng bộ: Sleep không tạo happens-before; đồng bộ phải dùng cơ chế phù hợp theo Go Memory Model (channel, mutex, atomic,...).",
             fontName="BookSans",
             fontSize=6.0,
             fillColor=COLOR_INK_MUTED,
@@ -392,7 +392,7 @@ def build_waitgroup_completion_proof_drawing(
     c4_y = w4_y  # Exact horizontal alignment: 58.0
     d.add(Rect(c_box_x, c4_y, box_w, c4_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_INK_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(String(c_box_x + 6.0, c4_y + 12.5, "reports := registry.Snapshot()", fontName="BookMono", fontSize=6.4, fillColor=COLOR_INK_DARK))
-    d.add(String(c_box_x + 6.0, c4_y + 3.5, "r.mu.Lock() → copy → r.mu.Unlock(); assert len == workers", fontName="BookSans", fontSize=5.8, fillColor=COLOR_INK_MUTED))
+    d.add(String(c_box_x + 6.0, c4_y + 3.5, "r.mu.Lock() → copy → r.mu.Unlock(); assert len == workers", fontName="BookSans", fontSize=6.1, fillColor=COLOR_INK_MUTED))
 
     # ==================================================================
     # CROSS-THREAD SYNCHRONIZATION EDGES & CALLOUTS (Happens-Before Relations)
@@ -406,9 +406,9 @@ def build_waitgroup_completion_proof_drawing(
     # 1. Top Edge: Spawn relationship from C1 to Worker
     spawn_y = c1_y + c1_h / 2.0
     draw_arrow(d, c_box_x, spawn_y, w_box_x + box_w, spawn_y, color=COLOR_INK_LIGHT, width=0.9, head_size=3.5, dashed=True, dash_pattern=[2, 2])
-    # Badge for spawn (width 48 pt, fits well within the 64 pt gap)
-    d.add(Rect(mid_gap_center - 24.0, spawn_y - 6.5, 48.0, 13.0, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
-    d.add(String(mid_gap_center, spawn_y - 2.5, "go worker(i)", fontName="BookMono", fontSize=5.8, fillColor=COLOR_INK_MID, textAnchor="middle"))
+    # Badge for spawn (width 52 pt, fits well within the 64 pt gap)
+    d.add(Rect(mid_gap_center - 26.0, spawn_y - 6.5, 52.0, 13.5, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
+    d.add(String(mid_gap_center, spawn_y - 2.2, "go worker(i)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     # 2. Main Edge: Final Done() returning counter to 0 unblocks Wait() (WAITGROUP COMPLETION BARRIER)
     # Perfect horizontal line from W3 right edge to C3 left edge
