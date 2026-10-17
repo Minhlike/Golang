@@ -217,49 +217,59 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     d.add(String(col1_x + 6.0, body_y + body_h - 12.5, "DISPATCHER", fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
     d.add(String(col1_x + col1_w - 6.0, body_y + body_h - 12.5, "[Độc quyền gửi in]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED, textAnchor="end"))
 
-    d1_x = col1_x + 6.0
-    d1_w = col1_w - 12.0  # 102.0 pt
+    d1_x = col1_x + 5.0
+    d1_w = col1_w - 10.0  # 104.0 pt
 
-    # Box 1: Ownership of in (Created by Run(), Dispatcher has exclusive send)
-    d1_y = body_y + body_h - 48.0
-    d.add(Rect(d1_x, d1_y, d1_w, 24.0, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
-    d.add(String(d1_x + 5.0, d1_y + 14.5, "in := make(chan Job)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 5.0, d1_y + 4.5, "Run() tạo in; Dispatcher gửi & đóng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    # Box 1: Run() creates in channel
+    d1_h = 23.0
+    d1_y = body_y + body_h - 18.0 - 5.0 - d1_h
+    d.add(Rect(d1_x, d1_y, d1_w, d1_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
+    d.add(String(d1_x + 5.0, d1_y + 13.5, "in := make(chan Job)", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 5.0, d1_y + 4.0, "Run() tạo in; Dispatcher gửi & đóng", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow D1 -> D2
-    draw_arrow(d, d1_x + d1_w / 2.0, d1_y, d1_x + d1_w / 2.0, d1_y - 6.0, color=COLOR_INK_DARK, width=0.9, head_size=3.5)
+    draw_arrow(d, d1_x + d1_w / 2.0, d1_y, d1_x + d1_w / 2.0, d1_y - 4.5, color=COLOR_INK_DARK, width=0.9, head_size=3.2)
 
-    # Box 2: Feed jobs loop with ctx check (Full valid Go syntax with matching braces & logic badge)
-    d2_h = 70.0
-    d2_y = d1_y - 6.0 - d2_h
-    d.add(Rect(d1_x, d2_y, d1_w, d2_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
-    d.add(String(d1_x + 5.0, d2_y + 59.5, "[Trích đoạn logic // Cấp phát]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(d1_x + 5.0, d2_y + 50.5, "for _, job := range jobs {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 9.0, d2_y + 42.0, "select {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(d1_x + 9.0, d2_y + 33.5, "case in <- job:", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 9.0, d2_y + 25.0, "case <-ctx.Done():", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(d1_x + 16.0, d2_y + 17.0, "return", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(d1_x + 9.0, d2_y + 9.0, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(d1_x + 5.0, d2_y + 2.0, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-
-    # Box 3: defer close(in) - explicit registration vs execution timing
-    d3_h = 44.0
-    d3_y = body_y + 8.0
-    d.add(Rect(d1_x, d3_y, d1_w, d3_h, fillColor=COLOR_POLICY_BG, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
-    d.add(String(d1_x + 5.0, d3_y + 31.5, "defer close(in)", fontName="BookMono", fontSize=6.4, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 5.0, d3_y + 21.0, "• Đăng ký: khi bắt đầu goroutine", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(d1_x + 5.0, d3_y + 11.5, "• Thực thi: khi return (hết việc/hủy)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(d1_x + 5.0, d3_y + 3.0, "• Tác dụng: báo worker thoát lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    # Box 2: defer close(in) REGISTRATION (At goroutine entry, BEFORE the loop)
+    d2_h = 29.0
+    d2_y = d1_y - 4.5 - d2_h
+    d.add(Rect(d1_x, d2_y, d1_w, d2_h, fillColor=COLOR_POLICY_BG, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
+    d.add(String(d1_x + 5.0, d2_y + 19.5, "defer close(in) // ĐĂNG KÝ", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 5.0, d2_y + 11.5, "• Đăng ký: Trước vòng lặp for", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 5.0, d2_y + 3.0, "• Trạng thái: Chỉ chạy khi return", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow D2 -> D3
-    draw_arrow(d, d1_x + d1_w / 2.0, d2_y, d1_x + d1_w / 2.0, d3_y + d3_h, color=COLOR_INK_DARK, width=0.9, head_size=3.5)
+    draw_arrow(d, d1_x + d1_w / 2.0, d2_y, d1_x + d1_w / 2.0, d2_y - 4.5, color=COLOR_INK_DARK, width=0.9, head_size=3.2)
+
+    # Box 3: Feed jobs loop with ctx check (Full valid Go syntax with matching braces & logic badge)
+    d3_h = 67.0
+    d3_y = d2_y - 4.5 - d3_h
+    d.add(Rect(d1_x, d3_y, d1_w, d3_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
+    d.add(String(d1_x + 5.0, d3_y + 57.5, "[Trích đoạn logic // Cấp phát]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(d1_x + 4.5, d3_y + 49.5, "for _, job := range jobs {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 8.5, d3_y + 41.5, "select {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(d1_x + 8.5, d3_y + 33.5, "case in <- job:", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 8.5, d3_y + 25.5, "case <-ctx.Done():", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(d1_x + 15.5, d3_y + 17.5, "return", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(d1_x + 8.5, d3_y + 9.5, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(d1_x + 4.5, d3_y + 2.5, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+
+    # Arrow D3 -> D4 (When loop finishes or returns)
+    draw_arrow(d, d1_x + d1_w / 2.0, d3_y, d1_x + d1_w / 2.0, d3_y - 4.5, color=COLOR_INK_DARK, width=0.9, head_size=3.2)
+
+    # Box 4: Execution of defer close(in) upon return
+    d4_h = 26.0
+    d4_y = d3_y - 4.5 - d4_h
+    d.add(Rect(d1_x, d4_y, d1_w, d4_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
+    d.add(String(d1_x + 5.0, d4_y + 14.5, "KHI RETURN: close(in) THỰC THI", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(d1_x + 5.0, d4_y + 4.5, "Kênh in đóng sạch; worker thoát lặp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # ------------------------------------------------------------------
     # TRANSFER: Dispatcher -> in channel -> Workers
     # ------------------------------------------------------------------
     chan_jobs_x = col1_x + col1_w + 3.0
     chan_jobs_w = col2_x - chan_jobs_x - 3.0  # 26.0 pt
-    chan_jobs_y = d2_y + 16.0
+    chan_jobs_y = d3_y + 17.0
     chan_jobs_h = 32.0
 
     d.add(Rect(chan_jobs_x, chan_jobs_y, chan_jobs_w, chan_jobs_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
@@ -802,7 +812,7 @@ def build_http_client_request_path_drawing(w: float = 275.97, h: float = 362.83)
 # EXPORT PIPELINE
 # ==============================================================================
 
-def export_diagrams_to_png(target_dir: Path | None = None, dpi: int = 320) -> list[Path]:
+def export_diagrams_to_png(target_dir: Path | None = None, dpi: int = 320, names: list[str] | None = None) -> list[Path]:
     """Render Chapters 09, 10, 11 diagrams to high-resolution publication PNGs at 320 DPI."""
     register_fonts()
     if target_dir is None:
@@ -814,6 +824,8 @@ def export_diagrams_to_png(target_dir: Path | None = None, dpi: int = 320) -> li
         ("performance-evidence-path.png", build_performance_evidence_path_drawing()),
         ("http-client-request-path.png", build_http_client_request_path_drawing()),
     ]
+    if names is not None:
+        diagrams = [(fn, dr) for fn, dr in diagrams if fn in names]
 
     exported = []
     with tempfile.TemporaryDirectory() as tmpdir:

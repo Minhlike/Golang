@@ -1,25 +1,28 @@
-# BÁO CÁO HIỆU CHỈNH KỸ THUẬT SƠ ĐỒ ĐỢT 01: CHƯƠNG 09–11 (AGENT 2 — ROUND 3/3 FINAL REVIEW)
+# BÁO CÁO HIỆU CHỈNH KỸ THUẬT SƠ ĐỒ ĐỢT 01: CHƯƠNG 09–11 (AGENT 2 — FINAL MICRO-FIX)
 **Ngày thực hiện:** 17/10/2026  
-**Nhánh công việc:** `design/ch09-11-agent2-redesign` (baseline: `d655341`)  
+**Nhánh công việc:** `design/ch09-11-agent2-redesign` (baseline: `401d229`)  
 **Trạng thái:** `AWAITING_MANUAL_APPROVAL` (Chờ người dùng và reviewer kiểm tra độc lập trước khi phê duyệt tích hợp)
 
 ---
 
-## 1. Mục tiêu hiệu chỉnh kỹ thuật vòng cuối (Round 3/3 Final Review)
+## 1. Mục tiêu và phạm vi vi chỉnh cuối cùng (Final Micro-Fix)
 1. **STRICT CONTENT LOCK:**
    - Giữ nguyên tuyệt đối 100% văn bản Markdown trong `book/chapters/` (`git diff main -- book/chapters/` = 0).
-   - Chỉ sửa sơ đồ Chương 9 và Chương 11; giữ nguyên sơ đồ Chương 10 đã đạt chuẩn.
+   - Chỉ cập nhật sơ đồ Chương 09 (`channel-work-lifecycle.png`) và văn bản chú thích preview Chương 10 trong `scripts/build_ch09_11_preview.py`.
+   - **Tuyệt đối không sửa PNG Chương 10 (`performance-evidence-path.png`)**. Giữ nguyên 100% sơ đồ Chương 11 (`http-client-request-path.png`).
    - Không sửa code block, bảng biểu, caption, heading, typography bài giảng, các lab hoặc `Golang_Master.pdf`.
-2. **Chương 09 — Chuẩn hóa quyền sở hữu kênh (Channel Ownership):**
-   - Sửa câu “Chỉ sender mới được đóng kênh” thành: *"Chỉ đóng kênh khi bảo đảm không còn sender nào hoạt động"*. Coordinator không gửi dữ liệu vào `out` nhưng sở hữu quyền đóng `out` an toàn sau khi toàn bộ worker đã thoát (`workersDone.Wait()`).
-   - Phân biệt rõ hàm `Run()` trong `fixed/pool.go` là nơi khởi tạo cả hai channel `in` và `out`, trong khi Dispatcher goroutine là bên độc quyền gửi việc và đóng `in` (`defer close(in)`).
-3. **Chương 09 — Ngữ nghĩa hủy bỏ (Cancellation Semantics):**
-   - Không đưa ra cam kết tuyệt đối rằng không có kết quả nào được gửi sau khi context bị hủy.
-   - Làm rõ: Worker kiểm tra `ctx.Err() != nil` trước khi gửi để giảm tối đa bàn giao dư thừa; tuy nhiên trong câu lệnh `select`, nếu cả nhánh `out <- result` và `<-ctx.Done()` đều ready đồng thời, Go runtime sẽ chọn nhánh thực thi hoàn toàn ngẫu nhiên (pseudo-random).
-4. **Chương 11 — Gắn context mới vào Request (HTTP Trace Context Binding):**
-   - Bổ sung chính xác bước tái gán context: `traceCtx := httptrace.WithClientTrace(req.Context(), trace)` và `req = req.WithContext(traceCtx)`.
-   - Làm rõ tính bắt buộc của bước này: Nếu không gọi `req.WithContext(traceCtx)`, các hook của `httptrace` sẽ không bao giờ được kích hoạt trong `client.Do(req)`.
-   - Giữ nguyên toàn bộ các chi tiết đã đạt: `GotFirstResponseByte`, `Reused` vs `WasIdle`, các chặng có điều kiện DNS/TCP/TLS, xác minh chứng chỉ CA & DNS/IP SAN, quyền sở hữu Body và `StatusError`.
+2. **Chương 09 — Bố cục đăng ký và thực thi của `defer close(in)`:**
+   - Điều chỉnh cấu trúc vật lý của Cột 1 (Dispatcher) thành 4 khối tuần tự rõ ràng:
+     * **Khối 1 (Khởi tạo):** `in := make(chan Job)` — `Run() tạo in; Dispatcher gửi & đóng`.
+     * **Khối 2 (Đăng ký Defer):** `defer close(in) // ĐĂNG KÝ` đặt **trước** vòng lặp `for`. Chú thích rõ: *Đăng ký: Trước vòng lặp for*, *Trạng thái: Chỉ chạy khi return*.
+     * **Khối 3 (Cấp phát việc):** Vòng lặp `for _, job := range jobs` với `select/case in <- job / case <-ctx.Done(): return`.
+     * **Khối 4 (Thực thi Defer khi Return):** `KHI RETURN: close(in) THỰC THI` — `Kênh in đóng sạch; worker thoát lặp`.
+   - Khắc phục hoàn toàn khả năng gây hiểu nhầm `defer close(in)` được gọi sau vòng lặp; thể hiện chính xác ngữ nghĩa Go: `defer` đăng ký ngay khi vào goroutine, nhưng chỉ thực thi tại điểm thoát (`return`).
+3. **Chương 10 — Đồng bộ văn bản giới thiệu Preview PDF:**
+   - Sửa dòng giới thiệu trong `scripts/build_ch09_11_preview.py` từ `-count=5` thành `-count=6`, đồng nhất 100% với sơ đồ và bài giảng.
+   - Sơ đồ PNG Chương 10 (`performance-evidence-path.png`) được giữ nguyên tuyệt đối, không có diff.
+4. **Chương 11 — Giữ nguyên:**
+   - Toàn bộ sơ đồ Hình Chương 11 (`http-client-request-path.png`) giữ nguyên 100% kết quả đã đạt chuẩn ở Round 3/3.
 
 ---
 
@@ -30,9 +33,10 @@
 - **Mã nguồn lab:** `labs/part9-workflow-pressure/fixed/pool.go`.
 - **Cấu trúc quyền sở hữu và khởi tạo channel:**
   * `Run()`: Khởi tạo `in := make(chan Job)` và `out := make(chan Result)`.
-  * Dispatcher Header & Box 1: `DISPATCHER [Độc quyền gửi in]` — `Run() tạo in; Dispatcher gửi & đóng`.
-  * Dispatcher Box 2: `[Trích đoạn logic // Cấp phát]` với vòng lặp `for/select` đầy đủ cặp ngoặc `{}`.
-  * Dispatcher Box 3: `defer close(in)` (đăng ký lúc spawn, thực thi khi return, báo worker thoát lặp).
+  * Dispatcher Header & Box 1: `DISPATCHER [Độc quyền gửi in]` — `in := make(chan Job)` / `Run() tạo in; Dispatcher gửi & đóng`.
+  * Dispatcher Box 2 (Đăng ký Defer): `defer close(in) // ĐĂNG KÝ` — `• Đăng ký: Trước vòng lặp for` / `• Trạng thái: Chỉ chạy khi return`.
+  * Dispatcher Box 3 (Vòng lặp cấp phát): `[Trích đoạn logic // Cấp phát]` với vòng lặp `for/select` đầy đủ cặp ngoặc `{}`.
+  * Dispatcher Box 4 (Thực thi Defer): `KHI RETURN: close(in) THỰC THI` — `Kênh in đóng sạch; worker thoát lặp`.
   * Worker Row 2: `[Trích đoạn logic // Thực thi]` — `Kiểm tra ctx.Err() trước gửi; giảm tối đa bàn giao dư thừa`.
   * Worker Row 3: `[Trích đoạn logic // Bàn giao]` — `} // Nếu out và Done cùng ready, Go chọn ngẫu nhiên`.
   * Coordinator Header: `COORDINATOR [Sở hữu đóng out]` — `workersDone.Wait()` chờ $N$ worker gọi `Done()`, sau đó `close(out) // DUY NHẤT 1 LẦN`.

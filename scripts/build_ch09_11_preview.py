@@ -55,7 +55,7 @@ def build_preview() -> Path:
     SPECIMENS_DIR.mkdir(parents=True, exist_ok=True)
 
     # 1. Ensure diagrams are up to date in assets/diagrams/
-    vd.export_diagrams_to_png()
+    vd.export_diagrams_to_png(names=["channel-work-lifecycle.png"])
 
     # 2. Register standard book fonts
     register_fonts()
@@ -115,7 +115,7 @@ def build_preview() -> Path:
         ),
         (
             "CHƯƠNG 10: CHU TRÌNH ĐIỀU TRA HIỆU NĂNG VÀ BẰNG CHỨNG ĐỊNH LƯỢNG",
-            "Đường đi của bằng chứng kỹ thuật: Đi từ triệu chứng đến bài toán và tải đại diện (1.000 Reading), cố định hợp đồng kiểm thử, ghi nhận baseline bằng benchmark (-benchmem -count=5), bóc tách độ trễ runtime qua profile/trace (sync, sched, syscall), thực hiện tối ưu hóa phẫu thuật và đo đạc đối chứng khép kín vòng lặp. Kích thước xuất bản: 297.09 x 362.83 pt (Trang 199, xref 439).",
+            "Đường đi của bằng chứng kỹ thuật: Đi từ triệu chứng đến bài toán và tải đại diện (1.000 Reading), cố định hợp đồng kiểm thử, ghi nhận baseline bằng benchmark (-benchmem -count=6), bóc tách độ trễ runtime qua profile/trace (sync, sched, syscall), thực hiện tối ưu hóa phẫu thuật và đo đạc đối chứng khép kín vòng lặp. Kích thước xuất bản: 297.09 x 362.83 pt (Trang 199, xref 439).",
             ROOT / "assets/diagrams/performance-evidence-path.png",
             297.09,
             362.83,
