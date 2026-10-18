@@ -28,7 +28,7 @@ except ImportError:
     import fitz
 
 ROOT = Path(__file__).resolve().parents[1]
-PDF_PATH = ROOT / "Golang_Master.pdf"
+PDF_PATH = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "Golang_Master.pdf"
 WORKSPACE_QA = ROOT / ".workspace/publication-qa"
 PREFLIGHT_JSON = WORKSPACE_QA / "preflight/PREFLIGHT_RAW.json"
 PAGE_REVIEW_CSV = WORKSPACE_QA / "page_review.csv"
@@ -308,7 +308,7 @@ def run_preflight() -> dict:
             matches = pat.findall(text)
             if matches:
                 # Check for intentional teaching exception: Ch17 REPLACE_ME
-                if pat.pattern == r"\bREPLACE_ME\b" and ("probe-api@sha256:REPLACE_ME" in text or "Placeholder REPLACE_ME" in text):
+                if pat.pattern == r"\bREPLACE_ME\b" and ("probe-api@sha256:REPLACE_ME" in text or "Placeholder REPLACE_ME" in text or "chỗ REPLACE_ME" in text):
                     classified_exceptions.append({
                         "page": pno,
                         "type": "INTENTIONAL_TEACHING_EXAMPLE",

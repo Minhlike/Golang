@@ -195,23 +195,23 @@ def draw_axonometric_cross_section(ax, cx, cy, scale=1.04):
         ax.scatter([p3_x], [p3_y], s=7 * scale, color="#000000", zorder=21)
 
         ax.text(p3_x - lead_len - 4 * scale, p3_y + 4.0 * scale, t_title,
-                fontsize=6.4 * scale, fontfamily="sans-serif", weight="bold", color="#000000",
+                fontsize=max(6.2, 6.4 * scale), fontfamily="sans-serif", weight="bold", color="#000000",
                 ha="right", va="bottom", zorder=22)
         ax.text(p3_x - lead_len - 4 * scale, p3_y - 2.5 * scale, t_sub,
-                fontsize=5.2 * scale, fontfamily="monospace", color="#333333",
+                fontsize=6.0, fontfamily="monospace", color="#333333",
                 ha="right", va="top", zorder=22)
 
         # 5. Right-Hand Elevation Benchmarks
         p1_x, p1_y = p1
-        r_lead_len = 16.0 * scale
+        r_lead_len = 10.0 * scale
         ax.plot([p1_x, p1_x + r_lead_len], [p1_y, p1_y],
                 color="#888888", lw=0.5 * scale, ls=(0, (3, 3)), zorder=18)
         ax.plot([p1_x + r_lead_len, p1_x + r_lead_len], [p1_y - 3.0 * scale, p1_y + 3.0 * scale],
                 color="#777777", lw=0.7 * scale, zorder=18)
         ax.scatter([p1_x], [p1_y], s=6 * scale, color="#555555", zorder=19)
         el_str = f"EL. {z_base:+04d} MM"
-        ax.text(p1_x + r_lead_len + 4 * scale, p1_y, el_str,
-                fontsize=5.2 * scale, fontfamily="monospace", color="#555555",
+        ax.text(p1_x + r_lead_len + 3 * scale, p1_y, el_str,
+                fontsize=6.0, fontfamily="monospace", color="#555555",
                 ha="left", va="center", zorder=19)
 
 
@@ -270,7 +270,7 @@ def generate_front_cover_page():
         ax.plot([cx_tick, cx_tick], [cal_y - 3, cal_y + 3], color="#000000", lw=0.75)
 
     # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
-    art_cx = 345.0
+    art_cx = 336.0
     art_cy = 385.0
     draw_axonometric_cross_section(ax, art_cx, art_cy, scale=1.04)
 
@@ -285,35 +285,35 @@ def generate_front_cover_page():
     col3_x = left_m + 360
 
     # Column 1
-    ax.text(col1_x, bot_y - 10, "SYSTEM RUNTIME SPECIFICATION",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(col1_x, bot_y - 24,
+    ax.text(col1_x, bot_y - 8, "SYSTEM RUNTIME SPECIFICATION",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col1_x, bot_y - 22,
             "M:N Work-Stealing Go Scheduler\nTri-Color Concurrent Mark-Sweep GC\nChannel Rendezvous & Mutex Arena",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Column 2
-    ax.text(col2_x, bot_y - 10, "DISTRIBUTED SRE INFRASTRUCTURE",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(col2_x, bot_y - 24,
+    ax.text(col2_x, bot_y - 8, "DISTRIBUTED SRE INFRASTRUCTURE",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col2_x, bot_y - 22,
             "Kubernetes Level-Triggered Reconcile\neBPF Kernel Tracing & Observability\nZero-Downtime Service Mesh Routing",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Column 3
-    ax.text(col3_x, bot_y - 10, "PUBLICATION STANDARDS",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(col3_x, bot_y - 24,
+    ax.text(col3_x, bot_y - 8, "PUBLICATION STANDARDS",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(col3_x, bot_y - 22,
             "Format: ISO A4 (210 x 297 mm)\nType: Source Serif 4 & JetBrains Mono\nPrint: High-Density Grayscale Monotone",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Sub-footer line
     sub_foot_y = 28.0
     ax.plot([left_m, right_m], [sub_foot_y, sub_foot_y], color="#999999", lw=0.4)
     ax.text(left_m, sub_foot_y - 5,
             "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
-            fontsize=4.6, fontfamily="monospace", color="#666666", va="top")
+            fontsize=6.0, fontfamily="monospace", color="#666666", va="top")
     ax.text(right_m, sub_foot_y - 5,
             "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
-            fontsize=4.6, fontfamily="monospace", color="#666666", ha="right", va="top")
+            fontsize=6.0, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # Save
     out_pdf = OUTPUT_DIR / "front_cover_page.pdf"
@@ -405,7 +405,7 @@ def generate_full_cover_wrap():
         ax.plot([cx_tick, cx_tick], [f_cal_y - 3, f_cal_y + 3], color="#000000", lw=0.75)
 
     # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
-    f_art_cx = FRONT_LEFT_PT + 345.0
+    f_art_cx = FRONT_LEFT_PT + 336.0
     f_art_cy = BOTTOM_TRIM_PT + 385.0
     draw_axonometric_cross_section(ax, f_art_cx, f_art_cy, scale=1.04)
 
@@ -420,35 +420,35 @@ def generate_full_cover_wrap():
     f_col3_x = f_left_m + 360
 
     # Column 1
-    ax.text(f_col1_x, f_bot_y - 10, "SYSTEM RUNTIME SPECIFICATION",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(f_col1_x, f_bot_y - 24,
+    ax.text(f_col1_x, f_bot_y - 8, "SYSTEM RUNTIME SPECIFICATION",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col1_x, f_bot_y - 22,
             "M:N Work-Stealing Go Scheduler\nTri-Color Concurrent Mark-Sweep GC\nChannel Rendezvous & Mutex Arena",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Column 2
-    ax.text(f_col2_x, f_bot_y - 10, "DISTRIBUTED SRE INFRASTRUCTURE",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(f_col2_x, f_bot_y - 24,
+    ax.text(f_col2_x, f_bot_y - 8, "DISTRIBUTED SRE INFRASTRUCTURE",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col2_x, f_bot_y - 22,
             "Kubernetes Level-Triggered Reconcile\neBPF Kernel Tracing & Observability\nZero-Downtime Service Mesh Routing",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Column 3
-    ax.text(f_col3_x, f_bot_y - 10, "PUBLICATION STANDARDS",
-            fontsize=5.8, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
-    ax.text(f_col3_x, f_bot_y - 24,
+    ax.text(f_col3_x, f_bot_y - 8, "PUBLICATION STANDARDS",
+            fontsize=6.2, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
+    ax.text(f_col3_x, f_bot_y - 22,
             "Format: ISO A4 (210 x 297 mm)\nType: Source Serif 4 & JetBrains Mono\nPrint: High-Density Grayscale Monotone",
-            fontsize=4.9, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#333333", linespacing=1.35, va="top")
 
     # Sub-footer line
     f_sub_foot_y = BOTTOM_TRIM_PT + 28.0
     ax.plot([f_left_m, f_right_m], [f_sub_foot_y, f_sub_foot_y], color="#999999", lw=0.4)
     ax.text(f_left_m, f_sub_foot_y - 5,
             "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
-            fontsize=4.6, fontfamily="monospace", color="#666666", va="top")
+            fontsize=6.0, fontfamily="monospace", color="#666666", va="top")
     ax.text(f_right_m, f_sub_foot_y - 5,
             "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
-            fontsize=4.6, fontfamily="monospace", color="#666666", ha="right", va="top")
+            fontsize=6.0, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # --------------------------------------------------------------------------
     # SPINE (GÁY SÁCH)
@@ -580,7 +580,7 @@ def generate_full_cover_wrap():
             "Định dạng: ISO A4 (210 x 297 mm) // Khâu chỉ dán gáy keo PUR\n"
             "Chế bản: Đơn sắc High-Density Grayscale // Bản in thử nghiệm 2026\n"
             "Phần mềm mã nguồn mở: https://github.com/Minhlike/Golang",
-            fontsize=5.4, fontfamily="monospace", color="#444444", linespacing=1.4, va="top")
+            fontsize=6.0, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
 
     # Right: Barcode Box Placeholder
     bc_w = 95
@@ -595,7 +595,7 @@ def generate_full_cover_wrap():
         sw = 1.0 if (s % 3 != 0) else 1.8
         ax.plot([sx, sx], [bc_y + 13, bc_y + bc_h - 7], color="#000000", lw=sw)
     ax.text(bc_x + bc_w / 2.0, bc_y + 4.5, "9 786040 202601",
-            fontsize=5.8, fontfamily="monospace", color="#000000", ha="center")
+            fontsize=6.0, fontfamily="monospace", color="#000000", ha="center")
 
     # Save Full Cover Wrap Outputs
     out_wrap_pdf = OUTPUT_DIR / "full_cover_wrap_print.pdf"

@@ -295,7 +295,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         if paragraph_lines:
             prose = " ".join(paragraph_lines)
             style = s["body"]
-            if before_code and prose.rstrip().endswith(":"):
+            if before_code and prose.rstrip().endswith(":") and len(prose) <= 160:
                 style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
             story.append(Paragraph(inline(prose, mono), style))
             paragraph_lines = []
@@ -405,8 +405,9 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         Blocks > PAGE_FIT lines: equal-split into balanced halves/thirds.
         """
         nonlocal code_lines
-        # At 11pt/15pt leading + 20pt padding: ~36 lines fit in one page column.
-        PAGE_FIT = 36
+        # At 11pt/15pt leading + 20pt padding: code blocks <= 24 lines stay unified;
+        # longer blocks split into balanced halves to maintain page density without dangling fragments.
+        PAGE_FIT = 24
         n = len(code_lines)
         if n <= PAGE_FIT:
             chunks = [code_lines]
@@ -752,10 +753,18 @@ def keep_headings_with_content(story: list) -> list:
             end += 1
         prefix = story[index:end]
         if end < len(story) and isinstance(story[end], KeepTogether):
-            for heading in prefix:
-                heading.keepWithNext = False
-            result.append(KeepTogether(prefix + story[end]._content))
-            index = end + 1
+            combined = prefix + story[end]._content
+            combined_h = sum(f.wrap(PRINTABLE_WIDTH, 1000)[1] for f in combined)
+            if combined_h <= 550:
+                for heading in prefix:
+                    heading.keepWithNext = False
+                result.append(KeepTogether(combined))
+                index = end + 1
+            else:
+                for spacing in prefix[1:]:
+                    spacing.keepWithNext = True
+                result.extend(prefix)
+                index = end
         else:
             for spacing in prefix[1:]:
                 spacing.keepWithNext = True

@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 import sys
 
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageChops
 import pymupdf as fitz
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,38 +156,34 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
                         "bbox": (round(r.x0, 1), round(r.y0, 1), round(r.x1, 1), round(r.y1, 1)),
                     })
 
-                # 2. DPI check
-                if eff_dpi < 150.0:
+                # 2. DPI check: fail when effective raster DPI < 300.0 (prefer 320.0)
+                if eff_dpi < 300.0:
                     dpi_warnings.append({
                         "page": pno,
                         "xref": xref,
                         "dpi": round(eff_dpi, 1),
                         "px": (px_w, px_h),
                         "pt": (round(w_pt, 1), round(h_pt, 1)),
+                        "error": f"DPI {eff_dpi:.1f} < 300.0 (preferred >= 320.0)",
                     })
 
-                # 3. Grayscale check
-                if cs > 1:  # Multi-channel (e.g. RGB)
+                # 3. Grayscale check: fail when ANY pixel violates R == G == B (zero tolerance, no downsampling)
+                if cs > 1:  # Multi-channel (e.g. RGB, RGBA, CMYK)
                     try:
                         pil_img = PILImage.open(io.BytesIO(img_bytes))
-                        if pil_img.mode in ("RGB", "RGBA"):
-                            # Check if saturation is non-zero
+                        if pil_img.mode in ("RGB", "RGBA", "CMYK", "YCbCr", "LAB"):
                             rgb_data = pil_img.convert("RGB")
-                            # Sample pixels
-                            w_samp = min(100, rgb_data.width)
-                            h_samp = min(100, rgb_data.height)
-                            resized = rgb_data.resize((w_samp, h_samp))
-                            has_color = False
-                            for r_val, g_val, b_val in resized.getdata():
-                                if max(abs(r_val - g_val), abs(r_val - b_val), abs(g_val - b_val)) > 8:
-                                    has_color = True
-                                    break
-                            if has_color:
+                            r_band, g_band, b_band = rgb_data.split()
+                            diff_rg = ImageChops.difference(r_band, g_band)
+                            diff_gb = ImageChops.difference(g_band, b_band)
+                            max_diff = max(diff_rg.getextrema()[1], diff_gb.getextrema()[1])
+                            if max_diff > 0:
                                 color_issues.append({
                                     "page": pno,
                                     "xref": xref,
                                     "mode": pil_img.mode,
-                                    "desc": "Image contains colored pixels (chromatic saturation > 8)",
+                                    "max_diff": max_diff,
+                                    "desc": f"Image contains colored pixels (R!=G!=B, max diff={max_diff})",
                                 })
                     except Exception as e:
                         pass
@@ -218,6 +214,7 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
         "total_images_in_catalog": len(catalog),
         "catalog": catalog,
         "overflow_issues": overflow_issues,
+        "dpi_issues": dpi_warnings,
         "dpi_warnings": dpi_warnings,
         "color_issues": color_issues,
         "unrendered_figure_tags": unrendered_figure_tags,
@@ -229,17 +226,18 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    report = audit_diagrams_and_images()
+    target_pdf = Path(sys.argv[1]) if len(sys.argv) > 1 else PDF_PATH
+    report = audit_diagrams_and_images(target_pdf)
     print("=" * 80)
-    print("AUDIT BÁO CÁO TOÀN DIỆN: HÌNH ẢNH & SƠ ĐỒ (GOLANG_MASTER.PDF)")
+    print(f"AUDIT BÁO CÁO TOÀN DIỆN: HÌNH ẢNH & SƠ ĐỒ ({target_pdf.name.upper()})")
     print("=" * 80)
     print(f"Tổng số trang PDF:              {report['total_pages']}")
     print(f"Tổng số đối tượng hình ảnh:     {report['total_images_in_catalog']}")
     print(f"Số lượng sơ đồ có đánh số:      {report['figures_found_count']} (Hình 1 - Hình {max((f['num'] for f in report['figures']), default=0)})")
     print(f"Thẻ @figure chưa biên dịch:     {len(report['unrendered_figure_tags'])}")
     print(f"Lỗi tràn khung/lề (Overflow):   {len(report['overflow_issues'])}")
-    print(f"Cảnh báo độ phân giải (<150DPI): {len(report['dpi_warnings'])}")
-    print(f"Lỗi màu (chứa màu ngoài Grayscale): {len(report['color_issues'])}")
+    print(f"Lỗi độ phân giải (<300 DPI):    {len(report['dpi_issues'])}")
+    print(f"Lỗi màu (chứa pixel R!=G!=B):   {len(report['color_issues'])}")
     print(f"Lỗi nhảy số thứ tự hình ảnh:    {len(report['numbering_issues'])}")
     print("=" * 80)
 
@@ -248,13 +246,13 @@ if __name__ == "__main__":
         for iss in report["overflow_issues"]:
             print(f"Trang {iss['page']} (xref {iss['xref']}): {', '.join(iss['violations'])}")
 
-    if report["dpi_warnings"]:
-        print("\n--- CHI TIẾT CẢNH BÁO ĐỘ PHÂN GIẢI THẤP (<150 DPI) ---")
-        for w in report["dpi_warnings"]:
+    if report["dpi_issues"]:
+        print("\n--- CHI TIẾT LỖI ĐỘ PHÂN GIẢI THẤP (<300 DPI) ---")
+        for w in report["dpi_issues"]:
             print(f"Trang {w['page']} (xref {w['xref']}): DPI={w['dpi']} (pixel: {w['px']}, hiển thị: {w['pt']})")
 
     if report["color_issues"]:
-        print("\n--- CHI TIẾT HÌNH ẢNH CÓ MÀU (CHƯA ĐƠN SẮC HOÁ) ---")
+        print("\n--- CHI TIẾT HÌNH ẢNH CÓ MÀU (R!=G!=B) ---")
         for c in report["color_issues"]:
             print(f"Trang {c['page']} (xref {c['xref']}): {c['desc']}")
 
@@ -266,5 +264,14 @@ if __name__ == "__main__":
     if report["unrendered_figure_tags"]:
         print(f"\n--- CẢNH BÁO THẺ @figure CHƯA XỬ LÝ TẠI TRANG: {report['unrendered_figure_tags']} ---")
 
-    if not (report["overflow_issues"] or report["dpi_warnings"] or report["color_issues"] or report["numbering_issues"] or report["unrendered_figure_tags"]):
+    has_errors = bool(
+        report["overflow_issues"]
+        or report["dpi_issues"]
+        or report["color_issues"]
+        or report["numbering_issues"]
+        or report["unrendered_figure_tags"]
+    )
+    if not has_errors:
         print("\n>>> KẾT QUẢ: 100% HOÀN HẢO! TOÀN BỘ SƠ ĐỒ VÀ HÌNH ẢNH ĐẠT CHUẨN IN ẤN VÀ HIỂN THỊ <<<")
+    else:
+        sys.exit(1)

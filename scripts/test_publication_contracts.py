@@ -216,6 +216,56 @@ class PublicationContracts(unittest.TestCase):
             self.assertEqual(previous.read_bytes(), b'previous accepted artifact')
             self.assertEqual(current.read_bytes(), candidate.read_bytes())
 
+    def test_audit_diagrams_rejects_sub_300_dpi(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'low_dpi.png'
+            PILImage.new('RGB', (100, 100), (200, 200, 200)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_low_dpi.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(600, 600),
+                                    leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_path), width=100, height=100)
+            doc.build([Spacer(1, 10), PageBreak(), img, Paragraph("Hình 1 — Low DPI", book_style.get_book_styles()["caption"])])
+            report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
+            self.assertTrue(any(iss["dpi"] < 300.0 for iss in report["dpi_issues"]))
+
+    def test_audit_diagrams_rejects_rgb_chroma_zero_tolerance(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'tinted.png'
+            PILImage.new('RGB', (2000, 500), (246, 246, 247)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_tinted.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(600, 600),
+                                    leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_path), width=450, height=112)
+            doc.build([Spacer(1, 10), PageBreak(), img, Paragraph("Hình 1 — Tint", book_style.get_book_styles()["caption"])])
+            report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
+            self.assertEqual(len(report["color_issues"]), 1)
+            self.assertEqual(report["color_issues"][0]["max_diff"], 1)
+
+    def test_audit_diagrams_accepts_pure_grayscale_and_high_dpi(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'clean.png'
+            PILImage.new('RGB', (2000, 500), (240, 240, 240)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_clean.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(600, 600),
+                                    leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_path), width=400, height=100)
+            doc.build([Spacer(1, 10), PageBreak(), img, Paragraph("Hình 1 — Clean", book_style.get_book_styles()["caption"])])
+            report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
+            self.assertEqual(len(report["dpi_issues"]), 0)
+            self.assertEqual(len(report["color_issues"]), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
