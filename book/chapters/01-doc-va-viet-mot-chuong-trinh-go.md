@@ -27,14 +27,14 @@ func main() {
 
 ## Chạy chương trình trong một module nhỏ
 
-Lưu đoạn mã trên thành `main.go` trong một thư mục trống. Trước khi chạy, tạo một module cục bộ cho thư mục ấy. Lệnh `go mod init` tạo tệp `go.mod` và khai báo module path; một module quản lý một hoặc nhiều package cùng các dependency của chúng. Module chưa phải là một package, cũng không có nghĩa mã phải được công bố lên mạng. Ở bài đầu này, chỉ cần biết thư mục đang thuộc một module và công cụ Go dùng `go.mod` để xác định module ấy cùng các dependency khi cần.
+Lưu đoạn mã trên thành tệp `main.go` trong một thư mục rỗng. Trước khi chạy, hãy khởi tạo một mô-đun cục bộ cho thư mục đó. Lệnh `go mod init` khởi tạo tệp `go.mod` và xác lập đường dẫn mô-đun (*module path*); một mô-đun quản lý một hoặc nhiều gói (*packages*) cùng các quan hệ phụ thuộc (*dependencies*) của chúng. Một mô-đun chưa đồng nghĩa với một gói đơn lẻ, và cũng không bắt buộc mã nguồn phải được phát hành công khai. Trong bài mở đầu này, điều cốt lõi là hiểu rằng thư mục đang nằm trong sự quản lý của một mô-đun và bộ công cụ Go dựa vào tệp `go.mod` để nhận diện mô-đun cùng các phụ thuộc liên quan.
 
 ~~~powershell
 go mod init example.com/first-go
 go run .
 ~~~
 
-Lệnh đầu tạo `go.mod`; `example.com/first-go` là tên định danh minh họa, không phải một địa chỉ mà anh phải sở hữu. Lệnh sau yêu cầu Go xây package `main` trong thư mục hiện tại rồi chạy executable tạm. Ta sẽ trở lại module, đường dẫn import, đồ thị phụ thuộc và cách một package trở thành ranh giới ở Chương 5. Hiện tại chỉ cần giữ một mốc thực hành: mỗi lab nằm trong một thư mục có `go.mod` riêng, và terminal phải đứng đúng thư mục của lab trước khi chạy lệnh được ghi trong bài.
+Lệnh đầu tạo `go.mod`; `example.com/first-go` là tên định danh minh họa, không phải một địa chỉ tên miền thực tế cần sở hữu. Lệnh sau yêu cầu Go xây package `main` trong thư mục hiện tại rồi chạy executable tạm. Ta sẽ trở lại module, đường dẫn import, đồ thị phụ thuộc và cách một package trở thành ranh giới ở Chương 5. Hiện tại chỉ cần giữ một mốc thực hành: mỗi lab nằm trong một thư mục có `go.mod` riêng, và terminal phải đứng đúng thư mục của lab trước khi chạy lệnh được ghi trong bài.
 
 ![Giải phẫu source file: mỗi vùng trong chương trình có một vai trò nhìn thấy được.](../../assets/diagrams/go-source-anatomy.png)
 
@@ -77,7 +77,7 @@ Việc định vị chính xác vai trò ngữ pháp của từng dòng giúp ta
 
 Khai báo: Giới thiệu một tên và thứ mà tên ấy chỉ tới, như biến, hằng số, kiểu hoặc hàm, trong một phạm vi xác định. Với `const service = "checkout"`, tên `service` chỉ tới một hằng số; nó không phải một câu gán lại biến mỗi lần `main` chạy.
 
-Biểu thức (Expression): Kết hợp toán hạng và toán tử để tính giá trị. Ví dụ `status >= 500` cho một giá trị kiểu `bool`. Lời gọi hàm cũng là biểu thức: có thể trả một hoặc nhiều kết quả; lời gọi không trả kết quả được dùng như câu lệnh. Ngữ cảnh quyết định cách dùng các kết quả ấy. Đánh giá biểu thức có thể gọi hàm làm thay đổi dữ liệu hoặc gây panic, nên không đồng nghĩa với một phép tính không có tác động phụ.
+Biểu thức (Expression): Kết hợp toán hạng và toán tử để tính giá trị. Ví dụ `status >= 500` cho một giá trị kiểu `bool`. Lời gọi hàm cũng là biểu thức: có thể trả một hoặc nhiều kết quả; lời gọi không trả kết quả được dùng như câu lệnh. Ngữ cảnh quyết định cách dùng các kết quả ấy. Đánh giá biểu thức có thể gọi hàm làm thay đổi dữ liệu hoặc gây hoảng loạn (`panic`), nên không đồng nghĩa với một phép tính không có tác động phụ.
 
 Câu lệnh (Statement): Là đơn vị thực thi hoàn chỉnh chỉ dẫn máy tính thực hiện một hành động cụ thể, chẳng hạn như rẽ nhánh điều kiện (`if`), lặp vòng (`for`), gán giá trị (`=`), hoặc trả về từ hàm (`return`). Câu lệnh cấu thành luồng chảy động của chương trình.
 
@@ -85,15 +85,15 @@ Kiểu dữ liệu (Type): Là định nghĩa trừu tượng quy định tập 
 
 Giá trị (Value): Là dữ liệu hoặc kết quả cụ thể thuộc một kiểu. Kiểu quyết định những phép toán có nghĩa đối với giá trị đó. Việc trình biên dịch có phải hiện thực giá trị trong thanh ghi, bộ nhớ hay loại bỏ chỗ lưu trữ khi tối ưu là quyết định triển khai, không phải một phần của định nghĩa giá trị ở tầng ngôn ngữ.
 
-Lời gọi hàm (Function call): Là cơ chế chuyển giao quyền thực thi từ hàm gọi sang hàm được gọi, kèm theo việc đánh giá các biểu thức đối số và truyền các giá trị đó theo ngữ nghĩa truyền giá trị của Go. Một Go compiler có thể inline thân hàm hoặc truyền tham số qua thanh ghi/ngăn xếp theo ABI nội bộ, nhưng đó là quyết định triển khai cần được đo hay quan sát ở đúng toolchain, không phải contract của source code.
+Lời gọi hàm (*function call*): Là cơ chế chuyển giao quyền điều khiển từ hàm gọi sang hàm được gọi, đi kèm việc đánh giá các biểu thức đối số và truyền các giá trị đó theo đúng ngữ nghĩa giá trị của Go. Trình biên dịch có thể nội suy (*inline*) thân hàm hoặc truyền tham số qua thanh ghi/ngăn xếp theo giao diện nhị phân ứng dụng nội bộ (*internal ABI*), nhưng đó là quyết định tối ưu hóa của bộ công cụ thực tế (*toolchain*), không phải là khế ước trực tiếp của mã nguồn.
 
 ## Định danh và Từ khóa
 
-Trong ví dụ trên, `service`, `fmt`, `Println`, `classify`, `status` và `label` là các định danh (identifiers) — những cái tên do lập trình viên hoặc thư viện quy ước để đại diện cho biến, kiểu hoặc hàm. Ngược lại, `package`, `import`, `const`, `func`, `if` và `return` là các từ khóa (keywords) bất biến của ngôn ngữ Go, được dành riêng cho trình phân tích cú pháp.
+Trong ví dụ trên, `service`, `fmt`, `Println`, `classify`, `status` và `label` là các định danh (identifiers), tức những tên gọi do lập trình viên hoặc thư viện quy ước để đại diện cho biến, kiểu dữ liệu hoặc hàm số. Ngược lại, `package`, `import`, `const`, `func`, `if` và `return` là các từ khóa (keywords) bất biến của ngôn ngữ Go, được dành riêng cho trình phân tích cú pháp.
 
-Định danh bắt đầu bằng chữ cái Unicode hoặc `_`, theo sau bởi chữ cái Unicode, chữ số Unicode hoặc `_`. Quy ước Go thường dùng `MixedCaps` hay `mixedCaps` cho tên nhiều từ. `snake_case` vẫn hợp lệ về cú pháp; chọn cách đặt tên nhất quán với API và code xung quanh, không coi convention là lệnh cấm của compiler.
+Định danh bắt đầu bằng một chữ cái Unicode hoặc ký tự gạch dưới `_`, theo sau bởi các chữ cái, chữ số Unicode hoặc ký tự gạch dưới. Phong cách quy chuẩn của Go thường ưu tiên kiểu lạc đà (như `MixedCaps` hoặc `mixedCaps`) cho các danh từ ghép. Cách viết `snake_case` vẫn hoàn toàn hợp lệ về mặt cú pháp; hãy chọn lối đặt tên nhất quán với toàn bộ giao diện lập trình và mã nguồn xung quanh thay vì nhầm lẫn quy ước phong cách thành lệnh cấm của trình biên dịch.
 
-Export cần hai điều kiện: tên bắt đầu bằng chữ hoa Unicode thuộc nhóm Lu, và tên được khai báo ở cấp package hoặc là tên field hay method. `Println` thỏa cả hai; `classify` không được export. Biến cục bộ `Label` trong thân hàm vẫn chỉ là biến cục bộ, không trở thành API vì viết hoa.
+Quyền xuất khẩu (*exported identifier*) đòi hỏi hai điều kiện tiên quyết: định danh bắt đầu bằng một chữ cái in hoa Unicode (thuộc nhóm phân loại Lu), và được khai báo ở cấp độ gói hoặc là tên của một trường dữ liệu (*field*), phương thức (*method*). Hàm `Println` thỏa mãn cả hai tiêu chí; trong khi hàm `classify` thuộc phạm vi nội bộ. Một biến cục bộ `Label` nằm trong thân hàm vẫn chỉ là biến cục bộ, hoàn toàn không biến thành giao diện công khai chỉ vì được viết hoa chữ cái đầu.
 
 ## Khai báo Biến và Khởi tạo Bộ nhớ
 
@@ -103,25 +103,25 @@ Khai báo tường minh bằng `var`: `var name Type = value` chọn kiểu cho 
 
 Khai báo suy luận kiểu: Cú pháp `var name = value` cho phép compiler tự động suy diễn kiểu từ giá trị khởi tạo ở vế phải, giúp loại bỏ sự lặp lại thừa thãi.
 
-Khai báo không khởi tạo và Quy tắc Zero Value: Nếu một biến được khai báo dưới dạng `var name Type` mà không gán giá trị khởi tạo tường minh, đặc tả ngôn ngữ Go bảo đảm biến đó nhận giá trị zero value theo đúng kiểu dữ liệu.
+Khai báo không khởi tạo và Quy tắc Giá trị Mặc định: Nếu một biến được khai báo dưới dạng `var name Type` mà không gán giá trị khởi tạo tường minh, đặc tả ngôn ngữ Go bảo đảm biến đó nhận giá trị mặc định (*zero value*) theo đúng kiểu dữ liệu.
 
 Khai báo ngắn trong thân hàm bằng `:=`: Cú pháp `name := value` kết hợp đồng thời việc khai báo biến mới, suy luận kiểu và gán giá trị. Cú pháp này chỉ hợp lệ bên trong thân hàm, không được phép dùng ở cấp độ tệp.
 
-| Kiểu dữ liệu | Giá trị Zero Value theo Đặc tả Ngôn ngữ | Ghi chú ngữ nghĩa |
+| Kiểu dữ liệu | Giá trị Mặc định (Zero Value) theo Đặc tả | Ghi chú ngữ nghĩa |
 | :--- | :---: | :--- |
 | Số nguyên (`int`, `int64`, `byte`...) | `0` | Giá trị số không. |
 | Số thực (`float32`, `float64`) | `0.0` | Số không dấu phẩy động. |
 | Logic (`bool`) | `false` | Trạng thái sai mặc định. |
 | Chuỗi ký tự (`string`) | `""` | Chuỗi rỗng với độ dài bằng 0. |
-| Con trỏ, slice, map, channel, func, interface | `nil` | Zero value có ý nghĩa và giới hạn thao tác riêng theo từng kiểu; Chương 2–3 lần rõ các trường hợp dữ liệu. |
+| Con trỏ, slice, map, channel, func, interface | `nil` | Giá trị rỗng có ý nghĩa và giới hạn thao tác riêng theo từng kiểu; Chương 2–3 phân tích rõ các cấu trúc dữ liệu này. |
 
-Với biến được khai báo theo ngữ nghĩa Go thông thường, không có giá trị khởi tạo tường minh thì biến nhận zero value, không nhận byte rác từ chỗ lưu trữ trước đó. Đây không phải lời hứa cho bộ nhớ ngoài được đưa vào qua `unsafe` hay cgo. Zero value cũng chưa chắc hợp lệ với nghiệp vụ: `var port int` đọc được giá trị 0, nhưng API yêu cầu port `1..65535` vẫn phải từ chối nó.
+Với một biến được khai báo theo ngữ nghĩa Go thông thường mà không có giá trị khởi tạo tường minh, biến đó sẽ tự động nhận giá trị mặc định (*zero value*), tuyệt đối không nhận các byte rác ngẫu nhiên còn sót lại từ vùng nhớ trước đó. Điều này không áp dụng cho các khối bộ nhớ thô được can thiệp từ bên ngoài qua `unsafe` hoặc cgo. Giá trị mặc định cũng chưa chắc đã là một giá trị nghiệp vụ hợp lệ: khai báo `var port int` sẽ nhận giá trị 0, nhưng nếu giao diện API đòi hỏi dải cổng mạng từ 1 đến 65535 thì logic thẩm định vẫn phải từ chối giá trị này.
 
-Cam kết ngữ nghĩa này không đồng nghĩa với việc mỗi biến đều bắt buộc phải chiếm một ô nhớ vật lý trong RAM và trình biên dịch luôn phải thực hiện lệnh memset xóa sạch các byte về số 0. Tùy thuộc vào chiến lược tối ưu hóa, trình biên dịch có thể xóa giá trị trên thanh ghi CPU, gấp hằng số (constant-fold), hoặc thậm chí loại bỏ hoàn toàn việc cấp phát lưu trữ nếu biến không còn được dùng đến. Việc xóa các byte bộ nhớ về 0 chỉ là một cơ chế triển khai (implementation mechanism) trong các trường hợp vùng nhớ lưu trữ thực sự được hiện thực hóa (materialized) trên stack frame hoặc heap.
+Cam kết ngữ nghĩa này không đồng nghĩa với việc mỗi biến đều bắt buộc phải chiếm một ô nhớ vật lý trong RAM và trình biên dịch luôn phải thực hiện thao tác xóa sạch các byte về số 0. Tùy thuộc vào chiến lược tối ưu hóa, trình biên dịch có thể xóa giá trị trên thanh ghi vi xử lý, gập hằng số tại thời điểm biên dịch (*constant folding*), hoặc loại bỏ hoàn toàn việc cấp phát nếu biến không còn được sử dụng. Thao tác xóa byte bộ nhớ về 0 chỉ là cơ chế triển khai cụ thể khi vùng lưu trữ thực sự được cụ thể hóa (*materialized*) trên khung ngăn xếp (*stack frame*) hoặc vùng nhớ heap.
 
 Khai báo ngắn cần ít nhất một biến mới không phải `_`. Nó có thể dùng lại biến đã khai báo trong cùng block nếu kiểu không đổi; khi ấy biến cũ được gán giá trị, không tạo bản thứ hai. Còn khai báo tên trùng ở block con tạo một biến khác.
 
-> **Dừng để dự đoán.** Đọc đoạn mã sau và dự đoán chính xác hai dòng output: biến `x` trong block con nhận giá trị nào? Sau khi thoát khỏi block con, `x` có giá trị là 1, 2 hay 4?
+> **Dừng để dự đoán:** Đọc đoạn mã sau và dự đoán chính xác hai dòng kết quả (*output*): biến `x` trong khối con (*block*) nhận giá trị nào? Sau khi thoát khỏi khối con, `x` có giá trị là 1, 2 hay 4?
 
 ~~~go
 x := 1
@@ -133,7 +133,7 @@ x, y := 2, 3
 fmt.Println(x, y)
 ~~~
 
-#### Đáp án — chỉ đọc sau khi đã tự làm
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 Kết quả in ra lần lượt là `4 3` rồi `2 3`. Tại câu lệnh `x, y := 2, 3`, do xuất hiện trong cùng block và có thêm biến mới `y`, Go áp dụng quy tắc redeclaration: biến `x` cũ nhận giá trị mới là `2` mà không tạo ra bản sao thứ hai. Khi bước vào block con, khai báo ngắn `x := 4` tạo ra một biến hoàn toàn mới nằm trong phạm vi từ vựng hẹp hơn, che khuất biến ngoài và khiến lệnh in đầu tiên xuất ra `4 3`. Sau khi thoát khỏi block con, biến nội bộ này hết phạm vi từ vựng; lệnh in cuối cùng đọc lại biến `x` của block cha (đang giữ giá trị `2`) và biến `y` (`3`), cho kết quả `2 3`.
 
 Phản ví dụ biên giới làm rõ bản chất: nếu bỏ `y` để viết tiếp `x := 2` trong cùng block, compiler lập tức báo lỗi `no new variables on left side of :=`. Ngược lại, phép gán `x = 2` thì hợp lệ vì nó chỉ cập nhật giá trị của biến sẵn có. Phạm vi từ vựng, không phải hình thức của cú pháp `:=`, quyết định biến nào được dùng lại.
@@ -151,7 +151,7 @@ _ = code
 _ = n
 ~~~
 
-`small` là hằng số nguyên chưa có kiểu. Khi gán vào `code`, giá trị phải biểu diễn được bằng `int16`; khi dùng `:=` không có kiểu đích, kiểu mặc định của hằng số nguyên là `int`. Vì vậy `n` đã là variable kiểu `int`. Nếu thay 500 bằng 70000, phép gán vào `int16` bị compiler từ chối. Nếu viết `const small int = 500`, anh đã chọn kiểu ngay trong khai báo; hằng số có kiểu không còn được đối xử như hằng số chưa có kiểu ở phép gán ấy. Hằng số biểu diễn giá trị ở thời điểm biên dịch, không phải một variable bất biến có địa chỉ để lấy bằng `&`.
+`small` là hằng số nguyên chưa có kiểu. Khi gán vào `code`, giá trị phải biểu diễn được bằng `int16`; khi dùng `:=` không có kiểu đích, kiểu mặc định của hằng số nguyên là `int`. Vì vậy `n` đã là variable kiểu `int`. Nếu thay 500 bằng 70000, phép gán vào `int16` bị compiler từ chối. Nếu viết `const small int = 500`, người lập trình đã ấn định kiểu ngay trong khai báo; hằng số có kiểu không còn được đối xử linh hoạt như hằng số chưa có kiểu ở phép gán ấy. Hằng số biểu diễn giá trị tại thời điểm biên dịch, không phải một biến bất biến có địa chỉ để lấy bằng `&`.
 
 `iota` giúp diễn đạt một chuỗi hằng số trong cùng một nhóm khai báo. Nó bắt đầu từ 0, tăng theo từng mục khai báo hằng số trong nhóm, không theo số dòng văn bản; một mục khai báo nhiều tên vẫn dùng cùng giá trị `iota`. Mục bỏ biểu thức dùng lại biểu thức và kiểu của mục trước. Hãy tính ba giá trị rồi mới chạy thử:
 
@@ -166,7 +166,7 @@ const Restarted = iota // nhóm mới, trở lại 0
 
 Đây là tên cho các số nguyên, chưa phải một cơ chế enum tự kiểm tra giá trị hợp lệ. Variable `int` vẫn nhận được số không thuộc ba trạng thái. Nếu số được lưu vào database hay truyền qua giao thức, chèn một dòng giữa nhóm có thể đổi ý nghĩa các giá trị về sau; khi ấy giá trị tường minh và chính sách tương thích quan trọng hơn việc gõ ít ký tự. Chương 3 sẽ thêm một kiểu có tên để phân biệt ý nghĩa, nhưng kiểu ấy cũng không tự kiểm tra miền giá trị.
 
-Trong `labs/edition-contracts`, `TestConstantsAndIdentity` giữ trace này thành thí nghiệm nhỏ. Hãy đổi hằng số chưa có kiểu thành hằng số kiểu `int`, rồi giải thích lỗi gán trước khi sửa. Quy tắc nguồn là các mục Constants, Constant declarations và Representability của Go specification, phiên bản ngôn ngữ Go 1.27; test chỉ kiểm tra những trường hợp đã chọn.
+Trong `labs/edition-contracts`, ca kiểm thử `TestConstantsAndIdentity` lưu giữ vết thực nghiệm này thành một bài tập nhỏ. Hãy thử đổi hằng số chưa có kiểu thành hằng số mang kiểu `int` tường minh, rồi giải thích căn nguyên lỗi gán trước khi chỉnh sửa. Quy tắc chuẩn tắc bắt nguồn từ các mục Constants, Constant declarations và Representability trong đặc tả ngôn ngữ Go phiên bản Go 1.27; bài kiểm tra tập trung kiểm chứng các tình huống biên điển hình.
 
 ## Phạm vi Từ vựng và Vòng đời Lưu trữ: Scope không đồng nghĩa với Lifetime
 
@@ -190,7 +190,7 @@ func main() {
 
 Biến `label` được khai báo bên trong khối lệnh `if`. Khi luồng đọc của trình biên dịch vượt ra ngoài dấu ngoặc nhọn đóng `}`, phạm vi từ vựng của tên `label` kết thúc; định danh này nằm ngoài lexical scope tại vị trí đó, nên quá trình phân giải tên (name resolution) của compiler không tìm thấy khai báo hợp lệ, từ chối câu lệnh với thông báo: `undefined: label`.
 
-Tuy nhiên, việc định danh hết phạm vi từ vựng không đồng nghĩa với việc giá trị bị hủy ngay lập tức. Nếu một con trỏ hoặc closure vẫn làm giá trị có thể quan sát được, compiler sẽ chọn representation đủ dài cho lifetime đó; trong một lần build nó có thể là heap. Nếu không, compiler có thể dùng thanh ghi, stack hoặc bỏ hẳn storage. Scope là quy tắc tên của ngôn ngữ; vị trí lưu trữ là chi tiết tối ưu hóa, nên đừng suy ra cái sau chỉ từ cái trước.
+Tuy nhiên, việc một định danh kết thúc phạm vi từ vựng không đồng nghĩa với việc giá trị tương ứng bị hủy bỏ ngay lập tức. Nếu một con trỏ hoặc một bao đóng (*closure*) vẫn giữ khả năng quan sát giá trị đó, trình biên dịch sẽ lựa chọn vùng lưu trữ có vòng đời đủ dài; trong bản biên dịch thực tế đó có thể là bộ nhớ heap. Ngược lại, trình biên dịch có thể tận dụng thanh ghi, ngăn xếp (*stack*) hoặc lược bỏ hoàn toàn vị trí lưu trữ. Phạm vi từ vựng là quy tắc định danh ở tầng ngôn ngữ; vị trí lưu trữ vật lý là chi tiết tối ưu hóa của trình biên dịch, do đó không thể suy diễn vị trí bộ nhớ chỉ dựa vào cú pháp khai báo.
 
 ![Vết của scope: label nằm trong if block, còn status sống ở main block.](../../assets/diagrams/go-scope-trace.png)
 
@@ -215,13 +215,13 @@ Chương trình in ra giá trị 3 bên trong khối `if`, nhưng biến `retrie
 
 Go kiểm tra kiểu trước khi chạy. Với hai biến số thuộc các kiểu khác nhau như `int` và `int64`, cùng giá trị hoặc cùng kích thước lưu trữ không làm phép cộng hay phép gán trực tiếp hợp lệ. Ta cần conversion tường minh trong ví dụ dưới đây. Quy tắc gán được rộng hơn riêng trường hợp số; Chương 3 sẽ phân biệt identity của kiểu, assignability và interface satisfaction.
 
-Specification quy định `int` và `uint` cùng kích thước, 32 hoặc 64 bit; toolchain Go 1.27.1 trên target amd64 đang dùng chọn 64 bit. Các kiểu `int8`, `int16`, `int32`, `int64` và bản không dấu tương ứng có width cố định. `byte` là alias của `uint8`; `rune` là alias của `int32`, thường dùng để biểu diễn điểm mã Unicode, nhưng kiểu `int32` không tự kiểm tra một số có phải điểm mã hợp lệ hay không.
+Đặc tả ngôn ngữ quy định kiểu `int` và `uint` có cùng độ dài kích thước, 32 hoặc 64 bit; bộ công cụ Go 1.27.1 trên nền tảng mục tiêu amd64 quy định kích thước này là 64 bit. Các kiểu `int8`, `int16`, `int32`, `int64` cùng các kiểu không dấu tương ứng có độ rộng bit cố định. Trong đó, `byte` là biệt danh kiểu của `uint8`; `rune` là biệt danh của `int32`, thường dùng để biểu diễn một điểm mã Unicode (*code point*), dù bản thân kiểu số nguyên `int32` không tự động xác thực một giá trị có phải là điểm mã Unicode hợp lệ hay không.
 
 Kiểu số thực gồm `float32` và `float64` tuân theo chuẩn IEEE-754. Toán tử so sánh bằng `==` hoàn toàn hợp lệ với số thực khi tính bằng nhau tuyệt đối (exact equality) chính là hợp đồng bài toán đòi hỏi (chẳng hạn so sánh với `0.0` hoặc hằng số cố định). Tuy nhiên, đối với các giá trị sinh ra từ chuỗi phép tính có sai số làm tròn (rounding error), ta thường cần tiêu chí gần bằng phù hợp với từng miền nghiệp vụ cụ thể, thay vì áp đặt máy móc một giá trị epsilon cố định cho mọi bài toán.
 
 Kiểu logic `bool` chỉ nhận một trong hai giá trị `true` hoặc `false`, đồng hành cùng các toán tử logic gồm phép và `&&`, phép hoặc `||`, và phép phủ định `!`.
 
-`string` là chuỗi byte bất biến: anh có thể gán một string khác cho biến, nhưng không gán vào `text[0]` để sửa byte của string đang có. `len` đếm byte, không đếm ký tự hiển thị. Chương 2 sẽ dùng UTF-8 và phép chuyển sang byte slice để kiểm tra hai điều này; không cần giả định layout bộ nhớ của string để dùng đúng contract.
+Kiểu `string` là chuỗi byte bất biến: chúng ta có thể gán một chuỗi mới cho biến, nhưng tuyệt đối không thể gán vào `text[0]` để sửa đổi từng byte của chuỗi hiện hành. Hàm `len` đếm số lượng byte, không đếm số lượng ký tự hiển thị. Chương 2 sẽ đi sâu vào định dạng UTF-8 và thao tác chuyển đổi sang lát cắt byte để kiểm chứng hai nguyên tắc này; bạn không cần phải giả định bố cục bộ nhớ nội bộ của chuỗi để tuân thủ đúng khế ước ngôn ngữ.
 
 Phép chuyển đổi kiểu bắt buộc phải thực hiện tường minh theo cú pháp `T(v)`, trong đó `T` là kiểu đích và `v` là giá trị cần chuyển:
 
@@ -239,7 +239,7 @@ Toán tử số học bao gồm cộng `+`, trừ `-`, nhân `*`, chia `/`, và 
 
 Toán tử so sánh gồm `==`, `!=`, `<`, `<=`, `>` và `>=`. Kết quả là giá trị logic; theo spec, kết quả so sánh là boolean chưa có kiểu và nhận kiểu phù hợp theo ngữ cảnh. Chẳng hạn `failed := status >= 500` tạo biến `failed` kiểu `bool`.
 
-Về mặt cú pháp, `count++` và `count--` là câu lệnh, không phải biểu thức. Vì vậy `x = count++` không hợp lệ; Go cũng không có dạng prefix `++count`. Quy tắc này không cấm mọi biểu thức có side effect: một lời gọi hàm vẫn có thể thay đổi state.
+Trong hệ thống cú pháp Go, `count++` và `count--` là các câu lệnh độc lập chứ không phải biểu thức. Vì vậy `x = count++` không hợp lệ; Go cũng không có dạng prefix `++count`. Quy tắc này không cấm mọi biểu thức có side effect: một lời gọi hàm vẫn có thể thay đổi state.
 
 ## Xuất Dữ liệu Định dạng với Gói `fmt`
 
@@ -335,7 +335,7 @@ Trong ví dụ `[]int` này, `code` nhận bản sao giá trị phần tử; gá
 
 Hàm là đơn vị đóng gói logic độc lập, nhận vào các tham số hình thức và trả về kết quả cho bên gọi.
 
-Go truyền đối số theo giá trị (pass by value): tham số nhận giá trị của đối số, không trở thành chính biến của bên gọi. Đây là ngữ nghĩa của lời gọi, không phải cam kết về một lệnh sao chép bit hay vị trí stack/thanh ghi; compiler có thể tối ưu nếu giữ nguyên hành vi quan sát được. Với số nguyên, gán lại tham số không đổi biến gốc. Với con trỏ hoặc cấu trúc chứa con trỏ, giá trị được truyền vẫn có thể dẫn tới vùng dữ liệu chung.
+Go thực hiện truyền đối số theo giá trị (*pass-by-value*): tham số chỉ tiếp nhận bản sao giá trị của đối số truyền vào, không bao giờ trở thành chính biến gốc của bên gọi. Đây là ngữ nghĩa chuẩn tắc của lời gọi hàm, không phải một cam kết cứng nhắc về một lệnh sao chép từng bit hay vị trí lưu trữ ngăn xếp/thanh ghi; trình biên dịch hoàn toàn có thể tối ưu hóa miễn là bảo toàn hành vi quan sát được từ bên ngoài. Đối với kiểu số nguyên, việc gán lại tham số bên trong hàm không làm thay đổi biến gốc. Đối với con trỏ hoặc các cấu trúc chứa con trỏ, bản sao giá trị con trỏ vẫn trỏ tới cùng một ô nhớ dữ liệu dùng chung.
 
 Go cho phép hàm trả về cùng lúc nhiều giá trị độc lập, tạo tiền đề cho khuôn mẫu xử lý lỗi tiêu chuẩn của ngôn ngữ bằng cách trả về cặp giá trị gồm kết quả dữ liệu và đối tượng lỗi:
 
@@ -363,7 +363,7 @@ fmt.Println("Cong mang:", port)
 
 Biến là tên gọi đại diện cho một vị trí lưu trữ giá trị. Con trỏ (pointer) là một giá trị chứa địa chỉ trong không gian địa chỉ của tiến trình trỏ tới một vị trí lưu trữ khác.
 
-Toán tử lấy địa chỉ `&` trích xuất giá trị con trỏ trỏ tới biến đứng sau nó. Toán tử giải tham chiếu `*` đặt trước một biến con trỏ để đọc hoặc ghi đè giá trị tại vị trí mà con trỏ đang tham chiếu. Giá trị con trỏ in ra qua `%p` đại diện cho địa chỉ trong không gian địa chỉ ảo của tiến trình theo quy ước của nền tảng, không phải địa chỉ RAM vật lý.
+Toán tử lấy địa chỉ `&` trích xuất giá trị con trỏ tham chiếu tới biến đứng sau nó. Toán tử giải tham chiếu `*` đặt trước một biến con trỏ để đọc hoặc ghi đè giá trị tại vị trí mà con trỏ đang tham chiếu. Giá trị con trỏ in ra qua `%p` đại diện cho địa chỉ trong không gian địa chỉ ảo của tiến trình theo quy ước của nền tảng, không phải địa chỉ RAM vật lý.
 
 ~~~go
 func main() {
@@ -385,7 +385,7 @@ Con trỏ cho phép các hàm khác nhau cùng thao tác và biến đổi một
 
 Để hiểu rõ đường đi từ mã nguồn xuống phần cứng, ta cần phân biệt rạch ròi hai tầng biểu diễn thường bị nhầm lẫn: bản danh sách hợp ngữ trung gian của compiler (`-S`) và mã máy thực thi sau liên kết (`objdump`).
 
-Thí nghiệm dùng Go 1.27.1, target `windows/amd64`, với source ở `labs/part1-reading-go/testdata/classify/main.go` đúng như ví dụ mở chương. Chạy từ thư mục `labs/part1-reading-go`. Cờ `-l` tắt inlining cho package đang build để hàm nhỏ `classify` còn hiện ra riêng; đây là điều kiện quan sát, không phải cấu hình tối ưu production. Một lệnh tạo binary đồng thời in listing compiler:
+Thí nghiệm được thực hiện trên phiên bản Go 1.27.1, nền tảng mục tiêu `windows/amd64`, với mã nguồn tại tệp `labs/part1-reading-go/testdata/classify/main.go` tương tự ví dụ mở đầu chương. Hãy chạy lệnh từ thư mục `labs/part1-reading-go`. Cờ `-l` tạm thời vô hiệu hóa việc nội suy hàm (*inlining*) cho gói đang xây dựng để hàm `classify` hiển thị độc lập; đây là điều kiện để quan sát thực nghiệm, không phải cấu hình tối ưu hóa cho môi trường sản xuất. Câu lệnh dưới đây tạo tệp thực thi đồng thời xuất bản danh sách hợp ngữ của trình biên dịch:
 
 ~~~bash
 go build -gcflags="-l -S" -o classify.exe ./testdata/classify
@@ -407,7 +407,7 @@ main.classify STEXT nosplit size=34 align=0x0 args=0x8
 	RET
 ~~~
 
-Đoạn trích giữ các lệnh liên quan tới điều kiện và kết quả, bỏ các dòng metadata; header được ngắt dòng cho vừa khung. Plan 9 dùng symbol như `go:string."healthy"(SB)` chưa có địa chỉ liên kết cuối cùng. Đọc chính binary vừa tạo bằng `objdump`, thay vì build lại một source hay bộ cờ khác rồi so hai kết quả:
+Đoạn trích lọc lại các chỉ dẫn liên quan tới điều kiện và kết quả trả về, lược bỏ các dòng siêu dữ liệu; phần tiêu đề được định dạng lại cho vừa khung hiển thị. Hợp ngữ Plan 9 sử dụng các ký hiệu biểu tượng như `go:string."healthy"(SB)` khi chưa có địa chỉ liên kết nhị phân cuối cùng. Hãy đọc trực tiếp tệp nhị phân vừa tạo bằng công cụ `objdump`, thay vì biên dịch lại mã nguồn với các cờ khác rồi so sánh hai kết quả:
 
 ~~~bash
 go tool objdump -s "main\.classify" classify.exe
@@ -428,7 +428,7 @@ Các cột địa chỉ, byte lệnh và instruction dưới đây được trí
 
 Sự đối chiếu giữa hai đầu ra làm nổi bật bản chất của toolchain:
 
-Trong hàm `classify` của build này, ABI nội bộ dùng `AX` cho argument `status`; hàm không dựng stack frame riêng. Điều đó không có nghĩa mọi hàm Go đều không dùng stack, hay tên thanh ghi là contract của source.
+Trong hàm `classify` của lượt biên dịch này, giao diện nhị phân nội bộ (*internal ABI*) phân bổ thanh ghi `AX` cho tham số `status`; hàm không cần dựng khung ngăn xếp (*stack frame*) riêng biệt. Điều đó không có nghĩa mọi hàm Go đều không sử dụng ngăn xếp, hay tên thanh ghi là một khế ước bất biến của mã nguồn.
 
 Giá trị `$500` trở thành `$0x1f4` trong cách hiển thị của objdump, cùng giá trị số. Nhánh `JLT 21` của listing tương ứng `JL 0x1400a5275`, được mã hóa bằng `7c 0d`. Cả hai đều đi tới đường trả `"healthy"` khi `status < 500`; không có bằng chứng từ cặp đầu ra này rằng linker đã đảo điều kiện.
 
@@ -436,7 +436,7 @@ Các symbol string được giải quyết thành địa chỉ trong vùng mà o
 
 ## Đọc Thông điệp Biên dịch: Phân tích Tĩnh Thay vì Phỏng đoán
 
-Khi gặp lỗi biên dịch, hãy tìm tên, biểu thức hoặc khai báo mà diagnostic đang chỉ tới. Bảng này tách các loại lỗi để anh chọn một phép thử nhỏ:
+Khi gặp lỗi biên dịch, hãy tìm tên, biểu thức hoặc khai báo mà thông báo chẩn đoán đang chỉ tới. Bảng dưới đây phân loại các dạng lỗi điển hình giúp chúng ta lựa chọn một phép thử có chủ đích:
 
 | Tình huống kiểm chứng | Thao tác tạo lỗi cú pháp | Thông báo thực tế từ Go 1.27.1 Compiler | Tầng phân tích của Compiler |
 | :--- | :--- | :--- | :--- |

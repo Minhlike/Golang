@@ -15,13 +15,26 @@ variable "github_deploy_ref" {
 }
 
 variable "ecr_repository_name" {
-  description = "Target AWS ECR repository name (must be strictly lowercase alphanumeric, hyphens, underscores, slashes)"
+  description = "Target AWS ECR repository name; validate path segments, separators and API length limits"
   type        = string
   default     = "golang-master"
 
   validation {
-    condition     = can(regex("^[a-z0-9][a-z0-9-_/]*$", var.ecr_repository_name))
-    error_message = "ECR repository name must be strictly lowercase and conform to AWS ECR naming rules."
+    condition = length(var.ecr_repository_name) >= 2 && length(var.ecr_repository_name) <= 256 && can(regex(
+      "^[a-z0-9]+(([._]|__|-+)[a-z0-9]+)*(/[a-z0-9]+(([._]|__|-+)[a-z0-9]+)*)*$", var.ecr_repository_name
+    ))
+    error_message = "ECR repository name must have valid lowercase path segments and 2-256 characters."
+  }
+}
+
+variable "deployer_role_name" {
+  description = "IAM role name, independent of the repository path; 1-64 IAM-safe characters"
+  type        = string
+  default     = "golang-master-production-deployer"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9+=,.@_-]{1,64}$", var.deployer_role_name))
+    error_message = "Supply an IAM role name of 1-64 supported characters, without slashes."
   }
 }
 

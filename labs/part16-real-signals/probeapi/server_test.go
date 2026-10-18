@@ -48,6 +48,21 @@ func TestProbeEmitsBoundedMetricsAndParentChildTrace(t *testing.T) {
 	if !parent || !child {
 		t.Fatalf("missing request/child relation: %#v", spans)
 	}
+	// A valid parent ID alone does not prove it belongs to this request.
+	var request, dependency int = -1, -1
+	for i, span := range spans {
+		if span.Name() == "probe.request" {
+			request = i
+		}
+		if span.Name() == "probe.dependency" {
+			dependency = i
+		}
+	}
+	if request < 0 || dependency < 0 ||
+		spans[dependency].Parent().SpanID() != spans[request].SpanContext().SpanID() ||
+		spans[dependency].SpanContext().TraceID() != spans[request].SpanContext().TraceID() {
+		t.Fatal("dependency must be a child of this request in the same trace")
+	}
 
 	metrics := httptest.NewRecorder()
 	h.ServeHTTP(metrics, httptest.NewRequest(http.MethodGet, "/metrics", nil))

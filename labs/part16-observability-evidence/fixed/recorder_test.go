@@ -6,6 +6,39 @@ import (
 	"testing"
 )
 
+func TestLifetimeRatioCanHideRecentOutage(t *testing.T) {
+	var recorder Recorder
+	for i := 0; i < 1000; i++ {
+		if err := recorder.Observe(OutcomeSuccess); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := recorder.Snapshot()
+	for i := 0; i < 10; i++ {
+		if err := recorder.Observe(OutcomeTimeout); err != nil {
+			t.Fatal(err)
+		}
+	}
+	after := recorder.Snapshot()
+	lifetime, known := after.SuccessRatio()
+	if !known || lifetime != 1000.0/1010.0 {
+		t.Fatalf("lifetime ratio = %v, known = %v", lifetime, known)
+	}
+	// These snapshots are from the same recorder, with no reset between them.
+	window := Snapshot{
+		Completed: after.Completed - before.Completed,
+		Succeeded: after.Succeeded - before.Succeeded,
+		Failed:    after.Failed - before.Failed,
+		TimedOut:  after.TimedOut - before.TimedOut,
+	}
+	if window != (Snapshot{Completed: 10, TimedOut: 10}) {
+		t.Fatalf("window = %+v", window)
+	}
+	if ratio, known := window.SuccessRatio(); !known || ratio != 0 {
+		t.Fatalf("window ratio = %v, known = %v", ratio, known)
+	}
+}
+
 func TestRecorderKeepsBoundedOutcomeCounts(t *testing.T) {
 	var recorder Recorder
 	for _, outcome := range []Outcome{

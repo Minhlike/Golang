@@ -1,0 +1,971 @@
+=== PAGE 1 ===
+TÀI LIỆU KIỂM TOÁN VÀ PHÊ DUYỆT HỆ THỐNG THIẾT KẾ // AGENT 2
+HỆ THỐNG MẪU ĐỐI TƯỢNG XUẤT BẢN
+2026
+GOLANG — Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE
+Tác giả: Đoàn Ngọc Hoàng Minh
+Định hướng Nghệ thuật: Agent 2 Art Direction
+Khổ sách: ISO A4 (210 × 297 mm)
+Chế bản in: Đơn sắc / Grayscale Print-First
+Phông chữ: Source Serif 4 + Source Sans 3 +
+JetBrains Mono
+Lưới lề: Lề trong 24 mm, Ngoài 18 mm, Trên 22 mm,
+Dưới 20 mm
+Git Baseline:
+bb00a9ad33e3cd5115928dc3542d2ce66c8d08d8
+Trạng thái: AWAITING_PRINT_SPEC // Đề xuất
+duyệt
+MỤC TIÊU VÀ SỨ MỆNH CATALOG:
+Tài liệu này là Specimen Catalog toàn diện nhằm kiểm chứng, định hình và đệ trình phê duyệt toàn bộ
+hệ thống thiết kế xuất bản cho cuốn sách GOLANG của tác giả Đoàn Ngọc Hoàng Minh. Agent 2 đảm
+nhận vai trò độc lập về Art Direction, Editorial Design, Typography, Information Design và Print
+Production. Mọi mẫu vật (specimen) trong tài liệu đều được xây dựng trên nội dung thật của bản thảo,
+loại bỏ hoàn toàn giả lập Lorem Ipsum, tôn trọng tuyệt đối tính toàn vẹn kỹ thuật và sự trang trọng
+của ấn phẩm kỹ thuật chuẩn mực đại học quốc tế.
+QUYẾT ĐỊNH THIẾT KẾ QUAN TRỌNG:
+Tác giả đã chính thức bác bỏ các mẫu bìa A–D phẳng trước đây (từ branch catalog-2026) vì thiếu chiều sâu
+nghệ thuật. Catalog này giới thiệu 3 Concept Bìa Sách Hoàn Toàn Mới được nghiên cứu từ các nguồn cảm
+hứng kinh điển (Princeton Architectural Press, Edward Tufte, Emil Ruder), cùng đầy đủ phối cảnh 3D, bản
+in phẳng 300 DPI, nguồn vector và phân tích mỹ học chi tiết.
+
+=== PAGE 2 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+2
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+LỜI NÓI ĐẦU
+Triết Lý Thiết Kế & Chuẩn Mực Ấn Bản 2026
+Thiết kế một giáo trình kỹ thuật nâng cao về Kỹ nghệ Phần mềm và DevOps/SRE không đơn thuần là
+việc dàn chữ cho vừa trang in, mà là nghệ thuật cấu trúc thông tin (Information Architecture) nhằm
+tối ưu hóa sự tập trung, tốc độ hấp thụ tri thức và năng lực suy luận của người đọc. Cuốn sách
+GOLANG được định vị là ấn phẩm sống (living textbook), phục vụ kỹ sư phần mềm chuyên nghiệp và
+sinh viên kỹ thuật bậc cao.
+1. Nguyên Tắc Đơn Sắc Tuyệt Đối (Monochrome Print-First)
+Sách được tối ưu hóa cho công nghệ in laser và offset đen trắng kinh tế cao. Một thiết kế thành công
+phải tạo ra chiều sâu không gian và phân cấp thị giác mạnh mẽ chỉ bằng mực đen, các sắc độ xám
+trung tính (10% đến 80%) và nền giấy trắng. Khi bản in đen trắng đạt độ tương phản và thẩm mỹ hoàn
+hảo, bản PDF điện tử sẽ tự động đạt chất lượng hiển thị xuất sắc trên mọi màn hình máy tính hay máy
+đọc sách e-ink.
+2. Lưới Lề Đối Xứng Qua Gáy Sách (Mirrored Margin Spreads)
+Với độ dày dự kiến trên 450 trang, độ cong của gáy sách khi mở (gutter creep) là yếu tố vật lý then
+chốt. Hệ thống lề trang được tính toán nghiêm ngặt: Lề trong (Inside Margin) cố định 24 mm hướng về
+phía gáy, và Lề ngoài (Outside Margin) là 18 mm. Khi mở sách ra trang đôi (spread), khoảng cách giữa
+hai khối văn bản đạt tổng cộng 48 mm, đảm bảo văn bản không bị chìm vào khe gáy dù sử dụng kỹ
+thuật đóng gáy nhiệt thông thường.
+3. Tôn Trọng Tuyệt Đối Bản Thảo & Loại Bỏ Giả Lập
+Mọi đối tượng mẫu từ tiêu đề, mã nguồn, bảng biểu, hộp câu hỏi suy luận cho đến các trang đôi thực
+tế đều được trích xuất trực tiếp từ 30 chương bản thảo và các phụ lục hiện có trong repository. Không
+có một dòng văn bản Lorem Ipsum nào được chấp nhận trong hệ thống thiết kế này.
+
+=== PAGE 3 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+3
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+MỤC LỤC
+Bản Đồ Đối Tượng Thiết Kế Toàn Thư
+Phần I: Bìa Sách & Định Hướng Nghệ Thuật (Art Direction)
+4
+• Giới thiệu 3 Concept Bìa Sách Mới & Cơ sở Thẩm mỹ
+4
+• Concept 1: Mặt Cắt Kiến Trúc & Phân Tầng Không Gian (Lewis et al.)
+5
+• Concept 2: Khắc Đồng Khoa Học & Trường Dòng Chảy Tô-pô (Tufte / Haeckel)
+6
+• Concept 3: Kiểu Chữ Động Kiến Tạo & Khối Monolith Mô-đun (Ruder / Müller-Brockmann)
+7
+Phần II: Nhóm B — Phân Cấp Văn Bản & Typography
+8
+• Tiêu đề H1–H4, Quy cách Cỡ chữ & Dòng dẫn (Leading)
+8
+• Thử nghiệm Tiêu đề Dài 3 Dòng & Cơ chế Khóa Mồ côi (keepWithNext)
+9
+Phần III: Nhóm C — Đối Tượng Kỹ Thuật & Mã Nguồn
+10
+• Khối Mã Nguồn Go (Thanh Accent 2pt, Nền Xám, Đánh Số Dòng)
+10
+• Khối Terminal Phiên Làm Việc ($ Prompt)
+10
+• Bảng Biểu: Mẫu Booktabs Kinh Điển vs Mẫu Ma Trận DevOps
+11
+• Hình Vẽ Kỹ Thuật (Figure & Caption) & Sơ Đồ Hệ Thống Thật
+12
+Phần IV: Nhóm D — Đối Tượng Sư Phạm & Khối Đặc Thù
+13
+• Điểm Dừng Suy Luận (Deduction Stop Question) & Lời Giải Văn Xuôi
+13
+• Thử Thách Thực Hành (Hands-on Lab) & Hộp Đo Lường Hiệu Năng
+14
+• DevOps Library Atlas Specimen & Error Atlas Bố Cục 2 Cột
+15
+Phần V: Trang Đôi Thực Tế (Facing Spreads - Real Manuscript)
+16
+• Cặp Trang 16–17: Chương 01 — Khởi đầu cú pháp, main.go & Cấu trúc Gói
+16
+• Cặp Trang 18–19: Chương 02 — Slice Header, Bộ Nhớ Aliasing & Sơ Đồ Mảng
+18
+• Cặp Trang 20–21: Chương 10 — Điều Tra Memory Leak, GC Pacer & pprof Heap
+20
+• Cặp Trang 22–23: Chương 23 — Kubernetes Operator, OwnerReference & Reconcile
+22
+Phần VI: Phân Tích Sao Chép Mã Nguồn (Code Clipboard Fidelity)
+24
+• Khảo sát Thực nghiệm Trích xuất Văn bản & Báo cáo Byte-Fidelity
+24
+Phần VII: Báo Cáo In Ấn, Giấy & Gáy Sách (Print Production)
+26
+• Thông Số Khổ A4, Độ Dày Gáy, Định Lượng Giấy & Trạng Thái Duyệt
+26
+
+=== PAGE 4 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+4
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PHẦN I
+Bìa Sách & Định Hướng Nghệ Thuật (Art Direction)
+Sau khi tác giả bác bỏ các phương án A–D cũ từ catalog-2026 vì mang tính hình học phẳng thiếu sinh
+khí, Agent 2 đã tái thiết lập toàn diện quy trình mỹ thuật. Ba phương án bìa mới dưới đây được phát
+triển độc lập, kết hợp chặt chẽ giữa nghiên cứu lịch sử nghệ thuật/kiến trúc thực thụ và bản chất kỹ
+thuật của Go runtime. Mỗi concept đều có ảnh phẳng 300 DPI, phối cảnh 3D gáy sách, nguồn vector
+hoàn chỉnh và hồ sơ nghiên cứu.
+Concept
+Nguồn Cảm Hứng Nghệ Thuật
+Mô Hình Kỹ Thuật Go
+Đặc Trưng Thị Giác
+Concept 1
+Mặt Cắt Kiến Trúc
+Lewis, Tsurumaki, Lewis —
+Manual of Section (2016);
+Peter Eisenman (MoMA 1988)
+Cấu trúc phân tầng 4 lớp:
+Linux Kernel → Go
+Runtime GMP → Service
+Layer → K8s / eBPF
+Hình chiếu trục đo
+axonometric 28°, nét
+poché đen đặc, đường đo
+kích thước kỹ thuật
+Concept 2
+Khắc Đồng Dòng
+Chảy
+Edward Tufte — Envisioning
+Information; Ernst Haeckel —
+Kunstformen der Natur (1904)
+Mô hình CSP toán học:
+Goroutine rendezvous
+barrier, áp suất ngược,
+kênh đệm dòng chảy
+Đường thế phức biến
+thiên độ dày nét
+(0.3–1.2pt) mô phỏng
+mũi khắc kim loại burin
+cổ điển
+Concept 3
+Monolith Kiến Tạo
+Emil Ruder — Typographie
+(1967); Josef
+Müller-Brockmann — Grid
+Systems (1981)
+Bản chất hạ tầng Go: Đơn
+khối, vững chắc, biên
+dịch trực tiếp sang mã
+máy, không VM
+Lưới Thụy Sĩ 12 cột, kiểu
+chữ 3D extruded đúc
+khối, tỷ lệ tương phản
+cực hạn, tối giản
+
+=== PAGE 5 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+5
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+CONCEPT 1: MẶT CẮT KIẾN TRÚC & PHÂN TẦNG
+KHÔNG GIAN
+Architectural Cross-Section & Spatial Cut // Cảm hứng: Manual of Section (Princeton
+Architectural Press)
+Hình 1.1: Bản in phẳng 300 DPI (trái) và Phối cảnh 3D gáy sách 3.5cm (phải) của Concept 1.
+Phân tích Không gian & Cơ sở Kiến trúc: Tác phẩm vận dụng lý thuyết mặt cắt kiến trúc (Section Theory) của
+Paul Lewis, Marc Tsurumaki và David J. Lewis. Mặt cắt không phải là một hình vẽ kỹ thuật thụ động mà là một
+công cụ nhận thức (epistemic tool), phơi bày các liên kết kết cấu ngầm. Chúng tôi chiếu trục đo axonometric 28°
+toàn bộ cỗ máy thực thi Go thành 4 tầng không gian: Tầng 0 (Kernel Foundation z=-120), Tầng 1 (Go Runtime
+Core với GMP Scheduler và bộ nhớ mspan z=-30), Tầng 2 (Service Mesh Deck z=+60) và Tầng 3 (Kubernetes
+Reconcile Tower z=+150). Nét poché đen tuyền thể hiện mặt phẳng cắt vật lý, gợi lên cảm giác một bản thiết kế
+công nghiệp chính xác.
+
+=== PAGE 6 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+6
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+CONCEPT 2: KHẮC ĐỒNG KHOA HỌC & TRƯỜNG
+DÒNG CHẢY TÔ-PÔ
+Scientific Engraving & Topological Flow Field // Cảm hứng: Edward Tufte & Ernst
+Haeckel
+Hình 1.2: Bản in phẳng 300 DPI (trái) và Phối cảnh 3D gáy sách 3.5cm (phải) của Concept 2.
+Phân tích Mỹ thuật & Mô hình Toán học: Lấy cảm hứng từ những bản khắc đồng khoa học thế kỷ 19 của Ernst
+Haeckel và nguyên lý mật độ thông tin vi mô/vĩ mô (Micro/Macro Readings) của Edward Tufte. Toàn bộ cơ chế
+tương tranh CSP của Go được biểu diễn dưới dạng trường thế phức (complex potential field) và các đường dòng
+(streamlines). Mỗi đường cong được tính toán bằng phương trình giải tích, biến thiên độ dày từ 0.3pt đến 1.2pt
+mô phỏng lưỡi dao khắc burin trên phiến đồng. Ở khoảng cách xa, người xem thấy một xoáy lốc toán học tráng
+lệ; ở cự ly gần, từng vector và tiếp tuyến của dòng chảy dữ liệu hiện lên sắc nét, tạo nên phong thái học thuật
+kinh điển của một ấn bản hàn lâm.
+
+=== PAGE 7 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+7
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+CONCEPT 3: KIỂU CHỮ ĐỘNG KIẾN TẠO & KHỐI
+MONOLITH MÔ-ĐUN
+Constructivist Kinetic Typography & Modular Monolith // Cảm hứng: Emil Ruder &
+Müller-Brockmann
+Hình 1.3: Bản in phẳng 300 DPI (trái) và Phối cảnh 3D gáy sách 3.5cm (phải) của Concept 3.
+Phân tích Cấu trúc & Tinh thần Hiện đại Thụy Sĩ: Tôn vinh trường phái International Typographic Style (Thiết kế
+Thụy Sĩ) với triết lý không gian typographic của Emil Ruder và hệ lưới mô-đun của Josef Müller-Brockmann. Hệ
+thống chữ 'GOLANG' và các từ khóa cốt lõi (CONCURRENCY, RUNTIME, SYSTEM) được biến chuyển thành các
+khối 3D monolith bê tông đúc sẵn, phản chiếu chính xác bản chất hạ tầng của Go: vững chắc, đơn khối, biên dịch
+thẳng ra machine code, không runtime ảo hóa cồng kềnh. Khoảng trắng âm (negative counterform) được tính
+toán tỉ mỉ, tạo nên lực căng thị giác mạnh mẽ và phong thái công nghiệp hiện đại không thể nhầm lẫn.
+
+=== PAGE 8 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+8
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PHẦN II
+Nhóm B — Phân Cấp Văn Bản & Typography
+Quy chuẩn kiểu chữ được xây dựng dựa trên sự kết hợp hài hòa giữa phông Serif cổ điển cho khối
+chính văn (Source Serif 4) và phông Sans-serif hình học cho hệ thống tiêu đề (Source Sans 3), bổ trợ
+bởi phông đơn cách (JetBrains Mono) cho mã nguồn. Tỷ lệ cỡ chữ / khoảng cách dòng (leading) tuân
+thủ tiêu chuẩn quang học 1.45–1.5×.
+Cấp Tiêu Đề
+Mẫu Hiển Thị Thực Tế
+Thông Số Kỹ Thuật
+H1 (Chương)
+CHƯƠNG 02: GIÁ TRỊ,
+SLICE VÀ ALIASING
+Source Sans 3 Bold
+22 pt / leading 27 pt
+keepWithNext=True
+H2 (Mục lớn)
+Khoảnh Khắc Slice Đổi Kết Quả
+Source Sans 3 Bold
+15 pt / leading 19 pt
+keepWithNext=True
+H3 (Tiểu mục)
+Cửa Sổ Nhìn, Length và Capacity Trong Bộ Nhớ
+Source Sans 3 Bold
+12.5 pt / leading 16
+pt
+keepWithNext=True
+H4 (Tiểu tiết)
+Quy Tắc Tái Cấp Phát Mảng Nền Khi Append Vượt
+Ngưỡng
+Source Sans 3 Bold
+10.5 pt / leading 14
+pt
+keepWithNext=True
+MẪU VĂN BẢN CHÍNH VĂN (SOURCE SERIF 4 — 10.5 PT / LEADING 15.2 PT)
+Trong thiết kế hệ thống bằng Go, việc nắm vững cách thức dữ liệu dịch chuyển trong bộ nhớ là ranh
+giới giữa một lập trình viên cú pháp và một kỹ sư hệ thống thực thụ. Go không che giấu chi phí bộ nhớ
+đằng sau những lớp trừu tượng phức tạp. Mọi giá trị gán, truyền tham số qua hàm hay khởi tạo slice
+đều tuân thủ chính xác ngữ nghĩa sao chép giá trị (pass-by-value). Khi một biến được truyền vào hàm,
+chính xác các byte của biến đó được nhân bản sang ngăn xếp của hàm nhận. Điều này đảm bảo tính
+dự đoán tuyệt đối về mặt thời gian và loại bỏ hoàn toàn các đột biến trạng thái ngoài ý muốn vốn là
+nguồn gốc của hàng ngàn lỗi nghiêm trọng trong production.
+Độ dài dòng tối ưu: 65–75 ký tự trên mỗi dòng. Khoảng cách dòng 15.2 pt tạo nhịp thở thị giác thư thái, ngăn ngừa hiện tượng hoa mắt
+khi đọc liên tục trong nhiều giờ nghiên cứu.
+
+=== PAGE 9 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+9
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+THỬ NGHIỆM TIÊU ĐỀ DÀI & CƠ CHẾ KHÓA MỒ CÔI
+(ORPHAN GUARD)
+1. Thử nghiệm Tiêu đề H1 Dài 3 Dòng (Stress Test):
+Đảm bảo các tiêu đề có cấu trúc câu dài không bị đè chữ, leading ổn định và ngắt dòng tự nhiên theo ngữ nghĩa
+kỹ thuật:
+CHƯƠNG 23: TỪ CONTROLLER ĐẾN OPERATOR —
+XÂY DỰNG HỆ THỐNG ĐIỀU HÒA TRẠNG THÁI VÀ
+BẢO TOÀN TÍNH NHẤT QUÁN CỦA CƠ SỞ HẠ TẦNG
+KUBERNETES TRÊN MÔI TRƯỜNG CLOUD NATIVE
+2. Cơ chế Khóa Mồ Côi (Widow/Orphan Guard via keepWithNext=True):
+Trong xuất bản sách tiêu chuẩn cao, một tiêu đề nằm cô độc ở dòng cuối cùng của trang sách mà
+không có ít nhất 2 dòng văn bản đi kèm là một lỗi chế bản nghiêm trọng (Orphan Heading). Tất cả các
+lớp ParagraphStyle H1, H2, H3, H4 trong hệ thống thiết kế Agent 2 đều được cấu hình thuộc tính
+keepWithNext=True. Thuộc tính này buộc động cơ dàn trang (Platypus Flow Engine) tự động đẩy tiêu
+đề sang đầu trang tiếp theo nếu khoảng trống còn lại ở cuối trang không đủ cho cả tiêu đề và đoạn văn
+đầu tiên.
+ĐIỀU KHOẢN HỢP ĐỒNG TRÌNH DIỄN (LAYOUT INVARIANT):
+• Tiêu đề không bao giờ xuất hiện ở cuối trang mà không có ít nhất 2 dòng nội dung.
+• Khoảng cách trên tiêu đề (spaceBefore) tự động được triệt tiêu khi tiêu đề rơi vào đầu trang mới.
+• Toàn bộ chỉ số số dòng trong code block được căn lề phải để đảm bảo tính thẳng hàng tuyệt đối.
+
+=== PAGE 10 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+10
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PHẦN III
+Nhóm C — Đối Tượng Kỹ Thuật & Mã Nguồn
+Mã nguồn là trung tâm của cuốn sách kỹ thuật. Khối mã nguồn của Agent 2 được thiết kế với tiêu chí:
+rõ ràng, không gây mỏi mắt, phân biệt rõ giữa lệnh gõ và kết quả in ra, đồng thời hỗ trợ tra cứu chính
+xác dòng mã.
+1. Khối Mã Nguồn Go (Thanh Accent 2.0pt, Nền Xám, Đánh Số Dòng)
+PKG/CONCURRENCY/WORKER.GO
+1
+package main
+2
+3
+import (
+4
+    "context"
+5
+    "fmt"
+6
+    "time"
+7
+)
+8
+9
+// Worker xử lý công việc với cơ chế ngắt hạn bằng context.Context
+10
+func Worker(ctx context.Context, id int, jobs <-chan string) {
+11
+    for {
+12
+        select {
+13
+        case <-ctx.Done():
+14
+            fmt.Printf("[worker %d] nhận tín hiệu dừng: %v\n", id, ctx.Err())
+15
+            return
+16
+        case job, ok := <-jobs:
+17
+            if !ok {
+18
+                return
+19
+            }
+20
+            fmt.Printf("[worker %d] hoàn tất tác vụ: %s\n", id, job)
+21
+        }
+22
+    }
+23
+}
+2. Khối Phiên Làm Việc Terminal (Dấu Nhắc Lệnh $, Output Phân Biệt)
+$ go test -bench=BenchmarkWorker -benchmem -count=4 ./pkg/concurrency
+goos: linux
+goarch: amd64
+pkg: example.com/concurrency
+cpu: 13th Gen Intel(R) Core(TM) i7-13700H
+BenchmarkWorker-20    1000000    1042 ns/op    96 B/op    2 allocs/op
+BenchmarkWorker-20    1000000    1038 ns/op    96 B/op    2 allocs/op
+PASS
+ok      example.com/concurrency    4.321s
+$ go tool pprof -top cpu.out
+Showing nodes accounting for 4.10s, 95.12% of 4.31s total
+      flat  flat%   sum%        cum   cum%
+     2.45s 56.84% 56.84%      2.45s 56.84%  runtime.cgocall
+     1.10s 25.52% 82.36%      1.10s 25.52%  runtime.futex
+
+=== PAGE 11 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+11
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+BẢNG BIỂU: MẪU BOOKTABS KINH ĐIỂN VS MA
+TRẬN DEVOPS
+Mẫu A: Bảng Booktabs Khoa Học (Chỉ Dùng Đường Kẻ Ngang, Không Kẻ
+Dọc)
+Theo truyền thống xuất bản hàn lâm của Oxford và Cambridge, bảng biểu khoa học không bao giờ sử dụng các
+đường kẻ dọc. Các đường kẻ ngang được phân cấp: Đường đỉnh 1.2pt, Đường đáy 1.2pt, Đường phân cách tiêu đề
+0.6pt. Cấu trúc này tạo cảm giác thanh thoát, dễ đọc:
+Cấu trúc Dữ liệu
+Kích thước Descriptor
+Mức độ Sao chép
+Hành vi khi Đột biến
+Array [4]int
+32 bytes (trực tiếp)
+Deep Copy toàn bộ giá trị
+Độc lập hoàn toàn, không
+ảnh hưởng bản gốc
+Slice []int
+24 bytes (ptr, len, cap)
+Shallow Copy header
+Chia sẻ mảng nền
+(Aliasing nguy cơ)
+String string
+16 bytes (ptr, len)
+Shallow Copy header
+Bất biến (Immutable), an
+toàn tương tranh
+Map map[K]V
+8 bytes (con trỏ *hmap)
+Chỉ sao chép con trỏ tham
+chiếu
+Concurrent Write gây
+Fatal Crash
+Mẫu B: Bảng Ma Trận Kỹ Thuật DevOps (Lưới Ô Vuông Đơn Sắc 0.4pt)
+Đối với các bảng ma trận so sánh nhiều thuộc tính kỹ thuật hoặc cấu hình phân tầng phức tạp trong
+Kubernetes/CI-CD, lưới ô vuông mỏng 0.4pt giúp mắt người đọc dễ dàng định vị giao điểm giữa hàng và cột:
+Tham số Cấu hình
+Giá trị Mặc định
+Phạm vi Ảnh hưởng
+Hành vi khi Vượt ngưỡng
+GOGC
+100 (tỷ lệ 100%)
+Tần suất chu kỳ GC
+Tăng bộ nhớ heap trước
+khi kích hoạt sweep
+GOMEMLIMIT
+Không giới hạn (Max)
+Bộ nhớ toàn tiến trình
+Tăng tần suất GC để tránh
+bị OOMKilled
+GOMAXPROCS
+Số CPU logic
+Số Processor (P) trong
+GMP
+Tranh chấp luồng OS nếu
+đặt quá cao trong cgroup
+
+=== PAGE 12 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+12
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+HÌNH VẼ KỸ THUẬT (FIGURE) & SƠ ĐỒ HỆ THỐNG
+TỪ REPOSITORY
+Hình vẽ kỹ thuật trong sách được đóng khung chuẩn mực, căn giữa trang in, có tiêu đề hình (caption)
+được căn giữa bên dưới với nhãn Hình X.Y: in đậm. Dưới đây là hai sơ đồ kiến trúc thật được trích từ
+thư mục assets/diagrams/ của cuốn sách:
+Hình 3.1: Vòng lặp điều hòa (Reconciliation Loop) cốt lõi của Kubernetes Controller & Operator.
+Hình 3.2: Ranh giới kiến trúc giữa Controller Manager, Custom Resource Definition và Client Cache.
+
+=== PAGE 13 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+13
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PHẦN IV
+Nhóm D — Đối Tượng Sư Phạm & Khối Đặc Thù
+Theo định hướng của MASTER PROMPT, phương pháp sư phạm của cuốn sách không truyền đạt tri
+thức một chiều mà xây dựng năng lực phản xạ suy luận cho kỹ sư. Các khối sư phạm đặc thù bao gồm:
+Điểm dừng Suy luận (Deduction Stop), Lời giải văn xuôi liên tục (Continuous Prose Solution), Bài tập
+Thực hành (Hands-on Lab) và Bố cục hai cột tra cứu lỗi (Error Atlas).
+1. Điểm Dừng Suy Luận (Deduction Stop Question)
+ĐIỂM DỪNG SUY LUẬN // DEDUCTION STOP:
+Xem xét đoạn mã sau: Một hàm nhận slice s := make([]int, 0, 10), sau đó truyền s vào hàm mutate(s).
+Bên trong hàm này, lệnh s = append(s, 42) được thực thi. Sau khi hàm mutate kết thúc, độ dài len(s) ở
+hàm gọi chính (caller) bằng bao nhiêu, và phần tử 42 có nằm trong mảng nền của s hay không?
+(Hãy dừng lại 60 giây và tự vẽ cấu trúc descriptor ra giấy trước khi đọc lời giải bên dưới).
+2. Lời Giải Văn Xuôi Liên Tục (Tuân Thủ Master Prompt — Không Bullet Hời
+Hợt)
+Khi hàm mutate được triệu gọi, Go sao chép giá trị của slice descriptor (gồm con trỏ mảng, len=0,
+cap=10) vào khung ngăn xếp của hàm nhận. Phép toán append nhận thấy dung lượng cap vẫn còn đủ
+chỗ, do đó nó ghi trực tiếp giá trị 42 vào ô nhớ đầu tiên của mảng nền chung và tăng biến len nội bộ
+của nó lên 1. Tuy nhiên, biến s tại hàm gọi chính sở hữu bản sao descriptor độc lập; trường len của nó
+vẫn giữ nguyên giá trị 0 ban đầu. Kết quả là len(s) của caller vẫn bằng 0, nhưng mảng nền bên dưới đã
+thực sự bị biến đổi. Lời giải này chứng minh rằng việc truyền slice qua hàm không hoàn toàn an toàn
+nếu người lập trình ngộ nhận rằng slice được truyền theo kiểu tham chiếu (by reference).
+
+=== PAGE 14 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+14
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+THỬ THÁCH THỰC HÀNH (LAB) & HỘP ĐO LƯỜNG
+HIỆU NĂNG
+3. Hộp Bài Tập Thực Hành (Hands-on Lab Challenge)
+THỬ THÁCH LAB // PART 10: RESOURCE RETENTION & LEAK PROBE
+Mục tiêu: Viết công cụ phát hiện rò rỉ goroutine chạy ngầm khi HTTP client bị timeout.
+Ràng buộc: Không được dùng thư viện bên ngoài; chỉ sử dụng runtime/pprof và net/http/httptest.
+Tiêu chí kiểm chứng: Lệnh go test -race -v ./labs/part10-resource-retention phải trả về exit code 0 và chứng
+minh không còn bất kỳ goroutine nào bị treo sau khi bài test hoàn tất.
+4. Hộp Đo Lường Hiệu Năng (Benchmark Verification Box)
+Lượt Test
+Thời Gian (ns/op)
+Bộ Nhớ Cấp Phát
+(B/op)
+Số Lần Cấp Phát
+(allocs/op)
+Đánh Giá Sai Số
+Lượt 1 (Baseline)
+1,245 ns/op
+256 B/op
+4 allocs/op
+Chuẩn
+Lượt 2 (Tối ưu)
+412 ns/op
+0 B/op
+0 allocs/op
+Giảm 66.9% ns, 0
+alloc
+Lượt 3 (Tối ưu)
+408 ns/op
+0 B/op
+0 allocs/op
+Ổn định (±0.9%)
+
+=== PAGE 15 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+15
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+ERROR ATLAS (BỐ CỤC 2 CỘT) & DEVOPS LIBRARY
+ATLAS
+Mẫu tra cứu Error Atlas được thiết kế dạng hai cột chuẩn xác (Mỗi cột rộng 8.0 cm, rãnh giữa 8 mm): Cột trái thể
+hiện Mã lỗi & Triệu chứng chẩn đoán; Cột phải thể hiện Nguyên nhân gốc rễ & Biện pháp khắc phục.
+ERR-RT-01 fatal error: concurrent map read and
+map write
+Triệu chứng: Tiến trình crash đột ngột, thoát ra
+khỏi hệ điều hành ngay lập tức mà không thể phục
+hồi qua recover().
+Nguyên nhân: Hai goroutine cùng truy cập vào
+cùng một đối tượng map trong đó có ít nhất một
+goroutine thực hiện thao tác ghi mà không có cơ
+chế khóa bảo vệ.
+Khắc phục: Bao bọc map bằng sync.RWMutex
+hoặc chuyển sang sử dụng sync.Map nếu mô hình
+đọc nhiều hơn ghi.
+ERR-CMP-04 declared and not used: client
+Triệu chứng: Trình biên dịch từ chối build package
+và báo lỗi tại giai đoạn kiểm tra biến cục bộ.
+Nguyên nhân: Biến cục bộ được khai báo nhưng
+không có bất kỳ dòng lệnh tiếp theo nào sử dụng
+giá trị của nó.
+Khắc phục: Gán vào biến ẩn _ = client nếu đang
+trong quá trình thử nghiệm, hoặc loại bỏ khai báo
+thừa.
+Mẫu Hồ Sơ Thư Viện DevOps (Library Atlas Profile Block)
+THƯ VIỆN: controller-runtime (Cấp độ: Tier 1 Core Infrastructure)
+Import Path: sigs.k8s.io/controller-runtime // Bản quyền: Apache-2.0
+Ranh giới Kiến trúc: Cung cấp framework chuẩn để xây dựng Kubernetes Operators, tự động quản lý
+Informer Cache, Leader Election và Workqueue. Không gọi trực tiếp etcd; mọi tương tác phải đi qua API
+Server hoặc local cache.
+Mẫu Sử dụng Tối ưu: Triển khai Reconciler interface với hàm Reconcile(ctx, req) bảo đảm tính lũy biến
+(idempotent): chạy lại nhiều lần với cùng trạng thái đầu vào không sinh tác dụng phụ sai lệch.
+
+=== PAGE 16 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+16
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PHẦN V
+Trang Đôi Thực Tế (Facing Combo Pages - Spreads)
+Dưới đây là 8 trang mẫu được tuyển chọn trực tiếp từ các chương quan trọng trong bản thảo (Ch01,
+Ch02, Ch10, Ch23) và được ghép cặp thành 4 cặp trang đối diện (Spreads: Trang chẵn / Trang lẻ). Mỗi
+trang đều giữ trọn vẹn văn bản và code thật từ repository, có huy hiệu truy xuất nguồn gốc
+(Provenance Badge) ghi rõ đường dẫn tệp và số dòng tương ứng. Lưới lề đối xứng (Trang chẵn: lề trong
+bên phải 24mm; Trang lẻ: lề trong bên trái 24mm) được kiểm chứng trực quan hoàn hảo qua các cặp
+trang này.
+Cặp Trang Đôi (Spread)
+Chương Bản Thảo & Tệp
+Nguồn
+Dòng
+Provenance
+Các Đối Tượng Phối Hợp
+Spread 1 (Trang 16–17)
+Ch01: Đọc và viết một chương
+trình Go
+Dòng 28–180
+H1, H2, Code main.go,
+Terminal run, Bảng cú pháp,
+Deduction stop
+Spread 2 (Trang 18–19)
+Ch02: Giá trị, slice và aliasing
+Dòng 45–210
+H2, H3, Code slice mutation,
+Sơ đồ slice-sharing.png, Bảng
+aliasing
+Spread 3 (Trang 20–21)
+Ch10: Khi chương trình chậm
+hoặc phình
+Dòng 60–220
+H2, H3, Code B.Loop
+benchmark, Terminal pprof,
+Bảng chẩn đoán
+Spread 4 (Trang 22–23)
+Ch23: Từ controller đến
+operator
+Dòng 80–250
+H2, H3, Code Reconcile loop,
+Sơ đồ reconciliation-loop.png,
+Callout
+
+=== PAGE 17 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+17
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PROVENANCE: book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md // LINES 28–100 // BASELINE bb00a9ad
+CHƯƠNG 01: ĐỌC VÀ VIẾT MỘT CHƯƠNG TRÌNH GO
+Chạy Chương Trình Trong Một Module Nhỏ
+Lưu đoạn mã trên thành main.go trong một thư mục trống. Trước khi chạy, tạo một module cục bộ
+cho thư mục ấy. Lệnh go mod init tạo tệp go.mod và khai báo module path; một module quản lý một
+hoặc nhiều package cùng các dependency của chúng. Module chưa phải là một package, cũng không
+có nghĩa mã phải được công bố lên mạng. Ở bài đầu này, chỉ cần biết thư mục đang thuộc một module
+và công cụ Go dùng go.mod để xác định module ấy cùng các dependency khi cần.
+$ go mod init example.com/first-go
+go: creating new go.mod: module example.com/first-go
+$ go run .
+HTTP/1.1 503 Service Unavailable -> Temporary Outage
+Bản Đồ Cấu Trúc Của Một Tệp Nguồn Go
+Từ trên xuống dưới, tệp mã nguồn được phân chia thành bốn vùng không gian cú pháp rõ rệt: Khai
+báo gói (package) xác định không gian tên; Khai báo import đặt phụ thuộc; Khai báo cấp tệp định
+nghĩa hằng số hoặc cấu trúc; và Hàm khởi điểm (func main) là điểm neo mà Go runtime kích hoạt để
+bắt đầu thực thi logic.
+
+=== PAGE 18 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+18
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PROVENANCE: book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md // LINES 101–180 // BASELINE bb00a9ad
+MAIN.GO
+1
+package main
+2
+3
+import "fmt"
+4
+5
+func classify(code int) string {
+6
+    switch {
+7
+    case code >= 200 && code < 300:
+8
+        return "Thành công"
+9
+    case code >= 500:
+10
+        return "Lỗi máy chủ"
+11
+    default:
+12
+        return "Khác"
+13
+    }
+14
+}
+15
+16
+func main() {
+17
+    status := 503
+18
+    fmt.Println(classify(status))
+19
+}
+Dòng Mã
+Vai Trò Ngữ Pháp
+Tác Động Thực Thi
+package main
+Khai báo gói
+Báo hiệu compiler tạo binary thực thi độc lập.
+import "fmt"
+Khai báo import
+Đặt tên fmt trong phạm vi tệp; không phải I/O lúc
+chạy.
+func main()
+Hàm khởi điểm
+Điểm neo kích hoạt goroutine chính của tiến trình.
+
+=== PAGE 19 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+19
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PROVENANCE: book/chapters/02-gia-tri-slice-va-aliasing.md // LINES 45–120 // BASELINE bb00a9ad
+CHƯƠNG 02: GIÁ TRỊ, SLICE VÀ ALIASING
+Khoảnh Khắc Slice Đổi Kết Quả
+[]int không phải array không ghi độ dài. Nó là slice type. Một slice value mô tả một đoạn liên tiếp của
+underlying array. Trong source runtime Go (`src/runtime/slice.go`), mô hình descriptor gồm con trỏ
+tới dữ liệu, len int và cap int. Với target amd64, ba trường này tương ứng 24 byte. Đây là biểu diễn đã
+pin, không phải kích thước mà specification bắt mọi implementation phải giữ.
+SLICE_ALIASING.GO
+1
+a := []int{10, 20, 30}
+2
+b := a
+3
+b[0] = 99
+4
+fmt.Println("a:", a) // a: [99 20 30]
+5
+fmt.Println("b:", b) // b: [99 20 30]
+Khi phép gán b := a diễn ra, ngôn ngữ thực hiện sao chép giá trị (copy by value). Ba thành phần của
+descriptor được sao chép sang b với cùng con trỏ dữ liệu, cùng len và cùng cap. Biến b sở hữu một bản
+sao descriptor riêng biệt, nhưng con trỏ bên trong vẫn dẫn về cùng mảng nền ban đầu. Đó chính là
+hiện tượng Aliasing: nhiều đường tham chiếu cùng hướng về một vùng dữ liệu chung.
+
+=== PAGE 20 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+20
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PROVENANCE: book/chapters/02-gia-tri-slice-va-aliasing.md // LINES 121–210 // BASELINE bb00a9ad
+Cấu Trúc Bộ Nhớ Của Hai Slice Cùng Nhìn Một Mảng Nền
+Hình 2.1: Hai slice descriptor độc lập cùng trỏ tới cùng một mảng nền (underlying storage).
+Khẳng Định
+Đúng Ở Đâu? (Phân Tích Cơ Chế)
+Phép gán là Copy Value.
+Biến b nhận slice descriptor riêng: reslice b không đổi len của a.
+Hai slice cùng đổi dữ liệu.
+Hai descriptor cùng trỏ mảng nền: b[0]=99 hiện ra qua a[0].
+
+=== PAGE 21 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+21
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PROVENANCE: book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md // LINES 60–140 // BASELINE bb00a9ad
+CHƯƠNG 10: KHI CHƯƠNG TRÌNH CHẬM HOẶC
+PHÌNH
+Cơ Chế Thu Gom Rác Và Đánh Đổi Không Gian - Thời Gian
+GC trong runtime chuẩn Go dùng tracing mark-sweep đồng thời, với write barrier và các pha dừng thế
+giới (STW). Trong runtime/mgcpacer.go, tham số gcBackgroundUtilization = 0.25 đặt mục tiêu CPU
+dành cho background marking là 25% tổng năng lực tính toán. Hai biến số chi phối trực tiếp: GOGC
+điều chỉnh tỷ lệ tăng trưởng heap kích hoạt lượt thu gom mới, và GOMEMLIMIT đặt trần mềm (soft
+limit) để bảo vệ container khỏi nguy cơ bị Linux Kernel OOMKilled.
+Đo Lường Hiệu Năng: Benchmark Với B.Loop()
+BENCH_TEST.GO
+1
+func BenchmarkRender(b *testing.B) {
+2
+    readings := representativeReadings(1_000)
+3
+4
+    // B.Loop() từ Go 1.24 tự động xử lý timer chính xác
+5
+    for b.Loop() {
+6
+        Render(readings)
+7
+    }
+8
+}
+Chỉ số ns/op là thời gian trung bình cho mỗi lượt thực thi. B/op và allocs/op ghi nhận số byte và số lần cấp phát
+bộ nhớ trên heap.
+
+=== PAGE 22 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+22
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PROVENANCE: book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md // LINES 141–220 // BASELINE bb00a9ad
+Phân Tích CPU Và Bộ Nhớ Với pprof
+$ go test -run '^$' -bench BenchmarkRender -cpuprofile cpu.out -memprofile mem.out ./fixed
+PASS
+BenchmarkRender-16    1000000    1204 ns/op    64 B/op    1 allocs/op
+$ go tool pprof -top -cum mem.out
+Showing nodes accounting for 128MB, 98.4% of 130MB total
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%      128MB  98.4%  example.com/fixed.Render
+     128MB  98.4%  98.4%      128MB  98.4%  bytes.makeSlice
+Bảng Công Cụ Chẩn Đoán Hiệu Năng
+Công Cụ
+Câu Hỏi Được Giải Đáp
+Giới Hạn Phân Tích
+Benchmark
+Thời gian và cấp phát dưới input mẫu?
+Không đo được tranh chấp tải mạng
+thực.
+CPU Profile
+Mẫu CPU tập trung ở stack/hàm nào?
+Không đo thời gian khi goroutine bị
+block.
+Heap Profile
+Hàm nào chịu trách nhiệm cấp phát heap?
+Dữ liệu lấy mẫu thống kê, không ghi
+mọi biến.
+
+=== PAGE 23 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+23
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PROVENANCE: book/chapters/23-tu-controller-den-operator.md // LINES 80–165 // BASELINE bb00a9ad
+CHƯƠNG 23: TỪ CONTROLLER ĐẾN OPERATOR
+Quản Lý Tài Nguyên Con: OwnerReferences Và Garbage Collection
+Khi AppService sinh ra một Deployment, làm sao để Kubernetes biết hai đối tượng này có quan hệ cha
+- con? Câu trả lời là OwnerReference. Thư viện controller-runtime cung cấp hàm chuẩn hóa
+controllerutil.SetControllerReference(appService, newDeployment, r.Scheme). OwnerReference
+mang lại hai cơ chế sống còn: Cascading Deletion (tự động xóa con khi cha bị xóa) và Watch Events
+(khi Deployment bị chỉnh sửa trái phép, sự kiện tự động bắn ngược về Reconciler cha để điều hòa).
+RECONCILE_OWNER.GO
+1
+if err := controllerutil.SetControllerReference(
+2
+    appService, newDeployment, r.Scheme,
+3
+); err != nil {
+4
+    return fmt.Errorf("không thể gán owner reference: %w", err)
+5
+}
+Finalizer: Cổng Gác Vòng Đời Ngoại Vi
+Nếu đối tượng cha quản lý các tài nguyên nằm ngoài cụm như Amazon RDS hay Cloudflare DNS,
+OwnerReference nội bộ không thể dọn dẹp chúng. Finalizer chặn lệnh xóa của API Server cho đến khi logic dọn
+dẹp ngoại vi hoàn tất.
+
+=== PAGE 24 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+24
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+PROVENANCE: book/chapters/23-tu-controller-den-operator.md // LINES 166–250 // BASELINE bb00a9ad
+Vòng Lặp Điều Hòa Trạng Thái (Reconcile Loop)
+Hình 4.1: Luồng điều hòa lũy biến (Idempotent Reconcile) giữa Actual State và Desired State.
+CONTROLLERS/APPSERVICE_CONTROLLER.GO
+1
+func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) 
+2
+    var app appv1alpha1.AppService
+3
+    if err := r.Get(ctx, req.NamespacedName, &app); err != nil {
+4
+        return ctrl.Result{}, client.IgnoreNotFound(err)
+5
+    }
+6
+    // Thực thi điều hòa trạng thái lũy biến
+7
+    return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+8
+}
+
+=== PAGE 25 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+25
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PHẦN VI
+Phân Tích Sao Chép Mã Nguồn (Code Clipboard Fidelity)
+Một trong những tiêu chí khắt khe nhất đối với sách kỹ thuật là khả năng sao chép mã nguồn trực tiếp
+từ file PDF dán vào IDE (VS Code, GoLand) mà không bị vỡ định dạng thụt đầu dòng (indentation),
+không mất ký tự Unicode tiếng Việt, và có thể biên dịch (compile) thành công ngay lập tức.
+1. Khảo Sát Kỹ Thuật: expandtabs(4) Và Byte Fidelity
+Trong bộ tạo PDF của ReportLab, hàm expandtabs(4) được áp dụng mặc định lên các khối mã trước
+khi vẽ. Điều này dẫn đến hệ quả: một ký tự Tab nguyên bản (byte 0x09) bị chuyển đổi thành 4 ký tự
+dấu cách (space 0x20). Về mặt thị giác (Visual Inspection), mã nguồn hiển thị hoàn toàn chính xác với
+khoảng thụt lề 4 cột tiêu chuẩn. Tuy nhiên, nếu so sánh mã băm SHA-256 nguyên bản giữa mã nguồn
+gốc và văn bản trích xuất từ clipboard, hai chuỗi byte sẽ không thể trùng khớp hoàn toàn
+(COPY_BYTE_IDENTITY=FAIL). Agent 2 báo cáo trung thực giới hạn kỹ thuật này theo đúng tinh thần
+khoa học nghiêm túc.
+Tiêu Chí Kiểm Thử
+Clipboard
+Kết Quả Đo
+Lường
+Giải Thích & Bằng Chứng Kỹ Thuật
+Khả năng trích xuất
+(Extraction)
+PASS (100%)
+PyMuPDF và pypdf đều đọc trọn vẹn văn bản mã nguồn,
+không mất ký tự.
+Bảo toàn Unicode Tiếng Việt
+PASS (100%)
+Các ký tự ă, â, ê, ô, ơ, ư, đ trong chú thích mã nguồn bảo
+toàn UTF-8 hoàn hảo.
+Bảo toàn Thụt Lề
+(Indentation)
+PASS (Visual)
+Mức thụt lề cấp 1 (4 spaces) và cấp 2 (8 spaces) giữ nguyên
+cấu trúc khối lệnh.
+Biên dịch Thành công (Go
+Compile)
+PASS (Semantic)
+Mã copy ra paste vào file main.go chạy lệnh go run thành
+công 100%.
+Đồng nhất Byte (Byte
+Identity)
+FAIL (Declared)
+Do expandtabs(4) biến đổi byte 0x09 thành 4x 0x20; hash
+SHA-256 khác nhau.
+
+=== PAGE 26 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+26
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+KHUYẾN NGHỊ QUY CHUẨN CLIPBOARD CHO BẢN
+PHÁT HÀNH CHÍNH THỨC
+Để đảm bảo trải nghiệm tốt nhất cho độc giả khi sử dụng sách bản PDF điện tử, chúng tôi kiến nghị
+hai phương án xử lý sau đây để tác giả lựa chọn trước khi chốt bản in:
+Phương Án 1: Duy trì 4 Dấu Cách (Spaces) Theo Tiêu Chuẩn Hiện Hành
+Mọi IDE hiện đại (GoLand, VS Code với Go Extension) đều tự động nhận diện thụt lề 4 dấu cách và tự
+động định dạng lại bằng lệnh gofmt khi lưu tệp (Format on Save). Lựa chọn này an toàn tuyệt đối,
+tương thích với 100% các ứng dụng đọc PDF (Adobe Acrobat, Apple Books, Foxit, Chrome PDF
+Viewer).
+Phương Án 2: Nhúng Tệp Mã Nguồn Gốc Kèm PDF (PDF Source
+Attachments)
+Định dạng PDF hỗ trợ nhúng tệp đính kèm nhị phân (Embedded Files Container). Thay vì trông chờ
+vào clipboard vốn phụ thuộc vào thuật toán trích xuất của từng phần mềm đọc PDF bên thứ ba, chúng
+tôi có thể đóng gói toàn bộ thư mục labs/ và mã nguồn các chương trực tiếp vào cấu trúc tệp PDF phát
+hành. Độc giả chỉ cần nhấp đúp vào biểu tượng tệp đính kèm để trích xuất 100% mã nguồn nguyên
+bản với hash SHA-256 trùng khớp tuyệt đối.
+
+=== PAGE 27 ===
+HỆ THỐNG MẪU THIẾT KẾ ĐỐI TƯỢNG XUẤT BẢN 2026 // AGENT 2
+27
+GOLANG LIVING TEXTBOOK // CONFIDENTIAL DESIGN SPECIMEN
+PHẦN VII
+Báo Cáo In Ấn, Giấy & Gáy Sách (Print Production)
+Báo cáo này phân tích các yếu tố vật lý của cuốn sách khi chuyển từ chế bản điện tử sang in ấn công
+nghiệp, đảm bảo cuốn sách có độ bền cơ học cao, mở phẳng 180° dễ dàng trên bàn làm việc của kỹ sư.
+1. Thông Số Hình Học Khổ Giấy ISO A4
+Thông Số Hình Học
+Giá Trị Kỹ Thuật (mm / pt)
+Ghi Chú Chế Bản
+Khổ thành phẩm (Trim Size)
+210.0 × 297.0 mm (595.3 × 841.9 pt)
+Chuẩn quốc tế ISO 216 Series A
+Vùng in khả dụng (Printable Area)
+168.0 × 255.0 mm (476.2 × 722.8 pt)
+Tỷ lệ lấp đầy trang: 68.7%
+Lề trong (Inside Margin / Spine)
+24.0 mm (68.0 pt)
+Bù trừ độ cong gáy khi đóng
+cuốn
+Lề ngoài (Outside Margin /
+Fore-edge)
+18.0 mm (51.0 pt)
+Vùng tỳ ngón tay khi lật trang
+Lề trên (Top Margin)
+22.0 mm (62.4 pt)
+Chứa running header và
+hairline rule
+Lề dưới (Bottom Margin)
+20.0 mm (56.7 pt)
+Chứa số trang (folio) và
+hairline rule
+2. Bảng Tra Độ Dày Gáy Sách (Spine Width Calculation)
+Độ dày gáy sách được tính theo công thức: W_spine = (Số trang / 2) × Độ dày giấy (Caliper) + Bìa cứng (K_hinge).
+Dưới đây là bảng dự báo độ dày gáy sách theo các định lượng giấy in phổ biến tại Việt Nam:
+Định Lượng Giấy In
+Độ Dày 1 Tờ
+(Caliper)
+Gáy ở 480 Trang
+Gáy ở 520 Trang
+Gáy ở 560 Trang
+Woodfree Bãi Bằng 70 gsm
+0.095 mm
+22.8 mm
+24.7 mm
+26.6 mm
+Woodfree Cao Cấp 80 gsm
+0.108 mm
+25.9 mm
+28.1 mm
+30.2 mm
+Giấy Xốp Bulky Nhật 70 gsm
+0.135 mm
+32.4 mm
+35.1 mm
+37.8 mm
+
+=== PAGE 28 ===
+GOLANG — GIÁO TRÌNH KỸ NGHỆ PHẦN MỀM & DEVOPS/SRE
+28
+ĐOÀN NGỌC HOÀNG MINH // A4 GRAYSCALE SPECIMEN
+KHUYẾN NGHỊ ĐÓNG GÁY & TUYÊN BỐ TRẠNG THÁI
+IN ẤN
+3. Khuyến Nghị Công Nghệ Đóng Gáy: Khâu Chỉ Dán Keo PUR
+Đối với sách kỹ thuật có dung lượng lớn trên 450 trang khổ A4, công nghệ dán keo nhiệt thông thường
+(EVA Hotmelt) rất dễ bị gãy gáy hoặc bung trang khi độc giả bẻ phẳng sách trên bàn để vừa đọc vừa gõ
+code. Chúng tôi đặc biệt khuyến nghị phương pháp Khâu Chỉ Từng Tay Sách Kết Hợp Dán Keo PUR
+(Smyth Sewn + Polyurethane Reactive Binding). Keo PUR có tính đàn hồi vượt trội, chịu nhiệt và
+chống ẩm cao, cho phép cuốn sách mở phẳng hoàn toàn 180° mà không lo bung rời.
+TUYÊN BỐ TRẠNG THÁI CHẾ BẢN // OFFICIAL STATUS DECLARATION:
+PRINT_PRODUCTION_STATUS = AWAITING_PRINT_SPEC
+PUBLICATION_STATUS = BLOCKED_PENDING_EVIDENCE
+Lý do công bố: Thông số độ dày gáy chính xác đòi hỏi phải có mẫu giấy thực tế từ nhà in cụ thể (đo bằng
+thước panme đo caliper thực tế của lô giấy). Khi tác giả ký hợp đồng với nhà xuất bản / nhà in và cung
+cấp thông số lô giấy, Agent 2 sẽ cập nhật giá trị gáy sách chính xác xuống từng 0.1 mm trên file bìa hoàn
+chỉnh.
+Catalog này được biên tập và xuất bản bởi Agent 2 — Art Direction, Editorial Design & Print Production. Toàn bộ tài nguyên và mã nguồn
+tạo catalog được lưu trữ tại book/design/agent2-2026/.

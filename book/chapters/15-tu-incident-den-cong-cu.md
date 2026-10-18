@@ -2,11 +2,11 @@
 
 # Chương 15 — Từ incident đến công cụ
 
-Một incident nhỏ thường không thiếu lệnh để gõ. Thiếu là một lời kể đáng tin về điều lệnh đó đã làm. Một người vận hành có thể chạy `curl`, `nslookup`, `git`, hay một tool nội bộ rồi nhìn thấy một dòng lỗi. Nhưng dòng lỗi ấy không nói command nào đã thật sự được chạy, nó có nhận đủ thời gian không, có in chẩn đoán ra `stderr` không, hay process kết thúc bằng exit status nào. Gõ lại cùng một lệnh nhiều lần chỉ làm lịch sử mờ hơn.
+Một sự cố vận hành (*incident*) thông thường không thiếu các câu lệnh để gõ. Điều còn thiếu là một bản ghi đáng tin cậy về những gì câu lệnh đó đã thực sự thực hiện. Một kỹ sư vận hành có thể chạy `curl`, `nslookup`, `git`, hoặc một công cụ nội bộ rồi quan sát thấy một dòng báo lỗi. Nhưng dòng lỗi ấy không cho biết chính xác câu lệnh nào đã được kích hoạt, tiến trình có được cấp đủ thời gian xử lý hay không, có xuất dữ liệu chẩn đoán ra luồng lỗi chuẩn `stderr` hay không, và tiến trình đã kết thúc với mã trạng thái thoát nào. Việc gõ lại cùng một dòng lệnh nhiều lần chỉ làm lịch sử điều tra thêm mờ mịt.
 
-Chương này bắt đầu từ một requirement khiêm tốn: một incident command chạy **một tool chẩn đoán đã được chọn trước**, chờ nó theo một deadline, rồi trả về output và trạng thái có thể giải thích. Đây chưa phải feature lớn cho `opsprobe`; trước hết ta dựng một minimal reproducer độc lập để học đúng boundary của process. Khi contract đã rõ, `opsprobe` mới có thể dùng nó như một building block nhỏ.
+Chương này bắt đầu từ một yêu cầu nghiệp vụ khiêm tốn: một lệnh điều tra sự cố sẽ kích hoạt một công cụ chẩn đoán đã được chọn trước, chờ đợi tiến trình theo một thời hạn xử lý (*deadline*), rồi thu thập toàn bộ dữ liệu đầu ra và trạng thái kết thúc có thể giải trình. Đây chưa phải một tính năng đồ sộ cho công cụ `opsprobe`; trước hết ta dựng một mô hình tái lập tối giản độc lập nhằm nắm vững ranh giới quản lý tiến trình con (*process boundary*). Khi hợp đồng hành vi đã được minh định, `opsprobe` mới có thể tích hợp thành phần này như một khối nền tảng vững chắc.
 
-Mental model của chương là: **command runner là một supervisor nhỏ của process con**. Nó không chỉ “gọi một binary”. Nó nhận intent đã được validate, sở hữu deadline, chờ process kết thúc, giữ output tách biệt, phân loại kết quả, rồi để caller quyết định cách trình bày và ghi nhận. Nếu không sở hữu những điều đó, tool có thể biến một incident rõ ràng thành một chuỗi shell command khó tái hiện.
+Mô hình tư duy của chương là: bộ chạy câu lệnh là một tiến trình giám sát thu nhỏ của tiến trình con. Nó không chỉ đơn thuần kích hoạt một tệp nhị phân. Thành phần này tiếp nhận ý định đã được kiểm tra hợp lệ, quản lý thời hạn thực thi, chờ tiến trình kết thúc, lưu giữ dữ liệu đầu ra tách bạch giữa các luồng, phân loại kết quả thoát, và để bên gọi quyết định phương thức hiển thị cũng như lưu vết. Nếu thiếu sự kiểm soát chặt chẽ các yếu tố đó, công cụ chẩn đoán có thể biến một sự cố rõ ràng thành một chuỗi lệnh vỏ hệ điều hành rời rạc và không thể tái lập.
 
 ## Một câu lệnh nhìn có vẻ vô hại
 
@@ -16,18 +16,20 @@ Giả sử alert báo dependency `catalog` trả lời chậm. Một command đ�
 exec.Command("sh", "-c", "probe " + target).Run()
 ~~~
 
-Nó giấu quá nhiều quyết định. `target` là dữ liệu hay một mảnh shell program? Error có phải exit status khác 0, không tìm được executable, hay deadline đã hết? `stdout` và `stderr` đi đâu? Và nếu process cha của `opsprobe` đang dừng theo lifecycle ở Chương 12, process con có còn chạy không?
+Cách làm tắt này che giấu quá nhiều quyết định hệ thống. Giá trị `target` là dữ liệu thuần túy hay là một đoạn mã kịch bản vỏ lệnh (*shell script*)? Lỗi trả về xuất phát từ mã thoát khác 0, không tìm thấy tệp thực thi, hay do thời hạn xử lý đã cạn kiệt? Dữ liệu từ luồng đầu ra chuẩn `stdout` và luồng lỗi chuẩn `stderr` được chuyển hướng về đâu? Và nếu tiến trình cha của `opsprobe` đang trong quá trình dừng tắt theo vòng đời đã nêu ở Chương 12, liệu tiến trình con có tiếp tục chạy mồ côi hay không?
 
-`os/exec` cố ý không tự gọi system shell và không tự mở rộng glob, pipeline hay redirect. Đó là một ranh giới hữu ích: command name và từng argument là dữ liệu riêng. Nếu thật sự cần shell, ta phải chọn shell, quoting và threat model một cách tường minh; một incident tool không nên vô tình nhận quyền chạy shell chỉ vì ghép string.
+Gói `os/exec` cố ý không tự động kích hoạt vỏ lệnh hệ thống và không tự ý mở rộng ký tự đại diện (*globbing*), đường ống dẫn (*pipeline*) hay chuyển hướng luồng (*redirect*). Đó là một ranh giới bảo vệ hữu ích: tên lệnh thực thi và từng đối số là các phần tử dữ liệu độc lập. Nếu thực sự cần tới vỏ lệnh, kỹ sư phải chủ động lựa chọn trình thông dịch, cơ chế bao đóng chuỗi ký tự và mô hình đe dọa an ninh một cách tường minh; một công cụ xử lý sự cố không nên vô tình nhận quyền thực thi vỏ lệnh chỉ vì hành vi nối chuỗi thiếu kiểm soát.
 
 ![Dòng đời của một incident command](../../assets/diagrams/incident-command-lifecycle.png)
 @figure Mô hình khái niệm. `Result` là bằng chứng cục bộ về một lần chạy; nó không tự chứng minh nguyên nhân gốc của incident.
 
-Trong chapter này, caller chọn executable từ code hoặc một allow-list. `target` chỉ là argument. Đó không phải giải pháp đầy đủ cho mọi tool runner, nhưng là boundary đúng cho yêu cầu hiện tại: người dùng không được gửi cả một command line tùy ý qua flag rồi bắt chương trình đoán ý nghĩa của nó.
+Trong chương này, bên gọi chỉ định tệp thực thi trực tiếp từ mã nguồn hoặc thông qua danh sách trắng cho phép (*allowlist*). Giá trị `target` chỉ đơn thuần là một đối số tham số. Đây không phải lời giải vạn năng cho mọi bộ điều phối công cụ, nhưng là ranh giới chuẩn xác cho yêu cầu hiện tại: người dùng không được phép truyền nguyên một chuỗi dòng lệnh tùy ý qua cờ cấu hình rồi buộc chương trình phải tự suy đoán ý nghĩa cú pháp.
+
+Tách đối số ngăn việc shell diễn giải `;`, `*` hay `$HOME`, nhưng chương trình đích vẫn có thể hiểu đầu vào như một cờ, biểu thức hoặc đường dẫn nguy hiểm. Bên gọi phải kiểm tra theo hợp đồng của chính công cụ; `--` chỉ kết thúc cờ nếu công cụ hỗ trợ. Tên không chứa dấu phân cách đường dẫn còn được tìm qua cơ chế `LookPath`; kết quả phụ thuộc môi trường. `exec.ErrDot` chặn trường hợp tìm ra executable tương đối với thư mục hiện tại, không xác minh danh tính hay tính tin cậy của mọi executable trong PATH. Công cụ đã chọn trước nên dùng đường dẫn và quyền truy cập được kiểm soát.
 
 ## Bốn kết cục, không phải một `error`
 
-Một runner có thể trả `error`, nhưng caller cần biết loại failure. Thành công là process chạy rồi exit status bằng 0. Một command được khởi động thành công nhưng exit với status 7 lại là một kết cục khác: `stderr` của nó có thể chính là dữ liệu chẩn đoán hữu ích. Hết deadline là kết cục thứ ba. Không tìm được executable hoặc không thể start là kết cục thứ tư, thường là lỗi cấu hình hoặc môi trường trước cả khi diagnosis bắt đầu.
+Bộ chạy lệnh có thể trả về lỗi `error`, nhưng bên gọi bắt buộc phải phân biệt được dạng thất bại cụ thể. Thành công trọn vẹn là khi tiến trình được khởi chạy và kết thúc với mã trạng thái bằng 0. Một câu lệnh được kích hoạt thành công nhưng kết thúc với mã thoát 7 lại là một kết cục hoàn toàn khác: luồng lỗi chuẩn `stderr` của nó có thể chứa đựng chính xác manh mối chẩn đoán sự cố. Quá hạn thời gian chờ (*deadline exceeded*) là kết cục thứ ba. Không tìm thấy tệp thực thi hoặc không đủ quyền khởi chạy là kết cục thứ tư, thường xuất phát từ sai sót cấu hình môi trường trước khi quá trình chẩn đoán kịp bắt đầu.
 
 @table Kết cục của một lần chạy process
 
@@ -38,11 +40,11 @@ Một runner có thể trả `error`, nhưng caller cần biết loại failure.
 | Deadline/cancel | Có thể đã start | output đã thu được, cờ timeout | Parent context hay ngân sách thời gian đã kết thúc. |
 | Không start | Không | command và exit code chưa có | Sai executable, quyền hoặc môi trường. |
 
-`Result` và `error` đi cùng nhau vì chúng trả lời hai câu khác nhau. `Result` là bằng chứng thu được; `error` nói lần chạy có thỏa contract không. Vì vậy đừng viết API chỉ trả `error` rồi làm mất `stderr` mỗi khi exit code khác 0. Và cũng đừng coi mọi non-zero exit là panic-worthy: tool chẩn đoán có thể dùng exit code để báo một điều kiện đã được dự tính.
+Hai đối tượng `Result` và `error` song hành cùng nhau vì chúng giải đáp hai khía cạnh riêng biệt. Cấu trúc `Result` lưu giữ toàn bộ bằng chứng thực nghiệm thu thập được; giá trị `error` xác nhận lượt chạy có thỏa mãn hợp đồng hành vi hay không. Do đó, tránh thiết kế giao diện lập trình chỉ trả về lỗi đơn thuần rồi làm thất lạc nội dung `stderr` mỗi khi tiến trình kết thúc với mã thoát khác 0. Đồng thời, không nên quy chụp mọi mã thoát khác 0 đều là lỗi nghiêm trọng: một công cụ chẩn đoán có thể chủ động sử dụng mã thoát để thông báo một tình trạng nghiệp vụ đã được trù tính từ trước.
 
 ## Viết supervisor nhỏ trước
 
-Lab dùng `Spec` rất hẹp. `Name` là executable đã được caller quyết định, `Args` là các argument riêng rẽ, còn `Timeout` là ngân sách của lần chạy. `Run` không biết `catalog` là gì, không parse JSON và không tự log. Tách những trách nhiệm này ra giữ cho test có thể kiểm soát process boundary. Hai khối `Run` dưới đây là các đoạn liên tiếp của cùng một function; source đầy đủ, có thể chạy nằm ở `fixed/run.go`.
+Bài thực hành giới hạn cấu trúc `Spec` trong phạm vi rất hẹp: trường `Name` là tệp thực thi do bên gọi quyết định, mảng `Args` chứa các đối số phân tách rõ ràng, và `Timeout` quy định ngân sách thời gian của lượt chạy. Hàm `Run` không cần biết dịch vụ `catalog` là gì, không phân tích cú pháp JSON và không tự ý ghi nhật ký. Việc tách bạch các trách nhiệm này giúp kiểm thử cô lập và kiểm soát trọn vẹn ranh giới tiến trình. Hai đoạn mã `Run` dưới đây là các phần liên tiếp của cùng một hàm; mã nguồn hoàn chỉnh có thể chạy được lưu tại tập tin `fixed/run.go`.
 
 ~~~go
 type Spec struct {
@@ -60,7 +62,7 @@ type Result struct {
 }
 ~~~
 
-`context.Context` vẫn là input đầu tiên. Nó nối runner vào request, CLI, hoặc lifecycle của service mà không buộc runner biết signal nào đã xảy ra. Ta tạo một deadline con; parent cancellation đi qua cùng đường đó. `exec.CommandContext` dùng context để interrupt process khi context kết thúc; mặc định `Cancel` của command gọi `Kill` trên process. Đây là behavior documented của standard library, không phải lời hứa rằng toàn bộ process tree trên mọi hệ điều hành đã được dọn sạch.
+Đối số `context.Context` luôn là dữ liệu đầu vào tiên quyết. Nó liên kết bộ chạy lệnh vào chuỗi yêu cầu, dòng lệnh CLI, hoặc vòng đời của dịch vụ mà không buộc bộ chạy phải trực tiếp xử lý các tín hiệu hệ điều hành cụ thể. Ta thiết lập một thời hạn con; cơ chế hủy bỏ từ tiến trình cha sẽ lan truyền xuyên suốt qua cùng đường dẫn đó. Phương thức `exec.CommandContext` sử dụng ngữ cảnh để ngắt tiến trình khi ngữ cảnh hoàn tất; mặc định hàm hủy bỏ của câu lệnh sẽ gửi tín hiệu cưỡng chế dừng (*Kill*) lên tiến trình. Đây là hành vi đã được tài liệu hóa của thư viện chuẩn, không phải lời cam kết rằng toàn bộ cây tiến trình con trên mọi hệ điều hành đều được dọn dẹp sạch sẽ.
 
 ~~~go
 func Run(ctx context.Context, spec Spec) (Result, error) {
@@ -81,7 +83,7 @@ func Run(ctx context.Context, spec Spec) (Result, error) {
 	err := cmd.Run()
 ~~~
 
-Khối đầu kết thúc tại `Run`: nó start process, chờ process và hai stream I/O hoàn tất, rồi giữ error gốc để phân loại. Validation phải đi trước `WithTimeout`, vì `context.WithTimeout(nil, ...)` sẽ panic. Hai buffer được gán trước `Run` để caller không phải đoán một dòng chẩn đoán đến từ `stdout` hay `stderr`.
+Đoạn mã đầu tiên kết thúc tại lệnh `Run`: nó khởi động tiến trình, chờ tiến trình cùng hai luồng nhập xuất hoàn tất, rồi lưu giữ lỗi gốc để phân loại. Bước kiểm tra tính hợp lệ bắt buộc phải diễn ra trước lời gọi `context.WithTimeout`, bởi việc truyền ngữ cảnh `nil` sẽ gây sập chương trình. Hai bộ đệm dữ liệu được gán trước khi chạy để bên gọi không phải suy đoán xem một dòng thông tin chẩn đoán xuất phát từ luồng chuẩn `stdout` hay luồng lỗi `stderr`.
 
 Sau khi process đã trả, phần còn lại dựng `Result` kể cả khi có error. Đọc nó như đoạn tiếp theo của function ở trên:
 
@@ -120,36 +122,43 @@ Sau khi process đã trả, phần còn lại dựng `Result` kể cả khi có 
 }
 ~~~
 
-Sau `Run`, `ProcessState` chỉ tồn tại nếu process đã thực sự start và kết thúc; `-1` là giá trị sentinel cho case không có exit status. Cuối cùng, runner hỏi context trước khi phân loại `ExitError`: nếu deadline của chính runner đã hết, đó là failure policy quan trọng hơn việc process kịp trả một status nào trong lúc bị ngắt.
+`ProcessState` được điền khi tiến trình đã khởi chạy và được chờ kết thúc. Runner khởi tạo `ExitCode=-1` khi chưa có trạng thái ấy, nhưng `ProcessState.ExitCode()` cũng có thể trả `-1` nếu tiến trình kết thúc bởi signal trên hệ điều hành hỗ trợ. Trước bước chạy, lỗi đặc tả trả `Result{}` với mã zero; vì vậy chỉ một số `ExitCode` không chứng minh tiến trình đã chạy hay thành công. Hãy xét cả `error` và hợp đồng của runner.
 
-Đoạn này chỉ phù hợp với output nhỏ, có giới hạn bởi contract của tool đang gọi. `bytes.Buffer` không phải policy output cho một process có thể in vô hạn. Tool production phải chọn rõ một trong ba hướng: stream có backpressure, capture có giới hạn và truncation được đánh dấu, hoặc chuyển output thành artifact. Đừng lén dùng buffer không giới hạn rồi gọi nó là observability.
+Runner ưu tiên `runCtx.Err()` ở thời điểm thu kết quả. Đây là chính sách phân loại, không phải bằng chứng context đã gây ra mọi mã thoát. Nếu context bị hủy sát lúc tiến trình kết thúc, lỗi context có thể được ưu tiên và `*exec.ExitError` không còn nằm trong error trả về. Cờ `TimedOut` chỉ chỉ ra `DeadlineExceeded`, không chỉ mọi lần hủy. Muốn phân biệt thêm nguyên nhân, cần hợp đồng kết quả khác; helper hiện tại không suy ra nhân quả từ thứ tự quan sát.
+
+Giải pháp này chỉ phù hợp với dữ liệu đầu ra dung lượng nhỏ, được giới hạn theo hợp đồng của công cụ đang chạy. Cấu trúc `bytes.Buffer` không phải chính sách tiếp nhận đầu ra phù hợp cho một tiến trình có thể in dữ liệu vô tận. Một công cụ môi trường thực tế bắt buộc phải chọn một trong ba chiến lược rõ ràng: truyền dòng dữ liệu có cơ chế tạo áp lực ngược (*backpressure*), thu thập có giới hạn trần và đánh dấu cắt ngắn rõ ràng, hoặc lưu trữ dữ liệu đầu ra thành tệp tạo tác (*artifact*). Tuyệt đối không âm thầm sử dụng bộ đệm vô hạn trong bộ nhớ rồi ngộ nhận đó là năng lực quan sát hệ thống.
 
 ## Cancel process không đồng nghĩa dọn cả cây process
 
-Đây là chỗ rất dễ mang trực giác từ Chương 12 sang sai. `CommandContext` mặc định gọi `Kill` cho **command process** khi context done. Một command có thể spawn process khác, để process đó giữ pipe mở, hoặc cần một protocol graceful riêng. `os/exec` còn có `WaitDelay` để giới hạn một số trường hợp process con không chịu kết thúc hoặc pipe I/O không đóng; nhưng process-group, job object, signal sequence và cleanup của tool cụ thể là policy phụ thuộc hệ điều hành.
+`CommandContext` mặc định gọi `Process.Kill` cho tiến trình trực tiếp khi context kết thúc; việc khởi chạy có thể chưa xảy ra nếu context đã hủy. Nó không dọn cả cây tiến trình. Tiến trình hậu duệ có thể giữ mở pipe dù tiến trình trực tiếp đã thoát. `WaitDelay` bắt đầu đếm từ khi context kết thúc hoặc `Wait` quan sát tiến trình thoát, tùy điều kiện nào đến trước; khi hết khoảng chờ nó có thể kill tiến trình trực tiếp còn sống và đóng các pipe do `Cmd` quản lý. Đây không phải thời lượng tối đa kể từ `Start`, cũng không làm một `Read`/`Write` tùy ý đang block tự kết thúc. Nếu tiến trình thoát thành công nhưng pipe phải đóng bởi `WaitDelay` và không có lần gọi `Cancel`, `Wait` trả `exec.ErrWaitDelay`. Nhóm tiến trình và Windows job object cần chính sách hệ điều hành riêng.
 
-Vì vậy lab không hứa “cancel là không còn process nào”. Với helper process của test, vốn không spawn hậu duệ và không giữ pipe mở sau khi bị hủy, test kiểm chứng `Run` trở về khi hết deadline và gắn nhãn kết quả. Với tool có process hậu duệ giữ pipe mở, `Run` vẫn có thể chờ I/O dù command chính đã bị kill; khi đó phải thiết kế `WaitDelay` và cleanup phù hợp. Nếu sau này product có tool spawn worker tree, requirement mới phải gọi tên target OS và lifecycle mong muốn trước khi thiết kế `SysProcAttr` hay process group.
+Test deadline hiện có kiểm lỗi và cờ timeout, không chứng minh tiến trình đã khởi chạy trước hạn: 30ms có thể hết ngay trong giai đoạn start. Test `TestRunCancelsAnAlreadyStartedChild` bổ sung điểm bắt tay qua TCP loopback; chỉ hủy sau khi helper báo đã chạy và đang chờ. Fixture chờ runner trả về, kiểm kết nối đã đóng và join goroutine do test sở hữu. Nó kiểm tiến trình trực tiếp trên môi trường chạy test, không đo latency cố định, không chứng minh cây hậu duệ được dọn. Runner vẫn để `WaitDelay=0`, nên các công cụ giữ pipe mở có thể khiến `Run` chờ lâu hơn ngân sách context. Đó là giới hạn cần giải quyết trước khi dùng cho loại công cụ ấy.
 
 ## Từ runner sang CLI có thể kể lại
 
-CLI là boundary với con người. Nó không nên nhét parsing flag, validation target, subprocess, formatting và logging vào một `main` dài. `flag.FlagSet` đủ cho command đầu tiên: parse `-target` và `-timeout`, kiểm tra target theo contract của probe, rồi gọi runner với executable đã chọn. Khi `Run` trả về, CLI có thể in report thân thiện; log có cấu trúc chỉ ghi field hữu ích để tái dựng lần chạy.
+Giao diện dòng lệnh (*CLI*) là ranh giới tiếp xúc trực tiếp với con người. Mã nguồn không nên nhồi nhét việc phân tích cờ cấu hình, kiểm tra hợp lệ mục tiêu, khởi tạo tiến trình con, định dạng dữ liệu và ghi nhật ký vào trong một hàm `main` kéo dài. Kiểu `flag.FlagSet` là đủ cho câu lệnh đầu tiên: phân tích cờ `-target` và `-timeout`, kiểm tra mục tiêu theo đúng hợp đồng của công cụ thăm dò, rồi kích hoạt bộ chạy với tệp thực thi đã định. Khi hàm `Run` hoàn tất, giao diện có thể in báo cáo trực quan cho người dùng; nhật ký có cấu trúc chỉ ghi nhận các trường dữ liệu cần thiết phục vụ việc tái dựng lượt chạy.
 
 ~~~go
-logger.Info(
-	"diagnostic completed",
-	"tool", result.Command[0],
-	"exit_code", result.ExitCode,
-	"timed_out", result.TimedOut,
-)
+if !errors.Is(err, ErrInvalidSpec) {
+	logger.Info(
+		"diagnostic returned",
+		"tool", spec.Name,
+		"exit_code", result.ExitCode,
+		"timed_out", result.TimedOut,
+		"ok", err == nil,
+	)
+}
 ~~~
 
-Đừng log token, header authorization, toàn bộ environment hay raw command line có secret. `slog` không tự làm dữ liệu nhạy cảm biến mất; chính boundary chọn field nào được đi vào log. Chương 16 sẽ biến một lần chẩn đoán đơn lẻ thành tín hiệu có thể quan sát bằng health, metric, trace và SLO. Hiện tại, điều quan trọng hơn là report không đánh tráo “command không chạy được”, “command chạy nhưng fail”, và “ta đã chủ động ngắt command vì hết ngân sách”.
+Đoạn ghi nhận dùng `spec.Name` đã được chọn trước, không truy cập `result.Command[0]`: lỗi đặc tả trả slice rỗng và truy cập ấy sẽ panic. Nhãn “returned” cùng trường `ok` cũng tránh gọi mọi lượt chạy là hoàn tất thành công; không ghi toàn bộ error hay đối số vì chúng có thể chứa dữ liệu nhạy cảm.
 
-> **Dừng để dự đoán:** Nếu `Run` chỉ trả `error`, incident report nào sẽ mất khi một probe exit status 2 nhưng đã in lời giải thích hữu ích vào `stderr`? Nếu `Run` chỉ trả `Result` và không trả `error`, caller có còn phân biệt được run thành công với run bị deadline không?
+Tuyệt đối không ghi nhật ký các thông tin mã thông báo bảo mật (*token*), tiêu đề ủy quyền (*authorization header*), toàn bộ biến môi trường hay chuỗi dòng lệnh thô chứa mật khẩu bí mật. Gói `slog` không tự động che giấu dữ liệu nhạy cảm; chính ranh giới thiết kế phải chọn lọc trường nào được phép lưu vào nhật ký. Chương 16 sẽ nâng tầm một lượt chẩn đoán đơn lẻ thành các tín hiệu quan sát toàn diện qua trạng thái sức khỏe, chỉ số đo lường, dấu vết thực thi và mục tiêu mức dịch vụ (*SLO*). Tại mốc này, điều cốt lõi là báo cáo không được đánh tráo giữa ba trạng thái: câu lệnh không thể khởi động, câu lệnh thực thi thất bại, và câu lệnh bị chủ động ngắt do cạn kiệt ngân sách thời gian.
 
-## Thực hành: chứng minh trạng thái thoát và thời hạn
+> **Dừng để dự đoán:** Nếu hàm `Run` chỉ trả về `error`, báo cáo sự cố sẽ đánh mất thông tin gì khi một công cụ thăm dò kết thúc với mã thoát 2 nhưng đã kịp in lời giải thích chẩn đoán vào `stderr`? Ngược lại, nếu hàm `Run` chỉ trả về `Result` mà không trả về `error`, liệu bên gọi có còn phân biệt được lượt chạy thành công với lượt chạy bị cưỡng chế dừng do quá hạn thời gian?
 
-Mở `labs/part15-incident-command/exercise/run_test.go` trước. Test không gọi `ping`, `curl` hay binary có sẵn của máy. Nó dùng test binary hiện tại làm helper process, nên case success, exit khác 0 và sleep đều chạy như nhau trên Windows, Linux và macOS. Đó là một cách thiết kế test quan trọng: thay vì phụ thuộc vào công cụ có sẵn của máy, ta kiểm soát process đang được quan sát.
+### Bài thực hành: Chứng minh trạng thái thoát và thời hạn
+
+Hãy mở tập tin `labs/part15-incident-command/exercise/run_test.go` trước. Bài kiểm thử không gọi `ping`, `curl` hay bất kỳ tệp thực thi có sẵn nào của hệ điều hành. Nó sử dụng chính tệp nhị phân kiểm thử hiện hành làm tiến trình hỗ trợ, giúp các trường hợp thành công, mã thoát khác 0 và tạm dừng đều vận hành đồng nhất trên Windows, Linux và macOS. Đó là một nguyên lý thiết kế kiểm thử cốt lõi: thay vì phụ thuộc vào các công cụ ngoại vi trên máy chủ, ta chủ động kiểm soát tiến trình mục tiêu đang được quan sát.
 
 ~~~powershell
 cd labs/part15-incident-command
@@ -160,15 +169,17 @@ go vet ./fixed
 go test -race ./fixed
 ~~~
 
-Contract yêu cầu: spec rỗng hoặc timeout không dương bị từ chối trước khi start; success giữ hai stream riêng và exit code 0; non-zero exit giữ `stderr`, exit code và vẫn cho `errors.As` thấy `*exec.ExitError`; deadline trả error khớp `context.DeadlineExceeded`, đánh dấu `TimedOut`, và không treo. Parent cancellation vẫn trả `context.Canceled`, không bị gọi nhầm là timeout. Test exercise đỏ vì behavior chưa được implement, không phải vì package hỏng.
+Hợp đồng hành vi đòi hỏi: đặc tả rỗng hoặc thời gian chờ không dương phải bị từ chối dứt khoát trước khi khởi chạy; trường hợp thành công lưu giữ hai luồng dữ liệu riêng biệt cùng mã thoát 0; trường hợp mã thoát khác 0 bảo toàn luồng `stderr`, mã thoát và vẫn cho phép `errors.As` nhận diện kiểu `*exec.ExitError`; trường hợp quá hạn thời gian trả về lỗi khớp với `context.DeadlineExceeded`, đánh dấu cờ `TimedOut` và không bị treo tiến trình. Việc hủy bỏ từ ngữ cảnh cha vẫn trả về `context.Canceled`, không bị đánh đồng với lỗi quá hạn thời gian. Bài tập ban đầu báo đỏ vì hành vi chưa được cài đặt, không phải do gói thư viện gặp lỗi.
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Tạo child context sau validation, dùng `exec.CommandContext` với name và args tách riêng, rồi gán hai `bytes.Buffer` trước `Run`. Dựng `Result` bất kể `Run` trả lỗi, vì output/exit status có thể vẫn cần cho incident. Kiểm tra `runCtx.Err()` trước `ExitError` để deadline không bị che bởi status của process vừa bị hủy. Bản fixed không dùng shell và không hứa cleanup process tree.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Tạo ngữ cảnh con sau khi xác thực dữ liệu, dùng `exec.CommandContext` với tên lệnh và các tham số tách riêng, rồi gán hai bộ đệm `bytes.Buffer` trước khi gọi `Run`. Dựng đối tượng `Result` bất kể `Run` trả về lỗi, vì dữ liệu đầu ra và trạng thái thoát vẫn có thể cần thiết cho công tác điều tra sự cố. Kiểm tra `runCtx.Err()` trước lỗi `ExitError` để thời hạn quá giờ không bị che khuất bởi trạng thái của tiến trình vừa bị hủy. Bản sửa đổi không dùng vỏ lệnh hệ thống (*shell*) và không cam kết dọn dẹp toàn bộ cây tiến trình con.
 
 ## Khi nào runner nhỏ này chưa đủ
 
-Runner này chưa nhận stdin, chưa đặt working directory hay environment riêng, chưa stream output, chưa redact secret, chưa retry, và chưa được xem là executor tổng quát cho input người dùng. Mỗi thứ đó thay đổi attack surface hoặc lifecycle. Ví dụ, `Cmd.Env` thay environment của child chứ không tự merge với environment hiện tại; `Cmd.Dir` làm working directory trở thành một input khác cần validate. Không thêm chúng chỉ vì struct còn chỗ trống.
+Bộ chạy lệnh này chưa tiếp nhận luồng nhập chuẩn `stdin`, chưa thiết lập thư mục làm việc hay biến môi trường riêng biệt, chưa truyền dòng dữ liệu đầu ra, chưa che giấu dữ liệu bí mật, chưa hỗ trợ thử lại, và chưa được coi là bộ thực thi tổng quát cho dữ liệu người dùng tùy ý. Mỗi tính năng trên đều làm thay đổi bề mặt tấn công (*attack surface*) hoặc vòng đời tiến trình. Chẳng hạn, trường `Cmd.Env` sẽ thay thế hoàn toàn biến môi trường của tiến trình con chứ không tự động hợp nhất với môi trường hiện hành; trường `Cmd.Dir` biến thư mục làm việc thành một đầu vào khác cần kiểm tra hợp lệ. Tuyệt đối không thêm các trường này chỉ vì cấu trúc dữ liệu còn chỗ trống.
 
-Điểm dừng của chapter là một tiến bộ nhỏ nhưng có thật: từ việc “gõ lệnh khi hoảng” sang một command có contract về process. `opsprobe` có thể sau này dùng runner này để gọi một diagnostic đã được chọn, nhưng chỉ khi incident requirement thật cần nó. Trước khi thêm metric, dashboard hay Kubernetes, ta phải biết một lần chạy đơn lẻ đã bắt đầu, kết thúc và thất bại như thế nào.
+Điểm dừng của chương ghi nhận một bước tiến vững chắc: chuyển dịch từ thói quen gõ lệnh cảm tính khi hoảng loạn sang việc kiểm soát câu lệnh có hợp đồng hành vi chặt chẽ về tiến trình. Ứng dụng `opsprobe` sau này có thể tận dụng bộ chạy này để kích hoạt một công cụ chẩn đoán đã được lựa chọn, nhưng chỉ khi yêu cầu xử lý sự cố thực sự đòi hỏi. Trước khi nghĩ đến việc bổ sung chỉ số đo lường, bảng điều khiển hay Kubernetes, kỹ sư phải hiểu tường minh một lượt thực thi đơn lẻ đã bắt đầu, kết thúc và thất bại như thế nào.
 
 @references
 1. Go Team. Package `os/exec`: `Command`, `CommandContext`, `Cmd`, `ExitError`, `WaitDelay` và quy tắc tìm executable. pkg.go.dev/os/exec

@@ -102,7 +102,7 @@ type DefaultChangeAuthorizer struct {
 func (a *DefaultChangeAuthorizer) AuthorizeChange(
 	ctx context.Context, role Role, serviceName, ticket string,
 ) error {
-	if role == RoleObserver {
+	if role != RoleOperator && role != RoleAdmin {
 		return fmt.Errorf("mcp: role %s not authorized for mutating tool restart_service", role)
 	}
 	if ticket == "" {

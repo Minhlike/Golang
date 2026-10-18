@@ -2,7 +2,7 @@
 
 # Chương 19 — Giữ type information khi abstraction lớn lên
 
-Một service có hai danh sách target: tên miền và port. Cả hai đều cần cùng một thao tác: giữ lại phần tử đầu tiên của mỗi giá trị, theo đúng thứ tự ban đầu. Nếu viết thẳng, ta có hai function gần như giống nhau. Sự lặp này chưa nguy hiểm; nó làm câu hỏi thiết kế hiện ra rõ: phần nào trong operation thực sự khác theo type, và phần nào là quy luật chung?
+Một dịch vụ có hai danh sách đích phục vụ: tên miền và cổng mạng. Cả hai đều đòi hỏi cùng một thao tác xử lý: giữ lại phần tử xuất hiện đầu tiên của mỗi giá trị theo đúng thứ tự ban đầu. Nếu viết trực diện, ta sẽ có hai hàm xử lý gần như giống hệt nhau. Sự trùng lặp này chưa gây nguy hiểm; nó làm nổi bật câu hỏi thiết kế cốt lõi: phần nào trong thao tác thực sự khác biệt theo kiểu dữ liệu, và phần nào tuân theo quy luật tính toán chung?
 
 ~~~go
 func uniqueNames(values []string) []string {
@@ -18,20 +18,28 @@ func uniqueNames(values []string) []string {
 }
 
 func uniquePorts(values []int) []int {
-	// cùng vòng lặp, chỉ khác type của value và map
+	seen := make(map[int]struct{}, len(values))
+	result := make([]int, 0, len(values))
+	for _, value := range values {
+		if _, exists := seen[value]; !exists {
+			seen[value] = struct{}{}
+			result = append(result, value)
+		}
+	}
+	return result
 }
 ~~~
 
-Một phản ứng thường thấy là đổi mọi thứ thành `any`. Function sẽ bớt lặp trên giấy, nhưng caller mất thông tin mà compiler có thể dùng để bắt lỗi. Phản ứng ngược lại là tạo một abstraction generic cho mọi mẩu code trùng nhau. Nó cũng tệ: một type parameter chỉ có ý nghĩa khi operation chung thật sự rõ hơn sau khi tách nó ra.
+Một phản ứng thường thấy là chuyển đổi mọi thứ sang kiểu `any`. Hàm xử lý sẽ bớt lặp lại về mặt hình thức, nhưng bên gọi sẽ đánh mất thông tin kiểu mà trình biên dịch có thể tận dụng để bắt lỗi sớm. Phản ứng ngược lại là vội vã tạo một tầng trừu tượng tổng quát (*generic*) cho mọi đoạn mã trùng lặp. Điều đó cũng nguy hại không kém: một tham số kiểu (*type parameter*) chỉ thực sự có ý nghĩa khi thao tác tính toán chung trở nên sáng tỏ và chặt chẽ hơn sau khi được tách biệt.
 
-Mental model của chương là: **generic giữ type information cho compiler khi cùng một operation áp dụng lên một tập type; interface giữ contract hành vi khi concrete type có thể thay đổi; reflection chỉ phù hợp khi shape hay metadata thực sự là input lúc runtime.** Đây là ba boundary khác nhau, không phải ba mức “linh hoạt” để tăng dần.
+Mô hình tư duy cốt lõi của chương là: hàm tổng quát giữ lại thông tin kiểu cho trình biên dịch khi cùng một thao tác áp dụng lên một tập kiểu dữ liệu; giao diện (*interface*) bảo toàn khế ước hành vi khi kiểu cụ thể có thể thay đổi; trong khi cơ chế phản chiếu (*reflection*) chỉ phù hợp khi hình thái dữ liệu hoặc siêu dữ liệu thực sự là đầu vào lúc chương trình đang chạy. Đây là ba ranh giới kỹ thuật hoàn toàn tách biệt, không phải ba cấp độ linh hoạt tăng dần để tùy tiện sử dụng.
 
 ![Các boundary giữ type information](../../assets/diagrams/type-information-boundaries.png)
-@figure Chọn abstraction theo câu hỏi cần trả lời. Sơ đồ là mental model, không mô tả representation runtime của interface hay cách compiler sinh code.
+@figure Lựa chọn tầng trừu tượng phù hợp với câu hỏi kỹ thuật cần giải quyết. Sơ đồ minh họa mô hình tư duy, không mô tả cách biểu diễn bộ nhớ lúc vận hành của giao diện hay cách trình biên dịch sinh mã thực thi.
 
 ## Bắt đầu bằng duplication, không bằng dấu ngoặc vuông
 
-`uniqueNames` và `uniquePorts` đều chỉ cần một phép: so sánh hai value bằng `==`. Điều đó loại slice, map và function, nhưng đủ cho `string`, `int`, pointer, struct có field comparable, và named type có underlying type tương ứng. `comparable` ghi đúng boundary ấy.
+Cả hai hàm `uniqueNames` và `uniquePorts` đều chỉ cần một phép tính toán duy nhất: so sánh hai giá trị bằng toán tử bằng `==`. Điều kiện này loại bỏ các kiểu mảng động (*slice*), bảng băm (*map*) và hàm (*function*), nhưng hoàn toàn đáp ứng cho `string`, `int`, con trỏ, cấu trúc chứa các trường có thể so sánh, và kiểu định danh có kiểu nền tảng tương ứng. Ràng buộc `comparable` xác lập chính xác ranh giới kỹ thuật đó.
 
 ~~~go
 func Unique[T comparable](values []T) []T {
@@ -50,15 +58,19 @@ names := Unique([]string{"api", "db", "api"})
 ports := Unique([]int{443, 8080, 443})
 ~~~
 
-`T` là type parameter, còn `comparable` là constraint: tập type argument mà `T` được phép nhận, đồng thời là giới hạn operation trong body. Vì caller đưa `[]string` hay `[]int`, compiler infer type argument; không cần viết `Unique[string](...)`. Viết explicit vẫn hợp lệ khi ngữ cảnh chưa đủ để infer, nhưng nó không phải nghi thức phải thêm vào mọi lời gọi.
+Trong khai báo trên, `T` là tham số kiểu (*type parameter*), còn `comparable` là ràng buộc (*constraint*): tập hợp các đối số kiểu mà `T` được phép tiếp nhận, đồng thời là giới hạn cho các thao tác được phép thực thi trong thân hàm. Do bên gọi truyền vào `[]string` hoặc `[]int`, trình biên dịch sẽ tự động suy luận đối số kiểu mà không bắt buộc lập trình viên phải viết `Unique[string](...)`. Việc viết tường minh vẫn hoàn toàn hợp lệ khi ngữ cảnh chưa đủ dữ liệu để suy luận, nhưng đó không phải là nghi thức bắt buộc cho mọi lời gọi hàm.
 
-Nếu thử `Unique([][]byte{{1}, {1}})`, code không compile. Đó là kết quả có ích: slice không comparable, nên map key và `==` không có semantics mà function này đã hứa. Chuyển input thành `[]any` không sửa được hợp đồng; hai interface value có dynamic type là slice còn có thể panic khi bị so sánh. Khi equality cho byte slice cần nghĩa khác, chẳng hạn `bytes.Equal`, API mới phải nói rõ nghĩa đó thay vì giả vờ `Unique` phổ quát.
+Nếu thử nghiệm với `Unique([][]byte{{1}, {1}})`, mã nguồn sẽ không thể biên dịch. Đó là một kết quả bảo vệ có giá trị thiết thực: mảng động không thể so sánh bằng toán tử bằng, do đó khóa của bảng băm và phép so sánh `==` không có ngữ nghĩa tương thích với những gì hàm đã cam kết. Việc chuyển đổi đầu vào thành `[]any` không sửa chữa được khế ước kỹ thuật; hai giá trị giao diện mang kiểu động là mảng còn có thể gây hoảng loạn (`panic`) ngay trong lúc chạy khi đem so sánh. Khi phép so sánh bằng cho các mảng byte đòi hỏi một ngữ nghĩa khác (như `bytes.Equal`), giao diện lập trình mới bắt buộc phải tuyên bố rõ ràng ngữ nghĩa đó thay vì giả vờ rằng hàm `Unique` có thể áp dụng phổ quát cho mọi loại dữ liệu.
 
-`any` là alias của `interface{}`. Nó có chỗ ở boundary thực sự nhận nhiều shape, như Chương 14 nhận destination để inspect bằng reflection. Nhưng `func UniqueAny(values []any) []any` buộc implementation phải type switch, type assertion hoặc chịu lỗi runtime để biết so sánh thế nào. Generic không làm type biến mất; nó yêu cầu compiler kiểm tra type argument thỏa constraint trước khi code chạy.
+Kiểu `any` là tên định danh phụ (*alias*) của `interface{}` rỗng. Nó phát huy vai trò ở ranh giới thực sự tiếp nhận nhiều hình thái dữ liệu đa dạng, tương tự như Chương 14 khi tiếp nhận đối tượng đích để kiểm tra qua cơ chế phản chiếu. Tuy nhiên, khai báo `func UniqueAny(values []any) []any` sẽ ép buộc phần hiện thực phải chuyển mạch kiểu (*type switch*), khẳng định kiểu (*type assertion*) hoặc chấp nhận phát sinh lỗi lúc chạy mới biết cách so sánh. Kiểu tổng quát không làm biến mất kiểu dữ liệu; nó yêu cầu trình biên dịch kiểm tra tính hợp lệ của đối số kiểu đối với ràng buộc ngay trước khi mã nguồn được phép thực thi.
+
+Có một ngoại lệ cần kiểm tra ngay: từ Go1.20, `any` và một số kiểu chứa interface có thể thỏa mãn ràng buộc `comparable`, dù không thuộc tập kiểu strictly comparable. Vì thế `Unique([]any{[]byte{1}})` biên dịch nhưng panic khi dùng slice động làm khóa map; chỉ một phần tử cũng đủ. Constraint cho phép viết phép toán trong thân hàm, không cam đoan mọi giá trị động đều so sánh an toàn. Test `TestUniqueInterfaceKeyCanPanic` bắt panic có chủ đích này; không chuyển nó thành hợp đồng trả error mà implementation không có.
+
+Ngay cả phép so sánh không panic cũng chưa định nghĩa cách gộp mọi dữ liệu nghiệp vụ: `NaN != NaN`, nên hai NaN vẫn là hai phần tử trong kết quả Unique. Hãy chọn chính sách riêng nếu miền dữ liệu muốn gộp NaN. Các phép thử tên miền/cổng chỉ dùng string/int; chúng không chứng minh hàm là bộ chuẩn hóa dữ liệu phổ quát.
 
 ## Constraint là danh sách phép được phép, không phải giấy phép bao hết type
 
-Có operation cần thứ tự thay vì equality. Ta có thể tự định nghĩa constraint nhỏ theo đúng domain của ví dụ, thay vì copy một constraint rộng chỉ để function trông “tái sử dụng được”.
+Có những thao tác đòi hỏi so sánh thứ tự hơn kém thay vì so sánh bằng. Chúng ta hoàn toàn có thể tự định nghĩa một ràng buộc thu hẹp phù hợp với đúng miền nghiệp vụ của bài toán, thay vì sao chép một ràng buộc quá rộng lớn chỉ để hàm trông có vẻ “tái sử dụng được”.
 
 ~~~go
 type Measurable interface {
@@ -77,20 +89,24 @@ type Milliseconds int64
 slowest := Max(Milliseconds(120), Milliseconds(80))
 ~~~
 
-Union `|` nói rằng một type argument thuộc một trong các term. Dấu `~` mở term ra cho mọi defined type có **underlying type** tương ứng. Không có `~int64`, `Milliseconds` không thỏa constraint dù `left > right` có nghĩa hoàn toàn rõ. Ngược lại, `~` không “chuyển đổi ngầm” giữa hai value đã có type: `int` và `int64` vẫn khác nhau, nên `Max(int(1), int64(2))` không có một `T` duy nhất để infer. Riêng hằng số chưa định kiểu như `1` có thể nhận type từ đối số còn lại.
+Max ở đây dùng đúng toán tử `>` chứ không định nghĩa thứ tự toàn phần cho số thực. Với NaN, phép so sánh ấy là false: `Max(NaN, 1)` trả 1 nhưng `Max(1, NaN)` trả NaN. Nếu số đo có thể chứa NaN, cần xác thực đầu vào hoặc quy định rõ cách xử lý; không suy từ constraint rằng kết quả độc lập thứ tự hai đối số.
 
-Constraint có type term như `~int | ~int64` là general interface: nó dùng để giới hạn type parameter, không phải một interface value để truyền quanh chương trình. Basic interface có thể dùng làm kiểu của value: nó chỉ khai báo hoặc nhúng các method, cũng có thể rỗng như `any`. Constraint còn có thể dùng type term để giới hạn tập type và các operation compiler cho phép. Đặt cả hai dưới cùng từ “interface” dễ làm mờ hai nhiệm vụ này.
+Toán tử hợp nhất `|` chỉ ra rằng một đối số kiểu phải thuộc về một trong các thành phần liệt kê. Ký tự ngã `~` mở rộng thành phần đó cho mọi kiểu tự định nghĩa (*defined type*) có kiểu nền tảng tương ứng. Nếu thiếu `~int64`, kiểu `Milliseconds` sẽ không thỏa mãn ràng buộc cho dù phép so sánh `left > right` hoàn toàn sáng tỏ về mặt ngữ nghĩa. Ngược lại, ký tự `~` không thực hiện ép kiểu ngầm định giữa hai giá trị đã mang kiểu cụ thể: kiểu `int` và `int64` vẫn hoàn toàn khác biệt, vì vậy lời gọi `Max(int(1), int64(2))` không thể tìm ra một tham số `T` duy nhất để suy luận kiểu. Riêng các hằng số chưa định kiểu (như số `1`) có thể tự động tiếp nhận kiểu dữ liệu từ đối số còn lại.
 
-> **Dừng để dự đoán.** Xét đoạn mã sau:
-> ~~~go
-> slowest := Max(Milliseconds(120), Milliseconds(80))
-> var raw int64 = slowest
-> ~~~
+Một ràng buộc chứa thành phần kiểu như `~int | ~int64` được gọi là giao diện tổng quát (*general interface*): nó được dùng riêng để giới hạn tham số kiểu, hoàn toàn không phải một giá trị giao diện để truyền qua lại trong chương trình. Một giao diện cơ bản (*basic interface*) có thể được dùng làm kiểu của biến: nó chỉ khai báo hoặc nhúng các phương thức, và có thể để rỗng như `any`. Ràng buộc còn có thể sử dụng các thành phần kiểu để giới hạn tập hợp kiểu dữ liệu và các phép toán mà trình biên dịch cho phép. Việc đặt cả hai khái niệm này dưới cùng một từ khóa “interface” rất dễ làm mờ nhạt đi hai vai trò kỹ thuật riêng biệt.
+
+> **Dừng để dự đoán:** Xét đoạn mã sau:
+
+~~~go
+slowest := Max(Milliseconds(120), Milliseconds(80))
+var raw int64 = slowest
+~~~
+
 > 1. Trình biên dịch thực hiện suy luận kiểu (type inference) cho `T` là `int64` hay `Milliseconds`?
 > 2. Biến `slowest` có kiểu dữ liệu tĩnh là gì?
 > 3. Lệnh gán `var raw int64 = slowest` có biên dịch thành công không, hay bị compiler báo lỗi?
 
-#### Đáp án — chỉ đọc sau khi đã tự làm
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
 Quá trình suy luận kiểu (type unification) chọn `T` chính xác là `Milliseconds` chứ không hề thu gọn (decay) về underlying type `int64`. Do cả hai đối số truyền vào đều mang kiểu `Milliseconds`, hàm generic bảo toàn thông tin kiểu của đối số và trả về kết quả mang đúng kiểu tĩnh `Milliseconds` thay vì ép về kiểu nền hay bọc trong interface rỗng.
 
@@ -98,7 +114,7 @@ Vì lý do đó, lệnh gán `var raw int64 = slowest` bị trình biên dịch 
 
 ## Generic named type giữ invariant cùng dữ liệu
 
-Khi dữ liệu và operation đi cùng nhau, generic named type có thể làm API gọn hơn. Set dưới đây chỉ nhận `comparable` vì Go map key cần constraint đó. Constraint nằm ở declaration của type, nên mỗi method đều kế thừa invariant thay vì lặp lại nó.
+Khi cấu trúc dữ liệu và các thao tác tính toán gắn liền với nhau, kiểu định danh tổng quát (*generic named type*) có thể làm giao diện lập trình trở nên tinh gọn và mạch lạc hơn. Tập hợp `Set` dưới đây chỉ chấp nhận các kiểu dữ liệu thỏa mãn `comparable` vì khóa của bảng băm trong Go bắt buộc phải đáp ứng ràng buộc này. Do ràng buộc được đặt ngay tại phần khai báo của kiểu, mọi phương thức gắn liền đều tự động kế thừa bất biến này thay vì phải khai báo lặp lại.
 
 ~~~go
 type Set[T comparable] map[T]struct{}
@@ -111,9 +127,9 @@ func (set Set[T]) Has(value T) bool {
 ports := Set[int]{443: {}, 8080: {}}
 ~~~
 
-`Set[string]` và `Set[int]` là instantiated types khác nhau. Caller không thể vô tình gọi `Set[string].Has(443)`. Đây không phải lời hứa rằng generic code luôn nhanh hơn code interface; performance phụ thuộc workload, compiler và version, nên phải đo nếu nó trở thành lý do chọn thiết kế. Ở đây lợi ích đã rõ trước benchmark: API nói chính xác value nào có thể vào set.
+Hai kiểu `Set[string]` và `Set[int]` là các kiểu được khởi tạo cụ thể riêng biệt. Bên gọi không thể vô tình gọi nhầm `Set[string].Has(443)`. Đây không phải lời khẳng định rằng mã nguồn tổng quát luôn chạy nhanh hơn mã nguồn dùng giao diện; hiệu năng phụ thuộc mật thiết vào khối lượng công việc, trình biên dịch và phiên bản Go, vì vậy cần phải đo đạc thực nghiệm nếu hiệu năng là căn cứ lựa chọn. Trong trường hợp này, lợi ích kỹ thuật đã sáng tỏ ngay trước khi đo chuẩn: giao diện lập trình xác định chính xác giá trị nào được phép đưa vào tập hợp.
 
-Go 1.27 còn cho method tự khai báo type parameter của nó. Điều này hữu ích khi operation thuộc namespace của data type nhưng result đổi element type.
+Phiên bản Go 1.27 cho phép phương thức tự khai báo tham số kiểu riêng biệt của nó. Đặc tính này phát huy giá trị lớn khi thao tác xử lý thuộc về không gian tên của kiểu dữ liệu nhưng kết quả trả về lại làm biến đổi kiểu phần tử.
 
 ~~~go
 type Batch[E any] []E
@@ -131,17 +147,17 @@ labels := Batch[int]{2, 4}.Map(func(port int) string {
 })
 ~~~
 
-Đây là generic method của Go 1.27, khác với method thông thường trên generic receiver như `Set[T].Has`. Generic method được instantiate khi dùng. Nó không biến interface method thành generic: interface method không được tự khai báo type parameter, và một generic method không phải cách để implement một interface method generic. Nếu consumer chỉ cần gọi `Map` trên một concrete `Batch`, method giúp tổ chức code; nếu consumer cần một behavior thay thế được, một interface nhỏ với signature cụ thể thường rõ hơn.
+Đây là phương thức tổng quát của Go 1.27, khác biệt với phương thức thông thường khai báo trên kiểu tiếp nhận tổng quát như `Set[T].Has`. Phương thức tổng quát được khởi tạo cụ thể tại thời điểm sử dụng. Nó không biến phương thức giao diện thành phương thức tổng quát: phương thức trong giao diện không được phép tự khai báo tham số kiểu, và phương thức tổng quát không phải là cách để hiện thực hóa một phương thức giao diện tổng quát. Nếu bên sử dụng chỉ cần gọi `Map` trên một đối tượng mảng `Batch` cụ thể, phương thức giúp tổ chức mã nguồn ngăn nắp; nếu bên sử dụng cần một hành vi có thể thay thế linh hoạt, một giao diện nhỏ với chữ ký hàm cụ thể sẽ tường minh hơn rất nhiều.
 
-## Compiler có thể chia sẻ hoặc chuyên biệt hóa mã — đừng biến nó thành lý do chọn API
+## Compiler có thể chia sẻ hoặc chuyên biệt hóa mã: không biến điều đó thành lý do chọn API
 
-Tại ngữ nghĩa ngôn ngữ, một generic function được instantiate sau khi type argument thỏa constraint. Đặc tả không hứa cách compiler sinh mã, kích thước binary hay số allocation. Bản Go toolchain hiện tại có những tên nội bộ như `go.shape` và dictionary; chúng giúp kỹ sư đọc assembly hoặc source compiler, nhưng không phải contract cho application và có thể đổi theo version, kiến trúc, PGO và thân hàm.
+Xét theo ngữ nghĩa ngôn ngữ, một hàm tổng quát được khởi tạo cụ thể sau khi đối số kiểu thỏa mãn đầy đủ ràng buộc. Đặc tả kỹ thuật không cam kết cách thức trình biên dịch sinh mã máy, kích thước tệp thực thi hay số lượng cấp phát bộ nhớ. Bộ công cụ Go hiện tại sử dụng các cấu trúc nội bộ như biểu diễn hình thái kiểu dữ liệu và từ điển tra cứu; những thông tin này hỗ trợ kỹ sư khi đọc mã hợp ngữ hoặc mã nguồn của trình biên dịch, nhưng hoàn toàn không phải khế ước kỹ thuật dành cho tầng ứng dụng và có thể thay đổi tùy theo phiên bản, kiến trúc phần cứng, cơ chế tối ưu hóa theo hồ sơ đo lường và cấu trúc thân hàm.
 
-Vì thế, đừng chọn generic vì tin nó luôn nhanh hơn interface, cũng đừng loại nó chỉ vì nghe rằng compiler “có dictionary”. Hãy chọn generic khi operation và constraint làm API đúng hơn. Khi chi phí là lý do quyết định, hãy đo hai implementation dưới cùng Go version, cùng máy/môi trường, workload và benchmark contract; sau đó kiểm tra allocation và profile thay vì suy ra từ representation nội bộ.
+Vì lẽ đó, không nên lựa chọn kiểu tổng quát chỉ vì niềm tin ngây thơ rằng nó luôn chạy nhanh hơn giao diện, và cũng đừng loại bỏ nó chỉ vì e ngại các cấu trúc từ điển tra cứu nội bộ của trình biên dịch. Hãy chọn kiểu tổng quát khi các thao tác và ràng buộc kỹ thuật giúp giao diện lập trình trở nên chuẩn xác hơn. Khi chi phí hiệu năng là căn cứ mang tính quyết định, hãy đo lường hai phương án hiện thực dưới cùng một phiên bản Go, cùng môi trường máy chủ, khối lượng tải và khế ước kiểm thử hiệu năng; sau đó tiến hành phân tích lượng cấp phát bộ nhớ và hồ sơ thực thi thay vì suy đoán mơ hồ từ các chi tiết nội bộ.
 
 ## Interface thay vì generics khi câu hỏi là “ai làm được việc này?”
 
-Một probe HTTP, một probe TCP và fake dùng trong test có thể trả outcome bằng các implementation khác nhau. Caller không cần giữ concrete type của chúng; caller cần gọi một behavior. Interface ghi contract đó ở compile time.
+Một công cụ thăm dò qua giao thức mạng, một công cụ thăm dò tầng truyền vận và một đối tượng giả lập dùng trong kiểm thử có thể trả về kết quả qua các phương án hiện thực hoàn toàn khác nhau. Bên gọi không cần nắm giữ kiểu dữ liệu cụ thể của chúng; bên gọi chỉ cần kích hoạt một hành vi đã được định nghĩa. Giao diện ghi nhận khế ước kỹ thuật đó ngay ở thời điểm biên dịch.
 
 ~~~go
 type Checker interface {
@@ -159,9 +175,9 @@ func RunOne(ctx context.Context, checker Checker) error {
 var _ Checker = httpChecker{}
 ~~~
 
-Dòng cuối là compile-time assertion: nếu `httpChecker` thiếu `Check`, package không compile. Khi program chạy, một value của interface có static type `Checker`, còn concrete value bên trong có thể có dynamic type khác ở từng lần gọi. Đó là lý do interface hữu ích cho polymorphism theo behavior, không phải vì nó “nhận được mọi type”.
+Dòng lệnh cuối cùng thực hiện kiểm tra tính hợp chuẩn ở thời điểm biên dịch: nếu cấu trúc `httpChecker` thiếu mất phương thức `Check`, gói mã nguồn sẽ không thể biên dịch. Khi chương trình vận hành, một giá trị giao diện mang kiểu tĩnh là `Checker`, trong khi giá trị cụ thể chứa bên trong có thể mang kiểu động khác nhau ở từng lần gọi. Đó là lý do giao diện phát huy giá trị cốt lõi cho tính đa hình theo hành vi, hoàn toàn không phải vì nó có thể “tiếp nhận mọi loại kiểu dữ liệu”.
 
-Khi code cần hiểu concrete case nào đang ở trong interface, type assertion và type switch là công cụ trực tiếp. Chúng không cần reflection.
+Khi mã nguồn cần xác định trường hợp cụ thể nào đang ẩn sau giá trị giao diện, phép khẳng định kiểu (*type assertion*) và chuyển mạch kiểu (*type switch*) là các công cụ trực tiếp và an toàn nhất. Chúng hoàn toàn không đòi hỏi cơ chế phản chiếu tốn kém.
 
 ~~~go
 func describe(value any) string {
@@ -175,7 +191,7 @@ func describe(value any) string {
 }
 ~~~
 
-`value.(int)` không có comma-ok sẽ panic khi assertion sai. Dạng `port, ok := value.(int)` trả zero value của `int` và `false`, nên caller có thể chọn policy error của mình. Type switch chỉ so dynamic type với các case đã biết; `reflect.Type` và struct tag của Chương 14 chỉ nên xuất hiện khi metadata runtime là dữ liệu của bài toán, chẳng hạn decoder/schema tool. Đừng dùng reflection để thay một type switch có vài case rõ ràng.
+Cú pháp `value.(int)` không có cờ kiểm tra sẽ lập tức phát sinh lỗi hoảng loạn (`panic`) khi phép khẳng định kiểu thất bại. Ngược lại, dạng hai giá trị `port, ok := value.(int)` sẽ trả về giá trị mặc định của `int` cùng cờ `false`, nhờ đó bên gọi có thể chủ động quyết định chính sách xử lý lỗi phù hợp. Cấu trúc chuyển mạch kiểu chỉ thực hiện so sánh kiểu động với các trường hợp đã biết trước; các công cụ phản chiếu kiểu và thẻ cấu trúc từ Chương 14 chỉ nên xuất hiện khi siêu dữ liệu lúc thực thi chính là bản chất bài toán (như công cụ giải mã hoặc phân tích lược đồ). Tuyệt đối không lạm dụng cơ chế phản chiếu chỉ để thay thế cho một khối chuyển mạch kiểu có một vài trường hợp rõ ràng.
 
 ## Typed nil: type động vẫn còn, dù pointer bên trong nil
 
@@ -197,9 +213,9 @@ fmt.Println(problem == nil)
 fmt.Println(result == nil)
 ~~~
 
-Kết quả là `true`, rồi `false`. `problem` là nil pointer. Khi gán nó vào `error`, interface value vẫn mang dynamic type `*ProbeError`; dynamic value của type đó là nil pointer.
+Kết quả in ra lần lượt là `true`, sau đó là `false`. Biến `problem` là một con trỏ `nil` (*`nil` pointer*). Khi gán biến này vào kiểu giao diện `error`, giá trị giao diện vẫn lưu giữ kiểu động là `*ProbeError`; và giá trị động thuộc kiểu đó là một con trỏ rỗng.
 
-Không cần suy ra layout runtime để giải thích kết quả. Theo ngữ nghĩa interface, `result` giữ dynamic type `*ProbeError` và dynamic value nil của type đó, nên interface value ấy không phải nil interface. Representation hai word mà một Go runtime trên một kiến trúc có thể dùng chỉ là chi tiết triển khai; đừng dùng nó làm contract, cũng đừng dựa vào kích thước hay field nội bộ của interface trong production code.
+Không cần phải suy đoán cách bố trí bộ nhớ nội bộ để giải thích hiện tượng này. Theo ngữ nghĩa chuẩn tắc của giao diện trong Go, biến `result` lưu giữ kiểu động `*ProbeError` và giá trị động rỗng của kiểu đó, do đó giá trị giao diện này hoàn toàn không phải là một giao diện `nil` (*`nil` interface*). Cách biểu diễn hai từ máy mà bộ thực thi Go trên một kiến trúc phần cứng sử dụng chỉ là chi tiết cài đặt; tuyệt đối không coi chi tiết đó là khế ước kỹ thuật và không bao giờ dựa vào kích thước hay các trường nội bộ của giao diện trong mã nguồn vận hành thực tế.
 
 Bug thường gặp nằm ở đường return:
 
@@ -213,9 +229,9 @@ func checkTarget(ok bool) error {
 }
 ~~~
 
-Hãy return `nil` ở nhánh thành công, hoặc chỉ tạo concrete error khi có failure. Không cần dùng reflection để đoán nil của mọi error: caller cần contract `err == nil`, còn method của concrete error phải xác định riêng receiver nil có hợp lệ không. Lab `labs/part19-type-information/typednil` giữ bug này để người học sửa và kiểm tra bằng test.
+Hãy trả về trực tiếp giá trị `nil` tường minh ở nhánh thực thi thành công, hoặc chỉ khởi tạo đối tượng lỗi cụ thể khi thực sự xảy ra sự cố. Không cần phải dùng đến cơ chế phản chiếu để suy đoán con trỏ rỗng bên trong mọi giao diện lỗi: bên gọi chỉ cần tin tưởng vào khế ước `err == nil`, trong khi các phương thức của kiểu lỗi cụ thể phải tự phân định rõ đối tượng tiếp nhận có hợp lệ khi nhận giá trị rỗng hay không. Bài thực hành `labs/part19-type-information/typednil` cố tình lưu giữ khiếm khuyết này để người học tự tay khắc phục và kiểm chứng bằng ca kiểm thử.
 
-## Thực hành: ba ranh giới, ba cách tự kiểm tra
+### Bài thực hành: Ba ranh giới, ba cách tự kiểm tra
 
 Lab `labs/part19-type-information` bắt đầu ở test/tag exercise và contract, không ở implementation có sẵn.
 
@@ -229,12 +245,12 @@ go test ./typednil/fixed
 go vet ./...
 ~~~
 
-Ba task lần lượt yêu cầu anh viết `Unique[T comparable]` từ test, review `Load[T any]` chưa nói format/ownership/decode, và sửa typed-nil fixture để nhánh success trả `nil error` thật. Chỉ sau đó mới mở `review/answer.md` và `fixed/`; chúng là reference để so reasoning, không phải chuẩn duy nhất cho naming.
+Ba nhiệm vụ thực hành lần lượt yêu cầu người học xây dựng hàm `Unique[T comparable]` xuất phát từ ca kiểm thử, phản biện thiết kế `Load[T any]` khi chưa xác định rõ định dạng, quyền sở hữu dữ liệu và quy trình giải mã, đồng thời khắc phục khiếm khuyết con trỏ rỗng có kiểu để nhánh thành công trả về đúng giá trị lỗi `nil` thực sự. Chỉ sau khi đã hoàn thành các bước tự làm, người học mới nên tham khảo tài liệu hướng dẫn và mã nguồn đối chiếu; chúng là tài liệu tham khảo để đối chiếu mạch tư duy logic, không phải khuôn mẫu duy nhất cho việc đặt tên.
 
-Điểm dừng của chương không phải “thấy `[]` là dùng generic”. Hãy hỏi operation có cần giữ type nào, constraint nào thực sự cho phép operation ấy, behavior nào nên là interface, và metadata nào chỉ runtime mới biết. Trả lời được bốn câu đó, abstraction bớt giống một màn ảo thuật và bắt đầu trở thành một contract có thể đọc.
+Điểm dừng nhận thức của chương không phải là “hễ nhìn thấy cặp ngoặc vuông là áp dụng kiểu tổng quát”. Hãy luôn tự đặt câu hỏi: thao tác tính toán cần bảo toàn thông tin kiểu nào, ràng buộc nào thực sự cho phép thực thi thao tác đó, hành vi nào nên được trừu tượng hóa thành giao diện, và siêu dữ liệu nào chỉ có thể biết được lúc chương trình vận hành. Khi trả lời thấu đáo được bốn câu hỏi đó, tầng trừu tượng sẽ không còn giống một màn ảo thuật khó lường mà sẽ trở thành một khế ước kỹ thuật trong sáng và có thể kiểm chứng độc lập.
 
 @references
 1. Go Team. The Go Programming Language Specification: interface values, type assertions, type switches, type constraints, instantiation và method declarations. go.dev/ref/spec
 2. Go Team. Go 1.27 Release Notes: generic methods và các thay đổi về type inference. go.dev/doc/go1.27
-3. Go Team. FAQ: nil interface value và nil pointer được lưu trong interface. go.dev/doc/faq
+3. Go Team. FAQ: `nil` interface value và `nil` pointer được lưu trong interface. go.dev/doc/faq
 4. Go Team. Generic Methods. go.dev/blog/generic-methods

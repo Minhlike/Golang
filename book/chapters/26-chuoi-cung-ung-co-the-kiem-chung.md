@@ -2,37 +2,37 @@
 
 # Chương 26 — Chuỗi cung ứng phần mềm có thể kiểm chứng
 
-Một scenario chuỗi cung ứng có thể gồm source nghiệp vụ, nhiều module gián tiếp và base image có package OS. Số thành phần phụ thuộc cách build: image `scratch` và một base image tổng quát không có cùng tập package. Vì vậy inventory phải được lấy từ artifact thực tế, không ước lượng từ số dòng Go của application.
+Một kịch bản chuỗi cung ứng phần mềm điển hình có thể bao gồm mã nguồn nghiệp vụ, nhiều module phụ thuộc gián tiếp và ảnh nền container (base image) chứa sẵn các gói cài đặt của hệ điều hành. Số lượng thành phần thực tế phụ thuộc vào phương thức đóng gói: một ảnh nền tối giản `scratch` và một ảnh nền hệ điều hành đầy đủ có tập hợp gói phần mềm hoàn toàn khác nhau. Vì vậy danh mục thành phần (inventory) phải được kết xuất trực tiếp từ artifact thực tế, không thể ước lượng cảm tính từ số dòng mã nguồn Go của ứng dụng.
 
-Điều đó mở rộng bề mặt rủi ro của **Chuỗi cung ứng phần mềm (Software Supply Chain)**.
+Thực tế này mở rộng bề mặt rủi ro của chuỗi cung ứng phần mềm (software supply chain).
 
-Các sự cố an ninh trên thực tế — từ SolarWinds, Codecov cho đến các cuộc tấn công Dependency Confusion và Typosquatting — cho thấy một ranh giới bảo mật quan trọng:
-> *Một kho mã nguồn sạch, được review kỹ lưỡng và vượt qua mọi bài kiểm thử unit test, vẫn có thể cho ra lò một container image độc hại nếu quy trình build, dependency hoặc kho lưu trữ artifact bị xâm phạm.*
+Các sự cố an ninh thực tế như SolarWinds, Codecov hay các cuộc tấn công nhầm lẫn phụ thuộc (dependency confusion) và giả mạo định danh gói (typosquatting) chứng minh một ranh giới bảo mật quan trọng:
+> *Một kho mã nguồn sạch, được duyệt kỹ lưỡng và vượt qua mọi bài kiểm thử đơn vị, vẫn có thể tạo ra một container image độc hại nếu quy trình đóng gói, gói phụ thuộc hoặc kho lưu trữ artifact bị xâm phạm.*
 
-Ta cần kiểm tra image nào đã được xét, bằng chứng nào gắn nó với builder/source được phép, và finding nào phải chặn theo policy. Chữ ký và scan không chứng minh artifact không có lỗ hổng hay mã độc; từng verifier chỉ đưa ra kết luận trong phạm vi dữ liệu và trust root của nó.
+Ta cần kiểm tra ảnh container nào đã được xét, bằng chứng nào gắn nó với bộ dựng hoặc nguồn mã được phép, và phát hiện lỗ hổng nào phải chặn theo chính sách kiểm soát. Chữ ký và việc quét mã không chứng minh gói phát hành hoàn toàn sạch mã độc hay lỗ hổng; từng bộ kiểm chứng chỉ đưa ra kết luận trong phạm vi dữ liệu và gốc tin cậy của nó.
 
-Chương này hướng dẫn bạn tư duy và xây dựng một **Cổng kiểm soát chuỗi cung ứng phần mềm (Supply Chain Verification Gate)** bằng Go theo nguyên tắc đóng kín (fail-closed), tích hợp kiểm chứng digest OCI, chữ ký số mật mã ECDSA, chứng thực nguồn gốc SLSA và phân tích khả năng vươn tới của lỗ hổng (`govulncheck`).
+Chương này dùng một cổng chính sách Go để học nguyên tắc fail-closed: từ chối khi không xác minh được bằng chứng mà chính sách yêu cầu. Lab kiểm tra định dạng digest, chữ ký ECDSA cục bộ và dữ liệu mẫu về xuất xứ, lỗ hổng. Nó không tích hợp xác minh Cosign, không chạy `govulncheck` và không chứng nhận một quy trình đạt SLSA Build L3. Cấp độ SLSA còn đòi bằng chứng về nền tảng dựng và cách bảo vệ provenance; một chuỗi `BuilderID` hay test xanh không đáp ứng những yêu cầu đó.
 
 ---
 
 ## 1. Mental Model: Chuỗi bảo chứng từ Mã nguồn đến Triển khai
 
-Mô hình dưới đây nối sáu chặng của một policy delivery. Mỗi mũi tên đòi bằng chứng riêng; đây không phải chuỗi tự bảo chứng:
+Sơ đồ là thiết kế tham chiếu gồm sáu chặng, không phải những tích hợp lab đã chạy. Chữ ký cần gắn với khóa và định danh đã xác thực; provenance cần gắn với artifact thực. Cổng phải đối chiếu bằng chứng với chính sách của mình, không chỉ kiểm tra có một tệp mang tên “attestation”:
 
 ![Chuỗi bằng chứng và cổng chính sách triển khai](../../assets/diagrams/supply-chain-policy-evidence.png)
-@figure Cổng chỉ xác minh các bằng chứng mà policy yêu cầu. Digest, chữ ký và provenance có vai trò khác nhau; đủ bằng chứng theo policy không chứng minh artifact không có mọi lỗi hoặc lỗ hổng.
+@figure Cổng chỉ xác minh các bằng chứng mà chính sách yêu cầu. Mã băm nội dung, chữ ký và dữ liệu xuất xứ có vai trò khác nhau; đủ bằng chứng theo chính sách không chứng minh gói phát hành sạch mọi lỗi hoặc lỗ hổng.
 
-Mỗi mắt xích cần bằng chứng phù hợp, nhưng không một file hay label nào tự chứng minh toàn bộ chuỗi. `go.sum` ghi checksum module mà toolchain đã biết và kiểm tra, chứ không khóa hoàn toàn graph như lockfile. Provenance chỉ hữu ích sau khi verifier kiểm tra subject, identity và expectation của policy. Digest nhận diện nội dung; Cosign keyless verification còn kiểm tra trust root, certificate identity/issuer và claim digest. Lab dưới đây mô hình hóa policy fail-closed, không thực hiện các bước Cosign/SLSA đó.
+Mỗi mắt xích cần bằng chứng phù hợp, nhưng không một tệp hay nhãn nào tự chứng minh toàn bộ chuỗi. `go.sum` ghi mã băm kiểm tra (*checksum*) module mà bộ công cụ biên dịch đã biết và kiểm tra, chứ không khóa hoàn toàn đồ thị như tệp khóa phiên bản. Dữ liệu xuất xứ (*provenance*) chỉ hữu ích sau khi bộ kiểm chứng xác minh đối tượng, danh tính và kỳ vọng của chính sách. Mã băm nhận diện nội dung; cơ chế xác minh không khóa (*keyless verification*) của Cosign còn kiểm tra gốc tin cậy, định danh chứng chỉ và khẳng định mã băm. Bài lab dưới đây mô hình hóa chính sách đóng an toàn, không thực hiện các bước Cosign hoặc SLSA hoàn chỉnh đó.
 
 ---
 
 ## 2. Toàn vẹn Module: `go.sum` và Go Checksum Database
 
-Trước khi container image được build, chuỗi cung ứng bắt đầu ngay tại thời điểm Go tải các gói phụ thuộc về máy.
+Trước khi ảnh container (`container image`) được đóng gói, chuỗi cung ứng bắt đầu ngay tại thời điểm Go tải các gói phụ thuộc về máy.
 
 ### Bản chất kỹ thuật của `go.sum`
 
-Một ngộ nhận kinh điển trong cộng đồng là coi `go.sum` như một tệp khóa phiên bản tương tự `package-lock.json` hay `yarn.lock`. Về mặt bản chất, tệp `go.mod` mới là nơi quyết định phiên bản module thông qua giải thuật lựa chọn phiên bản tối thiểu (Minimal Version Selection - MVS). Ngược lại, `go.sum` là cơ sở dữ liệu xác thực nội dung mật mã (Content Validation Database). Nó lưu trữ các mã băm SHA-256 của toàn bộ mã nguồn module và tệp `go.mod` tương ứng nhằm phát hiện mọi hành vi can thiệp trái phép hoặc thay đổi nội dung sau thời điểm phát hành chính thức.
+Một ngộ nhận kinh điển trong cộng đồng là coi `go.sum` như một tệp khóa phiên bản tương tự `package-lock.json` hay `yarn.lock`. Theo thiết kế, tệp `go.mod` mới là nơi quyết định phiên bản mô-đun thông qua giải thuật lựa chọn phiên bản tối thiểu (Minimal Version Selection - MVS). Ngược lại, `go.sum` là cơ sở dữ liệu xác thực nội dung mật mã (Content Validation Database). Nó lưu trữ các mã băm SHA-256 của toàn bộ mã nguồn mô-đun và tệp `go.mod` tương ứng nhằm phát hiện mọi hành vi can thiệp trái phép hoặc thay đổi nội dung sau thời điểm phát hành chính thức.
 
 Mỗi bản ghi trong `go.sum` được cấu trúc thành hai dòng thông tin bổ trợ:
 
@@ -41,79 +41,79 @@ github.com/gin-gonic/gin v1.9.1 h1:4A06lVSJ...
 github.com/gin-gonic/gin v1.9.1/go.mod h1:h1hp...
 ~~~
 
-Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm chuẩn tắc của cây thư mục module (theo giải thuật `dirhash.Hash1`): danh sách đường dẫn tệp được sắp xếp thứ tự, băm SHA-256 từng tệp, ghép thành danh sách định dạng chuẩn tắc rồi băm SHA-256 tổng thể và mã hóa base64. Dòng có hậu tố `/go.mod` lưu trữ mã băm chỉ tính riêng trên nội dung tệp khai báo phụ thuộc của module đó, cho phép công cụ Go kiểm tra cây phụ thuộc một cách nhanh chóng mà không bắt buộc phải tải toàn bộ mã nguồn của các module gián tiếp về máy.
+Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm chuẩn tắc của cây thư mục mô-đun (theo giải thuật `dirhash.Hash1`): danh sách đường dẫn tệp được sắp xếp thứ tự, băm SHA-256 từng tệp, ghép thành danh sách định dạng chuẩn tắc rồi băm SHA-256 tổng thể và mã hóa base64. Dòng có hậu tố `/go.mod` lưu trữ mã băm chỉ tính riêng trên nội dung tệp khai báo phụ thuộc của mô-đun đó, cho phép công cụ Go kiểm tra cây phụ thuộc một cách nhanh chóng mà không bắt buộc phải tải toàn bộ mã nguồn của các mô-đun gián tiếp về máy.
 
 ### Go Checksum Database (`sum.golang.org`)
 Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư viện bên thứ ba và tráo đổi nội dung của release tag `v1.2.0`, điều gì sẽ xảy ra?
 
 Nếu máy bạn chưa từng tải bản release đó, làm sao Go biết mã băm `h1:` nào là chuẩn?
 
-Với module thuộc phạm vi kiểm tra checksum database và cấu hình mặc định phù hợp, Go toolchain đối chiếu checksum đã tải với transparency log `sum.golang.org`. Nội dung không khớp gây lỗi checksum. Cơ chế này kiểm tra tính nhất quán của nội dung, không chứng minh nội dung không độc hại; `GOPRIVATE`, `GONOSUMDB`, `GOSUMDB=off` và source thay bằng `replace` còn tạo các boundary khác. Phải đọc cấu hình build trước khi suy ra module đã qua cùng đường kiểm tra.
+Với các mô-đun thuộc phạm vi kiểm tra của cơ sở dữ liệu mã băm và cấu hình mặc định phù hợp, bộ công cụ Go sẽ đối chiếu mã băm đã tải về với nhật ký minh bạch (*transparency log*) tại `sum.golang.org`. Nếu nội dung không trùng khớp, quá trình biên dịch sẽ lập tức báo lỗi kiểm tra mã băm. Cơ chế này bảo đảm tính toàn vẹn và nhất quán của nội dung tải về, hoàn toàn không chứng minh nội dung đó không chứa mã độc; các cấu hình như `GOPRIVATE`, `GONOSUMDB`, `GOSUMDB=off` và việc thay thế mã nguồn bằng chỉ thị `replace` sẽ tạo ra các ranh giới kiểm soát khác. Kỹ sư bắt buộc phải kiểm tra cấu hình biên dịch trước khi đưa ra kết luận rằng mô-đun đã đi qua cùng một quy trình thẩm định.
 
-> **Khuyến nghị:** Commit `go.sum` cùng `go.mod` khi module có dependency tạo file ấy. Không bỏ checksum đã ghi nhận chỉ để tránh merge conflict. Checksum database vẫn có thể kiểm tra module đủ điều kiện ngay cả khi chưa có entry local; vì vậy thiếu `go.sum` không tự chứng minh đã xảy ra tráo source, nhưng làm mất bằng chứng checksum đã được project lưu.
+> Khuyến nghị: Luôn lưu trữ tệp `go.sum` cùng tệp `go.mod` vào hệ thống quản lý mã nguồn khi mô-đun có các gói phụ thuộc sinh ra tệp này. Tuyệt đối không xóa bỏ các mã băm đã được ghi nhận chỉ để tránh xung đột khi hợp nhất mã nguồn (*merge conflict*). Cơ sở dữ liệu mã băm vẫn có thể kiểm tra các mô-đun đủ điều kiện ngay cả khi chưa có mục ghi nhận cục bộ; do đó việc thiếu tệp `go.sum` không tự chứng minh rằng mã nguồn đã bị tráo đổi, nhưng sẽ làm mất đi bằng chứng mã băm độc lập mà dự án đã lưu giữ.
 
 ---
 
 ## 3. Quét lỗ hổng tĩnh vs Khả năng vươn tới ký hiệu (`govulncheck`)
 
-Trong các pipeline CI/CD truyền thống, các công cụ quét container (như Trivy, Grype, Snyk) thường đối chiếu danh sách gói phần mềm với cơ sở dữ liệu CVE. Cách tiếp cận này tạo ra một vấn nạn nghiêm trọng trong vận hành: **Hội chứng mệt mỏi vì cảnh báo (Alert Fatigue)**.
+Trong các đường ống tích hợp và triển khai liên tục (CI/CD) truyền thống, các công cụ quét vùng chứa (như Trivy, Grype, Snyk) thường đối chiếu danh sách gói phần mềm với cơ sở dữ liệu CVE. Cách tiếp cận này tạo ra một vấn nạn nghiêm trọng trong vận hành: hội chứng quá tải vì cảnh báo an ninh (*alert fatigue*).
 
-Xét một scenario: project dùng `golang.org/x/crypto`, và version đang dùng có finding ở `ssh.ParsePrivateKey`, nhưng code ứng dụng chỉ gọi `bcrypt.GenerateFromPassword`. Một scanner chỉ xét inventory module có thể báo finding dù symbol không nằm trong đường gọi đã phân tích. Báo finding và chặn phát hành là hai quyết định khác nhau; policy của pipeline mới chọn điều kiện chặn. Đây không phải một CVE thật được gán cho version tùy ý.
+Xét một tình huống: dự án dùng `golang.org/x/crypto`, và phiên bản đang dùng có cảnh báo lỗ hổng ở `ssh.ParsePrivateKey`, nhưng mã nguồn ứng dụng chỉ gọi `bcrypt.GenerateFromPassword`. Một công cụ quét chỉ nhìn danh mục gói phụ thuộc có thể báo lỗ hổng dù ký hiệu hàm không hề nằm trong đường dẫn gọi đã phân tích. Cảnh báo lỗ hổng và chặn phát hành là hai quyết định khác nhau; chính sách của đường ống CI/CD mới là nơi chọn điều kiện chặn. Đây không phải một CVE thật được gán cho phiên bản tùy ý.
 
 ### Cơ chế phân tích đồ thị cuộc gọi của `govulncheck`
-Ở chế độ source, `govulncheck` còn phân tích khả năng vươn tới của ký hiệu, thay vì chỉ báo module có finding. Phải đọc chế độ scan và coverage của kết quả đang dùng.
+Ở chế độ mã nguồn (`source`), `govulncheck` còn phân tích khả năng vươn tới của ký hiệu, thay vì chỉ báo mô-đun có lỗ hổng. Phải đọc chế độ scan và coverage của kết quả đang dùng.
 
 ![Phân biệt phụ thuộc có symbol và đường gọi có thể tới](../../assets/diagrams/vulnerability-call-reachability.png)
-@figure Trong ví dụ phân tích này, ứng dụng có đường gọi tới bcrypt nhưng không thấy đường gọi tới ssh.ParsePrivateKey. Kết quả phải được hiểu trong giới hạn của bộ phân tích và build đang xét.
+@figure Có phụ thuộc bị ảnh hưởng và tìm thấy đường gọi tới ký hiệu bị ảnh hưởng là hai mức bằng chứng khác nhau. Khả năng vươn tới theo phân tích tĩnh không chứng minh khai thác thực tế; không tìm thấy đường gọi cũng không chứng minh an toàn tuyệt đối.
 
-JSON của govulncheck là stream message theo schema của version dùng, có OSV và finding với trace; không phải một object cố định chứa `Modules` và `Traces` viết hoa. Trong lab, `Severity` và `Reachable` là input fixture đã chuẩn hóa, không được parse từ output scanner. Finding có trace tới symbol chỉ là kết quả phân tích tĩnh về đường gọi có thể tới, không chứng minh đường ấy chạy hoặc khai thác được. Adapter thật phải ghi version/schema, chế độ source hay binary, scanner coverage và cách suy ra policy từ finding.
+Dữ liệu JSON của `govulncheck` là một luồng thông điệp (*stream message*) tuân theo lược đồ (*schema*) của phiên bản sử dụng, chứa định danh OSV và phát hiện lỗ hổng kèm vết gọi (*trace*); không phải một đối tượng cố định chứa `Modules` và `Traces` viết hoa. Trong bài thực hành, `Severity` và `Reachable` là dữ liệu mẫu (*fixture*) đã được chuẩn hóa, không phải bóc tách trực tiếp từ đầu ra công cụ quét. Một phát hiện có vết gọi tới ký hiệu hàm chỉ là kết quả phân tích tĩnh về đường gọi có khả năng chạm tới, không chứng minh đường dẫn đó chắc chắn được kích hoạt hay khai thác thành công trong thực tế. Bộ tương thích (*adapter*) thực tế phải ghi rõ phiên bản/lược đồ, chế độ quét mã nguồn hay tệp nhị phân, độ bao phủ quét và quy tắc suy diễn chính sách từ các cảnh báo phát hiện.
 
 ### Giới hạn phân tích cần lưu ý
 
-Cần lưu ý rằng khả năng phân tích tĩnh của `govulncheck` tập trung vào mã nguồn Go. Kỹ thuật xấp xỉ đồ thị cuộc gọi tĩnh có giới hạn trước reflection, hàm assembly hay điều phối động, không phân tích các phụ thuộc liên kết động qua CGO runtime, không lần vết trong plugin tải động (`plugin.Open`), và không quét các thư viện hệ thống nhị phân của base image container (như OpenSSL hay glibc — những thành phần này cần công cụ quét container chuyên dụng).
+Khả năng phân tích tĩnh của `govulncheck` tập trung chủ yếu vào mã nguồn Go. Kỹ thuật xấp xỉ đồ thị cuộc gọi tĩnh có giới hạn trước reflection, hàm assembly hay điều phối động, không phân tích các phụ thuộc liên kết động qua CGO runtime, không lần vết trong plugin tải động (`plugin.Open`), và không quét các thư viện hệ thống nhị phân của ảnh nền container (như OpenSSL hay glibc; những thành phần này đòi hỏi công cụ quét ảnh container chuyên dụng).
 
 ### Thiết kế chính sách thông minh
 
-`Reachable`, severity, scanner coverage và acceptance threshold đều là input policy. Một tổ chức có thể deny finding reachable high/critical, tổ chức khác có exception có hạn hay deny cả finding chưa chứng minh reachability. Vì vậy `Reachable=false` không có nghĩa “an toàn”; trong lab nó chỉ dẫn tới `WARN` theo policy minh họa và cần được review trong policy thật.
+`Reachable`, mức độ nghiêm trọng (*severity*), độ bao phủ của bộ quét và ngưỡng chấp nhận đều là dữ liệu đầu vào của chính sách. Một tổ chức có thể từ chối cảnh báo lỗ hổng mức cao hoặc nghiêm trọng nếu có thể vươn tới, tổ chức khác áp dụng ngoại lệ có thời hạn hoặc từ chối cả cảnh báo chưa chứng minh được đường gọi. Vì vậy `Reachable=false` không có nghĩa “an toàn”; trong bài thực hành nó chỉ dẫn tới trạng thái `WARN` theo chính sách minh họa và cần được xem xét lại trong chính sách thực tế.
 
 ---
 
 ## 4. Bất biến OCI: Mã băm Digest vs Nhãn Tag có thể biến đổi
 
-Khi container image được đóng gói và đẩy lên OCI Registry (Docker Hub, AWS ECR, GitHub Packages), chúng ta thường gắn thẻ tag như `:latest` hoặc `:v1.2.3`.
+Khi ảnh container được đóng gói và đẩy lên kho lưu trữ bản kê tiêu chuẩn OCI (như Docker Hub, AWS ECR, GitHub Packages), chúng ta thường gắn nhãn định danh phiên bản như `:latest` hoặc `:v1.2.3`.
 
-Tuy nhiên, trong thế giới container:
-> **Tag là con trỏ có thể thay đổi (Mutable Pointer), chỉ có Digest mới là Nguồn chân lý bất biến (Immutable Truth).**
+Tuy nhiên, trong quy chuẩn đóng gói vùng chứa:
+> Thẻ nhãn (`tag`) là con trỏ có thể thay đổi, trong khi chuỗi băm nội dung (`digest`) là định danh bất biến đại diện cho chính xác từng byte của hiện vật xuất phẩm (`artifact`).
 
 ![Tag có thể đổi đích và digest định danh nội dung](../../assets/diagrams/container-tag-digest.png)
-@figure Tag được phân giải thành digest tại một thời điểm. Dùng digest cố định nội dung được tham chiếu, không tự xác minh người tạo hay độ an toàn của nội dung ấy.
+@figure Thẻ nhãn (`tag`) được phân giải thành mã băm (`digest`) tại một thời điểm. Dùng mã băm cố định nội dung được tham chiếu, không tự xác minh người tạo hay độ an toàn của nội dung ấy.
 
-Nếu tag được trỏ sang image khác, một lần pull tiếp theo có thể nhận nội dung khác dù Pod template vẫn cùng chuỗi tag. Kết quả còn phụ thuộc imagePullPolicy, cache node và policy registry. Ghim digest giúp ràng buộc nội dung đã xét, không tự xác thực builder hay chứng minh artifact vô hại.
+Nếu thẻ nhãn (`tag`) bị trỏ sang ảnh khác, một thao tác kéo ảnh (*pull*) tiếp theo có thể nhận nội dung khác dù khuôn mẫu Pod vẫn giữ nguyên chuỗi thẻ nhãn đó. Kết quả còn phụ thuộc `imagePullPolicy`, bộ nhớ đệm của nút tính toán và chính sách của kho lưu trữ. Việc ghim mã băm nội dung giúp ràng buộc chính xác dữ liệu đã xét, nhưng không tự chứng minh bên tạo dựng hay bảo đảm gói phát hành vô hại.
 
-Policy của lab chọn quy tắc đầu tiên:
-**Từ chối mọi image không được định danh tường minh bằng mã băm SHA-256 dạng `sha256:<64_hex_chars>`.**
+Chính sách của bài thực hành chọn quy tắc đầu tiên:
+Nguyên tắc cốt lõi: Từ chối mọi ảnh container không được định danh tường minh bằng mã băm SHA-256 dạng `sha256:<64_hex_chars>`.
 
 ---
 
 ## 5. Chữ ký số Sigstore/Cosign và Attestation SLSA
 
-Làm sao chúng ta biết một container image có mã băm `sha256:abc...` thực sự được tạo ra bởi quy trình CI chính thức của tổ chức chứ không phải do hacker tự biên dịch rồi đẩy lên?
+Làm sao chúng ta biết một ảnh container có mã băm `sha256:abc...` thực sự được tạo ra bởi quy trình CI chính thức của tổ chức chứ không phải do hacker tự biên dịch rồi đẩy lên?
 
-Sigstore/Cosign là một lựa chọn cho việc ký và xác minh artifact:
+Bộ công cụ Sigstore/Cosign là một lựa chọn cho việc ký và xác minh hiện vật xuất phẩm (`artifact`):
 
-Một là, Ký không cần khóa tĩnh (Keyless Signing): Thay vì quản lý private key dài hạn trên máy chủ CI, runner tạo cặp khóa tạm thời (ephemeral keys) cho mỗi lần ký và dùng OpenID Connect (OIDC) token để xin chứng chỉ ngắn hạn từ Fulcio ràng buộc danh tính workflow với public key.
+Một là, Ký không cần khóa tĩnh (*Keyless Signing*): Thay vì quản lý khóa bí mật dài hạn trên máy chủ CI, tiến trình thực thi tạo cặp khóa tạm thời cho mỗi lần ký và dùng mã xác thực OpenID Connect (OIDC) để xin chứng chỉ ngắn hạn từ Fulcio nhằm ràng buộc danh tính quy trình với khóa công khai.
 
-Hai là, chứng chỉ ngắn hạn: Fulcio ràng buộc public key với identity OIDC theo policy của CA. `https://token.actions.githubusercontent.com` là issuer, không phải danh tính riêng của workflow. Verifier phải xét cả certificate identity được phép và issuer, validity cùng evidence của đường verify đang dùng.
+Hai là, chứng chỉ ngắn hạn: Fulcio ràng buộc khóa công khai với danh tính OIDC theo chính sách của nhà cung cấp chứng chỉ (CA). `https://token.actions.githubusercontent.com` là bên phát hành (*issuer*), không phải danh tính riêng của quy trình. Bộ kiểm chứng phải xét cả danh tính chứng chỉ được phép, bên phát hành, thời hạn hiệu lực cùng bằng chứng xác minh tương ứng.
 
-Ba là, Ký và xác minh claim digest: Cosign ký payload có claim về digest image; verifier mặc định kiểm tra claim đó cùng danh tính/certificate theo policy. Đây không tương đương với việc gọi `ecdsa.VerifyASN1` trên chuỗi digest trong lab.
+Ba là, Ký và xác minh khẳng định mã băm: Công cụ Cosign ký tải trọng chứa khẳng định (*claim*) về mã băm của ảnh; bộ kiểm chứng mặc định đối chiếu khẳng định đó cùng danh tính chứng chỉ theo chính sách. Quy trình này không đơn thuần chỉ là một lệnh gọi `ecdsa.VerifyASN1` trên chuỗi mã băm trong bài thực hành.
 
-Bốn là, SLSA Provenance Attestation: Ngoài chữ ký, CI còn tạo ra bản chứng thực nguồn gốc (Provenance) ghi rõ: Commit SHA nào, quy trình workflow nào (Builder ID) đã tạo ra artifact.
+Bốn là, Bản chứng thực nguồn gốc `SLSA` (`SLSA Provenance`): Ngoài chữ ký số, đường ống CI còn tạo ra bản chứng thực xuất xứ (*provenance*) ghi rõ: mã băm commit nào, quy trình tự động nào (Builder ID) đã tạo ra gói phát hành.
 
 ---
 
 ## 6. Xây dựng Cổng chính sách Fail-Closed trong Go
 
-Bây giờ, chúng ta sẽ hiện thực hóa toàn bộ các nguyên lý trên vào một module Go theo **Mô hình chính sách kiểm chứng sư phạm (Pedagogical Verification Policy Model)**. 
+Tại đây, toàn bộ các nguyên lý trên được hiện thực hóa vào một mô-đun Go theo mô hình chính sách kiểm chứng sư phạm.
 
 Mô hình này không nhằm mục đích thay thế hay bao bọc toàn bộ mã nguồn của Cosign CLI hay SLSA verifier bên ngoài. Thay vào đó, nó tách bạch rõ ràng 3 khế ước giao tiếp (interfaces) cốt lõi của một hệ thống kiểm định chuỗi cung ứng hiện đại:
 
@@ -152,14 +152,13 @@ type VulnerabilityProvider interface {
 	) ([]Vulnerability, error)
 }
 
-// Vulnerability mô phỏng phát hiện với ngữ nghĩa
-// reachability của govulncheck và mức độ từ OSV.
+// Trong lab, đây là dữ liệu mẫu do test cung cấp.
 type Vulnerability struct {
 	ID        string `json:"id"`
 	Package   string `json:"package"`
 	Symbol    string `json:"symbol"`
-	Severity  string `json:"severity"` // Từ OSV
-	Reachable bool   `json:"reachable"` // Từ call-graph
+	Severity  string `json:"severity"`
+	Reachable bool   `json:"reachable"`
 }
 ~~~
 
@@ -210,14 +209,15 @@ func NewPolicyEngine(builders, issuers []string) *PolicyEngine {
 }
 ~~~
 
-### Kiểm tra tính bất biến của OCI Digest
+### Kiểm tra định dạng OCI digest
 
 ~~~go
-// VerifyDigest xác thực artifact dùng mã băm bất biến.
+// VerifyDigest chỉ kiểm tra định dạng chuỗi digest.
 func VerifyDigest(digest string) error {
 	if !digestRegex.MatchString(digest) {
 		return errors.New(
-			"invalid OCI digest: must be sha256:64hex",
+			"invalid or mutable OCI digest: " +
+				"must be sha256:64hex",
 		)
 	}
 	return nil
@@ -226,10 +226,10 @@ func VerifyDigest(digest string) error {
 
 ### Xác thực chữ ký mật mã ECDSA và OIDC Issuer
 
-Đọc đoạn sau như một model dùng input fixture đã tin cậy, không phải verifier identity. Public key do caller cung cấp; `Issuer` chỉ là chuỗi caller khai báo, không được ràng buộc với key bằng certificate. `Attestation` cũng là struct chưa xác thực. Một người tự tạo key, ký digest rồi chép issuer/builder được allowlist vẫn được model chấp nhận. `TestModelAllowsSelfAssertedIdentity` giữ phản ví dụ này để ngăn test ALLOW bị đọc thành bằng chứng GitHub OIDC hay SLSA. Khi dùng gate thật, phải thay các verifier bằng đường xác minh trust root, identity và provenance phù hợp; thêm một phép so chuỗi không đóng được gap này.
+Đọc đoạn sau như một mô hình dùng dữ liệu mẫu đã tin cậy, không phải bộ xác minh danh tính thực thụ. Khóa công khai do bên gọi cung cấp; `Issuer` chỉ là chuỗi do bên gọi tự khai báo chứ chưa được ràng buộc với khóa bằng chứng chỉ số. `Attestation` cũng là cấu trúc chưa được xác thực. Một người tự tạo khóa, ký mã băm rồi sao chép bên phát hành/bên tạo dựng nằm trong danh sách trắng vẫn được mô hình chấp nhận. `TestModelAllowsSelfAssertedIdentity` giữ phản ví dụ này để ngăn việc hiểu nhầm kết quả kiểm thử đạt thành bằng chứng an toàn GitHub OIDC hay SLSA. Khi đưa vào cổng kiểm soát thực tế, phải thay các thành phần này bằng quy trình xác minh gốc tin cậy, định danh và xuất xứ đầy đủ; một phép so sánh chuỗi đơn thuần không thể lấp đầy lỗ hổng bảo mật này.
 
 ~~~go
-func (e *PolicyEngine) VerifySignature(
+func (v *DefaultSignatureVerifier) VerifySignature(
 	digest string,
 	sig *SignatureVerification,
 ) error {
@@ -239,9 +239,9 @@ func (e *PolicyEngine) VerifySignature(
 		)
 	}
 
-	// 1. Kiểm tra OIDC Issuer có nằm trong danh sách tin cậy
+	// So nhãn issuer trong fixture, chưa xác thực danh tính.
 	trustedIssuer := false
-	for _, ti := range e.TrustedIssuers {
+	for _, ti := range v.TrustedIssuers {
 		if sig.Issuer == ti {
 			trustedIssuer = true
 			break
@@ -254,7 +254,7 @@ func (e *PolicyEngine) VerifySignature(
 		)
 	}
 
-	// 2. Kiểm tra chữ ký toán học ECDSA P-256
+	// Kiểm tra chữ ký bằng khóa được cung cấp.
 	hash := sha256.Sum256([]byte(digest))
 	if len(sig.Signature) == 0 {
 		return errors.New("empty signature payload")
@@ -265,7 +265,8 @@ func (e *PolicyEngine) VerifySignature(
 	)
 	if !valid {
 		return errors.New(
-			"signature verification failed: bad signature",
+			"signature verification failed: " +
+				"cryptographic signature mismatch",
 		)
 	}
 	return nil
@@ -274,144 +275,95 @@ func (e *PolicyEngine) VerifySignature(
 
 ### Thực thi đánh giá toàn diện (Fail-Closed Evaluation)
 
-Khâu thẩm định được chia thành các chốt chặn nối tiếp nhau. Đầu tiên là kiểm tra tính toàn vẹn của mã băm và chữ ký số:
+`PolicyEngine` gọi verifier đã cấu hình, không tự bỏ qua interface để kiểm tra lại một cách khác. Thiếu verifier là lỗi, không phải dấu hiệu được phép đi tiếp. Phương thức chữ ký trong source có dạng:
 
 ~~~go
-func (e *PolicyEngine) evaluateIntegrity(
+func (e *PolicyEngine) VerifySignature(
 	digest string,
 	sig *SignatureVerification,
-	res *EvaluationResult,
-) bool {
-	// Cửa 1: Khóa cứng tính bất biến OCI Digest
-	if err := VerifyDigest(digest); err != nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(res.Violations, err.Error())
-		return false // Dừng ngay lập tức (fail closed)
+) error {
+	if e.SigVerifier == nil {
+		return errors.New("no signature verifier configured")
 	}
-
-	// Cửa 2: Xác thực chữ ký số Cosign
-	if err := e.VerifySignature(digest, sig); err != nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(res.Violations, err.Error())
-	}
-	return true
+	return e.SigVerifier.VerifySignature(digest, sig)
 }
 ~~~
 
-Tiếp theo, mô hình policy kiểm tra các field provenance đã được cung cấp. Trong hệ thật, verifier phải xác thực bằng chứng trước khi truyền chúng vào gate:
+`VerifyProvenance` cũng ủy quyền và từ chối nếu chưa cấu hình verifier. `DefaultProvenanceVerifier` của lab chỉ so các trường fixture; các thông báo lỗi thật là `missing SLSA provenance attestation`, `provenance subject digest does not match artifact digest` và `untrusted builder identity: %s`. Không dịch các chuỗi này khi đối chiếu output.
+
+Hàm `Evaluate` dưới đây giữ đúng thứ tự và các nhánh trả về của `policy.go`. Hãy dự đoán: nếu chữ ký thất bại, provenance verifier có được gọi không? Tại sao một lần xác minh provenance thành công không thể bù cho chữ ký đã thất bại?
 
 ~~~go
-func (e *PolicyEngine) evaluateProvenance(
-	digest string,
+func (e *PolicyEngine) Evaluate(
+	artifactDigest string,
+	sig *SignatureVerification,
 	att *Attestation,
-	res *EvaluationResult,
-) {
-	// Cửa 3: Kiểm chứng xuất xứ SLSA và Builder ID
-	if att == nil {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			"missing SLSA provenance attestation",
-		)
-		return
-	}
-
-	if att.SubjectDigest != digest {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			"provenance subject digest mismatch",
-		)
-	}
-
-	builderOK := false
-	for _, tb := range e.TrustedBuilders {
-		if att.BuilderID == tb {
-			builderOK = true
-			break
-		}
-	}
-	if !builderOK {
-		res.Decision = DecisionDeny
-		res.Violations = append(
-			res.Violations,
-			fmt.Sprintf(
-				"untrusted builder: %s",
-				att.BuilderID,
-			),
-		)
-	}
-}
-~~~
-
-Cuối cùng là chốt chặn kiểm tra lỗ hổng bảo mật với ngữ nghĩa reachability của `govulncheck`:
-
-~~~go
-func (e *PolicyEngine) evaluateVulnerabilities(
 	vulns []Vulnerability,
-	res *EvaluationResult,
-) {
-	// Cửa 4: Kiểm soát lỗ hổng govulncheck
+) EvaluationResult {
+	res := EvaluationResult{Decision: DecisionAllow}
+	if err := VerifyDigest(artifactDigest); err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
+	err := e.VerifySignature(artifactDigest, sig)
+	if err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
+	err = e.VerifyProvenance(artifactDigest, att)
+	if err != nil {
+		res.Decision = DecisionDeny
+		res.Violations = append(res.Violations, err.Error())
+		return res
+	}
 	for _, v := range vulns {
 		isCrit := strings.EqualFold(v.Severity, "CRITICAL")
 		isHigh := strings.EqualFold(v.Severity, "HIGH")
 
 		if isCrit || isHigh {
 			if v.Reachable {
-				// Hàm lỗi trên đường thực thi: TỪ CHỐI
+				// Fixture reachable: từ chối.
 				res.Decision = DecisionDeny
 				res.Violations = append(
 					res.Violations,
 					fmt.Sprintf(
-						"reachable %s vuln %s (sym: %s)",
-						v.Severity, v.ID, v.Symbol,
+						"reachable %s vulnerability %s " +
+							"in %s (symbol: %s)",
+						v.Severity, v.ID, v.Package, v.Symbol,
 					),
 				)
 			} else {
-				// Hàm lỗi không được gọi: CẢNH BÁO
+				// Fixture không reachable: cảnh báo.
 				res.Warnings = append(
 					res.Warnings,
 					fmt.Sprintf(
-						"uncalled %s vuln %s: tolerated",
-						v.Severity, v.ID,
+						"uncalled %s vulnerability %s " +
+							"in %s: tolerated under policy",
+						v.Severity, v.ID, v.Package,
 					),
 				)
 			}
 		}
 	}
-}
-~~~
-
-Hàm `Evaluate` chính thức chỉ việc điều phối tuần tự 3 chốt chặn:
-
-~~~go
-func (e *PolicyEngine) Evaluate(
-	digest string,
-	sig *SignatureVerification,
-	att *Attestation,
-	vulns []Vulnerability,
-) EvaluationResult {
-	res := EvaluationResult{Decision: DecisionAllow}
-	if !e.evaluateIntegrity(digest, sig, &res) {
-		return res
-	}
-	e.evaluateProvenance(digest, att, &res)
-	e.evaluateVulnerabilities(vulns, &res)
 	return res
 }
 ~~~
+
+`TestPolicyGateStopsOnSignatureFailure` dùng verifier chữ ký trả lỗi và một provenance verifier ghi nhận việc được gọi. Test yêu cầu `DENY` và không được gọi verifier sau. Tạm bỏ `return res` ở nhánh lỗi chữ ký rồi chạy test: kết quả cuối có thể vẫn là `DENY`, nhưng contract dừng tuần tự đã bị phá. Chỉ assert quyết định cuối không bắt được lỗi đó.
 
 ---
 
 ## 7. Kiểm chứng Lab thực tế (`labs/part26-supply-chain-gate`)
 
-Mã nguồn hoàn chỉnh của bài lab nằm tại thư mục `labs/part26-supply-chain-gate` (phân loại mức kiểm chứng: `UNIT_TESTED` / `MODEL_ONLY` đối với logic chính sách cổng fail-closed và chữ ký ECDSA P-256 nội bộ, chứng minh khế ước an ninh của 7 kịch bản kiểm định mà không phụ thuộc vào hạ tầng mạng Sigstore bên ngoài). Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
+Mã nguồn hoàn chỉnh của bài thực hành nằm tại thư mục `labs/part26-supply-chain-gate` (phân loại mức kiểm chứng: kiểm thử đơn vị đối với logic chính sách cổng đóng an toàn khi lỗi và chữ ký số ECDSA P-256 nội bộ, chứng minh khế ước an ninh của 7 kịch bản kiểm định mà không phụ thuộc vào hạ tầng mạng Sigstore bên ngoài). Khi chạy kiểm thử với cờ kiểm tra xung đột dữ liệu:
 
 ~~~bash
 go test -v -race ./...
 ~~~
 
-Bộ kiểm thử thực hiện xác minh toàn bộ 7 kịch bản:
+Transcript lịch sử sau ghi tên bảy test gốc; thời lượng không phải số đo cho lần chạy hiện tại và không chứng minh Sigstore hay SLSA đã được kiểm chứng trực tiếp:
 
 ~~~
 === RUN   TestPolicyGateAllowedWithValidSignature
@@ -437,9 +389,9 @@ ok      part26-supply-chain-gate   2.128s
 | Kịch bản fixture | Điều kiểm tra trong model | Quyết định (`Decision`) |
 | :--- | :--- | :--- |
 | Input được model chấp nhận | ECDSA tự tạo trong test; chuỗi issuer/builder khớp; không truyền finding. Không gọi GitHub OIDC hay scanner. | **ALLOW** theo policy model |
-| Phản ví dụ tự khai danh tính (`TestModel...`) | Model chấp nhận key tự tạo và issuer/builder tự khai; chứng minh model chưa xác thực OIDC | **`ALLOW`** (nhấn mạnh ranh giới model) |
+| Phản ví dụ tự khai danh tính (`TestModel...`) | Model chấp nhận key tự tạo và issuer/builder tự khai; chứng minh model chưa xác thực `OIDC` | **`ALLOW`** (nhấn mạnh ranh giới model) |
 | Image không có chữ ký | Bị chặn đứng ngay tại Cửa 2 | **`DENY`** |
-| Lỗ hổng nghiêm trọng có thể vươn tới (`Reachable = true`) | Ký hiệu `ssh.ParsePrivateKey` được gọi trong ứng dụng | **`DENY`** |
+| Lỗ hổng nghiêm trọng được fixture đánh dấu `Reachable = true` | Test cung cấp cờ này với tên `ssh.ParsePrivateKey`; không chạy scanner hay chứng minh ứng dụng gọi hàm | **`DENY`** theo policy model |
 | Finding không được fixture đánh dấu reachable (`Reachable = false`) | `http2.Server.ServeConn` là tên symbol minh họa, không phải bằng chứng quan sát mọi đường chạy | **`ALLOW`** (kèm cảnh báo trong `Warnings`, theo policy lab) |
 | Cố tình dùng tag thay vì digest | Truyền vào chuỗi `my-registry.io/app:v1.2.0` | Bị chặn ngay từ Cửa 1 → **`DENY`** |
 | Dừng trước provenance sau lỗi chữ ký | Khi chữ ký sai, cổng dừng ngay tại Cửa 2 và không kiểm tra tiếp Cửa 3 | **`DENY`** (fail-closed tuần tự) |
@@ -460,10 +412,10 @@ ok      part26-supply-chain-gate   2.128s
 ## 9. Bài tập thực hành thiết kế Cổng bảo vệ
 
 ### Thử thách 1: Ghim Base Image chuẩn (Golden Image Pinning)
-**Yêu cầu:** Trong tệp Dockerfile nhiều tầng (multi-stage build), tầng thực thi cuối cùng thường bắt đầu bằng một base image (ví dụ `gcr.io/distroless/static-debian12`). Hãy viết một hàm Go nhận vào danh sách base images tin cậy (dưới dạng ánh xạ giữa tên image và mã băm sha256 cho phép) và kiểm tra xem một dòng `FROM <image>` trong Dockerfile có tuân thủ đúng mã băm đã được phê duyệt hay không.
+Yêu cầu: Viết hàm kiểm tra một tham chiếu ảnh đã được tách từ lệnh `FROM`, chẳng hạn `registry.example/base@sha256:...`. Chỉ chấp nhận repository có trong catalog và digest hợp lệ khớp giá trị đã duyệt. Test phải từ chối tag, digest sai định dạng, repository lạ và chuỗi có nhiều dấu `@`. Bài tập không yêu cầu viết parser Dockerfile: stage alias, `ARG`, `--platform` và ảnh `scratch` cần chính sách riêng khi tích hợp thực tế.
 
 ### Thử thách 2: Cơ chế Timeout Fail-Closed (Network Timeout Fallback)
-**Yêu cầu:** Khi cổng kiểm tra gọi sang máy chủ Rekor hoặc Fulcio qua mạng, nếu request bị timeout (quá 2 giây), hãy thiết kế một cấu trúc hàm sao cho: thay vì trả về lỗi chung chung khiến người vận hành bối rối, hàm phải trả về quyết định `DENY` kèm thông điệp vi phạm giải thích rõ ràng rằng: Cổng đã chủ động đóng lại theo nguyên tắc Fail-Closed để bảo vệ an toàn cho cụm máy chủ.
+Yêu cầu: Nhận một callback xác minh có hỗ trợ context. Thiếu callback, context đã hủy, lỗi xác minh hoặc callback trả `nil` sau khi context bị hủy đều phải dẫn tới `DENY`. Đặt ngân sách 2 giây cho callback; không tuyên bố context có thể cưỡng chế dừng một hàm không hợp tác. Viết test bằng callback cục bộ trước; các test này không gọi Rekor hay Fulcio.
 
 ---
 
@@ -479,7 +431,7 @@ func VerifyBaseImage(
 	catalog GoldenCatalog,
 ) (bool, error) {
 	parts := strings.Split(imageRef, "@")
-	if len(parts) != 2 {
+	if len(parts) != 2 || parts[0] == "" {
 		return false, fmt.Errorf(
 			"image must be pinned with digest: repo@sha256:hex",
 		)
@@ -487,6 +439,9 @@ func VerifyBaseImage(
 
 	repo := parts[0]
 	digest := parts[1]
+	if err := VerifyDigest(digest); err != nil {
+		return false, err
+	}
 
 	expectedDigest, exists := catalog[repo]
 	if !exists {
@@ -513,32 +468,47 @@ func SafeRemoteVerify(
 	ctx context.Context,
 	verifyFunc func(context.Context) error,
 ) EvaluationResult {
-	// Giới hạn thời gian xác thực tối đa 2 giây
+	// Callback phải hợp tác với cancellation.
 	timeoutCtx, cancel := context.WithTimeout(
 		ctx, 2*time.Second,
 	)
 	defer cancel()
 
+	if verifyFunc == nil {
+		return deniedRemoteVerification(
+			fmt.Errorf("no remote verifier configured"),
+		)
+	}
+	if err := timeoutCtx.Err(); err != nil {
+		return deniedRemoteVerification(err)
+	}
 	err := verifyFunc(timeoutCtx)
+	if err == nil {
+		err = timeoutCtx.Err()
+	}
 	if err != nil {
-		// Nguyên tắc Fail-Closed: Bất kỳ sự cố mạng nào
-		// cũng dẫn đến quyết định TỪ CHỐI (DENY)
-		return EvaluationResult{
-			Decision: DecisionDeny,
-			Violations: []string{
-				fmt.Sprintf("fail-closed: aborted: %v", err),
-			},
-		}
+		return deniedRemoteVerification(err)
 	}
 
 	return EvaluationResult{Decision: DecisionAllow}
 }
+
+func deniedRemoteVerification(err error) EvaluationResult {
+	return EvaluationResult{
+		Decision: DecisionDeny,
+		Violations: []string{
+			fmt.Sprintf("fail-closed: aborted: %v", err),
+		},
+	}
+}
 ~~~
 
-Fail-closed từ chối artifact khi thiếu bằng chứng mà policy yêu cầu, kể cả lúc verifier gặp outage. Nó không bảo đảm mọi artifact đã chấp nhận đều vô hại: trust root, signer được phép, nội dung và chính policy vẫn có thể sai hoặc bị xâm phạm. Safety và availability của gate là hai câu hỏi cần kiểm chứng riêng.
+Hai lời giải có source chạy được trong `contract_examples.go`. `TestBaseImageContract` kiểm tra cả catalog có digest sai; `TestRemoteVerificationRejectsNilAfterCancellation` cố tình cho callback trả `nil` sau cancellation để bắt đường cho phép sai. Không assert một thời lượng cố định và không dùng goroutine bỏ mặc callback để tạo ảo giác có thể cưỡng chế timeout. Context chỉ thông báo hạn chót; nếu callback không trả về, wrapper này cũng không trả về. Kiểm tra `Err()` sau callback loại kết quả thành công khi cancellation đã được quan sát tại điểm kiểm tra, không tạo một thao tác nguyên tử với mọi cancellation xảy ra về sau.
+
+Nguyên tắc đóng an toàn từ chối gói phát hành khi thiếu chứng cứ mà chính sách yêu cầu, kể cả lúc bộ kiểm chứng gặp sự cố gián đoạn dịch vụ. Cơ chế này không bảo đảm mọi gói phát hành được chấp nhận đều vô hại: gốc tin cậy, bên ký được phép, nội dung và chính quy tắc kiểm soát vẫn có thể sai sót hoặc bị xâm phạm. Tính an toàn và tính sẵn sàng của cổng kiểm soát là hai bài toán cần được kiểm chứng độc lập.
 
 ---
 
-Quy trình kiểm soát chuỗi cung ứng phần mềm giúp đối chiếu tính toàn vẹn của mã nguồn, xuất xứ build và chữ ký số artifact container với policy đã chọn. Bằng chứng ấy không chứng minh file nhị phân vô hại: mã nguồn, signer hay trust root vẫn có thể bị xâm phạm.
+Quy trình kiểm soát chuỗi cung ứng phần mềm giúp đối chiếu tính toàn vẹn của mã nguồn, xuất xứ bản dựng và chữ ký số của ảnh container với chính sách đã chọn. Bằng chứng đó không chứng minh tệp nhị phân hoàn toàn vô hại: mã nguồn, bên ký hay gốc tin cậy vẫn có thể bị xâm phạm.
 
-Khi container thực sự chạy, cần thêm bằng chứng về hành vi: tiến trình nào mở kết nối mạng, đọc tệp cấu hình hay thực hiện thao tác đáng ngờ? Trong **Chương 27**, chúng ta dùng **eBPF (Extended Berkeley Packet Filter) kết hợp với Go** để quan sát các sự kiện tại những hook được chọn trong kernel Linux. Đây không phải khả năng bắt trọn mọi hành vi hay quan sát miễn phí. Phạm vi hook, cửa sổ thu thập, sự kiện bị mất và chi phí xử lý đều giới hạn kết luận; phải đo overhead với workload thực tế trước khi triển khai trên production.
+Khi vùng chứa thực sự vận hành, hệ thống cần bổ sung bằng chứng về hành vi lúc chạy: tiến trình nào mở kết nối mạng, đọc tệp cấu hình hay thực hiện các thao tác bất thường trong nhân hệ điều hành? Trong Chương 27, chúng ta sử dụng công nghệ eBPF kết hợp với Go để quan sát các sự kiện tại những điểm móc nối được chỉ định trong nhân hệ điều hành Linux. Đây không phải là khả năng bắt trọn mọi hành vi hay cơ chế quan sát miễn phí. Phạm vi điểm móc nối, cửa sổ thu thập, sự kiện bị đánh rơi và chi phí xử lý đều giới hạn phạm vi kết luận; kỹ sư bắt buộc phải đo lường độ trễ phụ trội với khối lượng tải thực tế trước khi triển khai trên môi trường vận hành.

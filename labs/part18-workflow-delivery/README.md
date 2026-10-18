@@ -24,8 +24,9 @@ Thử nghiệm chạy trực tiếp CLI `promote-gate` với các tình huống 
 ```powershell
 $DIGEST = "sha256:0123456789abcdef0123456789abcdef" + `
           "0123456789abcdef0123456789abcdef"
+go build -o promote-gate.exe ./cmd/promote-gate
 
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=true `
@@ -38,7 +39,7 @@ Kết quả mong đợi (Exit code 0):
 ### 2. Ứng viên trượt test (Rejected on Tests)
 
 ```powershell
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=false `
@@ -57,7 +58,7 @@ GitHub Attestations). Khi chưa có bước xác thực đó, không được fa
 `true` (evidence theater). Gate phải từ chối theo nguyên tắc fail-closed:
 
 ```powershell
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest $DIGEST `
   --revision "bcb3fe0" `
   --tests-passed=true `
@@ -70,7 +71,7 @@ Kết quả mong đợi (Exit code 1):
 ### 4. Định danh trôi nổi sai quy chuẩn (Malformed Input)
 
 ```powershell
-go run ./cmd/promote-gate `
+./promote-gate.exe `
   --digest ":latest" `
   --revision "bcb3fe0"
 ```
@@ -80,6 +81,11 @@ Kết quả mong đợi (Exit code 2):
 
 Gate từ chối thẳng thừng các tag trôi nổi như `:latest`, buộc pipeline phải dùng
 định danh OCI manifest digest bất biến (`sha256:...`).
+
+Các mã trên là của binary chạy trực tiếp (`$LASTEXITCODE` trong PowerShell).
+`go run` không bảo toàn mã lỗi của child: input lỗi2 được báo `exit status 2`
+nhưng công cụ Go trả1. Trên Linux bỏ hậu tố `.exe`. Trường provenance=true trong
+ví dụ allow là fixture của policy, không phải bằng chứng đã xác minh attestation.
 
 ## Bài 2: Phân tích Workflow Specimen (`workflows/delivery.yaml`)
 
@@ -121,5 +127,7 @@ giới kỹ thuật cần lưu ý:
   dùng cho `ecr:GetAuthorizationToken` vì AWS IAM bắt buộc (không hỗ trợ resource
   scoping). Các action khác đều được khóa chặt vào `data.aws_caller_identity.current.account_id`
   và repository/service cụ thể.
-- Biến `ecr_repository_name` được validate viết thường, tách biệt khỏi tên GitHub repo.
+- Biến `ecr_repository_name` kiểm pattern từng segment và độ dài2–256 theo API
+  ECR; tên như `team//api` hay `api-` bị từ chối. `deployer_role_name` là tên IAM
+  riêng (1–64 ký tự hợp lệ, không dấu `/`), không ghép nguyên tên kho vào role.
 - Máy hiện tại không có `terraform` hay `aws`; không tự cài và không tạo cloud resource.

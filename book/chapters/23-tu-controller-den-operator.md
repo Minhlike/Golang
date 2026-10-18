@@ -2,23 +2,21 @@
 
 # Chương 23 — Từ controller đến operator: API riêng và vòng đời tài nguyên
 
-Trong Chương 22, chúng ta đã nắm vững nền móng của một controller cấp thấp: dùng `client-go`, `SharedInformer` và `TypedRateLimitingInterface` để điều hòa các tài nguyên lõi như Pod. Nhưng khi hệ thống phát triển, nhu cầu quản trị hạ tầng vượt xa các khối cơ bản của Kubernetes.
+Chương 22 đã thiết lập nền tảng của một bộ điều khiển (`controller`) sử dụng `client-go`, `SharedInformer` và `TypedRateLimitingInterface` để điều hòa các tài nguyên lõi như Pod. Tuy nhiên, khi hệ thống mở rộng, nhu cầu quản trị hạ tầng vượt khỏi phạm vi các tài nguyên cơ bản có sẵn của Kubernetes.
 
-Bạn không chỉ muốn quản lý Pod đơn lẻ; bạn muốn định nghĩa cả một hệ sinh thái: một cụm cơ sở dữ liệu phân tán tự động sao lưu định kỳ, một dịch vụ thanh toán tự động cấp phát tài nguyên trên đám mây, hoặc một ứng dụng nội bộ tự động cấu hình ingress, chứng chỉ SSL và tài khoản IAM.
-
-Nếu làm theo cách thủ công, bạn phải bảo trì hàng trăm file YAML dài vô tận và phụ thuộc vào con người chạy lệnh `kubectl apply`. Đây chính là lúc khái niệm **Operator** ra đời: *đóng gói tri thức của một kỹ sư vận hành giàu kinh nghiệm (Domain Operational Knowledge) vào trong mã nguồn Go tự động*.
+Một hệ thống phức tạp thường bao gồm nhiều thành phần phụ thuộc lẫn nhau: cụm cơ sở dữ liệu phân tán có lịch sao lưu định kỳ, dịch vụ nghiệp vụ cần cấu hình ingress kèm chứng chỉ bảo mật và tài khoản IAM. Phương thức quản lý thủ công qua nhiều tệp cấu hình YAML tĩnh dễ gây sai lệch cấu hình và phụ thuộc vào thao tác can thiệp trực tiếp của con người. Mô hình Operator giải quyết hạn chế này bằng cách đóng gói các quy trình vận hành miền (domain operational knowledge) vào chính mã nguồn Go của bộ điều khiển, tự động hóa vòng đời tài nguyên thông qua định nghĩa tài nguyên tùy biến (Custom Resource Definition - CRD).
 
 ---
 
 ## 1. Operator là gì và Khi nào cần Operator?
 
 Câu hỏi trung tâm của chương này là:
-> *Sự khác biệt cốt lõi giữa một Kubernetes Controller thông thường và một Kubernetes Operator là gì?*
+> *Sự khác biệt cốt lõi giữa một bộ điều khiển Kubernetes thông thường (`Controller`) và một bộ vận hành Kubernetes (`Operator`) là gì?*
 
-Operator dùng controller để tự động hóa vòng đời một ứng dụng hay domain cụ thể, thường cùng một CRD. Controller nói chung cũng có thể làm việc với custom resource; không có quy tắc rằng nó chỉ hiểu tài nguyên dựng sẵn. Điểm khác biệt hữu ích là tri thức vận hành mà reconciliation thể hiện, không một loại controller đặc biệt do Go hay Kubernetes compiler nhận diện.
+Bộ vận hành (`Operator`) sử dụng bộ điều khiển để tự động hóa vòng đời của một ứng dụng hay nghiệp vụ chuyên biệt (`domain`), thường đi kèm một định nghĩa tài nguyên tùy biến (`CRD`). Bộ điều khiển nói chung cũng có thể làm việc với tài nguyên tùy biến; không có quy tắc nào bắt buộc nó chỉ được hiểu các tài nguyên có sẵn của hệ thống. Điểm khác biệt nằm ở tri thức vận hành mà logic điều hòa biểu đạt, chứ không phải một kiểu bộ điều khiển đặc biệt do Go hay Kubernetes nhận diện.
 
 ![Tri thức vận hành trong một operator](../../assets/diagrams/operator-capabilities.png)
-@figure Operator biểu đạt tri thức vận hành qua API, vòng lặp điều hòa và các tích hợp quản lý tài nguyên. Các thành phần này là vai trò thiết kế, không phải ba bước chạy tuần tự.
+@figure Bộ vận hành (`Operator`) biểu đạt tri thức vận hành qua API, vòng lặp điều hòa và các tích hợp quản lý tài nguyên. Các thành phần này là vai trò thiết kế, không phải ba bước chạy tuần tự.
 
 Thay vì bắt người dùng phải tự tạo `Deployment`, gắn `ConfigMap`, tạo `Secret` và mở `Service`, Operator cung cấp một tài nguyên duy nhất gọn gàng:
 
@@ -33,18 +31,18 @@ spec:
   port: 8080
 ~~~
 
-Khi bạn nộp khai báo trên, Operator sẽ tự động sinh ra Deployment tương ứng, gắn nhãn, cấu hình health check, theo dõi sức khỏe và cập nhật trạng thái thực tế về cho bạn.
+Khi bạn nộp khai báo trên, bộ vận hành (`Operator`) sẽ tự động sinh ra đối tượng `Deployment` tương ứng, gắn nhãn, cấu hình health check, theo dõi sức khỏe và cập nhật trạng thái thực tế về cho bạn.
 
 ---
 
 ## 2. Kiến trúc của controller-runtime
 
-Viết Operator bằng `client-go` thuần túy đòi hỏi tự nối các phần quản lý cache, queue và lifecycle. Thư viện `sigs.k8s.io/controller-runtime` cung cấp lớp tổ chức chung cho các phần này; lượng code tiết kiệm phụ thuộc yêu cầu của operator, không có con số chung.
+Xây dựng bộ vận hành (`Operator`) bằng `client-go` thuần túy đòi hỏi phải tự kết nối các thành phần quản lý bộ đệm, hàng đợi và vòng đời tài nguyên. Thư viện `sigs.k8s.io/controller-runtime` cung cấp lớp kiến trúc tổ chức chung cho các thành phần này; mức độ tinh gọn mã nguồn thực tế phụ thuộc vào yêu cầu của từng operator.
 
 Sơ đồ dưới đây tách trách nhiệm quản lý tiến trình, xử lý khóa và truy cập tài nguyên:
 
 ![Ranh giới giữa Manager, Reconciler và Client](../../assets/diagrams/operator-manager-boundaries.png)
-@figure Manager tổ chức các component; controller gọi Reconciler cho một khóa. Client dùng cache cho đường đọc được cấu hình và HTTP cho đường ghi; sơ đồ lược bỏ các đường đọc không qua cache.
+@figure Manager tổ chức các thành phần kiến trúc; bộ điều khiển gọi bộ điều hòa (`Reconciler`) cho một khóa tài nguyên. Client sử dụng bộ nhớ đệm cho các luồng đọc được cấu hình và giao thức HTTP cho luồng ghi trực tiếp; sơ đồ lược bỏ các luồng đọc không thông qua bộ đệm.
 
 ### Bốn trụ cột của controller-runtime
 
@@ -59,7 +57,7 @@ Sơ đồ dưới đây tách trách nhiệm quản lý tiến trình, xử lý 
 
 ## 3. Bản thiết kế CRD: Ranh giới rạch ròi giữa Spec và Status
 
-Với API của lab, ta tách **Spec** — ý định người dùng — khỏi **Status** — điều controller quan sát. Đây là contract của API; quyền ghi thực tế còn phụ thuộc RBAC và subresource:
+Với API của bài thực hành, ta phân định rõ trường `Spec` (mô tả ý định người dùng) và trường `Status` (phản ánh quan sát thực tế của bộ điều khiển). Đây là hợp đồng của API; quyền ghi thực tế còn phụ thuộc vào RBAC và cấu hình subresource:
 
 | Khối dữ liệu | Ý nghĩa | Ai có quyền ghi? | Trách nhiệm |
 | :--- | :--- | :--- | :--- |
@@ -68,7 +66,7 @@ Với API của lab, ta tách **Spec** — ý định người dùng — khỏi 
 
 ### Quy tắc chống trượt (Anti-Drift Rule)
 
-> **Policy của lab:** Reconciler không sửa `Spec` để ghi observation hoặc tự ghi đè ý định người dùng. Observation đi vào `Status`; một controller có chức năng thay spec cần ownership và policy riêng.
+> **Chính sách của bài thực hành:** Hàm điều hòa không sửa `Spec` để ghi nhận kết quả quan sát hoặc tự ý ghi đè ý định của người dùng. Mọi quan sát phải được ghi vào `Status`; một bộ điều khiển chỉ can thiệp vào `Spec` khi đó là khế ước vận hành đã được quy định tường minh.
 
 Nếu người dùng cấu hình `replicas: 3`, mà Reconciler thấy tải cao rồi tự ý sửa `spec.replicas = 5`, hệ thống sẽ rơi vào cuộc chiến bất tận giữa Operator và công cụ GitOps (ArgoCD liên tục kéo về 3, Operator liên tục đẩy lên 5).
 
@@ -76,7 +74,7 @@ Mọi kết quả quan sát (số replica đang sẵn sàng, phiên bản thực
 
 ### Phân lập Status Subresource
 
-Để bảo vệ ranh giới này, Kubernetes cung cấp cơ chế **Status Subresource** (`/status` endpoint). Khi cập nhật trạng thái, bạn phải gọi:
+Để bảo vệ ranh giới này, Kubernetes cung cấp cơ chế tài nguyên phụ trạng thái (**Status Subresource** - `/status` endpoint). Khi cập nhật trạng thái, bạn phải gọi:
 
 ~~~go
 // ĐÚNG: Chỉ sửa Status, không đổi metadata.generation
@@ -85,7 +83,7 @@ if err := r.Status().Update(ctx, appService); err != nil {
 }
 ~~~
 
-Với CRD bật status subresource, write vào resource chính bỏ qua thay đổi Status. Generation tăng khi phần dữ liệu thuộc quy tắc generation của CRD thay đổi, không phải cứ gọi Update là tăng. Một write tạo event cũng chưa chứng minh loop vô tận: predicate, nội dung thay đổi và logic reconcile đều ảnh hưởng. Đọc status qua đường đúng và xử lý conflict của write đó.
+Với định nghĩa `CRD` kích hoạt tài nguyên phụ trạng thái (`status subresource`), thao tác ghi vào tài nguyên chính sẽ bỏ qua các thay đổi trong Status. Giá trị Generation chỉ tăng lên khi phần dữ liệu thuộc quy tắc thế hệ của spec thay đổi, không phải cứ gọi Update là tăng. Một thao tác ghi tạo ra sự kiện cũng chưa chứng minh vòng lặp vô tận: bộ lọc predicate, nội dung thay đổi và logic điều hòa đều có ảnh hưởng. Luôn đọc trạng thái qua đường dẫn quy chuẩn và xử lý xung đột ghi một cách cẩn trọng.
 
 ---
 
@@ -105,9 +103,9 @@ if err := controllerutil.SetControllerReference(
 
 ### OwnerReference giúp quản lý vòng đời thế nào
 
-Thứ nhất là cascading deletion theo policy: garbage collector dùng ownerReferences hợp lệ để xét dependent, nhưng propagation policy, owner khác còn tồn tại và finalizer có thể giữ object. Lab gắn owner cho Deployment; không suy ra mọi tài nguyên con bị xóa ngay hay tài nguyên ngoài cluster được thu hồi. Về ranh giới namespace, OwnerReference là ownership metadata có quy tắc scope chặt chẽ chứ không phải liên kết cha con tùy ý. Đối với namespaced dependent, tài nguyên có thể tham chiếu owner namespaced trong cùng namespace hoặc owner cluster-scoped; nếu trỏ tới owner namespaced ở namespace khác, tham chiếu không hợp lệ và bị coi như owner không tồn tại, khiến dependent có thể bị thu hồi khi mọi owner hợp lệ khác không còn. Ngược lại, cluster-scoped dependent chỉ được phép tham chiếu owner cluster-scoped; nếu trỏ tới namespaced owner, tham chiếu trở nên không thể phân giải (unresolvable), từ Kubernetes v1.20+ garbage collector sẽ ghi nhận warning event OwnerRefInvalidNamespace và dependent không thể được thu hồi dựa trên tham chiếu đó.
+Thứ nhất là xóa theo tầng bậc (`cascading deletion`) theo chính sách: bộ thu gom rác sử dụng các tham chiếu sở hữu (`ownerReferences`) hợp lệ để xác định tài nguyên phụ thuộc, nhưng chính sách lan truyền (`propagation policy`), quy tắc cùng không gian tên hoặc phạm vi toàn cụm sẽ quyết định cách thức xóa cụ thể. Tránh suy diễn rằng tài nguyên con luôn bị xóa ngay lập tức. Về ranh giới không gian tên, OwnerReference là siêu dữ liệu sở hữu có quy tắc phạm vi chặt chẽ chứ không phải liên kết cha con tùy ý. Đối với tài nguyên phụ thuộc nằm trong không gian tên, nó có thể tham chiếu chủ sở hữu trong cùng không gian tên hoặc chủ sở hữu cấp toàn cụm; nếu trỏ tới chủ sở hữu ở không gian tên khác, tham chiếu sẽ không hợp lệ và bị coi như không tồn tại, khiến tài nguyên con có thể bị thu hồi khi mọi chủ sở hữu hợp lệ khác không còn. Ngược lại, tài nguyên phụ thuộc cấp toàn cụm chỉ được phép tham chiếu chủ sở hữu cấp toàn cụm; nếu trỏ tới chủ sở hữu trong một không gian tên cụ thể, tham chiếu sẽ không thể phân giải, và từ Kubernetes v1.20+ bộ thu gom rác sẽ ghi nhận cảnh báo `OwnerRefInvalidNamespace`.
 
-Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): Controller có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
+Thứ hai là khả năng theo dõi sự kiện ngược dòng (`Watch Events`): Bộ điều khiển (`Controller`) có thể cấu hình `Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(...))`. Bất cứ khi nào ai đó sửa đổi hoặc xóa Deployment con, sự kiện sẽ tự động ánh xạ ngược về `AppService` cha để Reconciler thức dậy sửa chữa.
 
 ---
 
@@ -115,26 +113,26 @@ Thứ hai là khả năng theo dõi sự kiện ngược dòng (Watch Events): C
 
 Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng của bạn tạo ra các tài nguyên bên ngoài cụm như một cơ sở dữ liệu Amazon RDS, một bản ghi DNS trên Cloudflare, hay một hàng đợi tin nhắn AWS SQS?
 
-Nếu đối tượng `AppService` bị xóa trước khi cleanup hoàn tất, controller có thể mất dữ liệu để xác định tài nguyên ngoài cụm. Trong scenario này, finalizer giữ object đủ lâu cho việc thu hồi; vẫn cần cơ chế điều tra hoặc đối soát để xử lý sự cố ngoài đường chạy bình thường. Không có số chi phí chung suy ra từ một object bị xóa.
+Nếu đối tượng tài nguyên tùy biến (`AppService`) bị xóa trước khi quá trình dọn dẹp hoàn tất, bộ điều khiển có thể mất dữ liệu cần thiết để xác định tài nguyên ngoài cụm. Trong kịch bản này, cơ chế finalizer sẽ chặn việc hoàn tất xóa cho tới khi tiến trình dọn dẹp xác nhận đã hoàn thành an toàn; hệ thống vẫn cần cơ chế điều tra hoặc đối soát độc lập để xử lý các sự cố phát sinh ngoài luồng chạy bình thường.
 
-Đây chính là sứ mệnh của **Finalizer** (Bộ chốt vòng đời).
+Đây chính là sứ mệnh của cơ chế chốt vòng đời (**Finalizer**).
 
 ![Luồng dọn tài nguyên bằng finalizer](../../assets/diagrams/operator-finalizer-lifecycle.png)
-@figure Cleanup thất bại giữ finalizer để có thể thử lại. Cleanup thành công chỉ cho phép gỡ finalizer của controller này; API server còn phải xét các điều kiện xóa khác.
+@figure Việc dọn dẹp thất bại sẽ giữ lại finalizer để có thể thử lại. Dọn dẹp thành công chỉ cho phép gỡ bỏ finalizer của bộ điều khiển này; máy chủ API vẫn cần xem xét toàn bộ các điều kiện xóa khác.
 
-API server chỉ có thể hoàn tất xóa khi các điều kiện lifecycle, gồm toàn bộ finalizer còn lại, cho phép. Gỡ finalizer của controller này không hứa object biến mất ngay; controller không trực tiếp gọi etcd để xóa.
+Máy chủ API chỉ hoàn tất việc xóa khi mọi điều kiện trong vòng đời tài nguyên, bao gồm toàn bộ finalizer còn lại, đều đã thỏa mãn. Gỡ bỏ finalizer của bộ điều khiển này không đồng nghĩa với việc đối tượng sẽ biến mất ngay lập tức; bộ điều khiển không trực tiếp can thiệp vào etcd để xóa dữ liệu.
 
 ### Cạm bẫy Finalizer Deadlock
 
-Cleanup cần an toàn khi gọi lại. Một response not-found có thể được coi là đã hoàn tất nếu API và identity chứng minh đúng tài nguyên đích đã mất; không bỏ qua mọi 404, vì nó cũng có thể liên quan endpoint, quyền hoặc identity sai.
+Tác vụ dọn dẹp luôn phải an toàn khi gọi lại nhiều lần. Một phản hồi báo không tìm thấy (404 Not Found) có thể được coi là đã hoàn tất nếu API và định danh chứng minh chính xác rằng tài nguyên đích thực sự không còn tồn tại; không tùy tiện bỏ qua mọi lỗi 404, vì nó cũng có thể xuất phát từ việc sai điểm cuối (`endpoint`), sai thẩm quyền hoặc sai định danh.
 
-Nếu coi mọi 404 khi cleanup là lỗi phải retry, controller có thể giữ finalizer dù resource ngoài đã mất. Object có thể kẹt `Terminating` cho tới khi logic được sửa hoặc có can thiệp. Chỉ coi not-found là cleanup thành công khi đã xác nhận đúng identity và contract API, không bỏ qua mọi lỗi ngoài bằng cùng một nhánh.
+Nếu coi mọi mã lỗi 404 khi dọn dẹp đều là sự cố cần thử lại, bộ điều khiển có thể giữ mãi chốt `finalizer` dù tài nguyên bên ngoài đã biến mất. Đối tượng có thể bị kẹt ở trạng thái `Terminating` cho tới khi logic được sửa đổi hoặc có sự can thiệp thủ công. Chỉ coi việc không tìm thấy tài nguyên là dọn dẹp thành công khi đã xác nhận đúng định danh và khế ước API, không gộp mọi lỗi bên ngoài vào cùng một nhánh xử lý thô thiển.
 
 ---
 
 ## 6. Hiện thực Operator hoàn chỉnh trong Go
 
-Dưới đây là phần lõi Reconciler của `labs/part23-controller-runtime-operator/`:
+Dưới đây là phần lõi của bộ điều hòa (`Reconciler`) trong `labs/part23-controller-runtime-operator/`:
 
 Định nghĩa cấu trúc điều hòa với khả năng tiêm phụ thuộc (Dependency Injection) cho bộ dọn dẹp ngoại vi:
 
@@ -202,13 +200,13 @@ func (r *AppServiceReconciler) Reconcile(
 
 Trong `controller-runtime` v0.25.1, giá trị trả về của `Reconcile(ctx, req)` quyết định hành vi tiếp theo của hàng đợi theo bốn nhánh rành mạch:
 
-Nhánh thứ nhất, trả về `(ctrl.Result{}, err)` với `err != nil`: Nếu lỗi không phải `reconcile.TerminalError`, controller ghi log lỗi và đưa lại request vào hàng đợi với thuật toán Rate Limiting (`AddRateLimited`). Nếu vô tình trả về đồng thời `err != nil` và cờ `Requeue` hoặc `RequeueAfter`, controller sẽ ghi warning log và bỏ qua hai cờ requeue để ưu tiên xử lý lỗi.
+Nhánh thứ nhất, trả về `(ctrl.Result{}, err)` với `err != nil`: Nếu lỗi không phải `reconcile.TerminalError`, bộ điều khiển ghi nhật ký lỗi và đưa lại yêu cầu vào hàng đợi với thuật toán kiểm soát tốc độ thử lại (`AddRateLimited`). Nếu vô tình trả về đồng thời `err != nil` và cờ `Requeue` hoặc `RequeueAfter`, bộ điều khiển sẽ ghi nhật ký cảnh báo và bỏ qua hai cờ thử lại để ưu tiên xử lý lỗi.
 
-Nhánh thứ hai, trả về `(ctrl.Result{RequeueAfter: d}, nil)` với `d > 0`: Controller xóa lịch sử lỗi của request (`Forget`) và lên lịch đưa request trở lại hàng đợi sau khoảng thời gian `d` (`AddAfter`).
+Nhánh thứ hai, trả về `(ctrl.Result{RequeueAfter: d}, nil)` với `d > 0`: Bộ điều khiển xóa lịch sử lỗi của yêu cầu (`Forget`) và lên lịch đưa yêu cầu trở lại hàng đợi sau khoảng thời gian `d` (`AddAfter`).
 
-Nhánh thứ ba, trả về `(ctrl.Result{Requeue: true}, nil)`: Controller đưa request trở lại hàng đợi có kiểm soát tốc độ qua rate limiter. Trong các phiên bản controller-runtime mới, cách trả về này dần được thay thế bằng lỗi hoặc `RequeueAfter` tường minh.
+Nhánh thứ ba, trả về `(ctrl.Result{Requeue: true}, nil)`: Bộ điều khiển đưa yêu cầu trở lại hàng đợi có kiểm soát tốc độ qua bộ giới hạn tốc độ (rate limiter). Trong các phiên bản controller-runtime mới, cách trả về này dần được thay thế bằng lỗi hoặc `RequeueAfter` tường minh.
 
-Nhánh thứ tư, trả về `(ctrl.Result{}, nil)`: Điều hòa thành công. Controller xóa lịch sử lỗi (`Forget`), không xếp lại request, và worker chỉ thức dậy khi có sự kiện watch mới tác động lên tài nguyên.
+Nhánh thứ tư, trả về `(ctrl.Result{}, nil)`: lượt này không yêu cầu xếp lại và lịch sử lỗi được xóa (`Forget`). Key vẫn có thể đã được đánh dirty trong lúc xử lý, có lịch chờ từ trước hoặc được nguồn sự kiện khác đưa vào queue; không suy rằng chỉ watch mới mới đánh thức worker.
 
 ### Xử lý Xóa an toàn và Dọn dẹp ngoại vi
 
@@ -245,7 +243,7 @@ func (r *AppServiceReconciler) handleDeletion(
 
 ### Tự động nhận diện và sửa chữa sai lệch (Drift Correction)
 
-Nếu ai đó dùng `kubectl scale` để sửa số replica của Deployment con từ 3 xuống 1, Reconciler phát hiện sự không đồng nhất giữa `appService.Spec.Replicas` và `deployment.Spec.Replicas`, từ đó tự động ép trạng thái về đúng bản thiết kế ban đầu:
+Nếu ai đó dùng `kubectl scale` để sửa số bản sao của đối tượng `Deployment` con từ 3 xuống 1, hàm điều hòa phát hiện sự không đồng nhất giữa `appService.Spec.Replicas` và `deployment.Spec.Replicas`, từ đó tự động ép trạng thái về đúng bản thiết kế ban đầu:
 
 ~~~go
 func (r *AppServiceReconciler) syncDeploymentDrift(
@@ -272,7 +270,7 @@ func (r *AppServiceReconciler) syncDeploymentDrift(
 
 ## 7. Bằng chứng kiểm thử: Chứng minh 5 quy luật Operator
 
-Bộ kiểm thử tại `labs/part23-controller-runtime-operator/controllers/appservice_controller_test.go` dùng `fake.NewClientBuilder()` cho contract logic của reconciler. Đây không mô phỏng toàn diện API server: validation, generation/resourceVersion và nhiều semantics của subresource không giống cluster thật. Khi cần xác minh interaction với API server, dùng `envtest` hoặc cluster integration test riêng. Vì vậy lab vẫn ghi `ObservedGeneration` vào status để consumer biết status đã phản ánh spec nào, nhưng không dùng fake client để tuyên bố đã kiểm chứng đầy đủ lifecycle của generation.
+Bộ kiểm thử tại `labs/part23-controller-runtime-operator/controllers/appservice_controller_test.go` sử dụng `fake.NewClientBuilder()` để xác nhận khế ước logic của hàm điều hòa. Công cụ này không mô phỏng toàn diện máy chủ API: việc kiểm tra tính hợp lệ dữ liệu, thế hệ tài nguyên và ngữ nghĩa của tài nguyên phụ không hoàn toàn giống cụm máy chủ thật. Khi cần xác minh tương tác trực tiếp với máy chủ API, ta sử dụng `envtest` hoặc bài kiểm tra tích hợp cụm riêng biệt. Vì vậy bài thực hành ghi nhận `ObservedGeneration` vào trường status để bên tiêu thụ biết trạng thái đã phản ánh đúng bản spec nào, chứ không dùng fake client để tuyên bố đã kiểm chứng trọn vẹn vòng đời của generation.
 
 ~~~
 === RUN   TestReconcileCreateOwnedDeployment
@@ -290,27 +288,27 @@ ok      part23-controller-runtime-operator/controllers   1.875s
 ~~~
 
 ### 1. Khởi tạo tài nguyên con kèm OwnerReference (TestReconcileCreateOwnedDeployment)
-Khi tạo mới một `AppService`, Reconciler tự động sinh một `Deployment` mang tên tương ứng. Bằng chứng kiểm thử xác nhận `dep.OwnerReferences[0].Name == "cache-service"`, và `app.Finalizers` lập tức được bổ sung khóa `apps.example.com/finalizer`.
+Khi tạo mới một `AppService`, bộ điều hòa tự động sinh một đối tượng `Deployment` mang tên tương ứng. Bằng chứng kiểm thử xác nhận `dep.OwnerReferences[0].Name == "cache-service"`, và `app.Finalizers` lập tức được bổ sung khóa `apps.example.com/finalizer`.
 
 ### 2. Tự phục hồi sai lệch cấu hình (TestReconcileDriftCorrection)
 Lab sửa desired deployment rồi gọi Reconcile để kiểm tra logic khôi phục những field controller sở hữu. Test không đo tốc độ hội tụ của cluster thật; cache, event delivery, retry và API error vẫn ảnh hưởng thời gian sửa drift.
 
 ### 3. Vòng đời Finalizer (TestReconcileFinalizerExecution)
-Gán `DeletionTimestamp` vào đối tượng. Reconciler gọi `ExternalCleaner.Cleanup()` rồi mới gỡ Finalizer; thiếu cleaner là lỗi và finalizer phải giữ lại. Test chỉ chứng minh contract của lab; việc object thực sự biến mất là trách nhiệm API server/garbage collection và không được suy ra từ fake client.
+Gán `DeletionTimestamp` vào đối tượng. Bộ điều hòa gọi `ExternalCleaner.Cleanup()` rồi mới gỡ `finalizer`; thiếu bộ dọn dẹp là lỗi và `finalizer` phải giữ lại. Test chỉ chứng minh contract của lab; việc object thực sự biến mất là trách nhiệm API server/garbage collection và không được suy ra từ fake client.
 
 ### 4. Cập nhật Status Subresource độc lập (TestReconcileStatusSubresource)
-Kiểm chứng rằng khi Deployment con đạt trạng thái sẵn sàng (`AvailableReplicas: 3`), Reconciler cập nhật `appService.Status.AvailableReplicas = 3` và gán nhãn `Phase = "Ready"` thông qua cổng `r.Status().Update()` mà không làm biến đổi bất kỳ trường nào trong `Spec`.
+Test kiểm chính sách hẹp của lab: `AvailableReplicas: 3` với ba replica mong muốn dẫn tới `Phase = "Ready"`, cập nhật qua `r.Status().Update()` mà không đổi `Spec`. Chính sách này chưa kiểm `Deployment.Status.ObservedGeneration`, `UpdatedReplicas` hoặc rollout mới đã hoàn tất; nhãn Ready không đủ chứng minh ảnh mới đang phục vụ. `AppService.Status.ObservedGeneration` chỉ ghi thế hệ AppService được lượt này đọc. Test mới từ chối Deployment cùng tên nhưng không thuộc quyền điều khiển; hai fixture drift/status cũ được gắn owner reference để đúng tình huống child sở hữu, không coi name là ownership.
 
 ### 5. An toàn khi tài nguyên biến mất (TestNotFoundResourceNoOp)
-Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Reconciler trả về `(ctrl.Result{}, nil)` một cách nhẹ nhàng, không gây panic hay sinh lỗi rác trong log hệ thống.
+Gửi yêu cầu điều hòa cho một tài nguyên không hề tồn tại. Hàm điều hòa trả về `(ctrl.Result{}, nil)` một cách nhẹ nhàng, không gây `panic` hay sinh lỗi rác trong log hệ thống.
 
 ---
 
 ### Đặt cùng assertion trước API server thật
 
-Fake client ở trên cho phép kiểm tra reconciler đã gọi đúng đường ghi và xử lý các object của fixture. Nó không phải một API server thu nhỏ. `TestFakeDoesNotProveGeneration` trong thư mục `integration` đổi spec mà generation vẫn là 1 trên fake của `controller-runtime v0.25.1`. Đừng sửa số ấy thành 2 bằng test helper rồi gọi đó là bằng chứng Kubernetes tự tăng generation.
+Máy khách giả lập (`fake client`) ở trên cho phép kiểm tra hàm điều hòa đã gọi đúng luồng ghi và xử lý chính xác các đối tượng mẫu trong bộ kiểm thử. Nó không phải là một máy chủ API thu nhỏ. Bài kiểm tra `TestFakeDoesNotProveGeneration` trong thư mục `integration` thay đổi `spec` nhưng thế hệ tài nguyên (`generation`) vẫn giữ mức 1 trên bản giả lập của `controller-runtime` v0.25.1. Đừng tự ý nâng con số ấy lên 2 bằng hàm trợ giúp kiểm thử rồi ngộ nhận đó là bằng chứng Kubernetes tự động tăng thế hệ tài nguyên (`generation`).
 
-Thử một contract cụ thể: status subresource phải tách đường ghi mong muốn khỏi đường ghi quan sát. Test `TestRealAPIContract` nạp CRD có structural schema và `subresources.status` vào một control plane `envtest` riêng. Nó không đọc kubeconfig của anh và không sửa cluster từ Chương 17. Sau create, status tự khai bị bỏ; root `Update` không ghi được status; `Status().Update` không đổi được spec. Spec update tăng generation từ 1 lên 2, còn observedGeneration vẫn 1 cho tới khi controller báo quan sát mới. Cuối cùng, status writer dùng resourceVersion cũ phải nhận conflict thay vì ghi đè observation mới.
+Thử nghiệm một khế ước kỹ thuật cụ thể: tài nguyên phụ trạng thái (`status`) phải tách biệt rạch ròi luồng ghi mong muốn khỏi luồng ghi quan sát thực tế. Bài kiểm tra `TestRealAPIContract` nạp CRD có lược đồ cấu trúc và `subresources.status` vào một mặt phẳng điều khiển `envtest` độc lập. Nó không đọc tệp cấu hình kubeconfig cá nhân và không can thiệp vào cụm máy chủ từ Chương 17. Sau khi tạo, trạng thái tự khai bị loại bỏ; lệnh cập nhật gốc `Update` không thể ghi đè trường `status`; phương thức `Status().Update` không thể sửa đổi trường `spec`. Việc cập nhật `spec` sẽ nâng thế hệ tài nguyên (`generation`) từ 1 lên 2, trong khi `observedGeneration` vẫn giữ mức 1 cho tới khi bộ điều khiển báo cáo quan sát mới. Cuối cùng, bên ghi trạng thái dùng phiên bản tài nguyên cũ phải nhận mã lỗi xung đột thay vì ghi đè lên quan sát mới.
 
 ~~~bash
 # Từ module labs/part23-controller-runtime-operator
@@ -320,11 +318,13 @@ go test -tags integration -count=1 -v ./integration
 
 Đường thực thi này cần Linux/WSL và các binary `kube-apiserver`, `etcd` tương thích Kubernetes 1.37.x; dependency của lab đã ghim API v0.37.0. Môi trường Windows hiện tại chưa có assets đó, nên kiểm định API thật là `NOT_RUN`, không phải PASS. Test fake chạy được và việc biên dịch test cho Linux chỉ kiểm tra mã dùng đúng API thư viện. Khi tái lập trên Linux đủ prerequisite, hãy đọc output của chính test, không dùng kết quả compile làm chứng nhận integration.
 
-**Dừng trước đáp án.** Nếu thay `Status().Update` bằng `Update`, test nào phải bắt được lỗi dù request không trả error? Chạy lại với `RELIABILITY_MUTANT=root_status_write` trên môi trường đủ assets; assertion của đường status phải đỏ. Đây là biến thể được chuẩn bị cho integration, chưa được ghi đã chạy ở máy thiếu control plane.
+> **Dừng để dự đoán:** Nếu thay thế `Status().Update` bằng `Update`, bài kiểm tra nào sẽ bắt được lỗi dù yêu cầu không trả về mã lỗi? Chạy lại với cờ `RELIABILITY_MUTANT=root_status_write` trên môi trường có đủ tài nguyên nhị phân; câu khẳng định của luồng trạng thái sẽ chuyển sang báo lỗi. Đây là biến thể đột biến kiểm thử được chuẩn bị cho môi trường tích hợp.
 
-**Đáp án.** Root endpoint có thể chấp nhận request nhưng bỏ status, đồng thời chấp nhận spec mà code vô tình mang theo. Test đọc object lại bằng client không cache, kiểm tra cả phase, image và generation. Chỉ kiểm tra `err == nil` sẽ bỏ lọt việc ghi sai endpoint. Khi gặp conflict thật, reconciler phải đọc observation mới rồi tính lại thay đổi; ghi cùng object cũ nhiều lần không phải một cách sửa conflict.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-`envtest` chạy API server và etcd, không chạy kubelet, scheduler hay garbage collector. Vì vậy test này không chứng minh Pod ready, owner reference đã thu hồi child hay external finalizer đã dọn cloud. Tách contract API khỏi vòng điều hòa và khỏi workload thật giúp ta biết chính xác bằng chứng còn thiếu ở đâu.
+Điểm cuối gốc có thể chấp nhận yêu cầu nhưng lược bỏ trạng thái, đồng thời chấp nhận phần spec mà mã nguồn vô tình đính kèm. Bài kiểm tra đọc lại đối tượng bằng client không thông qua bộ đệm, đối soát toàn diện cả giai đoạn, ảnh container và thế hệ tài nguyên. Nếu chỉ kiểm tra `err == nil`, ta sẽ bỏ sót hoàn toàn việc ghi nhầm điểm cuối. Khi gặp xung đột thực tế, hàm điều hòa phải đọc lại quan sát mới rồi tính toán lại các thay đổi; việc lặp lại thao tác ghi trên cùng đối tượng cũ không phải là giải pháp xử lý xung đột.
+
+Môi trường `envtest` chỉ kích hoạt máy chủ API và etcd, không chạy kubelet, bộ điều phối scheduler hay bộ thu gom rác. Do đó, bài kiểm tra này không chứng minh Pod đã sẵn sàng, tham chiếu sở hữu đã thu hồi tài nguyên con hay chốt chặn finalizer đã dọn dẹp hạ tầng đám mây. Việc bóc tách khế ước API khỏi vòng lặp điều hòa và khối lượng công việc thực tế giúp ta nhận diện chính xác các khoảng trống bằng chứng kỹ thuật.
 
 ## 8. Các cạm bẫy người học thường gặp (Learner Pitfalls)
 
@@ -340,10 +340,10 @@ go test -tags integration -count=1 -v ./integration
 ## 9. Bài tập thực hành thiết kế Operator
 
 ### Thử thách 1: Tự động khởi tạo và đồng bộ ConfigMap đi kèm Deployment
-**Yêu cầu:** Mở rộng `AppServiceReconciler` để mỗi khi điều hòa một `AppService`, nó tự động tạo và đồng bộ một `ConfigMap` con (`<app-name>-config`) chứa file cấu hình ứng dụng `app.json` với nội dung `{"port": <Spec.Port>}`. `ConfigMap` này phải được gắn `OwnerReference` trỏ về `AppService`. Nếu `ConfigMap` đã tồn tại nhưng dữ liệu bị lệch (drift), reconciler phải cập nhật lại nội dung.
+*Yêu cầu kỹ thuật:* Mở rộng `AppServiceReconciler` để mỗi khi điều hòa một `AppService`, nó tự động tạo và đồng bộ một `ConfigMap` con (`<app-name>-config`) chứa file cấu hình ứng dụng `app.json` với nội dung `{"port": <Spec.Port>}`. `ConfigMap` này phải được gắn `OwnerReference` trỏ về `AppService`. Nếu `ConfigMap` đã tồn tại nhưng dữ liệu bị lệch (drift), reconciler phải cập nhật lại nội dung.
 
 ### Thử thách 2: Báo cáo Condition chuẩn mực trong Status
-**Yêu cầu:** Kubernetes khuyến nghị sử dụng slice `[]metav1.Condition` để thể hiện trạng thái chi tiết của tài nguyên. Hãy bổ sung hàm trợ giúp để cập nhật Condition `Type="DeploymentReady"` với `Status="True"` khi số lượng Pod sẵn sàng bằng số lượng replica mong muốn, hoặc `Status="False"` kèm Reason `"ReplicasUnavailable"` khi chưa đủ.
+*Yêu cầu kỹ thuật:* Kubernetes khuyến nghị sử dụng slice `[]metav1.Condition` để thể hiện trạng thái chi tiết của tài nguyên. Hãy bổ sung hàm trợ giúp để cập nhật Condition `Type="DeploymentReady"` với `Status="True"` khi số lượng Pod sẵn sàng bằng số lượng replica mong muốn, hoặc `Status="False"` kèm Reason `"ReplicasUnavailable"` khi chưa đủ.
 
 ---
 
@@ -404,11 +404,11 @@ func (r *AppServiceReconciler) reconcileConfigMap(
 
 Trong một reconciler chuẩn mực, việc kiểm soát và bảo vệ ranh giới tài nguyên gồm ba kỷ luật cốt lõi:
 
-Thứ nhất là kiểm tra quyền sở hữu (ownership verification). Khi `r.Get` tìm thấy ConfigMap đã tồn tại trên cụm, reconciler không được vội vàng cập nhật dữ liệu. Tài nguyên này có thể do một tiến trình khác tạo ra hoặc do người quản trị cấu hình thủ công. Hàm sử dụng `metav1.IsControlledBy(found, app)` để xác minh quyền điều khiển. Nếu ConfigMap không thuộc sở hữu của `AppService` hiện tại, chính sách an toàn nhất là từ chối can thiệp và trả về lỗi tường minh, tuyệt đối không ghi đè lên tài nguyên của chủ sở hữu khác.
+Thứ nhất là kiểm tra quyền sở hữu (ownership verification). Khi `r.Get` tìm thấy `ConfigMap` đã tồn tại trên cụm, bộ điều hòa không được vội vàng cập nhật dữ liệu. Tài nguyên này có thể do một tiến trình khác tạo ra hoặc do người quản trị cấu hình thủ công. Hàm sử dụng `metav1.IsControlledBy(found, app)` để xác minh quyền điều khiển. Nếu `ConfigMap` không thuộc sở hữu của `AppService` hiện tại, chính sách an toàn nhất là từ chối can thiệp và trả về lỗi tường minh, tuyệt đối không ghi đè lên tài nguyên của chủ sở hữu khác.
 
-Thứ hai là khắc phục trôi cấu hình (drift correction). Với ConfigMap đã xác thực đúng quyền sở hữu, việc chỉ kiểm tra `IsNotFound` khi khởi tạo ban đầu là chưa đủ. Nếu ai đó vô tình chỉnh sửa ConfigMap trực tiếp hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, logic chỉ tạo mới sẽ bỏ sót sai lệch dữ liệu. Do đó, hàm điều hòa đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi gọi `Update(ctx, found)` khi có khác biệt để bảo đảm tính nhất quán sau cùng (eventual consistency).
+Thứ hai là khắc phục hiện tượng trôi dạt cấu hình (drift correction). Với đối tượng `ConfigMap` đã xác thực đúng quyền sở hữu, việc chỉ kiểm tra trạng thái không tìm thấy khi khởi tạo ban đầu là chưa đủ. Nếu ai đó chỉnh sửa `ConfigMap` trực tiếp hoặc trường `Spec.Port` của `AppService` được cập nhật sau đó, luồng xử lý chỉ tạo mới sẽ bỏ sót sai lệch dữ liệu. Do đó, hàm điều hòa đối chiếu nội dung thực tế qua phép so sánh `found.Data["app.json"] != cm.Data["app.json"]`, rồi gọi `Update(ctx, found)` khi có khác biệt để bảo đảm tính nhất quán sau cùng (eventual consistency).
 
-Thứ ba là ranh giới tác động đến tiến trình trong Pod (workload boundary). Cập nhật ConfigMap trên API server không làm cho Pod tự động khởi động lại, trừ khi ứng dụng tự thiết lập cơ chế theo dõi file trên đĩa để nạp lại. Nếu ứng dụng nạp cấu hình qua biến môi trường (`envFrom`) hoặc mount qua `subPath`, kubelet sẽ không tự đẩy dữ liệu mới vào container. Để giải quyết ranh giới này, bản thân ConfigMap thay đổi không thể tự động làm đổi Deployment; chính reconciler của Operator phải chủ động tính mã băm SHA-256 của chuỗi `app.json` mới rồi gán vào annotation của Pod template trong Deployment (chẳng hạn `app.kubernetes.io/config-hash: <sha256>`). Khi Operator cập nhật Deployment với template annotation mới, Deployment controller của Kubernetes mới nhận diện được sự thay đổi ở cấp độ Pod template và kích hoạt Rolling Update để thay thế toàn bộ Pod bằng phiên bản nạp cấu hình mới.
+Thứ ba là tác động tới ứng dụng trong Pod. Cập nhật `ConfigMap` không tự restart Pod. Với volume thông thường, dữ liệu mới được chiếu xuống sau một khoảng trễ; ứng dụng có thể theo dõi và nạp lại cấu hình mà không restart. Biến môi trường `envFrom` và mount qua `subPath` không tự nhận dữ liệu mới theo cách đó. Nếu chọn policy rollout, Operator có thể gắn mã băm cấu hình vào annotation của Pod template rồi cập nhật Deployment; thay đổi template kích hoạt triển khai theo strategy đã cấu hình. Đây là một lựa chọn, không phải cơ chế duy nhất, và việc gửi update thành công chưa chứng minh rollout hoàn tất.
 
 ### Lời giải Thử thách 2: Quản lý Condition bằng meta.SetStatusCondition
 
@@ -444,4 +444,4 @@ Hàm `meta.SetStatusCondition` tự động kiểm tra: nếu điều kiện đ�
 
 ---
 
-Custom Resource, controller-runtime và finalizer cho ta các cơ chế để đọc và xây một operator nhỏ. Lab không chứng minh đã làm chủ mọi operator production; workload thật còn có schema evolution, ownership, retry, RBAC và recovery riêng. Chương 24 chuyển boundary ấy sang AWS SDK for Go v2 và credential tạm thời.
+Tài nguyên tùy biến, thư viện `controller-runtime` và cơ chế `finalizer` cung cấp cho ta các khối kiến trúc cốt lõi để xây dựng một operator hoàn chỉnh. Bài thực hành không nhằm chứng minh ta đã giải quyết mọi trường hợp phức tạp trên môi trường sản xuất; khối lượng công việc thực tế còn đòi hỏi tiến hóa lược đồ dữ liệu, quyền sở hữu, chính sách thử lại, phân quyền RBAC và cơ chế phục hồi riêng. Chương 24 sẽ chuyển các ranh giới này sang AWS SDK for Go v2 và thông tin xác thực tạm thời.

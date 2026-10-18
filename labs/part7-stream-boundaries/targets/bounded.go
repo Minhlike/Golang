@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 )
 
 // ErrDocumentTooLarge identifies input that exceeds the caller's byte limit.
@@ -14,12 +15,8 @@ func ReadBounded(r io.Reader, max int64) ([]byte, error) {
 	if max < 0 {
 		return nil, fmt.Errorf("negative byte limit: %d", max)
 	}
-	if max == int64(^uint64(0)>>1) {
-		data, err := io.ReadAll(r)
-		if err != nil {
-			return nil, fmt.Errorf("read target document: %w", err)
-		}
-		return data, nil
+	if max == math.MaxInt64 {
+		return nil, fmt.Errorf("byte limit cannot reserve an overflow probe: %d", max)
 	}
 
 	data, err := io.ReadAll(io.LimitReader(r, max+1))

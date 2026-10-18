@@ -145,18 +145,32 @@ func (q *WorkQueue) AddRateLimited(item string) bool {
 		return false
 	}
 
-	// Exponential backoff: base * 2^(failures-1)
-	backoffMultiplier := 1 << (failures - 1)
-	delay := q.config.BaseDelay * time.Duration(backoffMultiplier)
-	if delay > q.config.MaxDelay {
-		delay = q.config.MaxDelay
-	}
+	delay := retryDelay(q.config.BaseDelay, q.config.MaxDelay, failures)
 
 	time.AfterFunc(delay, func() {
 		q.Add(item)
 	})
 
 	return true
+}
+
+// retryDelay requires positive base/max and failures >= 1. Saturate before
+// doubling so a large retry count or duration cannot wrap into an immediate retry.
+func retryDelay(base, max time.Duration, failures int) time.Duration {
+	delay := base
+	if delay >= max {
+		return max
+	}
+	for remaining := failures - 1; remaining > 0; remaining-- {
+		if delay > max/2 {
+			return max
+		}
+		delay *= 2
+		if delay >= max {
+			return max
+		}
+	}
+	return delay
 }
 
 // Forget xóa bỏ lịch sử thất bại của item sau khi reconcile thành công,

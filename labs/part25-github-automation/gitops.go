@@ -1,8 +1,8 @@
 package automation
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/go-git/go-billy/v5"
@@ -45,11 +45,17 @@ func (r *InMemGitRepository) WriteFileAndCommit(filePath string, content []byte,
 	if err != nil {
 		return "", fmt.Errorf("failed to create file %s in memfs: %w", filePath, err)
 	}
-	if _, err := f.Write(content); err != nil {
+	n, err := f.Write(content)
+	if err == nil && n != len(content) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
 		_ = f.Close()
 		return "", fmt.Errorf("failed writing to memfs: %w", err)
 	}
-	_ = f.Close()
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("failed closing memfs file: %w", err)
+	}
 
 	if _, err := wt.Add(filePath); err != nil {
 		return "", fmt.Errorf("git add %s failed: %w", filePath, err)
@@ -73,7 +79,7 @@ func (r *InMemGitRepository) WriteFileAndCommit(filePath string, content []byte,
 func (r *InMemGitRepository) GetHeadCommitHash() (string, error) {
 	head, err := r.repo.Head()
 	if err != nil {
-		return "", errors.New("repository HEAD is unborn or detached")
+		return "", fmt.Errorf("repository HEAD is unavailable: %w", err)
 	}
 	return head.Hash().String(), nil
 }

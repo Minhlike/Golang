@@ -1,0 +1,903 @@
+{
+  "recorded_at_utc": "2026-10-12T00:22:51.283774+00:00",
+  "starting_head": "34aa4b41b048061422a3d77543a95b6ef228be63",
+  "parent_before_final_commit": "34aa4b41b048061422a3d77543a95b6ef228be63",
+  "main": "bb00a9ad33e3cd5115928dc3542d2ce66c8d08d8",
+  "origin_main": "bb00a9ad33e3cd5115928dc3542d2ce66c8d08d8",
+  "agent2_head": "5938862b864b51d755209031972a1bb07f5babf2",
+  "agent2_branch": "design/agent2-object-specimens",
+  "protected_sha256": {
+    "D:/Golang/Golang_Master.pdf": "7dfedd9825d36ccfb57515311829bc163bb6eb746423487488419400c36d8b68",
+    "D:/Golang/Golang_Master.prev.pdf": "685b0b7a51ed9d3ab5a9b531f040a4ed24132d94142972811d3b47e52daeaa8f",
+    "D:\\Golang-agent1-review\\MASTER PROMPT.txt": "45da2eb45b88d36fb5cfc95b63547b01274d618b8b8c6256efce4766f2c34785",
+    "D:\\Golang-agent1-review\\scripts\\build_pdf.py": "f6f6a0c662a33a979b41fa4ee7656c9f110fdaa379eb7cf04832f69b01ede9f7",
+    "D:\\Golang-agent1-review\\assets\\diagrams\\publication-flow.iuml": "7814eeea002e42136464ce08cf5fe1de41b0d452be6938acb341dd8462681a9e",
+    "D:/Golang/MASTER PROMPT.txt": "bd93e286595e9b45812b09d40124966137300d010fe19d063b860a564947d125"
+  },
+  "candidate_sha256": "5e235322d2ecda00dd64ea6a6a95293f08907bff2cfd48d74a7fee131f084307",
+  "chapter_files": {
+    "book/chapters/00-mo-cua-vao-go.md": "219e5fcaa898809df2e62512ad7e318fddd7d22b49dc1b2ed85b70c681787c7b",
+    "book/chapters/00-truoc-khi-viet-dong-go-dau-tien.md": "393712f0032616135eb18ba815b74c7f6b36e12574741fb5d2e834758125f814",
+    "book/chapters/01-doc-va-viet-mot-chuong-trinh-go.md": "6abfa7a711ba1b4f4522ca9cc0ef0ef9522f6170765028412a900baf8b77e641",
+    "book/chapters/02-gia-tri-slice-va-aliasing.md": "99249ed65a0fe3230f60e3373c4341d07e896b0a06129c2952dc38897e2d543a",
+    "book/chapters/03-mo-hinh-du-lieu-va-trach-nhiem-thay-doi.md": "94cf8f0baff35d03e624f71a90b6dfbc445031656723417d7809fc0954101a89",
+    "book/chapters/04-bien-loi.md": "c16a4951337f613e8717e6ad39efdf0852b0cbf4109f10d6983604b2124ff4e2",
+    "book/chapters/05-thiet-ke-package.md": "14152ee9c2a5caa3915013f3f5506a1a084c4bab5094e61418186274a8d20f2d",
+    "book/chapters/06-thay-doi-khong-so-hai.md": "c479a85c886ce54c685a5f7646732d8f1386057910ebb244e14028740bafe811",
+    "book/chapters/07-du-lieu-di-vao-va-di-ra.md": "9e22dbcfd9f8add34751c558954561e9baec61d68a36635a97f577339b09e7ef",
+    "book/chapters/08-mot-race-bat-dau-tu-dau.md": "925b14c4939c2a48365311b0b5b62354c90203619cf9cee7335f59c232bd5544",
+    "book/chapters/09-dong-cong-viec-co-ap-suat.md": "09e8f2b3d38bf47e8bf6089e61556e0d73f64563e712c86c8aaf8072f1f99353",
+    "book/chapters/10-khi-chuong-trinh-cham-hoac-phinh.md": "d35906bc45b19e44753381e39f99f209b83343bcc6bcd40c23e65c85f83fb21f",
+    "book/chapters/11-mot-request-thuc-su-di-dau.md": "44c86fb521098de85d59c068d04f473e1d15069a3bc1bdbc93eef806f49f9fb1",
+    "book/chapters/12-mot-service-song-va-tat-the-nao.md": "4a1672351672ab5e129c62c7ab3cb23b6e894ed3e111ec61831c4cc88f8f828e",
+    "book/chapters/13-mot-thay-doi-hoac-khong-co-gi.md": "5a3171f5ab43f26d59cb2a42118fe35c7d8cc73e3b17ab8f37132af3529f32c4",
+    "book/chapters/14-khi-kieu-tro-thanh-du-lieu.md": "1cddaaa1b6c9a053a8b932ff75ff57c344af354b906db41201b2b6ec29babeda",
+    "book/chapters/15-tu-incident-den-cong-cu.md": "fa5edcea4d69431df9c9d54856de6804466ac69ddca43bd7937d3d4626478d5b",
+    "book/chapters/16-thay-duoc-he-thong.md": "aef9a44d05e5989a44d75c1c02667a5d8653437dfb4e8ed71ce6083489049aa4",
+    "book/chapters/17-dong-goi-va-dieu-phoi.md": "37331e0a12f755065b74e9d1184946b12b10a4fbc0e91a1c92303470503b0d85",
+    "book/chapters/18-dua-thay-doi-ra-production.md": "6376ff032f65e4428f9dc33a7b1dedaff2717421b66bc675ed6ed19c8b8b9042",
+    "book/chapters/19-giu-type-information.md": "f6981669e2fb45ba28f83a108baded6ad076926cf158b6498207a7dbe8de336e",
+    "book/chapters/20-du-an-tong-ket-opsprobe.md": "fc958e3e9ddf808af14e0bafedfff30c0c52087db8f6268ceb057e02ca7838f4",
+    "book/chapters/21-vong-lap-dieu-hoa-controller.md": "08c243921a61e8e84f371b22f23022f4d0f01396219497a3fd168a4eaa468866",
+    "book/chapters/22-tu-watch-den-controller-that.md": "4d27a3c8df10da0b3621a7927e02d4ab45b1feccae0d5d6195a07146753b34f5",
+    "book/chapters/23-tu-controller-den-operator.md": "f9444a8de36941d62a2ef6d93089ac1de6d3d154a105999d2ce9ee2b1440e5fb",
+    "book/chapters/24-tu-dong-hoa-aws-bang-go.md": "615dd05cc2107d249f68fd5f346247a44bad2229efd0a18bf5cf6248281edd92",
+    "book/chapters/25-git-github-automation-event-driven.md": "ef67cd7aa4ecfe6545448fe5b8de6e4f65bb976ea994d524c842073dbf2727a8",
+    "book/chapters/26-chuoi-cung-ung-co-the-kiem-chung.md": "4266cfad7774aa107a3648f6f7fc4f30e15fd052e62871d4761bd1ecfe83c650",
+    "book/chapters/27-quan-sat-linux-bang-ebpf-va-go.md": "fa899506029d3ce1f38ce2d174812b6aba6468940ba4b722460d312c17abe9f3",
+    "book/chapters/28-mcp-va-aiops-an-toan-bang-go.md": "f8fa075c1b3543314f50d22fdcfb53fa083280f0c9e75cda08ff62c3e8653423",
+    "book/chapters/29-ky-su-va-bang-chung-trong-ky-nguyen-agent.md": "72450816f620e2e101a09ba769b3133104c1e329fdd713b3d04b13b6c4b21484"
+  },
+  "manual_reading_scope": "31 complete chapter manuscripts and two complete Atlas; reading is not execution of every claim",
+  "final_pdf_evidence_key": "validation.json/finalization/pdf_4",
+  "regression_evidence_key": "validation.json/finalization/tests_2",
+  "scoped_visual_review": {
+    "pdf_sha256": "5e235322d2ecda00dd64ea6a6a95293f08907bff2cfd48d74a7fee131f084307",
+    "pdf_pages": 614,
+    "scope": "changed fences, changed prose and adjacent code page boundaries; NOT full-publication QA",
+    "pages": [
+      {
+        "page": 2,
+        "reasons": [
+          "TOC"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "713481c7adf1634a43d727728ff9d504a5588167e0d6c31161bfa6ef3fcab65e",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 303,
+        "reasons": [
+          "17 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "3c21d56dea2b5452687e61864428aa257b22eb85444b1577196237d9bb564eed",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 338,
+        "reasons": [
+          "18 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "aad450259c6f841e80f49c3576df53f1fd5725c6243bee09005091ba2b7702e1",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 357,
+        "reasons": [
+          "20 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "12cd81687f5b259a20b1e6bc8379d0da375546482da5c6ca1408b6b7083f9297",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 358,
+        "reasons": [
+          "20 changed prose",
+          "boundary next to 359"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "a40ce34a5680119bf2e39f729dfcf36d72c9167b6d195bd61264077f0712b2f7",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 359,
+        "reasons": [
+          "20 changed fence 7"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "18090307186500e78058bb8467a1bd029e7323ce8b006f613cd419537cc8f92b",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 360,
+        "reasons": [
+          "boundary next to 359"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "9e490c2d897c24a35e8dc8e9a9b9401f97fbdfcba38c3a9efdb7fc755f59b4d3",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 362,
+        "reasons": [
+          "20 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "f7c3c1d4e4d6af2479b36124ecedb616bf8fe04fa9d1847d57a06a2dd1318b5c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 377,
+        "reasons": [
+          "boundary next to 378"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "09cbe0ce8db57d379ea5a6b1728bbae1b8b0ff780b15d9739a54a03921faf4a7",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 378,
+        "reasons": [
+          "21 changed fence 5",
+          "21 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "f2122d90f0f876034c446805e351c4addf765656b34fe70c7c5cf26ca82d4274",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 379,
+        "reasons": [
+          "boundary next to 378"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "bbc9a2f363ff2b5c177350d55251e8543c4472670e9a20c0495e2bcc3040f2b0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 381,
+        "reasons": [
+          "21 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "8f6e7228c28a8452e5815020b9f64c3e8af456c383f967c0693a4c751f7e8677",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 390,
+        "reasons": [
+          "22 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "badd88dd43031e87cdac63e11e6d9f08aae09b241c09dbb86cf16c4056f83862",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 413,
+        "reasons": [
+          "23 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "19973bc8b0efcf603eea0bf03d8db26e5456ba05cd09421612d0f82f777ef35c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 417,
+        "reasons": [
+          "23 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "e6214982ff71e6092d1f073b645be79a41f8d0c87a17a90c72a66ea188d3b967",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 422,
+        "reasons": [
+          "23 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "d8630d18141306803f0bdca6d0ca1f2b5ae823f39b1f626d753f6f7aa59e2a48",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 425,
+        "reasons": [
+          "changed figure aws-credentials-resolution, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "91568ab7fdf2372dca72a83e4452c499dfd477fdbe098e8472f95214c6e4e808",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 426,
+        "reasons": [
+          "changed figure aws-credentials-resolution, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "538e45d40a6bdad2dcd92e6097963ec486ff992667cc3bc154f0c3630163d6e0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 427,
+        "reasons": [
+          "24 changed prose",
+          "changed figure aws-credentials-resolution, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "fc169674d906677e75a1d0d6f5af42c498c97a4d95c61803b542eaa8171b7455",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 428,
+        "reasons": [
+          "24 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "f349774a8cf49e81de80707875a217d53e429227e258d8fea82377ab27ac5176",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 433,
+        "reasons": [
+          "24 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "0c5676f0f9371ae516b1fefb2817ec877cb017aaf9045f9d521b76d132d763da",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 434,
+        "reasons": [
+          "boundary next to 435"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "55f25461e5982bb947ec780d691b10a0277bcb46d25948bb233e343457834511",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 435,
+        "reasons": [
+          "24 changed fence 4"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "e80fe07fad4c488f06ef302551bad0285c85d5ea0f684e476abbff5bcc2eb007",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 436,
+        "reasons": [
+          "boundary next to 435"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "1cfeb5d3f27b6a0f6a4c408172ffd6fa6d5e07b2b937fe8f97a8721ec7fc00b5",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 442,
+        "reasons": [
+          "changed figure git-github-boundaries, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "6082e69ae7c1bae8af7732267c461949e8e538f23db17bdfe06aa413a45c8b99",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 443,
+        "reasons": [
+          "25 changed prose",
+          "changed figure git-github-boundaries, including boundary",
+          "changed figure webhook-hmac-verification, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "e433efd2a74c137bbe580709885ca567d5a5b149265f5c366550f594f19268e4",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 444,
+        "reasons": [
+          "changed figure git-github-boundaries, including boundary",
+          "changed figure webhook-hmac-verification, including boundary",
+          "boundary next to 445"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "567da7b44fd17910b1f947ce675e9a82ad32ff786eb16fffb7a65b7549405730",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 445,
+        "reasons": [
+          "25 changed fence 1",
+          "changed figure webhook-hmac-verification, including boundary",
+          "boundary next to 446"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "26b4babd3bbcd760c8803de93b353e0263d921e9417b67a1098b2496a8d929f1",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 446,
+        "reasons": [
+          "25 changed fence 2",
+          "boundary next to 445"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "d682e029538545b8244a12b6c6cb5475c81f058aaaa8924d12bd81e66f28b509",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 447,
+        "reasons": [
+          "boundary next to 446"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "4c2a406e97f73f1b5fe5ac76cb21631c22ce9ee472a57940002713704ef19157",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 448,
+        "reasons": [
+          "boundary next to 449"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "7f07b1d03abe57a87e4f014999eca2a5c3d5dd7ffeea30bbffaae210b20ab899",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 449,
+        "reasons": [
+          "25 changed fence 3"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "91d1c42801b2ca54250cbb4d0b45cd3f455b1f04c1f249f5df2f231fccf30fa9",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 450,
+        "reasons": [
+          "boundary next to 449"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "85052470290289e222a6abac236d7613d06c3651ecd3e3090780f2598ab83908",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 452,
+        "reasons": [
+          "boundary next to 453"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "6d09ae5d6b89578a1a2404c84250e8d9f025cb6503da7aeb43779a4e2e2ef91f",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 453,
+        "reasons": [
+          "25 changed fence 4",
+          "boundary next to 454"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "58b2173fa3261c7e3946a77bee23f0520b451030bc0674e558f94f4da50f8017",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 454,
+        "reasons": [
+          "25 changed fence 4",
+          "25 changed prose",
+          "boundary next to 453"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "72274aa69764bfa457aa84dbbf98d85e4b3b1e64f127dfcbe3e02cc3e2a05667",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 455,
+        "reasons": [
+          "boundary next to 454"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "ad318075306964e47b95069f0ee410d0975b987cbcfe898c1f01e7dc8cd2d4b0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 456,
+        "reasons": [
+          "boundary next to 457"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "d7865ce93f8c8a1942a74bca264b172d6011dcc606890e6e6ec1706c81bc8238",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 457,
+        "reasons": [
+          "25 changed fence 7"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "6b4999e515e75a27704c2b61a2501d1c95f5938d7919213a1a5e0f68e62d0ad9",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 458,
+        "reasons": [
+          "boundary next to 457"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "ed1d20e8426d9098c079f3ddad62583468934d883f29dcf1d1920d55d03717c5",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 461,
+        "reasons": [
+          "boundary next to 462"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "87d4f4e5de37c17fcee9a6917412aa48e9474f109ef752998baa3f5f9481d6f2",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 462,
+        "reasons": [
+          "25 changed fence 10"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "781e0aed73884d7c178a8465cd55a96ddfe38298295f738b556f7c2c239245b0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 463,
+        "reasons": [
+          "boundary next to 462"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "46081a93d2211fc0ba6e5180beb52f9577a51d83c1cc48ce5fd2dda04f5bb6f2",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 467,
+        "reasons": [
+          "changed figure vulnerability-call-reachability, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "eff4a3cbf467f433a231dd0098892f2db16aee8e0393cdfc6078705f70c97777",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 468,
+        "reasons": [
+          "changed figure vulnerability-call-reachability, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "3d381c95a856cd095f042f0ec4fa2c00bafead7bf32d843e100a631bd411d8f2",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 469,
+        "reasons": [
+          "changed figure vulnerability-call-reachability, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "a56ca836b59806c6c660306a9bbece65860fdcb23019efe0c2ffd641da23ae18",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 487,
+        "reasons": [
+          "boundary next to 488"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "84c96d6fde16a633f6ec4a0086c394dd0308fcf77e4436fe822f46c180d8de8c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 488,
+        "reasons": [
+          "27 changed prose",
+          "27 changed prose",
+          "27 quoted fence repair",
+          "boundary next to 489"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "872977813b51914ff962da962d8116e5e14a4af0260550857032ce6a5e81df31",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 489,
+        "reasons": [
+          "27 quoted fence repair",
+          "changed figure ebpf-build-load, including boundary",
+          "boundary next to 488"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "8edc202c4d13602e0b91da713295506b3072d50383b45857cab1702486c26156",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 490,
+        "reasons": [
+          "changed figure ebpf-build-load, including boundary",
+          "boundary next to 489"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "3ff6cbad432e09b7e9a13a6763382b1edb18441fcdc6ab205c22bd7d52ebc043",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 491,
+        "reasons": [
+          "changed figure ebpf-build-load, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "4927019320cd482a9bc5d7e29a9c58065444afe783af1c6563674079adda0ef7",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 517,
+        "reasons": [
+          "28 changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "4e9f95b8a5f652d282bc54fc47d3a1b3c02ec64ab5191092db076601bef871ad",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 518,
+        "reasons": [
+          "28 changed prose",
+          "boundary next to 519"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "82e1682c56dacf20e567919c451b99dc184e6e5930cf57d54da7048159051573",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 519,
+        "reasons": [
+          "28 changed fence 5",
+          "boundary next to 520"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "9adac4710958d14b81e1dc00828df7962edd42ef8c386922d16f9cc042934b31",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 520,
+        "reasons": [
+          "28 changed fence 5",
+          "boundary next to 519",
+          "boundary next to 521"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "ebe9ad63957b4ac841a8fdf138e3783faa472f427d8203813c3500953ce5b83c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 521,
+        "reasons": [
+          "28 changed fence 5",
+          "28 changed prose",
+          "boundary next to 520",
+          "boundary next to 522"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "48de492f230844ff7afbc7bf17d4108ef73610be521989d52185acde17d0073c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 522,
+        "reasons": [
+          "28 changed fence 6",
+          "boundary next to 521",
+          "boundary next to 523"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "b2ddc2f7c9bbc7dccf0b6214a75cb92acdaf9428cadb386f0bd4df6c01d77f84",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 523,
+        "reasons": [
+          "28 changed fence 6",
+          "boundary next to 522",
+          "boundary next to 524"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "cc83690ebd5396a842d2ba2eb215052321fb993ecaff21ae1a700af0184c7d22",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 524,
+        "reasons": [
+          "28 changed fence 6",
+          "boundary next to 523",
+          "boundary next to 525"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "e9fab131bf897ce8ded277f5aacf68f232ca117d1a7a0bbdb730b76e9bbcd7bd",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 525,
+        "reasons": [
+          "28 changed fence 7",
+          "boundary next to 524",
+          "boundary next to 526"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "e3968fd9c5cc143bcd6818b859ea30779f7297a4376ec2b6da5e4caa45073838",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 526,
+        "reasons": [
+          "28 changed fence 7",
+          "boundary next to 525",
+          "boundary next to 527"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "bee9dbd7d33f2e7607e228fb2a0115c5516a76867d1c39122aab2bbee8277928",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 527,
+        "reasons": [
+          "28 changed fence 7",
+          "boundary next to 526"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "ba70d8717565a1316614a11b466597ae9ebb65fab947465d3c015c80750fb216",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 528,
+        "reasons": [
+          "boundary next to 527"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "2dee2507b1d9061781832ed40fd828d6b2693d55f527c30a13a869db06d7f2f0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 532,
+        "reasons": [
+          "28 changed prose",
+          "boundary next to 533"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "4841a58d9ae1bb476c616431921266c8caa3139719d370afc7ca53f1662afb21",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 533,
+        "reasons": [
+          "28 changed fence 12",
+          "boundary next to 534"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "23ebec0afc943e2f3f7b12a66f5b94bc961723b41bf3d4c020eff50def01dd7c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 534,
+        "reasons": [
+          "28 changed fence 12",
+          "boundary next to 533"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "446e5d39f5ea76ea05d2c9369bc32ea1f87db988a15a818c758aceb50595e4ce",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 535,
+        "reasons": [
+          "boundary next to 534"
+        ],
+        "visual_check": "ISSUE:V04",
+        "render_sha256": "da2fd88beaa4f76536a1c8b83eea6894f4fa84756da6ffe6d8d2a2a333ac36a7",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 551,
+        "reasons": [
+          "BACK MATTER changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "fdbf739a892d5b2670900d1a2ad999066dc185175be0ab835de42ade98b7b2cf",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 567,
+        "reasons": [
+          "BACK MATTER changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "49986ddb1fb87eebf964680cb8f0ca6092796d27e91c085faeed7ea7c00feb61",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 568,
+        "reasons": [
+          "BACK MATTER changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "1315826b5776ef02ead65186969f7c83fe0df3d4543f741b3bebe42be3f0c010",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 575,
+        "reasons": [
+          "BACK MATTER changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "a811f0ad2ed43a2fb1301393488cf626e6e770d9528cc3110497115e3c4ba6e0",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 602,
+        "reasons": [
+          "changed figure agent-mailbox-contract, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "29508e6322d03fc2d037251eba0ce195401ebc14ff70b6940c922d736c56edf3",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 603,
+        "reasons": [
+          "changed figure agent-mailbox-contract, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "afd9d1127f3b73808fa563de7e14a1274abf740a7ef15276f8a748bb2dbdb75c",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 604,
+        "reasons": [
+          "BACK MATTER changed prose",
+          "changed figure agent-mailbox-contract, including boundary"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "82e3220a4a9ad5eebd84c92ee0e3d2bf5a018a8dee7a27196db78ae7cacc2eb6",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 606,
+        "reasons": [
+          "PHỤ LỤC A changed prose",
+          "PHỤ LỤC A changed prose",
+          "PHỤ LỤC A changed prose",
+          "PHỤ LỤC A changed prose",
+          "PHỤ LỤC A changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "f6cead3d640dfe8061bcf04416bb7e0b5b83910eff68b084b9578b71a37d7eda",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 608,
+        "reasons": [
+          "PHỤ LỤC A changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "9834fcefc16345dcb03fbf745aa5ccdb290b5a587f1febb289fb084a195fdbe7",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      },
+      {
+        "page": 614,
+        "reasons": [
+          "PHỤ LỤC A changed prose",
+          "PHỤ LỤC A changed prose"
+        ],
+        "visual_check": "VISUAL_PASS",
+        "render_sha256": "14168f7c12d5518c4b6f8b24a9b87c03779ea75d6f10a757613c28d922e16e42",
+        "grayscale_pixels_equal": true,
+        "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+      }
+    ]
+  },
+  "scoped_visual_pass": 76,
+  "scoped_visual_issues": [
+    {
+      "page": 535,
+      "reasons": [
+        "boundary next to 534"
+      ],
+      "visual_check": "ISSUE:V04",
+      "render_sha256": "da2fd88beaa4f76536a1c8b83eea6894f4fa84756da6ffe6d8d2a2a333ac36a7",
+      "grayscale_pixels_equal": true,
+      "observation": "Actual single page opened at original 144dpi resolution; checked code/text/figure legibility, boundaries, clipping and folio. Scoped, not whole-PDF acceptance."
+    }
+  ],
+  "whole_pdf_pages_not_opened": 537,
+  "issue_details": {
+    "V04": {
+      "severity": "P3",
+      "page": 535,
+      "description": "Curriculum Parts I-IX in summary table differ from PDF TOC Parts I-IV; structural/edition mismatch remains, outside design branch authority."
+    }
+  },
+  "scientific_review_status": "COMPLETE_WITH_VERIFICATION_LIMITS",
+  "publication_status": "NOT_FULL_PUBLICATION_ACCEPTANCE",
+  "no_new_chapters": true,
+  "no_main_merge": true,
+  "no_master_promotion": true
+}

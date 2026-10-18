@@ -2,17 +2,17 @@
 
 # Chương 6 — Thay đổi không sợ hãi
 
-Ở cuối Chương 5, `opsprobe` đã biết lấy một endpoint từ config và gọi `probe.Check`. Nhưng một yêu cầu rất bình thường vẫn khó chứng minh: khi operator đặt `OPS_PROBE_TARGET=payments.internal:9443`, endpoint nào thực sự đi tới runner? Chạy CLI và nhìn dòng `billing healthy=true` không trả lời được. Dòng đó không in host hay port; kể cả có in, một lần chạy tay vẫn không phải contract mà code giữ được khi nó đổi tiếp.
+Ở cuối Chương 5, công cụ `opsprobe` đã biết lấy một điểm cuối (*endpoint*) từ cấu hình và gọi `probe.Check`. Nhưng một yêu cầu rất bình thường vẫn khó chứng minh: khi người vận hành đặt `OPS_PROBE_TARGET=payments.internal:9443`, điểm cuối nào thực sự đi tới hàm thực thi (*runner*)? Chạy lệnh dòng lệnh và nhìn dòng `billing healthy=true` không trả lời được câu hỏi đó. Dòng đó không in tên máy chủ hay cổng; kể cả có in, một lần chạy thử thủ công vẫn không phải giao ước (*contract*) mà mã nguồn bảo toàn được khi tiếp tục thay đổi.
 
-Đây là lúc nhiều codebase đi sai hướng. Có người viết test gọi `main`, sửa environment process chung, chụp stdout, rồi hy vọng không đụng `os.Exit`. Có người khác bỏ test vì “CLI chỉ vài dòng”. Cả hai đều né câu hỏi thiết kế: phần nào là orchestration có thể kiểm chứng, phần nào là process boundary chỉ nên mỏng và rõ?
+Đây là lúc nhiều dự án đi sai hướng. Có người viết kiểm thử gọi trực tiếp hàm `main`, sửa biến môi trường của tiến trình chung, chụp luồng xuất chuẩn, rồi hy vọng không chạm vào lệnh `os.Exit`. Có người khác bỏ qua kiểm thử vì nghĩ rằng “mã dòng lệnh chỉ có vài dòng”. Cả hai đều né tránh câu hỏi thiết kế: phần nào là logic điều phối (*orchestration*) có thể kiểm chứng, phần nào là ranh giới tiến trình (*process boundary*) chỉ nên giữ thật mỏng và rõ ràng?
 
-## Một smoke test không biết điều ta cần biết
+## Một kiểm thử khói không biết điều ta cần biết
 
-`main` hiện ghép nhiều trách nhiệm: lấy environment thật, gọi config, gọi probe, quyết định exit code và in terminal. Một test gọi nó chỉ quan sát đường chạy được thử. Với thiết kế hiện tại, test khó đưa environment giả vào an toàn, quan sát endpoint runner nhận được hoặc tách config error khỏi probe error mà không đụng side effect của process.
+Hàm `main` hiện đang gánh quá nhiều trách nhiệm: đọc môi trường thực tế, nạp cấu hình, gọi hàm thăm dò, quyết định mã thoát và in ra thiết bị đầu cuối. Một ca kiểm thử gọi nó chỉ quan sát được một nhánh luồng chạy thử. Với thiết kế hiện tại, kiểm thử rất khó truyền môi trường giả lập vào một cách an toàn, không thể quan sát điểm cuối mà hàm thực thi nhận được, hoặc không thể bóc tách lỗi cấu hình khỏi lỗi thăm dò mà không kích hoạt các tác dụng phụ của tiến trình.
 
-Vấn đề không phải `main` là xấu. `os.LookupEnv`, stdout, stderr và `os.Exit` đều có chỗ đúng: chúng là ranh giới nơi chương trình gặp process. Vấn đề là logic cần quyết định trước khi chạm ranh giới ấy chưa có một đơn vị để test gọi.
+Vấn đề không phải bản thân `main` được viết tệ. Các lệnh `os.LookupEnv`, xuất ra luồng chuẩn và `os.Exit` đều có vị trí phù hợp: chúng là ranh giới nơi chương trình tiếp xúc với tiến trình hệ điều hành. Vấn đề là toàn bộ logic cần xử lý trước khi chạm tới ranh giới ấy chưa được tổ chức thành một đơn vị độc lập để kiểm thử có thể kích hoạt.
 
-Ta tạo package nội bộ `internal/app`. Nó không thay thế `probe` hay `config`; nó phối hợp hai package đó. `Run` nhận đúng hai dependency biến đổi được trong test: function đọc environment và runner thực hiện probe. Nó trả outcome thay vì in:
+Chúng ta tạo gói nội bộ `internal/app`. Gói này không thay thế `probe` hay `config`, mà đảm nhiệm việc điều phối hai gói đó. Hàm `Run` tiếp nhận đúng hai quan hệ phụ thuộc (*dependency*) có thể hoán đổi trong kiểm thử: hàm đọc môi trường và hàm thực thi thăm dò. Nó trả về kết quả cấu trúc (*outcome*) thay vì in trực tiếp ra màn hình:
 
 ~~~go
 type Outcome struct {
@@ -27,11 +27,11 @@ func Run(
 ) ([]Outcome, error)
 ~~~
 
-`Outcome.Err` là failure của một target đã được cấu hình; CLI có thể in nó rồi tiếp tục target khác. `error` return riêng là failure không tạo được danh sách outcome có nghĩa, như config không hợp lệ hoặc cancellation của toàn bộ run. Việc tách hai đường này không phải để tạo type cho đẹp: caller có policy khác nhau. Chương 4 từng đặt câu hỏi “caller cần quyết định gì?”; ở đây câu trả lời quyết định shape của result.
+Trường `Outcome.Err` đại diện cho sự cố của một mục tiêu đã được cấu hình; công cụ dòng lệnh có thể in lỗi đó ra rồi tiếp tục thăm dò mục tiêu kế tiếp. Ngược lại, giá trị `error` trả về độc lập đại diện cho thất bại nghiêm trọng không thể tạo ra danh sách kết quả có ý nghĩa, chẳng hạn như cấu hình bất hợp lệ hoặc toàn bộ lượt chạy bị hủy bỏ. Việc phân tách hai nhánh xử lý này không nhằm mục đích tạo kiểu cho đẹp mắt: bên gọi có các chính sách xử lý hoàn toàn khác nhau. Chương 4 từng đặt câu hỏi “bên gọi cần quyết định điều gì?”; ở đây câu trả lời sẽ định hình trực tiếp kiểu dữ liệu trả về.
 
-## Refactor đến khi test có thứ để nắm
+## Tái cấu trúc đến khi kiểm thử có điểm tựa vững chắc
 
-`Run` load target, map `config.Target` sang `probe.Service`, gọi `probe.Check`, rồi giữ mỗi kết quả trong một `Outcome`. Nó không đọc `os.LookupEnv`, không gọi `fmt.Printf` và không được gọi `os.Exit`. Những side effect ấy còn ở `cmd/opsprobe/main.go`:
+Hàm `Run` nạp mục tiêu, ánh xạ cấu hình `config.Target` sang `probe.Service`, gọi `probe.Check`, rồi lưu giữ từng kết quả trong một giá trị `Outcome`. Nó không trực tiếp đọc `os.LookupEnv`, không gọi `fmt.Printf` và tuyệt đối không gọi `os.Exit`. Các tác dụng phụ đó thuộc về tệp `cmd/opsprobe/main.go`:
 
 ~~~go
 outcomes, err := app.Run(
@@ -53,9 +53,9 @@ for _, outcome := range outcomes {
 }
 ~~~
 
-Đoạn `main` vẫn có logic tối thiểu: policy trình bày và process exit nằm lộ ra, dễ review. Nhưng test không cần gọi nó. Test nằm cạnh `Run`, đưa một closure làm `LookupEnv` và một `probe.Runner` ghi lại endpoint được gọi. Không có socket, environment toàn cục hay terminal nào bị đụng tới.
+Đoạn mã `main` vẫn duy trì logic tối thiểu: chính sách trình bày và mã thoát tiến trình hiển lộ rõ ràng, rất dễ duyệt xét. Nhưng kiểm thử không cần phải gọi tới nó. Kiểm thử nằm ngay cạnh `Run`, truyền một hàm đóng kín (*closure*) thay thế cho `LookupEnv` và một hàm `probe.Runner` ghi nhận điểm cuối được gọi. Không hề có socket mạng, biến môi trường toàn cục hay thiết bị đầu cuối nào bị can thiệp.
 
-Trước khi viết assertion, hãy tách ba thứ bằng mắt. Chúng ngăn test biến thành bản sao của implementation:
+Trước khi viết lời khẳng định kiểm thử (*assertion*), hãy phân định rạch ròi ba phạm vi bằng mắt. Điều này ngăn việc biến ca kiểm thử thành bản sao chép thụ động của mã triển khai:
 
 @table Phạm vi của unit test quanh `Run`
 
@@ -63,7 +63,7 @@ Trước khi viết assertion, hãy tách ba thứ bằng mắt. Chúng ngăn te
 | --- | --- | --- |
 | `LookupEnv` trả target nào; runner thành công hay lỗi | endpoint runner nhận; `Outcome` hoặc error trả về | environment process, stdout, stderr, `os.Exit` |
 
-Nếu một requirement chỉ hiện ra ở cột cuối, `Run` chưa phải đơn vị đúng để test; đó là việc của integration test ở một thời điểm có lý do. Nếu nó nằm ở cột đầu và cột giữa, unit test có thể cho feedback nhanh mà không giả lập cả process.
+Nếu một yêu cầu nghiệp vụ chỉ xuất hiện ở cột cuối cùng, hàm `Run` chưa phải đơn vị phù hợp để kiểm thử; đó là nhiệm vụ của kiểm thử tích hợp (*integration test*) vào thời điểm cần thiết. Nếu nó nằm ở hai cột đầu, kiểm thử đơn vị (*unit test*) có thể cung cấp phản hồi cực nhanh mà không cần giả lập toàn bộ tiến trình hệ điều hành.
 
 ~~~go
 func TestRunMapsEnvironmentTargetToRunner(t *testing.T) {
@@ -85,6 +85,9 @@ func TestRunMapsEnvironmentTargetToRunner(t *testing.T) {
 	}) {
 		t.Fatalf("runner endpoint = %+v", got)
 	}
+	if len(outcomes) != 1 {
+		t.Fatalf("outcomes = %+v", outcomes)
+	}
 	if outcomes[0].Err != nil ||
 		outcomes[0].Service != "billing" {
 		t.Fatalf("outcome = %+v", outcomes[0])
@@ -92,13 +95,13 @@ func TestRunMapsEnvironmentTargetToRunner(t *testing.T) {
 }
 ~~~
 
-Đây là unit test không vì nó ngắn, mà vì nó kiểm chứng một đơn vị có boundary hẹp. Test hỏi một điều quan sát được: input config có đi tới runner đúng không, và result có được gán với service đúng không. Nó không kiểm tra implementation detail như `Run` dùng bao nhiêu local variable hay loop viết thế nào.
+Đây là một ca kiểm thử đơn vị chuẩn mực không phải vì nó ngắn gọn, mà vì nó kiểm chứng một đơn vị có ranh giới khoanh vùng hẹp. Ca kiểm thử đặt ra một câu hỏi hoàn toàn có thể quan sát được: dữ liệu cấu hình đầu vào có truyền tới hàm thực thi chính xác hay không, và kết quả có gắn đúng với dịch vụ tương ứng hay không. Nó không săm soi chi tiết triển khai nội bộ như việc hàm `Run` khai báo bao nhiêu biến cục bộ hay viết vòng lặp bằng cú pháp nào.
 
-## Hai error, hai policy
+## Hai loại lỗi, hai chính sách ứng xử
 
-Thử thêm hai test trước khi đọc hết implementation. Với `OPS_PROBE_TARGET=payments.internal:0`, config phải error trước khi runner chạy. Đây là invalid input của cả run, nên `Run` return error và không có outcome nửa vời. Với runner trả `errors.New("connection refused")`, target đã tồn tại và operation đã bắt đầu; `Run` giữ `Outcome{Service: "billing", Err: ...}` để command có thể báo một dòng lỗi rồi tiếp tục khi danh sách target sau này dài hơn.
+Hãy bổ sung thêm hai ca kiểm thử trước khi đọc toàn bộ phần triển khai. Với cấu hình `OPS_PROBE_TARGET=payments.internal:0`, gói cấu hình phải báo lỗi ngay trước khi hàm thực thi được kích hoạt. Đây là dữ liệu đầu vào bất hợp lệ của toàn bộ lượt chạy, do đó `Run` trả về lỗi và không tạo ra bất kỳ kết quả dở dang nào. Trong khi đó, với hàm thực thi trả về `errors.New("connection refused")`, mục tiêu đã tồn tại và thao tác đã bắt đầu; hàm `Run` sẽ lưu giữ `Outcome{Service: "billing", Err: ...}` để công cụ có thể báo một dòng lỗi rồi tiếp tục thăm dò các mục tiêu kế tiếp khi danh sách sau này mở rộng.
 
-Cancellation khác với cả hai. `probe.Check` giữ identity `context.Canceled`, còn `Run` dừng thay vì biến cancellation của toàn bộ run thành một outcome per-service. Từ bên ngoài, ba policy hiện rõ:
+Tín hiệu hủy bỏ (*cancellation*) lại khác biệt hoàn toàn với cả hai trường hợp trên. Phương thức `probe.Check` bảo toàn danh tính lỗi `context.Canceled`, trong khi hàm `Run` dừng vòng lặp thay vì biến việc hủy bỏ toàn bộ lượt chạy thành kết quả thất bại cục bộ của từng dịch vụ. Nhìn từ bên ngoài, ba chính sách phân định rõ ràng:
 
 @table Policy cho lỗi cấu hình, lỗi probe và cancellation
 
@@ -108,21 +111,25 @@ Cancellation khác với cả hai. `probe.Check` giữ identity `context.Cancele
 | Một probe thất bại | `Outcome.Err` | Báo service đó; policy hiện tại cho phép đi tiếp. |
 | Context bị cancel | `error` giữ identity | Dừng run; không ghi health signal giả. |
 
-Không phải test nào cũng cần fake. Config parser đã có test input/output riêng ở Chương 5; `probe.Check` đã có test cancellation và wrapping. `Run` chỉ test phần nối ba contract ấy. Nếu một test chỉ lặp lại assertion của package dưới nó, nó làm refactor khó hơn mà không tăng niềm tin.
+Không phải ca kiểm thử nào cũng cần dùng đối tượng giả lập. Bộ phân tích cấu hình đã sở hữu các bài kiểm thử đầu vào/đầu ra chuyên biệt ở Chương 5; phương thức `probe.Check` cũng đã có kiểm thử cho cơ chế hủy bỏ và bọc lỗi. Hàm `Run` chỉ cần kiểm thử phần liên kết ba giao ước đó lại với nhau. Nếu một ca kiểm thử chỉ lặp lại y hệt các khẳng định của gói tầng dưới, nó sẽ gây cản trở cho quá trình tái cấu trúc mà không hề gia tăng độ tin cậy của hệ thống.
 
-**Thực hành - remove and rebuild.** Mở `labs/part6-testable-command`, đọc `internal/app/run_test.go` trước. Đừng chạy command trước; hãy dự đoán mỗi test đang bảo vệ policy nào. Sau đó tạm đổi tên `Run` để compiler báo các điểm mà test đang đòi contract, rồi tự dựng lại function từ test và các type đã có. Khi unit test xanh, chạy `go run ./cmd/opsprobe`. Cuối cùng đổi runner trong `main` thành một runner trả error và xác minh CLI in service name thay vì nuốt failure. Khôi phục runner thành công trước khi rời lab.
+### Bài thực hành: Tách bỏ và tái thiết lập
+
+Mở `labs/part6-testable-command`, đọc `internal/app/run_test.go` trước. Đừng chạy lệnh vội; hãy dự đoán mỗi kiểm thử đang bảo vệ chính sách nào. Sau đó tạm đổi tên `Run` để trình biên dịch báo các điểm mà kiểm thử đang đòi hỏi khế ước, rồi tự dựng lại hàm từ kiểm thử và các kiểu dữ liệu đã có. Khi kiểm thử đơn vị thành công, chạy `go run ./cmd/opsprobe`. Cuối cùng đổi runner trong `main` thành một runner trả lỗi và xác minh CLI in tên dịch vụ thay vì nuốt chửng lỗi thất bại. Khôi phục runner thành công trước khi rời bài lab.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** `Run` cần gọi `config.LoadTargets` đúng một lần trước loop, map từng `Target` sang `probe.Service`, rồi append outcome thành công hoặc failure của từng probe. Chỉ config error và cancellation thoát khỏi `Run` qua return error. `main` giữ environment thật, output và exit code. Lời giải không phải “dùng mock framework”; hai function value đang có đã là seams vừa đủ.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Hàm `Run` cần gọi `config.LoadTargets` đúng một lần trước vòng lặp, ánh xạ từng `Target` sang `probe.Service`, rồi nối kết quả thành công hoặc thất bại của từng kiểm tra. Chỉ lỗi cấu hình và tín hiệu hủy bỏ mới thoát khỏi `Run` qua lỗi trả về. Hàm `main` giữ môi trường thực tế, dữ liệu xuất ra và mã thoát. Lời giải không phải là “dùng khung giả lập mock”; hai giá trị hàm hiện có đã là điểm ghép nối vừa đủ.
 
 ## Khi một test case che mất các policy khác
 
-Test đầu tiên của `Run` cố ý chỉ dùng một override hợp lệ. Nó trả lời câu hỏi của refactor: endpoint có thật sự đi tới runner không? Nhưng nếu cứ nhân bản kiểu test đó cho từng input xấu, test suite sẽ dần thành một hành lang dài của những hàm gần giống nhau. Lúc ấy người đọc không còn nhìn thấy các rule của config; họ chỉ thấy rất nhiều lần gọi `LoadTargets`.
+Ca kiểm thử đầu tiên của `Run` cố ý chỉ dùng một trường hợp ghi đè hợp lệ. Nó trả lời câu hỏi khi tái cấu trúc (*refactor*): điểm cuối (*endpoint*) có thực sự truyền tới runner hay không? Nhưng nếu cứ nhân bản kiểu kiểm thử đó cho từng dữ liệu đầu vào xấu, bộ kiểm thử sẽ dần biến thành một chuỗi dài các hàm gần như giống hệt nhau. Lúc ấy người đọc không còn nhìn thấy các quy tắc của cấu hình; họ chỉ thấy rất nhiều lần gọi lặp lại `LoadTargets`.
 
-Một reviewer tốt sẽ hỏi khác đi: parser này có bao nhiêu policy độc lập? Với `OPS_PROBE_TARGET`, ta cần giữ ít nhất hai. Variable vắng mặt dùng default đã công bố. Variable có mặt phải là một `host:port` hợp lệ, có host và port trong khoảng TCP. Mỗi hàng test là một ví dụ cho một policy, không phải một input ngẫu nhiên để tăng coverage.
+Với `OPS_PROBE_TARGET`, chính sách của lab là: biến vắng mặt hoặc có chuỗi rỗng dùng cấu hình mặc định; chuỗi không rỗng phải tách được `host:port`, có host và port trong khoảng 1–65535. Một giá trị `found == true, raw == ""` không bị từ chối trong code hiện tại. Bảng kiểm thử phải có hàng riêng cho trường hợp đó, thay vì gọi mọi biến “có mặt” là một override hợp lệ. Những hàng khác nhau bảo vệ quyết định khác nhau, không chỉ làm tăng coverage.
 
-Đây là lúc bảng test có ích. Không phải vì Go community có một nghi thức tên là “table-driven test”, mà vì bảng làm lộ phần thay đổi và phần giữ nguyên. `raw`, `found` và `want` thay đổi theo case; cách gọi parser và assertion về một target duy nhất được giữ chung:
+Đây là lúc kỹ thuật kiểm thử hướng bảng (*table-driven test*) phát huy giá trị. Không phải vì cộng đồng Go áp đặt một nghi thức cố định, mà vì bảng cấu trúc làm hiển lộ rõ ràng phần dữ liệu thay đổi và phần logic giữ nguyên. Các giá trị `raw`, `found` và `want` thay đổi theo từng ca kiểm thử; trong khi cách thức gọi bộ phân tích cú pháp (*parser*) và lời khẳng định kiểm thử (*assertion*) về một mục tiêu duy nhất được dùng chung:
 
 ~~~go
 for _, tt := range tests {
@@ -142,11 +149,11 @@ for _, tt := range tests {
 }
 ~~~
 
-`t.Run` không chỉ để kết quả trông có tổ chức. Khi một case vỡ, `go test -v` sẽ nói case nào vỡ, thay vì để anh đếm hàng trong slice. Vì vậy `name` phải mô tả behavior: “port zero” tốt hơn “case 4”, còn “uses the documented default” nhắc cả người bảo trì rằng default là một phần contract.
+Hàm `t.Run` không chỉ giúp kết quả in ra trông có tổ chức. Khi một ca kiểm thử thất bại, lệnh `go test -v` sẽ chỉ rõ chính xác ca nào bị lỗi, thay vì buộc người kiểm tra phải đếm số thứ tự từng hàng trong lát cắt (*slice*). Do đó, trường tên ca kiểm thử cần mô tả hành vi rõ ràng: đặt tên “port zero” tốt hơn “case 4”, còn “uses the documented default” giúp nhắc nhở người bảo trì rằng giá trị mặc định là một phần trong giao ước (*contract*).
 
-### Review một bảng test trước khi tin nó
+### Đánh giá một bảng kiểm thử trước khi đặt niềm tin
 
-Thêm các input bị từ chối vào một table thứ hai trong `internal/config/config_test.go`:
+Thêm các dữ liệu đầu vào bị từ chối vào một bảng kiểm thử thứ hai trong tệp `internal/config/config_test.go`:
 
 ~~~go
 tests := []struct {
@@ -164,41 +171,48 @@ tests := []struct {
 }
 ~~~
 
-Điểm dễ bỏ sót không nằm ở vòng `for`, mà ở assertion. Test này chỉ hứa rằng từng input không hợp lệ bị từ chối; nó không hứa nguyên văn error message. Message là chi tiết có thể sửa để tốt hơn cho operator. Rule “input này không được phép tạo target” mới là contract. Nếu CLI hoặc API cần phân loại lỗi bằng máy, khi đó mới có lý do để thiết kế error type hay sentinel rõ ràng; đừng dùng string comparison như một cách thay thế cho thiết kế đó.
+Điểm dễ bỏ sót không nằm ở vòng lặp `for`, mà ở lời khẳng định kiểm thử (*assertion*). Ca kiểm thử này chỉ bảo đảm rằng từng dữ liệu không hợp lệ đều bị từ chối; nó không bảo đảm nguyên văn thông điệp lỗi (*error message*). Thông điệp lỗi là chi tiết kỹ thuật có thể hiệu chỉnh để hỗ trợ tốt hơn cho người vận hành. Quy tắc “dữ liệu đầu vào này không được phép tạo ra mục tiêu” mới chính là giao ước cốt lõi. Nếu giao diện dòng lệnh (*CLI*) hoặc giao diện lập trình (*API*) cần phân loại lỗi tự động bằng chương trình, khi đó mới phát sinh lý do thiết kế kiểu lỗi chuyên biệt (*custom error type*) hoặc lỗi lính gác (*sentinel error*); không nên dùng phép so sánh chuỗi thô sơ để thay thế cho thiết kế kiến trúc chuẩn mực.
 
-Với edition Go 1.27.1 này, range variable được khai báo bằng `:=` có một variable riêng ở mỗi iteration (semantics từ Go 1.22), nên closure không còn vô tình cùng giữ một variable `tt` như folklore Go cũ. Nhưng một bẫy pointer khác vẫn còn: `&tt` trỏ tới bản copy của iteration, không phải phần tử thật trong slice `tests`. Nếu mục tiêu là mutate phần tử gốc, hãy range lấy index rồi dùng `&tests[i]`. Ở đây `t.Run` chạy đồng bộ và closure chỉ đọc `tt`, nên pointer lẫn lifetime goroutine đều không phải điều policy parser cần nghĩ.
+Với phiên bản Go 1.27.1 này, biến vòng lặp khai báo bằng `:=` sở hữu một biến riêng biệt ở mỗi lần lặp (ngữ nghĩa bắt đầu từ Go 1.22), nên hàm bao đóng (*closure*) không còn vô tình giữ chung một biến `tt` như tập quán Go cũ. Tuy nhiên, một cạm bẫy con trỏ khác vẫn tồn tại: biểu thức `&tt` trỏ tới bản sao của lần lặp đó, chứ không phải phần tử thật trong lát cắt `tests`. Nếu mục tiêu là biến đổi trực tiếp phần tử gốc, hãy lặp lấy chỉ số rồi dùng `&tests[i]`. Ở đây hàm `t.Run` chạy tuần tự đồng bộ và hàm bao đóng chỉ đọc giá trị `tt`, nên con trỏ và vòng đời của goroutine đều không phải vấn đề mà chính sách bộ phân tích cần bận tâm.
 
-**Bài review ngắn.** Trước khi chạy test, hãy tự phân loại năm hàng trên: hàng nào bị `net.SplitHostPort` từ chối, hàng nào đi qua parser nhưng bị validation của sách từ chối? Sau đó thêm một case hợp lệ cho IPv6 theo dạng `[2001:db8::10]:443`. Assertion của nó phải kiểm tra `Host` không còn dấu ngoặc và `Port == 443`, thay vì chỉ kiểm tra `err == nil`.
+Quy tắc biến vòng lặp còn phụ thuộc phiên bản ngôn ngữ có hiệu lực của module hoặc tệp, không chỉ phiên bản toolchain được cài. Lab khai báo `go 1.27`, nên dùng ngữ nghĩa mới. Ngay cả với biến riêng mỗi vòng, `t.Parallel()` không nhân bản map, pointer hay phụ thuộc toàn cục mà các case cùng sử dụng. Chỉ bật nó khi từng case có dữ liệu và tài nguyên độc lập; `t.Setenv` không được dùng trong test parallel hoặc có tổ tiên parallel vì môi trường thuộc cả tiến trình.
+
+Có một điểm dễ làm test xanh giả: `t.Run` chỉ chờ tới khi subtest gọi `t.Parallel`, không đợi phần còn lại của subtest lúc ấy. Subtest parallel tiếp tục sau khi hàm cha trở về. Nếu cần kiểm tra tổng hợp sau tất cả case, hãy đặt chúng trong một nhóm `t.Run("group", ...)` rồi kiểm tra sau khi nhóm trả về; dùng `t.Cleanup` của nhóm để dọn tài nguyên, không dùng defer của cha làm tài nguyên biến mất trước lúc con chạy. Test `TestParallelSubtestsWaitForTheirGroup` ghi nhận thứ tự bằng primitive đồng bộ, không bằng sleep hay phỏng đoán scheduler.
+
+### Bài thực hành: Ôn tập phân loại dữ liệu đầu vào
+
+Trước khi chạy kiểm thử, hãy tự phân loại năm hàng trên: hàng nào bị `net.SplitHostPort` từ chối, hàng nào đi qua bộ phân tích nhưng bị bước xác thực (*validation*) của sách từ chối? Sau đó thêm một ca hợp lệ cho IPv6 theo dạng `[2001:db8::10]:443`. Khẳng định kiểm thử của nó phải xác minh `Host` không còn dấu ngoặc vuông và `Port == 443`, thay vì chỉ kiểm tra sơ sài `err == nil`.
 
 ---
 
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Thiếu port và `:8443` không tạo được target hợp lệ ở bước parse/host check. `https`, `0` và `65536` đi xa hơn: chúng cần conversion hoặc range validation. Với IPv6, `net.SplitHostPort` tách dạng có ngoặc thành host `2001:db8::10` và port `443`; chính vì vậy test nên ghi điều đó thành contract. Khi bảng bắt đầu chứa các cột không cùng một rule, hoặc mỗi row cần setup rất khác, tách test ra sẽ rõ hơn là nhồi thêm cột.
+Trường hợp thiếu cổng và `:8443` không tạo được mục tiêu hợp lệ ở bước phân tích cú pháp hoặc kiểm tra tên máy chủ. Các giá trị `https`, `0` và `65536` đi xa hơn: chúng đòi hỏi chuyển đổi kiểu hoặc xác thực phạm vi số. Với địa chỉ IPv6, hàm `net.SplitHostPort` tách chuỗi có ngoặc thành máy chủ `2001:db8::10` và cổng `443`; do đó ca kiểm thử nên ghi nhận điều đó thành giao ước rõ ràng. Khi bảng kiểm thử bắt đầu chứa các cột không cùng chung một quy tắc, hoặc mỗi hàng đòi hỏi thiết lập quá khác biệt, việc tách thành các hàm kiểm thử riêng biệt sẽ sáng sủa hơn là cố nhồi nhét thêm cột.
 
 ## Chạy đúng bằng chứng
 
-Khi suite xanh, `go test ./...` trả lời câu hỏi có giá trị nhưng rộng: có package nào vi phạm contract không? Lúc điều tra một report cụ thể, chạy tất cả test nhiều lần lại làm mất ngữ cảnh. Nếu operator báo rằng port `0` từng lọt qua validation, ta cần nhìn đúng rule đó trước, rồi mới mở rộng phạm vi.
+Khi bộ kiểm thử báo xanh, lệnh `go test ./...` trả lời câu hỏi có giá trị bao quát: có gói nào vi phạm giao ước (*contract*) hay không? Tuy nhiên, khi điều tra một báo cáo sự cố cụ thể, việc chạy lặp đi lặp lại toàn bộ kiểm thử sẽ làm phân tán sự tập trung. Nếu người vận hành phản ánh rằng cổng `0` từng lọt qua bước xác thực (*validation*), ta cần khoanh vùng kiểm tra đúng quy tắc đó trước, rồi mới mở rộng phạm vi.
 
-Từ thư mục `labs/part6-testable-command`, lệnh sau chọn một subtest bằng đường dẫn tên của nó:
+Từ thư mục `labs/part6-testable-command`, lệnh sau chọn một ca kiểm thử con bằng đường dẫn định danh của nó:
 
 ~~~powershell
 $case = 'TestLoadTargetsRejectsMalformedOverrides/port_zero'
 go test -run $case -v ./internal/config
 ~~~
 
-Đây không phải shortcut để né test đầy đủ trước khi commit. Nó là một kính lúp trong lúc debug: output giữ tên parent test và case `port_zero`, nên anh biết mình đang xem policy nào. Sau khi sửa bug, chạy lại package rồi chạy toàn bộ suite; một lỗi parser có thể làm app thất bại trước cả khi runner được gọi.
+Đây không phải đường tắt để né tránh việc kiểm thử đầy đủ trước khi lưu mã (*commit*). Nó là chiếc kính lúp trong quá trình gỡ lỗi: kết quả in ra giữ nguyên tên ca kiểm thử cha và ca con `port_zero`, giúp người đọc nhận biết chính xác chính sách nào đang được đánh giá. Sau khi sửa lỗi, hãy chạy lại kiểm thử của gói rồi mới chạy toàn bộ hệ thống; lỗi từ bộ phân tích cú pháp có thể khiến ứng dụng dừng hoạt động trước cả khi hàm thực thi được gọi.
 
-Hãy thử thay đổi tạm thời điều kiện range trong `LoadTargets` để port `0` đi qua, chỉ để xem subtest vỡ như thế nào. Đừng commit thay đổi đó. Bài học không phải thuộc câu lệnh `-run`; nó là phân biệt vòng lặp điều tra ngắn với bằng chứng đủ rộng để nhận một thay đổi vào codebase.
+Hãy thử thay đổi tạm thời điều kiện phạm vi trong `LoadTargets` để cổng `0` đi qua, chỉ nhằm quan sát ca kiểm thử con bị phá vỡ như thế nào. Đừng lưu thay đổi mang tính thử nghiệm đó. Bài học không phải là học thuộc cờ lệnh `-run`; nó là việc phân biệt giữa vòng lặp điều tra ngắn gọn với bộ bằng chứng toàn diện cần có trước khi sáp nhập một thay đổi vào mã nguồn.
 
-Từ đây Chương 6 đã có hai loại test khác nhau: `Run` kiểm chứng việc nối các boundary, còn config subtest giữ một ma trận input nhỏ nhưng có ý nghĩa. Phần tiếp theo sẽ tạo một failure mà unit test xanh vẫn chưa bắt được - hai goroutine cùng chạm vào một vùng dữ liệu.
+Từ đây Chương 6 đã phân định hai loại kiểm thử: hàm `Run` kiểm chứng việc liên kết các ranh giới (*boundary*), trong khi các ca kiểm thử con của cấu hình duy trì một ma trận đầu vào nhỏ gọn nhưng mang giá trị nghiệp vụ thiết thực. Phần tiếp theo sẽ tạo ra một thất bại mà kiểm thử đơn vị tuần tự báo xanh vẫn hoàn toàn bỏ lọt: hai luồng nhẹ (*goroutine*) cùng chạm vào một vùng dữ liệu mà không có cơ chế đồng bộ.
 
 ## Một test xanh vẫn có thể bỏ sót race
 
-`opsprobe` hiện chưa chạy probe song song; đó là lựa chọn có chủ đích khi ta còn đang học boundary và policy lỗi. Vì vậy sẽ là sai nếu em giả vờ vừa phát hiện một race trong code của nó. Thay vào đó, hãy tách đúng failure cần học: nhiều worker cùng ghi vào một counter hoàn thành. Đây là loại bug có thể trông vô hại khi chạy một lần, vì không có compiler error và unit test tuần tự vẫn xanh.
+`opsprobe` hiện chưa chạy các tác vụ thăm dò song song; đó là lựa chọn có chủ đích khi chúng ta còn đang tập trung vào ranh giới và chính sách xử lý lỗi. Vì vậy sẽ không thực tế nếu giả định rằng vừa phát hiện một cuộc đua dữ liệu (*data race*) trong mã nguồn của nó. Thay vào đó, hãy cô lập đúng thất bại cần học: nhiều tiến trình xử lý (*worker*) cùng ghi vào một bộ đếm hoàn thành. Đây là loại lỗi có thể trông vô hại khi chạy thử một lần, vì trình biên dịch không báo lỗi và kiểm thử đơn vị tuần tự vẫn vượt qua bình thường.
 
-Data race xảy ra khi nhiều goroutine truy cập cùng một biến đồng thời, có ít nhất một lần ghi, và không có synchronization phù hợp. Đây là định nghĩa về hành vi, không phải một lời phán đoán dựa trên việc count cuối cùng “có vẻ đúng”. `successes++` không phải một hành động nguyên tử ở cấp source; nó đọc giá trị cũ, tạo giá trị mới rồi ghi lại. Hai goroutine có thể xen vào giữa các bước ấy.
+Cuộc đua dữ liệu (*data race*) xảy ra khi nhiều goroutine truy cập cùng một biến đồng thời, có ít nhất một thao tác ghi, và hoàn toàn thiếu cơ chế đồng bộ hóa phù hợp. Đây là định nghĩa chặt chẽ về hành vi, không phải phán đoán cảm tính dựa trên việc kết quả đếm cuối cùng “có vẻ đúng”. Thao tác `successes++` không phải là một phép toán nguyên tử (*atomic operation*) ở cấp mã nguồn; nó đọc giá trị cũ, tạo giá trị mới rồi ghi đè lại. Hai goroutine hoàn toàn có thể xen ngang vào giữa các bước đó.
 
-Lab `labs/part6-race-detector/broken` giữ một counter cố ý sai. Test tạo 128 goroutine, mỗi goroutine gọi đúng một lần `RecordSuccess`:
+Bài thực hành `labs/part6-race-detector/broken` chứa một bộ đếm cố ý viết sai. Ca kiểm thử tạo 128 goroutine, mỗi goroutine gọi đúng một lần `RecordSuccess`:
 
 ~~~go
 type Counter struct {
@@ -210,13 +224,13 @@ func (c *Counter) RecordSuccess() {
 }
 ~~~
 
-Chạy test thường có thể không nói gì đáng ngờ. Để đưa memory access vào quan sát, hãy chạy fixture với race detector:
+Chạy kiểm thử thông thường có thể không phát hiện dấu hiệu đáng ngờ nào. Để đưa hành vi truy cập bộ nhớ vào phạm vi quan sát, hãy chạy mã mẫu kiểm thử (*fixture*) cùng bộ phát hiện tương tranh (*race detector*):
 
 ~~~powershell
 go test -race -tags raceexercise ./broken
 ~~~
 
-Lệnh này được mong đợi là thất bại và in `WARNING: DATA RACE`. Đó là một failure có chủ ý của lab, không phải một check được phép xanh cho milestone. Race detector ghi stack trace ở các access xung đột và nơi các goroutine liên quan được tạo. Khi đọc report, hãy lần theo ba câu hỏi: biến nào được dùng chung, access nào là write, và synchronization nào đáng lẽ phải tạo thứ tự giữa chúng?
+Lệnh này được dự kiến là thất bại và in ra cảnh báo `WARNING: DATA RACE`. Đó là thất bại có chủ ý của bài thực hành, không phải một bước kiểm tra được phép báo xanh. Bộ phát hiện tương tranh ghi lại vết ngăn xếp (*stack trace*) tại các điểm truy cập xung đột và vị trí các goroutine liên quan được khởi tạo. Khi đọc báo cáo chẩn đoán, hãy lần theo ba câu hỏi: biến nào được dùng chung, thao tác nào là ghi dữ liệu, và cơ chế đồng bộ hóa nào đáng lẽ phải xác lập thứ tự giữa chúng?
 
 @table Ba phần hữu ích nhất của một race report
 
@@ -226,11 +240,11 @@ Lệnh này được mong đợi là thất bại và in `WARNING: DATA RACE`. �
 | `Previous ... by goroutine` | Access xung đột nào chồng lên nó? | Thứ tự in ra không phải timeline đầy đủ của chương trình. |
 | `created at` | Goroutine nào mở đường cho access này? | Một report không chứng minh mọi đường chạy đều racy. |
 
-Detector là công cụ tìm bằng chứng khi code đã chạy, không phải chứng minh tuyệt đối rằng chương trình không có race. Một đường chưa được test chưa tạo memory access để detector quan sát. Vì thế `go test -race` đứng cạnh test tốt và workload có ý nghĩa; nó không thay thế chúng.
+Bộ phát hiện tương tranh (*race detector*) là công cụ thu thập bằng chứng khi mã đã chạy thực tế, không phải chứng minh toán học tuyệt đối rằng chương trình hoàn toàn không có tương tranh. Một nhánh luồng chưa được kiểm thử sẽ không kích hoạt truy cập bộ nhớ để công cụ quan sát. Do đó, cờ lệnh `go test -race` phải song hành cùng các ca kiểm thử chặt chẽ và khối lượng công việc có ý nghĩa; nó không thể thay thế cho tư duy thiết kế đồng thời đúng đắn.
 
-### Sửa invariant, không chỉ làm detector im lặng
+### Sửa chữa bất biến, không chỉ làm bộ phát hiện im lặng
 
-Trước khi thêm `sync.Mutex`, hãy nói invariant bằng một câu: `Successes` phải trả về số lần `RecordSuccess` đã hoàn tất, kể cả khi nhiều worker đang chạy. `Counter` vì thế mang một field `mu sync.Mutex` cạnh `successes`. Lock không còn là bùa chú; nó là ranh giới bảo vệ hai access vào state dùng chung:
+Trước khi thêm `sync.Mutex`, hãy phát biểu đặc tính bất biến (*invariant*) bằng một câu duy nhất: `Successes` phải trả về đúng số lần `RecordSuccess` đã hoàn tất, kể cả khi nhiều worker đang chạy đồng thời. Cấu trúc `Counter` vì thế mang thêm một trường `mu sync.Mutex` cạnh `successes`. Khóa bảo vệ (*lock*) không phải một nghi thức huyền bí; nó là ranh giới phân định bảo vệ hai thao tác truy cập vào trạng thái dùng chung:
 
 ~~~go
 func (c *Counter) RecordSuccess() {
@@ -246,25 +260,29 @@ func (c *Counter) Successes() int {
 }
 ~~~
 
-Phiên bản này nằm trong `labs/part6-race-detector/fixed`. Test của nó chờ mọi worker bằng `sync.WaitGroup`, sau đó kiểm tra count là `128`; `go test -race ./fixed` phải xanh. `WaitGroup` ở đây chỉ giúp test biết khi nào worker xong. Nó không tự bảo vệ `successes`; mutex mới làm việc đó. Phân biệt hai trách nhiệm này ngay từ đầu sẽ tránh rất nhiều “đã Wait rồi, sao vẫn race?” sau này.
+Phiên bản này nằm trong thư mục `labs/part6-race-detector/fixed`. Ca kiểm thử của nó chờ mọi worker kết thúc bằng `sync.WaitGroup`, sau đó kiểm tra số lượng đếm đạt đúng `128`; lệnh `go test -race ./fixed` phải báo xanh. `WaitGroup` ở đây chỉ có nhiệm vụ giúp ca kiểm thử nhận biết khi nào các worker hoàn tất. Bản thân nó không thể tự bảo vệ biến `successes`; khóa loại trừ tương hỗ (*mutex*) mới đảm nhận trọng trách đó. Phân biệt rõ hai trách nhiệm này ngay từ đầu sẽ giúp tránh được câu hỏi bối rối sau này: “Đã gọi `Wait` rồi, sao vẫn xảy ra xung đột dữ liệu?”
 
-`Mutex` và memory ordering sẽ được đào sâu ở phần concurrency. Ở Chương 6, bài học hẹp hơn: một test có assertion đúng vẫn có thể chưa quan sát được cách state bị chạm. Nếu requirement đưa goroutine vào code, thêm `-race` vào bằng chứng chấp nhận thay đổi là một quyết định testability, không phải một nghi thức trang trí.
+Khóa loại trừ tương hỗ (`sync.Mutex`) và thứ tự bộ nhớ (*memory ordering*) sẽ được đào sâu ở phần xử lý đồng thời (*concurrency*). Ở Chương 6, trọng tâm là: một ca kiểm thử sở hữu khẳng định kiểm thử (*assertion*) đúng đắn vẫn có thể chưa quan sát được cách thức trạng thái bị xung đột truy cập. Nếu yêu cầu bài toán đưa luồng nhẹ vào mã nguồn, việc bổ sung cờ `-race` vào bộ bằng chứng chấp nhận thay đổi là một quyết định thiết kế vì khả năng kiểm thử (*testability*), không phải hình thức trang trí.
 
-**Bài điều tra.** Chạy fixture `broken` một lần với `-race`, rồi mở `fixed/counter_test.go`. Trước khi chạy phiên bản fixed, khoanh hai method cùng chạm `successes` và dự đoán vì sao cả getter cũng lock. Sau đó thử bỏ lock riêng trong `Successes`; test hiện tại vẫn có thể xanh vì nó đọc sau `wg.Wait`, nhưng public method đã mất contract an toàn cho caller đồng thời.
+### Bài thực hành: Điều tra cuộc đua truy cập bộ nhớ (*race condition*)
+
+Chạy mã mẫu `broken` một lần với cờ `-race`, rồi mở tệp `fixed/counter_test.go`. Trước khi chạy phiên bản đã sửa, hãy khoanh vùng hai phương thức cùng truy cập vào `successes` và giải thích vì sao ngay cả phương thức đọc dữ liệu cũng phải khóa bảo vệ. Sau đó thử bỏ thao tác khóa riêng trong `Successes`; ca kiểm thử hiện tại vẫn có thể báo xanh vì nó đọc kết quả sau lời gọi `wg.Wait`, nhưng phương thức công khai đã đánh mất giao ước an toàn dành cho bên gọi đồng thời.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** `RecordSuccess` ghi còn `Successes` đọc cùng field, nên cả hai cần đi qua cùng mutex nếu API hứa dùng được đồng thời. `wg.Wait` chỉ tạo điểm chờ trong test hiện tại; nó không thay thế synchronization trong API. Fixture broken được tag riêng để repository vẫn có suite mặc định xanh, còn lệnh race được chạy như một thí nghiệm mà failure là kết quả đúng.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-## Fuzz khi property đã rõ
+Phương thức `RecordSuccess` thực hiện ghi còn `Successes` thực hiện đọc trên cùng một trường dữ liệu, do đó cả hai bắt buộc phải đi qua cùng một khóa mutex nếu giao diện cam kết an toàn khi sử dụng đồng thời. Lời gọi `wg.Wait` chỉ tạo điểm chờ đồng bộ trong nội bộ ca kiểm thử hiện tại; nó hoàn toàn không thay thế được cơ chế đồng bộ hóa trong giao diện lập trình. Mã mẫu bị hỏng được gắn thẻ phân loại riêng để kho mã nguồn vẫn duy trì bộ kiểm thử mặc định báo xanh, trong khi lệnh kiểm tra cuộc đua dữ liệu được thực thi như một thử nghiệm có kiểm soát mà thất bại chính là kết quả mong đợi.
 
-Các subtest của config đã có tên cho những biên mà ta chủ động chọn: port `0`, host rỗng, port quá lớn. Nhưng parser nhận một `string`; không ai có thể liệt kê trước mọi tổ hợp dấu ngoặc, Unicode, dấu hai chấm hay byte lạ mà input từ environment có thể mang theo. Fuzzing giúp tạo thêm input, nhưng chỉ có giá trị khi target biết phải đòi điều gì ở mọi input đó.
+## Kiểm thử mờ (Fuzzing) khi đặc tính bất biến đã rõ ràng
 
-Property của `LoadTargets` không phải “mọi string đều được parse”. Phần lớn string phải bị từ chối. Property đúng là: nếu `LoadTargets` trả thành công, nó trả đúng một target có host không rỗng và port trong `1..65535`. Điều này ghép tốt với table test: table nói các case quan trọng nào phải bị từ chối hay được map đúng; fuzz tìm xem còn input nào làm implementation tự mâu thuẫn với invariant đó.
+Các ca kiểm thử con của cấu hình đã định danh rõ những giá trị biên mà chúng ta chủ động lựa chọn: cổng `0`, tên máy chủ rỗng, cổng vượt quá giới hạn. Tuy nhiên, bộ phân tích cú pháp tiếp nhận một chuỗi `string`; không ai có thể lường trước mọi tổ hợp dấu ngoặc, ký tự Unicode, dấu hai chấm hay các byte dị thường mà dữ liệu đầu vào từ môi trường có thể mang theo. Kỹ thuật kiểm thử mờ (*fuzzing*) hỗ trợ sinh thêm dữ liệu đầu vào tự động, nhưng chỉ thực sự có giá trị khi mục tiêu kiểm thử biết rõ cần đòi hỏi điều kiện gì ở mọi dữ liệu sinh ra đó.
 
-Đừng thay property ấy bằng “function không panic”. Không panic là một hygiene check đáng có, nhưng một parser có thể bình tĩnh trả `Target{Host: "", Port: 0}` và vẫn phá command ở chỗ xa hơn. Property mạnh hơn buộc test nhìn vào kết quả thành công. Ngược lại, đừng bắt fuzz phải đoán error message hay bắt mọi input xấu rơi đúng vào một nhánh implementation; những điều đó làm target giòn mà không tăng sự hiểu biết về contract.
+Đặc tính bất biến (*property*) của `LoadTargets` không phải là “mọi chuỗi ký tự đều được phân tích cú pháp thành công”. Phần lớn chuỗi bất hợp lệ bắt buộc phải bị từ chối. Đặc tính đúng đắn là: nếu `LoadTargets` trả về thành công, nó phải trả về đúng một mục tiêu có máy chủ không rỗng và cổng nằm trong khoảng 1–65535. Điều này kết hợp rất chặt chẽ với kiểm thử hướng bảng: bảng kiểm thử xác lập các trường hợp then chốt nào phải bị từ chối hoặc ánh xạ chính xác; trong khi kỹ thuật kiểm thử mờ tìm kiếm xem còn dữ liệu đầu vào nào khiến mã nguồn tự mâu thuẫn với bất biến đó hay không.
 
-Trong thực tế có nhiều họ property: kết quả luôn giữ invariant, encode rồi decode trả về dữ liệu tương đương, hay hai cách biểu diễn phải đồng thuận. Ta chỉ dùng họ đầu tiên ở đây vì parser này chưa có format output để round-trip. Chọn property theo API đang có giúp fuzzing phục vụ thiết kế, thay vì ép mọi function phải có một bài test ngẫu nhiên.
+Đừng thay thế đặc tính ấy bằng khẳng định mơ hồ như “hàm không phát sinh hoảng loạn (`panic`)”. Không hoảng loạn là tiêu chuẩn vệ sinh mã nguồn cơ bản cần có, nhưng một bộ phân tích cú pháp hoàn toàn có thể bình thản trả về `Target{Host: "", Port: 0}` mà không `panic`, để rồi phá vỡ hoạt động của lệnh ở tầng sâu hơn. Một đặc tính kiểm thử mạnh mẽ buộc ca kiểm thử phải soi xét kỹ kết quả khi thành công. Ngược lại, đừng ép bộ kiểm thử mờ phải đoán đúng từng câu chữ của thông điệp lỗi hay bắt mọi dữ liệu đầu vào xấu phải rơi vào đúng một nhánh mã cụ thể; những đòi hỏi ấy chỉ khiến ca kiểm thử trở nên mong manh mà không nâng cao sự thấu hiểu về giao ước.
+
+Trong thực tế có nhiều họ đặc tính kiểm thử: kết quả luôn bảo toàn bất biến nghiệp vụ, quy trình mã hóa rồi giải mã (*encode/decode*) bảo toàn dữ liệu tương đương (*round-trip*), hoặc hai cách biểu diễn khác nhau phải luôn đồng thuận kết quả. Ở đây chúng ta áp dụng họ đặc tính đầu tiên vì bộ phân tích cú pháp này chưa có định dạng xuất dữ liệu để thực hiện đối chiếu hai chiều. Việc chọn lựa đặc tính bám sát giao diện lập trình hiện có giúp kiểm thử mờ phục vụ đắc lực cho thiết kế, thay vì biến tướng thành việc chạy thử dữ liệu ngẫu nhiên vô nghĩa.
 
 ~~~go
 func FuzzLoadTargetsNeverReturnsInvalidTarget(f *testing.F) {
@@ -296,7 +314,7 @@ func FuzzLoadTargetsNeverReturnsInvalidTarget(f *testing.F) {
 }
 ~~~
 
-`f.Add` không phải danh sách đầy đủ. Nó là seed corpus có chủ đích: một default, một hostname thường, một IPv6, một range error và một chuỗi không có hình dạng target. Khi chạy `go test`, seed corpus này vẫn được chạy như test bình thường. Khi chạy với `-fuzz`, toolchain mutate corpus để tìm input tạo coverage mới. Nếu tìm được failure, Go lưu input tái lập được để lần `go test` sau không làm bug biến mất theo may rủi.
+`f.Add` không nhằm cung cấp danh sách kiểm thử đầy đủ. Nó là tập hạt giống đầu vào (*seed corpus*) có chủ đích: một giá trị mặc định, một tên máy thông thường, một địa chỉ IPv6, một giá trị vượt ngưỡng phạm vi và một chuỗi sai hoàn toàn định dạng mục tiêu. Khi chạy `go test`, tập hạt giống này được thực thi như các ca kiểm thử thông thường. Khi kích hoạt cờ `-fuzz`, bộ công cụ sẽ biến đổi (*mutate*) tập dữ liệu đầu vào nhằm tìm kiếm những nhánh phủ mã mới. Nếu phát hiện trường hợp thất bại, Go sẽ tự động ghi lại dữ liệu đầu vào tái lập được để lần chạy sau kiểm chứng ngay mà không phụ thuộc vào yếu tố may rủi.
 
 Từ `labs/part6-testable-command`, chạy một lượt có giới hạn thời gian:
 
@@ -306,19 +324,25 @@ go test -run=^$ `
   -fuzztime=2s ./internal/config
 ~~~
 
-`-run=^$` bỏ qua ordinary test trong lượt fuzz riêng này; chúng vẫn phải chạy trong suite bình thường. `-fuzztime=2s` là ngân sách cho thí nghiệm local, không phải một con số chứng nhận parser an toàn. Fuzz target xanh chỉ nói rằng các input đã chạy chưa phá property; nó không thay thế review, test case có ý nghĩa hay validation giới hạn tài nguyên.
+Tùy chọn `-run=^$` giúp bỏ qua các ca kiểm thử thông thường trong lượt chạy fuzz này; chúng vẫn được kiểm tra trong bộ kiểm thử định kỳ. Thời lượng `-fuzztime=2s` là hạn mức thời gian cho thử nghiệm cục bộ, không phải chứng chỉ cam kết bộ phân tích an toàn tuyệt đối. Mục tiêu fuzz (*fuzz target*) báo xanh chỉ xác nhận các dữ liệu đã thử nghiệm chưa phá vỡ đặc tính bất biến; nó không thay thế việc duyệt mã (*code review*), các ca kiểm thử biên có ý nghĩa hay việc xác thực giới hạn tài nguyên.
 
-**Bài thiết kế property.** Một đề xuất nghe có vẻ hợp lý là “nếu `err == nil`, `target.Name` luôn là `billing`”. Hãy quyết định có nên đưa nó vào fuzz target này không. Nếu ngày mai config hỗ trợ nhiều service, assertion đó sẽ làm test cản refactor dù parser vẫn đúng. Hãy giữ property gần với contract hiện tại nhất: shape hợp lệ của target, không phải một chi tiết của demo.
+### Bài thực hành: Thiết kế đặc tính bất biến cho kiểm thử fuzzer
+
+Một đề xuất nghe có vẻ hợp lý là “nếu `err == nil`, trường `target.Name` luôn là `billing`”. Hãy quyết định có nên đưa điều kiện đó vào mục tiêu fuzz này hay không. Nếu sau này cấu hình hỗ trợ nhiều dịch vụ khác nhau, khẳng định kiểm thử đó sẽ cản trở việc tái cấu trúc dù bộ phân tích cú pháp vẫn hoạt động hoàn toàn chính xác. Hãy giữ cho đặc tính kiểm thử bám sát nhất với giao ước cốt lõi hiện tại: cấu trúc hợp lệ của mục tiêu, không phải một chi tiết ngẫu nhiên của ca kiểm thử mẫu.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** `Name == "billing"` là contract hiện tại của fixture nhỏ, nhưng không phải property parser cần giữ khi input model lớn hơn. Fuzz property nên đủ mạnh để bắt target lỗi và đủ hẹp để không đóng băng một thiết kế chưa được hứa. Khi fuzz tìm được failure thật, trước hết biến input đó thành một regression test dễ đọc; corpus là bằng chứng, test có tên là lời giải thích cho người đến sau.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Điều kiện `Name == "billing"` là giao ước tạm thời của mẫu kiểm thử nhỏ, chứ không phải đặc tính bất biến mà bộ phân tích cần duy trì khi mô hình dữ liệu đầu vào mở rộng. Đặc tính kiểm thử mờ nên đủ chặt chẽ để bắt lỗi mục tiêu không hợp lệ và đủ tinh gọn để không đóng băng một chi tiết thiết kế chưa từng được cam kết. Khi kiểm thử mờ phát hiện thất bại thực sự, trước hết hãy chuyển dữ liệu đầu vào đó thành một ca kiểm thử hồi quy (*regression test*) dễ đọc; tập dữ liệu sinh ra là bằng chứng, còn ca kiểm thử với tên gọi tường minh là lời giải thích cho những kỹ sư tiếp quản sau này.
+
+Một giới hạn khác nằm ngay trong property đang dùng: parser bỏ qua mọi override và luôn trả default vẫn thỏa host/port hợp lệ. Vì vậy, property này cần đi cùng bảng kiểm thử ánh xạ chính xác, không thay thế nó. Đối chứng âm trong evidence giữ nguyên fuzz target nhưng cố ý bỏ override: seed test vẫn xanh, còn case `maps a host and port from the override` đỏ. Đó là bằng chứng cụ thể về khoảng trống của test, không phải lý do thêm một assertion tùy tiện để khóa mọi thiết kế tương lai. Fake runner cũng chỉ chứng minh đối số và chính sách điều phối; nó không chứng minh DNS, kết nối hay dịch vụ thật đã hoạt động.
 
 ## Đo câu hỏi trước khi tối ưu câu trả lời
 
-Sau khi thấy parser có nhiều validation, một phản xạ quen thuộc là đề nghị cache kết quả: “`net.SplitHostPort` có thể chậm”. Nhưng `LoadTargets` hiện chỉ chạy khi command khởi tạo. Kể cả một benchmark cho thấy override tốn allocation, điều đó chưa biến nó thành bottleneck của một CLI chạy vài probe. Benchmark tốt bắt đầu bằng câu hỏi đủ cụ thể để kết quả có thể thay đổi một quyết định.
+Sau khi thấy bộ phân tích cú pháp có nhiều bước xác thực, một phản xạ quen thuộc là đề xuất thêm bộ nhớ đệm (*cache*) lưu kết quả: “lệnh `net.SplitHostPort` có thể chậm”. Nhưng hàm `LoadTargets` hiện chỉ thực thi một lần duy nhất khi lệnh khởi tạo. Kể cả khi một bài kiểm chuẩn hiệu năng cho thấy việc ghi đè gây tốn bộ nhớ cấp phát, điều đó vẫn chưa biến nó thành điểm nghẽn cổ chai (*bottleneck*) của một công cụ dòng lệnh chỉ chạy vài thao tác thăm dò. Một bài kiểm chuẩn hiệu năng tốt bắt đầu bằng câu hỏi đủ cụ thể để kết quả có thể trực tiếp làm thay đổi một quyết định thiết kế.
 
-Ở đây câu hỏi hẹp là: một lần load default, hostname override và IPv6 override có chi phí tương đối ra sao trên máy đang chạy? Test setup nằm trước `b.Loop()`, nên timer của benchmark hiện đại không tính phần đó; `b.ReportAllocs` yêu cầu output thêm allocation:
+Câu hỏi cần kiểm chứng ở đây là: một lượt nạp giá trị mặc định, một lượt ghi đè tên máy chủ và một lượt ghi đè địa chỉ IPv6 có chi phí tài nguyên tương đối ra sao trên máy đang chạy? Khởi tạo kiểm thử nằm trước vòng lặp `b.Loop()`, nên bộ đếm thời gian của phép đo kiểm chuẩn không tính phần chuẩn bị đó; phương thức `b.ReportAllocs` yêu cầu kết quả xuất ra thêm thông tin cấp phát bộ nhớ:
 
 ~~~go
 func BenchmarkLoadTargets(b *testing.B) {
@@ -348,17 +372,19 @@ func BenchmarkLoadTargets(b *testing.B) {
 }
 ~~~
 
-Chạy từ lab với `go test -run=^$ -bench=BenchmarkLoadTargets -benchmem ./internal/config`. `-run=^$` tránh trộn ordinary test vào lượt đo; `-benchmem` cho `allocs/op` và `B/op`. Đừng copy số `ns/op` của máy này vào một README như một sự thật phổ quát. CPU, Go version, power mode và noise của hệ thống đều làm số đổi. Nếu một thay đổi performance thật sự sắp được nhận, hãy đo trước/sau trên cùng môi trường, lặp lại và ghi đúng workload mà quyết định đang phục vụ.
+Chạy từ thư mục bài thực hành với `go test -run=^$ -bench=BenchmarkLoadTargets -benchmem ./internal/config`. Tùy chọn `-run=^$` giúp tránh trộn các ca kiểm thử thông thường vào lượt đo hiệu năng; cờ `-benchmem` cung cấp các chỉ số `allocs/op` (số lần cấp phát bộ nhớ trên mỗi thao tác) và `B/op` (số byte tiêu tốn trên mỗi thao tác). Đừng sao chép số đo `ns/op` của máy tính cá nhân vào tệp README như một chân lý phổ quát. Tốc độ vi xử lý, phiên bản Go, chế độ tiết kiệm năng lượng và các tiến trình nền của hệ điều hành đều làm kết quả dao động. Nếu một đề xuất tối ưu hiệu năng sắp được sáp nhập, hãy đo lường trước và sau thay đổi trên cùng một môi trường cố định, lặp lại nhiều lần và ghi nhận chính xác khối lượng công việc mà quyết định kỹ thuật đang phục vụ.
 
-Trong case này, kết luận có thể là “không tối ưu”. Đó là một kết quả kỹ thuật hoàn toàn hợp lệ: config parse một lần chưa đáng đổi API, thêm cache hay làm code kém đọc. Benchmark đã làm việc của nó khi giúp ta từ chối một tối ưu không có pressure, chứ không chỉ khi nó dẫn tới một patch nhanh hơn.
+Trong trường hợp này, kết luận hoàn toàn có thể là “không cần tối ưu”. Đó là một kết quả kỹ thuật chuẩn mực: việc nạp cấu hình một lần duy nhất chưa xứng đáng để đánh đổi bằng việc làm xáo trộn giao diện lập trình, bổ sung tầng nhớ đệm phức tạp hay khiến mã nguồn trở nên khó đọc. Bài kiểm chuẩn hiệu năng đã hoàn thành xuất sắc nhiệm vụ khi giúp chúng ta từ chối một tối ưu hóa sớm khi chưa có áp lực thực tế, chứ không chỉ hữu ích khi nó tạo ra một bản vá chạy nhanh hơn.
 
-**Bài review.** Chạy benchmark hai lần. Chỉ đề xuất tối ưu khi có workload như config reload trong hot loop hoặc profile thật; “số lớn hơn” chưa đủ.
+### Bài thực hành: Đánh giá kết quả đo lường hiệu năng
 
-## Contract ở ranh giới process
+Chạy benchmark hai lần độc lập. Chỉ đề xuất tối ưu khi xuất hiện áp lực khối lượng công việc thực tế (như nạp lại cấu hình trong vòng lặp cao điểm hoặc có hồ sơ đo lường thực tế); việc “một con số trông lớn hơn” là chưa đủ căn cứ.
 
-Unit test của `app.Run` cố ý không biết terminal hay exit code. Điều đó giúp nó giữ boundary hẹp, nhưng cũng tạo một khoảng trống cần kiểm tra ở đúng nơi: command vẫn phải in success vào stdout, đưa config error sang stderr và trả mã exit `2`. Đây là contract nhìn thấy được của process; đổi nó có thể làm script của operator hỏng dù các package phía trong vẫn xanh.
+## Giao ước ở ranh giới tiến trình
 
-Gọi `main` trong test thường làm khoảng trống ấy khó kiểm chứng, vì `os.Exit` kết thúc process test. Thay vì fake cả process, ta rút phần presentation thành một function nhỏ nhận writer và trả exit code. `main` chỉ nối dependency thật vào function đó:
+Kiểm thử đơn vị của `app.Run` cố ý không phụ thuộc vào thiết bị đầu cuối (*terminal*) hay mã thoát của tiến trình (*exit code*). Điều đó giúp hàm duy trì ranh giới tinh gọn, nhưng cũng tạo ra một khoảng trống cần kiểm chứng ở đúng vị trí: lệnh vẫn phải ghi nhận kết quả thành công ra luồng xuất chuẩn `stdout`, đưa lỗi cấu hình ra luồng lỗi chuẩn `stderr` và trả mã thoát `2`. Đây là giao ước công khai của tiến trình; việc tự ý thay đổi nó có thể làm gãy đổ hàng loạt tập lệnh tự động hóa của người vận hành dù mã nguồn bên trong vẫn vượt qua kiểm thử.
+
+Lời gọi trực tiếp `main` trong kiểm thử thường khiến khoảng trống ấy rất khó kiểm chứng, vì hàm `os.Exit` sẽ chấm dứt tiến trình chạy kiểm thử. Thay vì cố gắng giả lập toàn bộ tiến trình hệ điều hành, chúng ta bóc tách phần hiển thị kết quả thành một hàm nhỏ tiếp nhận các giao diện ghi dữ liệu (*writer*) và trả về mã thoát. Hàm `main` chỉ đảm nhận nhiệm vụ gắn kết các tài nguyên thực tế của hệ thống vào hàm đó:
 
 ~~~go
 func main() {
@@ -375,7 +401,7 @@ func main() {
 }
 ~~~
 
-`run` vẫn gọi `app.Run`; nó chỉ thêm policy process rất nhỏ. Test vì thế có thể dùng `bytes.Buffer` làm stdout và stderr, rồi quan sát đúng ba thứ mà shell nhìn thấy: code, output thành công và output lỗi.
+Hàm `run` vẫn ủy thác cho `app.Run`; nó chỉ bổ sung chính sách xử lý tiến trình ở mức tối thiểu. Nhờ vậy, ca kiểm thử có thể truyền đối tượng `bytes.Buffer` làm đại diện cho `stdout` và `stderr`, rồi quan sát đúng ba yếu tố mà vỏ hệ điều hành nhìn thấy: mã thoát, dữ liệu thành công và dữ liệu báo lỗi.
 
 ~~~go
 func TestRunWritesSuccessContract(t *testing.T) {
@@ -403,26 +429,30 @@ func TestRunWritesSuccessContract(t *testing.T) {
 }
 ~~~
 
-Test này không assert `run` loop outcome thế nào hay `app.Run` parse config ra sao. Những contract đó đã thuộc package riêng. Nó chỉ giữ lời hứa của command: success đọc được bằng máy trên stdout và không rò error message.
+Ca kiểm thử này không kiểm chứng xem vòng lặp trả về kết quả ra sao hay `app.Run` phân tích cú pháp cấu hình như thế nào. Các giao ước đó đã thuộc về trách nhiệm của các gói nội bộ riêng biệt. Nó chỉ bảo vệ lời hứa của lệnh: kết quả thành công có thể đọc tự động bằng chương trình trên `stdout` và không làm rò rỉ thông điệp lỗi.
 
-Test phía failure cũng phải hẹp như vậy. Đưa vào một port không hợp lệ, để runner làm test fail nếu bị gọi, rồi assert exit `2`, stdout rỗng và diagnostic ở stderr. Đừng so toàn bộ message: wording validation có thể được cải thiện, còn nơi xuất hiện và exit policy mới là contract vận hành ổn định.
+Kiểm thử phía thất bại cũng cần được khoanh vùng chặt chẽ tương tự. Truyền vào một cổng không hợp lệ, để hàm thực thi phát hiện lỗi nếu bị gọi ngoài ý muốn, sau đó khẳng định mã thoát là `2`, luồng `stdout` rỗng và thông tin chẩn đoán xuất hiện ở `stderr`. Đừng so khớp toàn bộ thông điệp: câu chữ mô tả lỗi có thể được biên tập lại, trong khi nơi xuất hiện và chính sách mã thoát mới là giao ước vận hành bất biến.
 
-**Bài code review.** Chuyển một `fmt.Fprintf` từ `out` sang `errOut` rồi quyết định đó là chỉnh presentation vô hại hay breaking change cho shell pipeline. Sau đó tưởng tượng một mode `--json`: contract test nên có case riêng cho mode được hứa rõ ràng này, không được làm contract text mode yếu đi đến mức nhận bất cứ output nào.
+### Bài thực hành: Đánh giá mã nguồn tại ranh giới tiến trình
+
+Chuyển một lệnh `fmt.Fprintf` từ `out` sang `errOut` rồi quyết định đó là việc tinh chỉnh hiển thị vô hại hay là thay đổi phá vỡ tương thích (*breaking change*) cho đường ống lệnh vỏ hệ thống (*shell pipeline*). Sau đó đặt tình huống có thêm cờ `--json`: kiểm thử khế ước cần có ca kiểm thử riêng cho chế độ được cam kết rõ ràng này, không được nới lỏng khế ước chế độ văn bản đến mức chấp nhận bất kỳ dữ liệu đầu ra nào.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Trong shell pipeline, stdout thường mang dữ liệu command sau sẽ tiêu thụ; chuyển healthy result sang stderr có thể là breaking change. Test không cố đóng băng dấu câu mãi mãi. Nó bảo vệ boundary mà con người và automation dựa vào: success exit `0` và có result trên stdout; configuration failure exit `2`, không in success data, đồng thời có diagnostic ở stderr.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-Contract test này không thay thế một end-to-end test khởi động binary thật. Khi sau này command nhận flag, file config, signal hoặc network thật, một số luồng cần được kiểm chứng qua process thật. Nhưng dùng binary test để assert mọi dấu cách và mọi nhánh validation sẽ chậm, khó đọc và trùng với unit test. Ranh giới tốt là: logic có dependency thay thế được kiểm tra ở package bên trong; vài lời hứa mà process công bố được giữ ở `run`; chỉ một số đường đi quan trọng mới cần vượt ra integration test.
+Trong đường ống vỏ lệnh, stdout thường mang dữ liệu mà lệnh tiếp theo sẽ tiếp nhận xử lý; việc chuyển kết quả lành mạnh sang stderr có thể là thay đổi phá vỡ tương thích. Kiểm thử không nhằm đóng băng từng dấu câu mãi mãi. Nó bảo vệ ranh giới mà con người và hệ thống tự động hóa dựa vào: thành công thoát với mã `0` và có kết quả trên stdout; lỗi cấu hình thoát với mã `2`, không in dữ liệu thành công, đồng thời đưa thông tin chẩn đoán ra stderr.
 
-Đây là điểm dừng của mốc hiện tại: testability không đồng nghĩa phủ một lớp mock lên mọi package. Nó là khả năng đặt từng policy vào một boundary đủ nhỏ để ta tạo input, quan sát kết quả và biết chính xác thay đổi nào đang được bảo vệ.
+Kiểm thử giao ước này không thay thế cho kiểm thử đầu cuối (*end-to-end test*) khởi chạy tệp nhị phân thực tế. Sau này khi lệnh tiếp nhận thêm cờ lệnh, tệp cấu hình, tín hiệu hệ điều hành hoặc kết nối mạng thực sự, một số luồng bắt buộc phải được kiểm chứng qua tiến trình thực. Nhưng việc lạm dụng kiểm thử nhị phân để so khớp từng khoảng trắng hay mọi nhánh xác thực sẽ rất chậm chạp, cồng kềnh và trùng lặp với kiểm thử đơn vị. Ranh giới kiến trúc lành mạnh là: logic chứa các phụ thuộc có thể thay thế được kiểm thử ở gói nội bộ; các cam kết mà tiến trình công bố ra ngoài được giữ ở hàm `run`; và chỉ các luồng tích hợp then chốt mới cần chuyển giao cho kiểm thử tích hợp.
 
-## Kết quả xanh chưa trả lời câu hỏi nào?
+Đây là điểm mấu chốt của mốc thiết kế này: khả năng kiểm thử không đồng nghĩa với việc phủ một lớp giả lập (*mock*) nặng nề lên mọi gói mã nguồn. Nó là năng lực đặt từng chính sách nghiệp vụ vào một ranh giới đủ nhỏ để chúng ta kiến tạo dữ liệu đầu vào, quan sát kết quả và nhận biết chính xác thay đổi nào đang được bảo vệ.
 
-Với các lab vừa chạy, kết quả xanh nghĩa là những assertion đã được thỏa trên các input và lịch chạy được thực thi. Assertion thiếu vẫn có thể bỏ lọt lỗi trên chính input ấy. Fuzzing mở rộng tập input theo ngân sách và feedback coverage; số lượt chạy không cố định, và fuzzer không tự đặt thêm một property mà tác giả chưa viết. Khi có crasher, giữ corpus cùng regression test có tên để người sửa sau biết contract đã từng bị phá ở đâu.
+## Kết quả kiểm thử xanh chưa trả lời câu hỏi nào?
 
-Benchmark lại trả lời câu hỏi khác. `B.Loop` có từ Go 1.24; trong Go 1.27.1, lần gọi đầu reset timer và lần trả false dừng timer. Với đúng dạng `for b.Loop() { ... }`, compiler giữ sống các argument, kết quả lời gọi và biến được gán trong thân vòng theo cơ chế mô tả ở `testing/benchmark.go`. Không suy rộng cơ chế ấy sang một wrapper tùy ý hoặc xem nó là bảo đảm workload đại diện cho production. Mẫu `b.N` vẫn hợp lệ; nếu dùng nó, loại setup khỏi timer khi cần và bảo đảm phép tính cần đo không bị bỏ vì kết quả không được dùng. Không trộn cả hai kiểu vòng lặp trong một benchmark.
+Với các bài thực hành vừa hoàn tất, kết quả báo xanh đồng nghĩa các khẳng định kiểm thử (*assertion*) đã được thỏa mãn trên tập dữ liệu và lịch trình thực thi cụ thể đó. Một khẳng định kiểm thử bị bỏ sót vẫn có thể để lọt lỗi trên chính dữ liệu đầu vào ấy. Kiểm thử mờ (*fuzzing*) mở rộng không gian tìm kiếm đầu vào dựa trên thời gian và độ bao phủ mã nguồn; số lượt chạy không cố định, và bộ fuzzer không thể tự sáng tạo thêm một đặc tính bất biến nếu tác giả chưa định nghĩa. Khi phát hiện lỗi sập (*crasher*), hãy lưu trữ mẫu dữ liệu đó cùng một ca kiểm thử hồi quy (*regression test*) có tên rõ ràng để người sửa đổi sau này biết rõ giao ước từng bị phá vỡ ở đâu.
 
-Race detector cũng có chi phí riêng. Tài liệu chính thức nêu mức thường gặp khoảng 5–10 lần bộ nhớ và 2–20 lần thời gian chạy, tùy chương trình; đây không phải số đo của các lab trong sách. Detector quan sát access thực sự chạy, nên một đường chưa thực thi không thể tạo report cho đường ấy. Độ trễ mạng có thể làm lộ lịch chạy mới, nhưng không có nghĩa detector không dùng được với workload mạng. Muốn tăng khả năng phát hiện, chọn scenario có ý nghĩa và chạy đủ đường liên quan, không chỉ lặp một happy path.
+Kiểm chuẩn hiệu năng (*benchmark*) lại giải đáp một câu hỏi hoàn toàn khác. Cấu trúc `b.Loop()` xuất hiện từ Go 1.24; trong phiên bản Go 1.27.1, lần gọi đầu tiên thiết lập lại bộ đếm thời gian và lần trả về `false` sẽ dừng bộ đếm. Với dạng chuẩn `for b.Loop() { ... }`, trình biên dịch bảo đảm duy trì sự sống của các đối số, kết quả lời gọi và biến gán trong thân vòng lặp theo cơ chế được mô tả tại `testing/benchmark.go`. Không nên suy diễn cơ chế tối ưu ấy sang một hàm bọc tùy tiện hoặc ngộ nhận rằng bài đo lường phản ánh đầy đủ môi trường sản xuất. Cách viết truyền thống `b.N` vẫn hoàn toàn hợp lệ; nếu sử dụng, hãy loại trừ phần khởi tạo khỏi bộ đếm thời gian khi cần và bảo đảm phép toán cần đo không bị trình biên dịch loại bỏ do không sử dụng kết quả. Không bao giờ trộn lẫn hai cách viết vòng lặp trong cùng một bài đo lường.
 
-`go test -cover` báo statement coverage theo instrumentation của Go, không phải tỷ lệ mọi dòng source và cũng không phải branch hay path coverage. Dù đạt 100%, nó chưa chứng minh mọi tổ hợp điều kiện, input hay tương tác đồng thời đều đúng. Ví dụ một `if` đã được đi qua với điều kiện true vẫn có thể chưa thử nhánh false. Khi đọc report, hãy hỏi assertion nào bảo vệ policy, đường nào chưa chạy và công cụ nào có thể quan sát loại lỗi đó. Đó là giới hạn bằng chứng cụ thể, không phải lý do bỏ kiểm thử.
+Bộ phát hiện tương tranh (*race detector*) cũng đi kèm chi phí tài nguyên nhất định. Tài liệu kỹ thuật chính thức nêu mức tiêu hao thường gặp khoảng 5–10 lần dung lượng bộ nhớ và 2–20 lần thời gian thực thi tùy cấu trúc chương trình; đây không phải số đo riêng của các bài thực hành trong sách. Bộ phát hiện chỉ quan sát các truy cập bộ nhớ thực sự xảy ra trong lượt chạy, do đó một nhánh mã chưa được kích hoạt sẽ không thể tạo ra báo cáo. Độ trễ mạng có thể làm bộc lộ những lịch trình thực thi đồng thời mới, nhưng điều đó không có nghĩa công cụ bất lực trước các tác vụ mạng. Để nâng cao xác suất phát hiện, hãy thiết kế các kịch bản có giá trị thực tế và bao quát đầy đủ các luồng tương tác then chốt, thay vì chỉ lặp đi lặp lại một kịch bản thuận lợi.
+
+Lệnh `go test -cover` báo cáo độ bao phủ câu lệnh (*statement coverage*) dựa trên cơ chế gắn mã chẩn đoán (*instrumentation*) của Go, không phản ánh tỷ lệ mọi dòng mã nguồn và cũng không phải độ bao phủ nhánh (*branch coverage*) hay độ bao phủ đường dẫn (*path coverage*). Dù đạt mức 100%, con số đó chưa thể chứng minh mọi tổ hợp điều kiện, dữ liệu biên hay tương tác đồng thời đều chính xác. Ví dụ, một cấu trúc điều kiện `if` đã được kiểm thử ở nhánh đúng vẫn có thể chưa từng được kiểm tra ở nhánh sai. Khi đọc báo cáo độ bao phủ, hãy luôn đặt câu hỏi: khẳng định kiểm thử nào đang bảo vệ chính sách nghiệp vụ, nhánh luồng nào chưa từng chạy qua, và công cụ nào có thể phát hiện loại lỗi tiềm ẩn đó. Đó là giới hạn tất yếu của các công cụ thu thập bằng chứng, không phải lý do để buông lỏng việc kiểm thử.

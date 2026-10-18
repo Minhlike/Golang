@@ -1,0 +1,41 @@
+{
+  "unicode_preservation": {
+    "status": "PASS",
+    "pymupdf_matches": {
+      "đoàn ngọc hoàng minh": true,
+      "giáo trình": true,
+      "kỹ nghệ": true,
+      "phần mềm": true,
+      "điều hòa": true,
+      "nguyên nhân": true,
+      "khắc phục": true,
+      "bất biến": true
+    },
+    "pypdf_matches": {
+      "đoàn ngọc hoàng minh": true,
+      "giáo trình": true,
+      "kỹ nghệ": true,
+      "phần mềm": true,
+      "điều hòa": true,
+      "nguyên nhân": true,
+      "khắc phục": true,
+      "bất biến": true
+    },
+    "tested_glyphs": "ă, â, ê, ô, ơ, ư, đ (lowercase & uppercase)"
+  },
+  "code_structure": {
+    "page_18_package_main": true,
+    "page_18_classify_func": true,
+    "page_18_main_func": true,
+    "extraction_status": "PASS"
+  },
+  "line_number_isolation": {
+    "line_numbers_in_raw_stream": true,
+    "declared_finding": "Line numbers drawn on the canvas are extracted into the raw text stream by PDF text readers. For production releases, code snippets should either omit visual line numbers or offer source file attachments to ensure zero-effort copy-paste."
+  },
+  "byte_fidelity": {
+    "literal_tab_preserved": false,
+    "declared_status": "FAIL (Expected due to ReportLab expandtabs(4) contract)",
+    "semantic_fidelity": "PASS (4 spaces maintain visual structure and compiler validity)"
+  }
+}

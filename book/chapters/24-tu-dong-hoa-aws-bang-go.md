@@ -14,7 +14,7 @@ Chương 21 đến Chương 23 đã xây dựng mô hình điều hòa: quan sá
 
 ## 1. Chuỗi định danh ngầm định và Quyền tạm thời
 
-Ưu tiên production là thông tin xác thực tạm thời từ role/OIDC; điều đó không làm mọi nguồn trong default chain trở thành temporary credential. Với `config.LoadDefaultConfig`, các nguồn nền tảng gồm static credentials từ biến môi trường, shared config/credentials files, container credentials (ECS) và role credentials qua EC2 IMDS; cấu hình SSO hay web identity chọn provider tương ứng. Chain vẫn có thể nhận static credentials từ environment hoặc shared files, đặc biệt trên máy phát triển và trong test.
+Ưu tiên trên môi trường vận hành thực tế là sử dụng thông tin xác thực tạm thời từ vai trò IAM hoặc cơ chế OIDC; điều đó không biến mọi nguồn trong chuỗi phân giải mặc định thành thông tin xác thực tạm thời. Với `config.LoadDefaultConfig`, các nguồn nền tảng gồm thông tin xác thực tĩnh từ biến môi trường, tệp cấu hình chia sẻ, thông tin xác thực container (ECS) và vai trò IAM qua dịch vụ EC2 IMDS; cấu hình SSO hay danh tính web sẽ chọn nhà cung cấp tương ứng. Chuỗi phân giải vẫn có thể tiếp nhận thông tin xác thực tĩnh từ môi trường hoặc tệp chia sẻ, đặc biệt trên máy phát triển và trong các bài kiểm thử.
 
 Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời lượng phiên của IAM Role có thể cấu hình linh hoạt từ 15 phút tới 12 giờ tùy theo cấu hình vai trò, trong khi các cơ chế phiên liên kết (chained roles) hay `AssumeRoleWithWebIdentity` áp dụng giới hạn riêng. Mỗi bộ thông tin xác thực tạm thời luôn gắn liền với một Session Token (`AWS_SESSION_TOKEN`). Cần đặc biệt lưu ý: nếu khóa tạm thời bị rò rỉ trong thời gian còn hiệu lực, kẻ tấn công vẫn có thể sử dụng hợp lệ cho đến khi hết hạn hoặc cho đến khi quản trị viên chủ động thu hồi phiên (thông qua IAM revocation policy, cập nhật inline policy, hoặc vô hiệu hóa IAM role).
 
@@ -23,21 +23,21 @@ Các khóa tạm thời này có thời hạn hiệu lực hữu hạn: thời l
 
 ### Cơ chế bộ đệm và xác thực đồng bộ của SDK (`aws.CredentialsCache`)
 
-Ở source SDK được ghim, credential resolution có nhánh theo cấu hình, không phải một danh sách ưu tiên bất biến: profile được chọn tường minh, environment credentials và web-identity token có các nhánh riêng; profile có thể dùng source profile, SSO hay credential process trước khi tới container/IMDS. Đọc `config/resolve_credentials.go` cùng options của caller khi cần giải thích vì sao một provider được chọn. Không suy ra credential tạm thời chỉ từ việc gọi `LoadDefaultConfig`.
+Trong mã nguồn SDK được ghim, quy trình phân giải thông tin xác thực rẽ nhánh linh hoạt theo cấu hình chứ không phải một danh sách ưu tiên bất biến: hồ sơ cấu hình (profile) được chọn tường minh qua biến môi trường hoặc tệp cấu hình, thông tin xác thực từ môi trường và Web Identity đều có điều kiện kích hoạt riêng; hồ sơ cấu hình có thể sử dụng hồ sơ nguồn, SSO hay quy trình xác thực trước khi chuyển tiếp tới container hoặc IMDS. Hãy tham khảo `config/resolve_credentials.go` cùng các tùy chọn của bên gọi khi cần giải thích nguyên nhân một nhà cung cấp được lựa chọn. Tránh suy diễn rằng thông tin xác thực luôn là loại tạm thời chỉ thuần túy dựa vào việc triệu gọi `LoadDefaultConfig`.
 
 Đối với các khối lượng công việc container hóa và điều phối đám mây, SDK phân định rõ ba cơ chế cấp phát định danh độc lập thay vì gộp chung mọi môi trường:
 
-Một là, IAM Roles for Service Accounts (IRSA) trên Kubernetes: Pod gắn projected OIDC web identity token (qua biến `AWS_WEB_IDENTITY_TOKEN_FILE` và `AWS_ROLE_ARN`), kích hoạt Web Identity provider gọi tới AWS STS thông qua API `AssumeRoleWithWebIdentity`.
+Một là, cơ chế gắn vai trò IAM cho tài khoản dịch vụ Kubernetes (IRSA): Khối Pod được ánh xạ mã thông báo danh tính web OIDC (thông qua biến môi trường `AWS_WEB_IDENTITY_TOKEN_FILE` và `AWS_ROLE_ARN`), kích hoạt nhà cung cấp định danh gọi tới dịch vụ AWS STS thông qua giao diện lập trình `AssumeRoleWithWebIdentity`.
 
-Hai là, ECS Task Role: Container credential provider kết nối tới ECS agent credential endpoint cục bộ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`.
+Hai là, cơ chế vai trò cho tác vụ ECS: Nhà cung cấp thông tin xác thực vùng chứa kết nối trực tiếp tới điểm cuối xác thực của tiến trình ECS Agent cục bộ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`.
 
-Ba là, EKS Pod Identity: Container credential provider tương tác trực tiếp với EKS Pod Identity Agent trên node thông qua `AWS_CONTAINER_CREDENTIALS_FULL_URI` và token xác thực tại `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE`.
+Ba là, cơ chế định danh Pod trên EKS: Nhà cung cấp thông tin xác thực vùng chứa tương tác trực tiếp với tiến trình hỗ trợ danh tính trên nút máy chủ thông qua biến môi trường `AWS_CONTAINER_CREDENTIALS_FULL_URI` và mã thông báo xác thực tại `AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE`.
 
-Nhằm giảm thiểu số lượt gọi mạng lặp lại trước mỗi HTTP request, SDK v2 bọc provider bên trong cấu trúc `aws.CredentialsCache`. Cần lưu ý rằng `aws.CredentialsCache` không cần một background goroutine riêng để định kỳ làm mới credentials. Lượt `Retrieve(ctx)` tiếp theo sẽ lấy lại credentials từ provider khi cache không còn hợp lệ. Cụ thể, mỗi khi mã nguồn gọi `Retrieve(ctx)`, bộ đệm kiểm tra trực tiếp thời điểm hết hạn của khóa: nếu `ExpiryWindow > 0`, cache coi credentials hết hạn sớm hơn thời điểm hết hạn thực tế (effective expiration sớm hơn) để lượt `Retrieve(ctx)` tiếp theo làm mới chúng một cách đồng bộ; nếu `ExpiryWindow <= 0`, tùy chọn này bị bỏ qua. Nhờ cơ chế kiểm tra đồng bộ theo yêu cầu, `CredentialsCache` duy trì tính hợp lệ của phiên làm việc mà không cần duy trì tiến trình quét nền.
+SDK bao bọc provider trong `aws.CredentialsCache` để tránh lấy khóa lặp lại trước mỗi request. Khi có lượt `Retrieve` cần dữ liệu và khóa chưa có hoặc đã hết hạn, cache mới gọi provider; nó không có vòng quét định kỳ tự làm mới khi không có người gọi. `ExpiryWindow > 0` điều chỉnh mốc hết hạn lưu trong cache để lần gọi sau làm mới sớm; window không dương được bỏ qua. Không hiểu “theo nhu cầu” thành “không tạo goroutine”: source SDK v1.36.3 dùng singleflight để các caller cùng chờ một lượt lấy khóa, chạy lượt đó trong goroutine ngắn hạn. Context bị hủy có thể kết thúc một caller mà không hủy lượt lấy khóa dùng chung. Test có điểm bắt tay kiểm caller đã trả lỗi hủy, provider vẫn chạy rồi hoàn tất cho caller khác; đây là hành vi của phiên bản được ghim, không phải bảo đảm không còn việc nền khi caller trả về.
 
 ### Xác định Region và Ranh giới Dịch vụ Vùng
 
-Khi nạp cấu hình qua `config.LoadDefaultConfig`, việc xác định Region tuân theo chuỗi phân giải: cờ tùy chọn tường minh `config.WithRegion("ap-southeast-1")`, biến môi trường `AWS_REGION` hoặc `AWS_DEFAULT_REGION`, cấu hình profile trong file `~/.aws/config`, và EC2 instance metadata (IMDS).
+Khi nạp qua `config.LoadDefaultConfig`, Region có thể đến từ `config.WithRegion("ap-southeast-1")`, `AWS_REGION`/`AWS_DEFAULT_REGION` hoặc profile trong `~/.aws/config`; giá trị tường minh có ưu tiên cao hơn. SDK không có Region mặc định. Lấy Region từ EC2 IMDS cần bật tùy chọn `config.WithEC2IMDSRegion()`; không nhầm việc credential provider tự dùng IMDS với việc Region tự được suy ra từ IMDS.
 
 Khác với các dịch vụ mang tính toàn cầu (global services như IAM), hầu hết dịch vụ AWS (như Amazon S3, DynamoDB, EC2) đều vận hành theo từng region vật lý riêng biệt. Nếu không xác định được Region từ các nguồn cấu hình trên, SDK v2 sẽ trả về lỗi khi khởi tạo cuộc gọi đến dịch vụ vùng. Đặc biệt với Amazon S3, dù tên bucket là duy nhất trên phạm vi toàn cầu, mỗi bucket vẫn cư trú tại một region xác định; gửi request tới bucket ở region khác mà không cấu hình cross-region có thể dẫn đến lỗi điều hướng HTTP 301 hoặc lỗi ký chữ ký số SigV4.
 
@@ -45,20 +45,20 @@ Khác với các dịch vụ mang tính toàn cầu (global services như IAM), 
 
 ## 2. Luồng thực thi của AWS SDK v2 và Smithy Middleware
 
-AWS SDK for Go v2 dùng Smithy, một ngôn ngữ mô hình hóa service và bộ công cụ sinh SDK. Smithy không phải wire protocol thay cho HTTP hay SigV4; stack middleware là phần tổ chức đường gọi của SDK.
+AWS SDK for Go v2 sử dụng Smithy, một ngôn ngữ mô hình hóa dịch vụ và bộ công cụ sinh SDK. Smithy không phải là một giao thức truyền tải thay thế cho HTTP, và cũng không phải cơ chế ký SigV4 thay cho TLS; ngăn xếp trung gian (middleware stack) là phần tổ chức luồng triệu gọi của SDK.
 
-Một operation như `s3.PutObject` đi qua năm step của **Middleware Stack**. Các step gọi handler bên trong; response đi ngược ra ngoài. Vì vậy Deserialize gọi bước trao đổi HTTP trước khi giải mã response trả về:
+Một thao tác như `s3.PutObject` đi qua năm bước của **Middleware Stack**. Mỗi bước triệu gọi hàm xử lý bên trong; kết quả phản hồi sau đó đi ngược trở ra ngoài. Vì vậy Deserialize xử lý gói phản hồi sau hàm xử lý, còn Initialize xử lý trước khi yêu cầu được phát đi:
 
 ![Đường request và response qua Smithy middleware](../../assets/diagrams/smithy-request-response.png)
 @figure Mũi tên liền biểu diễn đường gọi vào handler, mũi tên đứt biểu diễn response trở về Deserialize. Middleware cụ thể và vị trí xử lý checksum phụ thuộc operation cùng cấu hình; sơ đồ không mô tả từng lần retry.
 
 ### Chữ ký số SigV4 (Signature Version 4)
 
-Trong đường gọi SigV4 đang xét, middleware ký ở pha **Finalize** xây canonical request từ phương thức HTTP, đường dẫn, query, các header được ký và giá trị payload hash theo chế độ signing. Đây là đại diện của request cho thuật toán xác thực, không phải chữ ký của từng packet mạng.
+Trong luồng triệu gọi chữ ký SigV4, phần mềm trung gian ký ở pha hoàn tất (**Finalize**) sẽ kiến tạo yêu cầu chuẩn hóa (`canonical request`) từ phương thức HTTP, đường dẫn, tham số truy vấn, các tiêu đề được ký và mã băm của nội dung tải trọng theo chế độ ký. Đây là đại diện của yêu cầu cho thuật toán xác thực, không phải chữ ký của từng gói tin mạng.
 
-SDK dùng signing key suy ra từ secret, ngày, region và service để tạo chữ ký SigV4 cho canonical request. Server kiểm tra những phần được ký; không phải mọi header đều được đưa vào SignedHeaders và một số chế độ cho phép unsigned payload. Sửa phần được bao phủ có thể gây lỗi xác minh, nhưng không suy ra một mã lỗi HTTP cố định cho mọi service. TLS vẫn cần bảo vệ đường truyền; SigV4 không thay thế TLS.
+SDK sử dụng khóa ký suy dẫn từ khóa bí mật, ngày tháng, vùng và dịch vụ để tạo chữ ký SigV4 cho yêu cầu chuẩn hóa. Máy chủ sẽ đối soát toàn bộ các thành phần được ký; không phải mọi tiêu đề đều được đưa vào danh sách ký (`SignedHeaders`) và một số chế độ cho phép tải trọng không ký. Sửa đổi phần được bao phủ có thể gây lỗi xác minh, nhưng không suy ra một mã lỗi HTTP cố định cho mọi dịch vụ. Giao thức TLS vẫn luôn cần thiết để bảo vệ đường truyền; chữ ký SigV4 không thay thế cho TLS.
 
-SigV4 xác thực yêu cầu cho AWS và bảo vệ các phần được ký; nó không tự cung cấp bí mật nội dung, chống phát lại ở mọi ngữ cảnh, hay ký mọi header/payload trong mọi lựa chọn dịch vụ. TLS vẫn bảo vệ kênh truyền, còn caller phải hiểu service và tùy chọn signing của lời gọi mình dùng.
+Cơ chế SigV4 xác thực yêu cầu gửi tới AWS và bảo vệ tính toàn vẹn của các thành phần được ký; nó không tự động mã hóa bí mật nội dung, không chống tấn công phát lại trong mọi ngữ cảnh, và không tự động ký toàn bộ tiêu đề. Giao thức TLS chịu trách nhiệm bảo vệ kênh truyền, còn bên gọi phải nắm rõ dịch vụ và tùy chọn ký của lời gọi mình sử dụng.
 
 ---
 
@@ -75,11 +75,11 @@ resp, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 
 Một bucket trên S3 có thể chứa 10 triệu đối tượng. API `ListObjectsV2` mặc định chỉ trả về tối đa 1.000 file mỗi lần gọi và trả về mã thông báo tiếp tục (`NextContinuationToken`).
 
-Nếu bạn tự viết vòng lặp `for` với token thủ công, mã nguồn sẽ trở nên cồng kềnh và dễ gặp lỗi vòng lặp vô tận nếu xử lý sai điều kiện ngắt. 
+Nếu bạn tự viết vòng lặp `for` với token thủ công, mã nguồn sẽ trở nên cồng kềnh và dễ gặp lỗi vòng lặp vô tận nếu xử lý sai điều kiện ngắt.
 
 ### Mẫu hình chuẩn: SDK Paginator
 
-`NewListObjectsV2Paginator` quản lý continuation token và trả từng trang. Nó không hứa tổng bộ nhớ O(1) theo mọi input: kích thước trang và cách caller giữ kết quả vẫn phải có budget.
+Hàm khởi tạo `NewListObjectsV2Paginator` quản lý mã đánh dấu tiếp tục (*continuation token*) và trả về từng trang dữ liệu riêng biệt. Nó không cam kết tổng mức sử dụng bộ nhớ sẽ luôn là $O(1)$ đối với mọi dữ liệu đầu vào: kích thước từng trang và cách thức bên gọi lưu giữ kết quả vẫn bắt buộc phải có định mức rõ ràng.
 
 ~~~go
 paginator := s3.NewListObjectsV2Paginator(
@@ -100,7 +100,7 @@ for paginator.HasMorePages() {
 }
 ~~~
 
-Paginator chỉ giữ trang đang xử lý; mức nhớ của caller còn phụ thuộc xử lý của nó. `ListAllKeys` trong lab cố ý gom kết quả vào `[]string`, nên dùng O(n) theo tổng số key. Với scan lớn, xử lý từng `page.Contents` hoặc gọi callback thay vì tích lũy toàn bộ.
+Bộ phân trang chỉ lưu giữ trang dữ liệu đang xử lý tại thời điểm tức thời; mức tiêu thụ bộ nhớ của bên gọi phụ thuộc hoàn toàn vào cách xử lý tiếp theo. Hàm `ListAllKeys` trong bài thực hành cố tình gom toàn bộ kết quả vào mảng chuỗi `[]string`, do đó sẽ tiêu tốn bộ nhớ ở mức $O(n)$ theo tổng số lượng khóa. Với các tác vụ quét dữ liệu quy mô lớn, hãy xử lý trực tiếp từng mảng `page.Contents` hoặc sử dụng hàm phản hồi (*callback*) thay vì tích lũy toàn bộ kết quả vào bộ nhớ.
 
 ---
 
@@ -108,7 +108,7 @@ Paginator chỉ giữ trang đang xử lý; mức nhớ của caller còn phụ 
 
 Khi một lệnh gọi AWS thất bại, bạn không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
 
-Thử lại ở tầng transport của SDK (`aws.Retryer`, mặc định tối đa 3 lần với backoff lũy thừa và jitter cho lỗi tạm thời) không bảo đảm tính lũy đẳng nghiệp vụ (business idempotency). Nếu một yêu cầu ghi bị ngắt kết nối mạng sau khi máy chủ AWS đã tiếp nhận và thực thi, việc SDK tự động thử lại có thể gây ra tác dụng phụ lặp lại ngoài mong muốn. Một số API của AWS cung cấp token lũy đẳng tường minh (như `ClientToken` trong EC2) để máy chủ nhận diện yêu cầu lặp; nhưng với Amazon S3 `PutObject`, ngữ nghĩa phụ thuộc chặt chẽ vào cấu hình bucket và điều kiện tiền đề. Khi bucket bật Versioning, nhiều lượt `PUT` với cùng một key sẽ tạo ra các version riêng biệt chứ không ghi đè tại chỗ, vì vậy việc dùng chung key không đảm bảo một tác dụng phụ duy nhất. Khi nghiệp vụ đòi hỏi tạo mới mà không ghi đè, hệ thống có thể cần yêu cầu có điều kiện (conditional request như `If-None-Match: *` khi dịch vụ hỗ trợ), nhưng đây không phải giải pháp vạn năng cho mọi tình huống. Tính lũy đẳng nghiệp vụ bắt buộc phải được thiết kế dựa trên đúng hợp đồng của từng thao tác và dịch vụ cụ thể. Trong policy của lab, `AccessDenied` không được retry như lỗi tạm thời. Các lỗi throttling hay service unavailable có thể cần backoff/jitter, nhưng retry còn phụ thuộc operation, budget và idempotency. Với timeout sau write, server có thể đã thực hiện side effect; không lặp mù quáng chỉ vì tên lỗi chứa `RequestTimeout`. Dùng classifier kết hợp với contract service và retryer đã cấu hình.
+Cơ chế thử lại ở tầng truyền vận của SDK (`aws.Retryer`, mặc định tối đa 3 lần với thuật toán lùi lũy thừa kèm độ trễ ngẫu nhiên cho các lỗi tạm thời) hoàn toàn không bảo đảm tính lũy đẳng nghiệp vụ (*business idempotency*). Nếu một yêu cầu ghi bị ngắt kết nối mạng sau khi máy chủ AWS đã tiếp nhận và thực thi thành công, việc SDK tự động thử lại có thể gây ra tác dụng phụ lặp lại ngoài ý muốn. Một số giao diện API của AWS cung cấp mã định danh lũy đẳng tường minh (như `ClientToken` trong EC2) để máy chủ nhận diện yêu cầu gửi lặp; tuy nhiên đối với thao tác `PutObject` trên Amazon S3, ngữ nghĩa phụ thuộc chặt chẽ vào cấu hình kho lưu trữ và các điều kiện tiên quyết. Khi kho lưu trữ bật tính năng quản lý phiên bản (*Versioning*), nhiều lượt gửi dữ liệu với cùng một khóa sẽ tạo ra các phiên bản độc lập chứ không ghi đè tại chỗ, do đó việc dùng chung một khóa không bảo đảm tạo ra một hiệu ứng phụ duy nhất. Khi bài toán đòi hỏi tạo mới mà không ghi đè, hệ thống có thể cần yêu cầu có điều kiện (như `If-None-Match: *` khi dịch vụ hỗ trợ), nhưng đây không phải giải pháp vạn năng cho mọi tình huống. Tính lũy đẳng nghiệp vụ bắt buộc phải được thiết kế dựa trên đúng khế ước kỹ thuật của từng thao tác và dịch vụ cụ thể. Trong chính sách của bài thực hành, lỗi từ chối truy cập `AccessDenied` tuyệt đối không được phép thử lại như lỗi tạm thời. Các lỗi điều tiết lưu lượng hoặc dịch vụ tạm thời không khả dụng có thể áp dụng thuật toán lùi lũy thừa, nhưng quyết định thử lại còn phụ thuộc vào bản chất thao tác, định mức tài nguyên và tính lũy đẳng. Đối với sự cố quá thời gian sau một thao tác ghi, máy chủ có thể đã hoàn tất hiệu ứng phụ; tuyệt đối không thử lại một cách mù quáng chỉ vì tên lỗi chứa chuỗi `RequestTimeout`. Hãy sử dụng bộ phân loại lỗi kết hợp chặt chẽ với khế ước dịch vụ và bộ thử lại đã được cấu hình cẩn trọng.
 
 ~~~go
 func ClassifyError(err error) (bool, string) {
@@ -143,15 +143,17 @@ func ClassifyError(err error) (bool, string) {
 }
 ~~~
 
+`true` ở đây chỉ đánh dấu ứng viên lỗi tạm thời, không phải quyền thử lại mọi thao tác ghi. Bộ thử lại tiêu chuẩn mặc định tối đa ba **attempt**, gồm lượt đầu và tối đa hai lượt thử lại, không phải ba lần thử lại ngoài lượt đầu. Cấu hình có thể thay đổi; ngân sách và khả năng lặp tác dụng phụ vẫn do từng thao tác quyết định.
+
 ---
 
 ## 5. Hiện thực Storage Client và Middleware tùy biến
 
-Dưới đây là cấu trúc mã nguồn trích xuất từ dự án mẫu `labs/part24-aws-sdk-go-v2/`. Trong khi mã nguồn triển khai thực tế trên production sẽ sử dụng `config.LoadDefaultConfig(ctx)` để gọi trực tiếp tới các endpoint dịch vụ AWS thật, dự án lab minh họa kiến trúc bằng `httptest.Server` giả lập giao thức S3 nhằm kiểm chứng hành vi nội tại của SDK v2 (middleware, provider, paginator, phân loại lỗi) hoàn toàn cô lập, không yêu cầu tài khoản đám mây thật hay chi phí vận hành:
+Dưới đây là cấu trúc mã nguồn trích xuất từ dự án mẫu `labs/part24-aws-sdk-go-v2/`. Trong khi mã nguồn triển khai trên môi trường thực tế sẽ sử dụng `config.LoadDefaultConfig(ctx)` để gọi trực tiếp tới các điểm cuối dịch vụ đám mây, dự án thực hành minh họa kiến trúc bằng máy chủ kiểm thử `httptest.Server` giả lập giao thức Amazon S3 nhằm kiểm chứng hành vi nội tại của SDK (ngăn xếp trung gian, nhà cung cấp định danh, bộ phân trang, phân loại lỗi) hoàn toàn cô lập, không đòi hỏi tài khoản đám mây thật hay phát sinh chi phí vận hành:
 
 ### 1. Provider cấp khóa tạm thời tự xoay vòng
 
-Provider giả dưới đây trả credential có thời hạn để kiểm tra cache của SDK. Nó không gọi STS hay mô phỏng xác thực và phân quyền của STS:
+Nhà cung cấp định danh giả lập dưới đây trả về thông tin xác thực có thời hạn hiệu lực để kiểm tra cơ chế lưu đệm của SDK. Mã nguồn không gọi dịch vụ STS và không mô phỏng quy trình xác thực hay phân quyền của dịch vụ này:
 
 ~~~go
 type DynamicCredentialProvider struct {
@@ -163,6 +165,11 @@ type DynamicCredentialProvider struct {
 func (p *DynamicCredentialProvider) Retrieve(
 	ctx context.Context,
 ) (aws.Credentials, error) {
+	select {
+	case <-ctx.Done():
+		return aws.Credentials{}, ctx.Err()
+	default:
+	}
 	count := p.retrieveCount.Add(1)
 	now := time.Now()
 
@@ -179,7 +186,7 @@ func (p *DynamicCredentialProvider) Retrieve(
 
 ### 2. Can thiệp vào Smithy Middleware để thêm Header Audit
 
-Để kiểm tra việc chèn một header của ứng dụng vào outbound request, ta viết middleware ở pha `Build`. Test chỉ kiểm tra header tại server cục bộ; không suy ra CloudTrail sẽ lưu custom header ấy:
+Để kiểm tra việc chèn một tiêu đề của ứng dụng vào yêu cầu gửi ra ngoài, chúng ta thiết lập phần mềm trung gian ở giai đoạn `Build`. Bài kiểm thử chỉ thẩm định tiêu đề tại máy chủ cục bộ; không suy diễn rằng dịch vụ nhật ký giám sát đám mây sẽ lưu trữ các tiêu đề tùy biến đó:
 
 ~~~go
 type AuditHeaderMiddleware struct {
@@ -224,8 +231,8 @@ s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 ---
 
 ## 6. Bằng chứng kiểm thử: Kiểm chứng 5 hành vi then chốt
- 
-Toàn bộ bộ kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` vận hành độc lập bằng `httptest.Server` (phân loại mức kiểm chứng: `MOCK_VERIFIED` đối với tầng HTTP transport và `UNIT_TESTED` đối với logic provider/paginator/middleware), mô phỏng cấu trúc phản hồi XML của S3 và kiểm chứng 5 hành vi kiến trúc then chốt mà không cần tài nguyên AWS thực tế:
+
+Toàn bộ tập kiểm thử tại `labs/part24-aws-sdk-go-v2/storage_test.go` vận hành độc lập bằng máy chủ giả lập `httptest.Server` (phân loại mức kiểm chứng: giả lập kiểm chứng đối với tầng truyền vận HTTP và kiểm thử đơn vị đối với logic nhà cung cấp, bộ phân trang và phần mềm trung gian), mô phỏng cấu trúc phản hồi XML của Amazon S3 và kiểm chứng 5 hành vi kiến trúc then chốt mà không cần tài nguyên đám mây thực tế:
 
 ~~~
 === RUN   TestCredentialsCacheReuseAndExpiredRefresh
@@ -263,20 +270,20 @@ Kiểm chứng hàm phân loại bóc tách chính xác các lỗi nghiệp vụ
 
 | Cạm bẫy thực tế | Hậu quả trên Production | Giải pháp phòng ngừa |
 | :--- | :--- | :--- |
-| **Hardcode Access Key** trong mã nguồn hoặc image. | Có thể lộ credential và các quyền credential cho phép. | Chọn provider credential tạm thời phù hợp môi trường; `LoadDefaultConfig` còn có thể chọn static credential nếu cấu hình để nó làm vậy. |
-| **Không đóng Response Body** khi gọi `s3.GetObject`. | Body và tài nguyên Transport có thể bị giữ lại, làm tăng áp lực tài nguyên khi lặp nhiều request. | Đặt `defer resp.Body.Close()` sau khi `GetObject` thành công; việc tái sử dụng kết nối còn có điều kiện riêng. |
-| **Tự viết vòng phân trang mà không xử lý token và ngân sách.** | Có thể lặp lại trang, bỏ sót dữ liệu hoặc giữ quá nhiều object. | Ưu tiên paginator của SDK; vẫn kiểm tra context, error, số trang và lượng dữ liệu giữ lại. |
-| **Thử lại mù quáng** với lỗi phân quyền `AccessDenied`. | Làm tắc nghẽn hàng đợi và kích hoạt các cảnh báo bảo mật bất thường trong SIEM. | Dùng `errors.As(err, &apiErr)` để chỉ thử lại các lỗi tạm thời (`SlowDown`, `5xx`). |
+| Ghi cứng khóa truy cập trong mã nguồn hoặc ảnh AMI/container. | Nguy cơ lộ thông tin xác thực và toàn bộ đặc quyền liên quan. | Lựa chọn nhà cung cấp thông tin xác thực tạm thời phù hợp với môi trường; hàm `LoadDefaultConfig` vẫn có thể nạp khóa tĩnh nếu cấu hình yêu cầu. |
+| Không đóng luồng phản hồi khi gọi `s3.GetObject`. | Phần thân và tài nguyên tầng truyền vận bị giữ lại, gây nghẽn tài nguyên khi lặp nhiều yêu cầu. | Khai báo `defer resp.Body.Close()` ngay sau khi gọi thành công; việc tái sử dụng kết nối đòi hỏi điều kiện riêng. |
+| Tự viết vòng phân trang mà không quản trị mã thẻ và ngân sách. | Nguy cơ lặp trang vô hạn, thất thoát dữ liệu hoặc chiếm dụng bộ nhớ nghiêm trọng. | Ưu tiên bộ phân trang tích hợp của SDK; luôn thẩm định ngữ cảnh, lỗi, số trang và dung lượng dữ liệu lưu giữ. |
+| Thử lại một cách mù quáng với lỗi từ chối truy cập `AccessDenied`. | Gây tắc nghẽn hàng đợi và kích hoạt các cảnh báo an ninh bất thường trong hệ thống giám sát. | Sử dụng `errors.As(err, &apiErr)` để chỉ thử lại các mã lỗi tạm thời (`SlowDown`, `5xx`). |
 
 ---
 
 ## 8. Bài tập thực hành thiết kế Cloud Tool
 
 ### Thử thách 1: Tích hợp Context Timeout chặt chẽ cho thao tác đám mây
-**Yêu cầu:** Viết `PutObjectWithTimeout` nhận `timeout time.Duration` và truyền context có deadline tới SDK. Test với server giả chậm để quan sát caller ngừng chờ trên đường chạy ấy. Cancellation không chứng minh tác động phía server bị rollback hoặc resource được giải phóng tức thời ở mọi tầng.
+Yêu cầu: Xây dựng hàm `PutObjectWithTimeout` tiếp nhận tham số `timeout time.Duration` và truyền ngữ cảnh có thời hạn kết thúc tới SDK. Kiểm thử với máy chủ giả lập có độ trễ cao để quan sát bên gọi chủ động dừng chờ. Thao tác hủy bỏ không chứng minh các hiệu ứng phụ phía máy chủ được đảo ngược hay tài nguyên được giải phóng tức thì ở mọi tầng.
 
 ### Thử thách 2: Thiết kế Waiter kiểm tra Bucket sẵn sàng
-**Yêu cầu:** Sau `CreateBucket`, dùng `s3.NewBucketExistsWaiter` để chờ điều kiện tồn tại được quan sát qua `HeadBucket`. Đặt thời gian chờ tối đa 30 giây, khoảng lùi từ 2 đến 5 giây. Đây không phải phép kiểm chứng DNS toàn cầu hay toàn bộ độ sẵn sàng của ứng dụng.
+Yêu cầu: Sau khi tạo vùng lưu trữ, sử dụng `s3.NewBucketExistsWaiter` để chờ điều kiện tồn tại được quan sát qua lệnh `HeadBucket`. Thiết lập thời gian chờ tối đa 30 giây, khoảng lùi từ 2 đến 5 giây. Đây không phải là phép kiểm chứng phân giải tên miền toàn cầu hay mức độ sẵn sàng toàn diện của ứng dụng.
 
 ---
 
@@ -334,8 +341,8 @@ func WaitForBucketReady(
 }
 ~~~
 
-`BucketExistsWaiter` lặp `HeadBucket` theo policy waiter của SDK cho đến khi đạt trạng thái chấp nhận được, lỗi hoặc hết `maxWait`. Nó chỉ chứng minh điều kiện tồn tại bucket; không chứng minh DNS, IAM policy hay ứng dụng đã sẵn sàng cho một workflow lớn hơn. Vì vậy timeout và điều kiện chấp nhận phải bám đúng operation đang chờ.
+Bộ chờ `BucketExistsWaiter` lặp lại lệnh `HeadBucket` theo chính sách của SDK cho đến khi đạt trạng thái chấp nhận được, gặp lỗi hoặc vượt quá thời gian chờ tối đa `maxWait`. Nó chỉ xác nhận điều kiện tồn tại của vùng lưu trữ; không chứng minh phân giải tên miền, chính sách IAM hay ứng dụng đã sẵn sàng cho một quy trình vận hành lớn hơn. Vì vậy thời hạn chờ và điều kiện chấp nhận phải bám sát thao tác đang chờ.
 
 ---
 
-Credential provider, middleware và paginator giải quyết các boundary khác nhau. Trước khi dùng trên AWS thật, cần kiểm tra role, IAM policy, budget retry và side effect của operation. Chương 25 chuyển sang webhook và GitHub API, nơi identity của delivery cũng không đồng nghĩa identity của một thao tác nghiệp vụ.
+Nhà cung cấp thông tin xác thực, ngăn xếp trung gian và cơ chế phân trang giải quyết các ranh giới kỹ thuật chuyên biệt. Trước khi triển khai trên hạ tầng AWS thực tế, ta cần kiểm tra vai trò IAM, chính sách phân quyền, ngân sách thử lại và tác dụng phụ của từng thao tác. Chương 25 sẽ chuyển sang tìm hiểu webhook và GitHub API, nơi định danh của một lần gửi tin không đồng nghĩa với định danh của một thao tác nghiệp vụ.

@@ -87,18 +87,19 @@ jobs:
             --load \
             labs/part16-real-signals
 
-          # Khi push registry thật hoặc export OCI layout, Buildx ghi nhận OCI manifest digest trong containerimage.digest
+          # Buildx metadata có thể chứa containerimage.digest ngay với --load;
+          # việc có digest không chứng minh artifact đã nằm trong registry.
           MANIFEST_DIGEST=$(jq -r '."containerimage.digest" // empty' build-metadata.json 2>/dev/null || true)
 
           # Phân biệt ranh giới kỹ thuật:
           # - Local Image ID (.Id từ docker inspect): mã băm config JSON của daemon cục bộ.
           # - OCI Manifest Digest: mã băm nội dung của OCI manifest (bao gồm layer descriptors).
-          # Nếu không push lên OCI registry (hoặc export OCI archive), daemon local KHÔNG CÓ
-          # manifest digest thật. Tuyệt đối không fallback vào chuỗi bịa đặt hay config ID.
+          # Không suy ra manifest digest từ config ID của daemon.
+          # Nếu exporter/toolchain không trả trường này thì fail-closed.
           if [ -z "$MANIFEST_DIGEST" ]; then
             echo "::error::Khong tim thay OCI manifest digest hop le tu build metadata." >&2
             echo "Luu y: Image ID tu daemon cuc bo khong phai OCI manifest digest." >&2
-            echo "Can push len OCI registry de co manifest digest dung chuan truoc khi gate/deploy." >&2
+            echo "Kiem tra exporter va build metadata; khong thay manifest digest bang config ID." >&2
             exit 1
           fi
 
@@ -136,13 +137,14 @@ jobs:
           check-latest: false
 
       - name: Evaluate Promotion Gate (Fail-Closed on Missing Provenance)
+        working-directory: labs/part18-workflow-delivery
         run: |
           # tests-passed=true được suy ra hợp lệ từ dependency graph (job verify đã pass).
           # provenance-verified=false vì chưa có bước ký số / xác thực attestation chuyên trách.
           # Tuyệt đối không hard-code "true" (chống evidence theater).
           # Gate sẽ từ chối candidate theo đúng nguyên tắc fail-closed và exit 1.
           # Bỏ hoàn toàn || echo hay swallow error: job PHẢI DỪNG NGAY VỚI EXIT CODE KHÁC 0.
-          go run ./labs/part18-workflow-delivery/cmd/promote-gate \
+          go run ./cmd/promote-gate \
             --digest "${{ needs.build-artifact.outputs.image_digest }}" \
             --revision "${{ needs.build-artifact.outputs.source_revision }}" \
             --tests-passed=true \

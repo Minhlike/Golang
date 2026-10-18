@@ -1,7 +1,7 @@
 # PHỤ LỤC A — ATLAS LỖI GO
 ## Đọc lỗi từ triệu chứng đến nguyên nhân
 
-Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn đoán nhanh, đóng vai trò điểm hội tụ cuối cùng cho các lỗi Go và lỗi vận hành xuất hiện xuyên suốt cuốn sách theo nguyên tắc Grayscale-first. Mỗi mục gồm: mã định danh chẩn đoán (bao gồm chuỗi lỗi thực tế `EXACT`, giá trị sentinel chuẩn `SENTINEL`, trạng thái nền tảng `STATUS`, hoặc nhóm hiện tượng chẩn đoán `FAMILY`); bản chất cơ chế trong 1 câu; điểm cảnh báo hiểu lầm (`!`) nếu có; hành động kiểm tra đầu tiên (`→`); cùng tham chiếu chương (`[ChX,Y]`).
+Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn đoán nhanh, là điểm hội tụ tra cứu cuối cùng cho các lỗi Go và lỗi vận hành xuất hiện xuyên suốt cuốn sách theo nguyên tắc Grayscale-first. Mỗi mục gồm: mã định danh chẩn đoán (bao gồm chuỗi lỗi thực tế `EXACT`, giá trị sentinel chuẩn `SENTINEL`, trạng thái nền tảng `STATUS`, hoặc nhóm hiện tượng chẩn đoán `FAMILY`); bản chất cơ chế trong 1 câu; điểm cảnh báo hiểu lầm (`!`) nếu có; hành động kiểm tra đầu tiên (`→`); cùng tham chiếu chương (`[ChX,Y]`).
 
 ### Bảng phân nhóm Taxonomy
 
@@ -35,11 +35,11 @@ Phụ lục này là tài liệu tra cứu kỹ thuật và phản xạ chẩn �
 ## A — Compiler & Type System
 
 ### A01 `undefined: x`
-Không tìm thấy identifier trong scope hiện tại hoặc identifier chưa được export từ package ngoài.
+Không tìm thấy identifier trong scope hiện tại. Tham chiếu tên không được export từ package khác có thể phát diagnostic khác, chẳng hạn `name not exported`; đừng so khớp chúng như cùng một chuỗi.
 → Kiểm tra lỗi chính tả tên biến/hàm, scope khai báo, hoặc viết hoa chữ cái đầu nếu gọi từ package khác. [Ch1,3,5]
 
 ### A02 `no new variables on left side of :=`
-Tất cả các biến ở vế trái toán tử `:=` đều đã được khai báo trước đó trong cùng một scope.
+Vế trái `:=` không có biến mới nào khác `_` trong block đang xét; dùng lại toàn bộ biến cũ hoặc chỉ có `_` đều không thỏa điều kiện khai báo ngắn.
 → Đổi toán tử sang phép gán thường `=`, hoặc bổ sung ít nhất một biến mới vào vế trái. [Ch1,2]
 
 ### A03 `"fmt" imported and not used`
@@ -51,7 +51,7 @@ Biến cục bộ được khai báo nhưng không có bất kỳ dòng code nà
 → Sử dụng biến vào logic, gán vào blank identifier `_ = x` nếu đang debug dở, hoặc loại bỏ khai báo thừa. [Ch1,2]
 
 ### A05 `cannot use x (variable of type T1) as T2 value in argument`
-Sai khác kiểu dữ liệu trong phép gán hoặc truyền đối số; Go không hỗ trợ ép kiểu ngầm định (implicit coercion).
+Đối số không gán được cho kiểu tham số theo quy tắc assignability. Không suy ra mọi cặp kiểu khác tên đều phải conversion: hằng số biểu diễn được, interface satisfaction và một số kiểu không có tên có quy tắc riêng.
 → Thực hiện ép kiểu tường minh `T2(x)` nếu hai kiểu tương thích, hoặc sửa signature của hàm nhận. [Ch2,3,14]
 
 ### A06 `assignment mismatch`
@@ -61,8 +61,8 @@ Số lượng biến nhận ở vế trái không khớp chính xác với số 
 → Kiểm tra signature của hàm gọi và hứng đủ tất cả các giá trị trả về (dùng `_` để bỏ qua nếu cần). [Ch1,4]
 
 ### A07 `missing return`
-Hàm có khai báo kiểu dữ liệu trả về nhưng tồn tại nhánh rẽ control-flow đi đến cuối block mà không có lệnh `return`.
-→ Rà soát các nhánh `if/else`, `switch/case` để bảo đảm mọi luồng thực thi đều trả về giá trị hoặc panic. [Ch1,4]
+Hàm có kết quả nhưng thân hàm không kết thúc bằng terminating statement theo Go spec. Compiler không chứng minh mọi điều kiện nghiệp vụ luôn đúng; một vòng `for {}` không có break cũng có thể là terminating statement.
+→ Kiểm tra return và các nhánh theo quy tắc terminating statement; không thêm panic chỉ để che một kết quả nghiệp vụ chưa được thiết kế. [Ch1,4]
 
 ### A08 `invalid operation: operator not defined on struct`
 Sử dụng toán tử so sánh (`==`, `!=`) trên struct chứa ít nhất một field không thể so sánh (như slice, map, func).
@@ -98,8 +98,8 @@ Type cụ thể không thỏa mãn interface vì thiếu method hoặc sai khác
 ## B — Runtime & Panic
 
 ### B01 `panic: runtime error: invalid memory address or nil pointer dereference`
-Dereference con trỏ nil hoặc gọi method qua nil interface có thể gây panic. Method có pointer receiver vẫn có thể nhận nil và xử lý nó; chỉ lời gọi trên receiver nil chưa đủ kết luận.
-! Nil dereference có thể làm process crash; đừng dùng recover để che lỗi mà không xác định contract và recovery boundary.
+Dereference con trỏ `nil` hoặc gọi method qua `nil` interface có thể gây `panic`. Method có pointer receiver vẫn có thể nhận `nil` và xử lý nó; chỉ lời gọi trên receiver `nil` chưa đủ kết luận.
+! Nil dereference có thể làm process crash; đừng dùng `recover` để che lỗi mà không xác định contract và recovery boundary.
 → Thêm kiểm tra `if ptr == nil` trước khi truy cập, hoặc rà soát constructor/hàm khởi tạo chưa gán con trỏ. [Ch2,3,12]
 
 ### B02 `panic: runtime error: index out of range [x] with length y`
@@ -129,7 +129,7 @@ Gọi lệnh `close()` lần thứ hai trên cùng một channel đã được �
 
 ### B08 `panic: interface conversion: interface {} is T1, not T2`
 Ép kiểu dạng assertion `v := x.(T2)` thất bại trong runtime khi giá trị thực tế bên trong là `T1` hoặc `nil`.
-→ Dùng `v, ok := x.(T2)` khi type động chưa được bảo đảm bởi contract. Nếu dùng assertion một giá trị, cần invariant rõ và hiểu rằng vi phạm sẽ panic. [Ch3,14,19]
+→ Dùng `v, ok := x.(T2)` khi type động chưa được bảo đảm bởi contract. Nếu dùng assertion một giá trị, cần invariant rõ và hiểu rằng vi phạm sẽ `panic`. [Ch3,14,19]
 
 ### B09 `fatal error: concurrent map read and map write`
 Nhiều goroutine cùng truy cập đọc và ghi đồng thời vào một biến kiểu `map` chuẩn mà không có cơ chế khóa đồng bộ.
@@ -175,7 +175,7 @@ Chuỗi JSON đưa vào `json.Unmarshal` bị rỗng hoặc bị ngắt cụt gi
 → Kiểm tra dữ liệu thực đọc được và lỗi decode; không dùng riêng `Content-Length` làm bằng chứng body đầy đủ. Giới hạn byte và xử lý stream rỗng theo contract API. [Ch7,11,20]
 
 ### C07 `sql: no rows in result set`
-Truy vấn `QueryRowContext` không tìm thấy bất kỳ bản ghi nào khớp với điều kiện lọc trong cơ sở dữ liệu (`sql.ErrNoRows`).
+Không có hàng cho truy vấn một kết quả; `QueryRowContext` trả `*sql.Row` và trì hoãn lỗi `sql.ErrNoRows` tới `Scan`, không trả cặp row/error trực tiếp.
 → Dùng `errors.Is(err, sql.ErrNoRows)` để phân biệt trường hợp không có dữ liệu với lỗi truy vấn database thực sự. [Ch13,20]
 
 ### C08 `sql: transaction has already been committed or rolled back`
@@ -213,11 +213,11 @@ Phương thức `server.Shutdown(ctx)` chạm mốc timeout của context truy�
 ## E — Filesystem & Process
 
 ### E01 `no such file or directory`
-Đường dẫn tập tin hoặc thư mục mục tiêu không tồn tại trên filesystem của hệ điều hành (`os.ErrNotExist`).
+Đường dẫn tập tin hoặc thư mục đích không tồn tại trên filesystem của hệ điều hành (`os.ErrNotExist`).
 → Kiểm tra đường dẫn tuyệt đối/tương đối, working directory thực tế của process, hoặc mount path trong container. [Ch7,15,17]
 
 ### E02 `permission denied`
-Process không có đủ quyền đọc, ghi, hoặc thực thi tập tin/thư mục mục tiêu (`os.ErrPermission`).
+Process không có đủ quyền đọc, ghi, hoặc thực thi tập tin/thư mục đích (`os.ErrPermission`).
 → Kiểm tra file mode permission (`chmod`), UID/GID của container user (non-root), hoặc chính sách SELinux/AppArmor. [Ch15,17]
 
 ### E03 `file already exists`
@@ -263,7 +263,7 @@ Dial không hoàn tất trong ngân sách kết nối, hoặc đọc/ghi vượt
 ### F04 `read: connection reset by peer`
 TCP stack báo connection reset. RST có thể đến từ peer hoặc thiết bị trung gian; riêng error string không xác định nguồn gây reset.
 ! Process restart, policy timeout hoặc middlebox là các hướng điều tra, không phải nguyên nhân đã được chứng minh. Crash cũng không luôn tạo RST.
-→ Kiểm tra log của server phía đối tác xem có sự cố panic, OOM, hay timeout của load balancer trung gian không. [Ch11,12,20]
+→ Kiểm tra log của server phía đối tác xem có sự cố `panic`, OOM, hay timeout của load balancer trung gian không. [Ch11,12,20]
 
 ### F05 `write: broken pipe`
 Lời gọi ghi bị báo EPIPE ở đường socket đang xét. TCP cho phép half-close; nhận FIN chỉ báo đóng chiều gửi của peer, không tự chứng minh mọi lần ghi tiếp phải lỗi.
@@ -307,7 +307,7 @@ Thực hiện thao tác trên `*sql.DB` đã đóng. Đây không phải `sql.Er
 
 ### G02 `driver: bad connection`
 Driver báo connection không dùng được (`driver.ErrBadConn`); `database/sql` có thể retry theo contract. Đây khác với chờ pool đạt `SetMaxOpenConns`.
-! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên "connection pool exhausted".
+! Chờ pool có thể kết thúc khi connection được trả lại, context bị hủy/hết hạn hoặc DB đóng. Không có error string chuẩn mang tên “connection pool exhausted”.
 → Điều tra connection lỗi và thống kê pool riêng. Chỉ đổi `SetMaxOpenConns` sau khi xét capacity database; context budget giới hạn chờ khi driver hỗ trợ, không sửa connection hỏng. [Ch13,20]
 
 ### G03 Unclosed sql.Rows (Connection Pool Starvation)
@@ -399,13 +399,13 @@ GitHub REST API có thể trả HTTP 403 hoặc 429 khi vượt primary hay seco
 ## J — Container / Kubernetes / CI-CD
 
 ### J01 CrashLoopBackOff
-Container liên tục kết thúc rồi được restart theo policy, và kubelet đang áp backoff. Exit 0 dưới `restartPolicy: Always`, failure hay liveness kill đều có thể dẫn tới vòng restart; không chỉ panic hoặc exit code dương.
+Container liên tục kết thúc rồi được restart theo policy, và kubelet đang áp backoff. Exit 0 dưới `restartPolicy: Always`, failure hay liveness kill đều có thể dẫn tới vòng restart; không chỉ `panic` hoặc exit code dương.
 ! Đây là waiting reason của container được phản ánh trong trạng thái Pod, không phải chuỗi lỗi của Go runtime hay một Pod phase riêng.
 → Kiểm tra log của container trước khi crash bằng lệnh `kubectl logs <pod> --previous`, rà soát biến môi trường và config bị thiếu. [Ch17,18,21]
 
 ### J02 OOMKilled (Exit Code 137)
 Container runtime/kubelet báo container bị OOM kill. Có thể liên quan cgroup memory limit hoặc áp lực OOM của host; cần đọc reason và sự kiện, không suy từ RSS của một process đơn lẻ.
-! Exit code 137 thường biểu thị SIGKILL và không riêng OOM. SIGKILL không thể bị handler chặn, nên process không chạy defer để dọn tài nguyên.
+! Exit code 137 thường biểu thị SIGKILL và không riêng OOM. SIGKILL không thể bị handler chặn, nên process không chạy `defer` để dọn tài nguyên.
 → Kiểm tra rò rỉ bộ nhớ qua heap profile (`pprof`), điều chỉnh thuật toán caching hoặc nâng hạn mức `limits.memory` cho pod. [Ch10,17,21]
 
 ### J03 ImagePullBackOff / ErrImagePull
@@ -420,12 +420,12 @@ Trạng thái lỗi cấu hình (`Waiting Reason`) khi Kubernetes không tìm th
 
 ### J05 Readiness probe failed
 * `HTTP probe failed with statuscode: 503`
-Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod Ready có thể thành false. EndpointSlice có thể vẫn giữ endpoint với `ready=false`; behavior Service còn phụ thuộc `publishNotReadyAddresses`.
+Probe readiness thất bại theo cấu hình; khi đạt failure threshold, Pod Ready có thể thành `false`. EndpointSlice có thể vẫn giữ endpoint với `ready=false`; behavior Service còn phụ thuộc `publishNotReadyAddresses`.
 ! Readiness failure không tự restart container và cũng không chứng minh process đang chạy bình thường; nó chỉ phản ánh kết quả của probe đã chọn.
 → Kiểm tra tình trạng kết nối đến các dependency hạ tầng (database, cache) và rà soát logic kiểm tra sẵn sàng của handler. [Ch12,17,20,21]
 
 ### J06 Liveness probe failed
-Liveness probe thất bại; đạt failure threshold dẫn tới xử lý restart container theo lifecycle và restart policy. Một lần probe lỗi chưa đủ suy ra container bị restart ngay.
+Liveness probe thất bại; đạt failure threshold dẫn tới xử lý restart container theo lifecycle và restart policy. Nếu `failureThreshold=1`, một lần lỗi đã đủ đạt ngưỡng; vẫn phải xét grace period và policy, không suy ra restart tức thời chỉ từ event.
 ! Tránh dùng lỗi database xa làm liveness failure nếu restart không chữa được nó; policy sai có thể gây cascading restart.
 → Chọn probe mà restart có khả năng chữa failure. Thường tránh đưa dependency xa vào liveness nếu nó gây restart dây chuyền; đây là khuyến nghị thiết kế, không phải giới hạn API chỉ cho kiểm tra nội tại. [Ch12,17,21]
 
@@ -455,9 +455,9 @@ Trạng thái chặn theo policy khi công cụ phân tích tìm đường gọi
 → Cập nhật phiên bản dependency đã vá lỗi, loại bỏ việc gọi ký hiệu chứa lỗ hổng, hoặc kiểm tra lại builder ID trong CI workflow. [Ch26]
 
 ### J11 MCP Tool Execution Denied: unauthorized mutation or SSRF boundary violation
-* `mcp: tool authorization denied for role <role> on tool <tool>`
-* `mcp: ssrf blocked: target ip <ip> belongs to private/metadata range`
-Trạng thái từ chối (`MCP Security Boundary Status`) khi Agent AI cố gắng kích hoạt công cụ làm thay đổi trạng thái hạ tầng (Mutating Tool) mà không có quyền hạn, hoặc truyền tham số URL vi phạm ranh giới phòng vệ SSRF (hướng tới AWS Metadata Service `169.254.169.254` hoặc Loopback `127.0.0.1`).
+* `mcp: role <role> not authorized for mutating tool restart_service`
+* `unapproved target_id <id>: blocked by SSRF allowlist policy`
+Trạng thái từ chối theo policy của lab Chương 28 khi role không được phép thay đổi hoặc `target_id` không nằm trong danh bạ. Đây là message ứng dụng, không phải diagnostic chuẩn MCP. Lab không nhận URL từ caller và không kiểm tra từng IP sau DNS/redirect; không trình bày nó như bộ chặn mọi địa chỉ private/metadata.
 ! Schema kiểm tra cấu trúc và constraint đã khai báo, không thay authorization, kiểm soát destination hay phòng prompt injection. Handler, gateway hoặc lớp mạng phải thực thi policy phù hợp; không phải yêu cầu bắt buộc dùng Go.
 → Kiểm tra role của Agent trong phiên MCP, cấu hình whitelist URL cho công cụ mạng, hoặc cấp token ủy quyền (Change Request ID) trước khi gọi các tool gây đột biến. [Ch28]
 

@@ -11,7 +11,7 @@ healthy := true
 retries := 0
 ~~~
 
-Bốn biến này đi cùng nhau. Chúng mô tả một service, nhưng compiler chưa biết điều đó. Càng nhiều hàm nhận chúng rời rạc, càng dễ đổi nhầm thứ tự, quên truyền một field, hoặc cập nhật một bản sao mà tưởng đã cập nhật trạng thái chung. Ta sẽ refactor dần mô hình này. Mỗi lần thay đổi, ta dừng ở cùng một câu hỏi: **function nhận value nào, và value ấy mở đường tới dữ liệu nào?**
+Bốn biến này đi cùng nhau. Chúng mô tả một dịch vụ, nhưng trình biên dịch chưa thể nhận biết mối liên kết đó. Càng nhiều hàm nhận các biến này một cách rời rạc, lập trình viên càng dễ đổi nhầm thứ tự, quên truyền một trường dữ liệu (*field*), hoặc cập nhật trên một bản sao cục bộ mà lầm tưởng đã thay đổi trạng thái chung. Chúng ta sẽ từng bước tái cấu trúc mô hình này. Mỗi lần thay đổi, ta dừng lại ở cùng một câu hỏi cốt lõi: hàm tiếp nhận giá trị nào, và giá trị ấy mở đường tới vùng dữ liệu nào?
 
 ## Bug đầu tiên: bonus đi đâu mất?
 
@@ -28,15 +28,15 @@ addBonus(balance)
 fmt.Println(balance) // 100
 ~~~
 
-`balance` không đổi vì lời gọi hàm cũng là một phép truyền value. Khi gọi `addBonus(balance)`, function nhận một parameter `x` có value `100`. Câu `x += 20` thay value trong variable `x`; nó không quay lại gán cho variable `balance` của caller. Đây không phải một ngoại lệ của `int`, mà là nền cho mọi signature trong chương này.
+Biến `balance` không đổi vì lời gọi hàm trong Go tuân thủ ngữ nghĩa truyền giá trị (*pass-by-value*). Khi gọi `addBonus(balance)`, hàm tiếp nhận một tham số `x` mang giá trị bản sao `100`. Phép tính `x += 20` chỉ thay đổi giá trị của biến cục bộ `x`; nó không thể tác động ngược lại biến `balance` ở phía bên gọi. Đây không phải là ngoại lệ của riêng kiểu `int`, mà là nền tảng chi phối mọi chữ ký hàm xuyên suốt chương này.
 
 ![Trace khái niệm của một lời gọi nhận int: parameter được khởi tạo bằng value của argument, rồi thay đổi riêng.](../../assets/diagrams/pointer-value-call.png)
 
-@figure Lời gọi `addBonus(balance)` copy value 100 vào parameter `x`. Sơ đồ biểu diễn semantics của variable và value, không khẳng định vị trí vật lý của chúng trong RAM.
+@figure Lời gọi `addBonus(balance)` sao chép giá trị 100 vào tham số `x`. Sơ đồ biểu diễn ngữ nghĩa của biến và giá trị, không khẳng định vị trí vật lý của chúng trong bộ nhớ RAM.
 
-Nếu function cần tạo một value mới, cách trên rất tốt: giá trị đi vào, kết quả đi ra bằng `return`. Ví dụ, `withBonus(balance)` có thể trả `120`, và caller chọn có gán kết quả đó cho `balance` hay không. Nhưng một số thao tác có ý nghĩa là thay đổi chính variable caller đã đưa vào. Lúc ấy cần biểu đạt đường đi tới variable đó một cách rõ ràng.
+Nếu hàm cần tạo một giá trị mới, cách tiếp cận trên rất rõ ràng: giá trị đầu vào được tiếp nhận, kết quả mới trả ra qua lệnh `return`. Ví dụ, `withBonus(balance)` có thể trả về `120`, và bên gọi tự quyết định việc có gán kết quả đó trở lại `balance` hay không. Tuy nhiên, một số thao tác có mục đích trực tiếp biến đổi biến gốc do bên gọi cung cấp. Khi đó, mã nguồn cần thể hiện rõ ràng con đường dẫn tới biến đó.
 
-## Pointer: con đường tới một variable
+## Con trỏ: con đường dẫn tới một biến
 
 | Khái niệm trong Go Semantics | Định nghĩa kỹ thuật chuẩn xác | Ví dụ tương ứng |
 | :--- | :--- | :--- |
@@ -46,7 +46,7 @@ Nếu function cần tạo một value mới, cách trên rất tốt: giá tr�
 | **Pointer value** | Giá trị mang kiểu con trỏ (như `*int`), chứa địa chỉ của một biến hoặc `nil`. | Biến con trỏ `p` |
 | **Pointee** | Biến đích tại ô nhớ mà con trỏ đang trỏ tới. | Ô nhớ chứa `balance` |
 
-Ta không cần giả định variable ấy nằm cố định trên stack hay heap. Đó là quyết định implementation có thể thay đổi. Điều cần dùng khi đọc code là quan hệ ngôn ngữ: pointer value có đang trỏ tới một variable hợp lệ hay không.
+Ta không cần suy đoán biến đó nằm cố định trên vùng nhớ ngăn xếp (*stack*) hay vùng nhớ động (*heap*). Đó là chi tiết hiện thực của trình biên dịch có thể thay đổi qua từng phiên bản. Điều cốt lõi khi đọc mã nguồn là mối quan hệ ngôn ngữ: giá trị con trỏ có đang trỏ tới một biến hợp lệ hay không.
 
 ~~~go
 func addBonus(balance *int) {
@@ -58,17 +58,17 @@ addBonus(&amount)
 fmt.Println(amount) // 120
 ~~~
 
-Ở caller, `&amount` tạo pointer tới variable `amount`. Parameter `balance` vẫn là một value được copy vào function - lần này value đó là pointer. Khi `*balance += 20` chạy, dereference `*balance` chọn chính variable `amount` làm đích gán. Bản sao của pointer không tạo bản sao của pointee.
+Ở phía bên gọi, `&amount` trích xuất con trỏ dẫn tới biến `amount`. Tham số `balance` vẫn là một giá trị được sao chép vào hàm, chỉ có điều giá trị sao chép đó là một địa chỉ con trỏ. Khi biểu thức `*balance += 20` thực thi, thao tác giải tham chiếu (*dereference*) `*balance` chọn chính biến `amount` làm đích gán dữ liệu. Bản sao của con trỏ không hề tạo ra bản sao của biến đích (*pointee*).
 
 ![Pointer value và variable mà nó trỏ tới: dereference chọn variable để đọc hoặc gán.](../../assets/diagrams/pointer-pointee.png)
 
-@figure `balance` trong function là pointer value được truyền theo value. `*balance` truy cập pointee; sơ đồ cố ý không dùng địa chỉ số hay stack/heap để tránh biến mental model thành chi tiết runtime.
+@figure Tham số `balance` trong hàm là giá trị con trỏ được truyền theo cơ chế sao chép giá trị. Thao tác `*balance` truy cập biến đích (*pointee*); sơ đồ cố ý không dùng địa chỉ số hay phân chia ngăn xếp/vùng nhớ heap để giữ đúng mô hình tinh thần ở tầng ngữ nghĩa.
 
-Phép `&` không dùng được với mọi expression. Thông thường, operand của `&` phải addressable: variable, dereference pointer, index của slice, field của struct addressable, hoặc index của array addressable là những trường hợp quan trọng ở giai đoạn này. Go specification có một ngoại lệ hữu ích: được phép lấy địa chỉ của composite literal, như `&Service{Name: "billing"}`. Không cần gọi composite literal là “addressable” để dùng đúng quy tắc; hãy nhớ hai ý riêng: `&x` thường cần một nơi có thể gán, còn literal có ngoại lệ được phép tạo value rồi lấy địa chỉ của nó. Map index không addressable - ta sẽ thấy lý do thực hành của giới hạn đó khi đưa map vào mô hình service.
+Phép lấy địa chỉ `&` không áp dụng được cho mọi biểu thức. Thông thường, toán hạng phải lấy được địa chỉ: một biến, biểu thức giải tham chiếu con trỏ, phần tử lát cắt, trường của struct lấy được địa chỉ hoặc phần tử mảng lấy được địa chỉ. Go có ngoại lệ cho biểu thức tạo giá trị phức hợp viết trực tiếp (*composite literal*), như `&Service{Name: "billing"}`. Đây không phải hằng số: biểu thức ấy tạo một biến mới chứa giá trị `Service` và trả con trỏ tới biến đó. Ta có thể sửa các trường qua con trỏ. Ngược lại, `&100` và `&services["billing"]` không hợp lệ. Khả năng gán và khả năng lấy địa chỉ không đồng nhất: phần tử map có thể là đích của phép gán nhưng không thể là toán hạng của `&`.
 
-### Nil là thiếu pointee, không phải "pointer rỗng vô hại"
+### Giá trị nil là thiếu biến đích, không phải “con trỏ rỗng vô hại”
 
-Zero value của pointer type là `nil`. `nil` không trỏ tới variable nào, nên dereference nó gây run-time panic.
+Giá trị mặc định (*zero value*) của kiểu con trỏ là `nil`. Giá trị `nil` không trỏ tới bất kỳ biến nào, do đó thao tác giải tham chiếu trên nó sẽ lập tức gây hoảng loạn khi chạy (`panic`).
 
 ~~~go
 var bonus *int
@@ -80,9 +80,9 @@ if bonus == nil {
 *bonus += 20
 ~~~
 
-Dereference `*bonus` cần một pointee để chọn làm đích gán; `nil` không có pointee, nên dereference nó panic. Kiểm tra `nil` là một phần của contract: function này có chấp nhận "không có giá trị" hay caller phải luôn truyền pointer hợp lệ? Đừng thêm `nil` check theo thói quen. Hãy quyết định và thể hiện điều đó qua API, test, hoặc lỗi trả về khi có lý do.
+Thao tác giải tham chiếu `*bonus` đòi hỏi một biến đích để làm nơi gán giá trị; giá trị `nil` không có biến đích nào, do đó thao tác giải tham chiếu sẽ gây hoảng loạn (`panic`). Việc kiểm tra `nil` là một phần trong giao ước của hàm: hàm này có chấp nhận tham số rỗng hay bên gọi bắt buộc phải luôn truyền vào một con trỏ hợp lệ? Không nên thêm các phép kiểm tra `nil` một cách máy móc theo quán tính. Hãy xác lập rõ ràng và thể hiện điều đó qua giao diện lập trình, ca kiểm thử hoặc mã lỗi trả về khi có lý do chính đáng.
 
-## Gom state thành một value có tên
+## Gom trạng thái thành một giá trị có tên
 
 Quay lại bốn biến rời rạc. Một struct gom chúng thành một value mà domain có thể gọi tên:
 
@@ -101,9 +101,9 @@ billing := Service{
 }
 ~~~
 
-`type Service` khai báo một named type; phần thân struct khai báo các field và type của chúng. Struct literal đặt value cho các field được nêu. `Retries` không xuất hiện trong literal nên nhận zero value của `int`, là `0`. Zero value không thay thế validation: một `Service{}` hợp lệ về type nhưng chưa chắc hợp lệ cho một service thật. Trong domain này, port `0` có thể nghĩa là "chưa cấu hình".
+Cú pháp `type Service struct { ... }` định nghĩa kiểu `Service` với các trường đã nêu. Biểu thức `Service{...}` tạo một giá trị struct; trường `Retries` không được liệt kê nhận giá trị mặc định `0`. Go không cho khai báo một struct làm hằng bằng `const`. Giá trị mặc định cũng không thay thế kiểm tra tính hợp lệ: `Service{}` hợp lệ về kiểu nhưng chưa chắc hợp lệ cho dịch vụ thật. Trong nghiệp vụ này, cổng `0` có thể mang nghĩa “chưa được cấu hình”.
 
-Struct không phải class thiếu method. Trước hết nó là một value có nhiều phần mang cùng một ý nghĩa. Field access chỉ đọc hoặc gán một phần của value:
+Cấu trúc (*struct*) không phải là một lớp đối tượng thiếu phương thức. Trước hết, nó là một giá trị phức hợp gồm nhiều thành phần mang chung một ý nghĩa nghiệp vụ. Phép truy xuất trường chỉ đơn thuần đọc hoặc gán một phần giá trị bên trong cấu trúc:
 
 ~~~go
 billing.Retries++
@@ -122,9 +122,9 @@ fmt.Println(candidate.Healthy) // false
 
 ![Hai struct value sau phép gán: field được copy, nên thay đổi field của `candidate` không quay lại `billing`.](../../assets/diagrams/struct-copy.png)
 
-@figure Assignment copy struct value hiện tại theo từng field. Nếu một field về sau là slice, map hoặc pointer, struct vẫn được copy nhưng field đó có thể mang theo một reference; lúc ấy phải phân tích tiếp value của field thay vì gắn nhãn "struct luôn độc lập".
+@figure Phép gán sao chép giá trị cấu trúc hiện tại theo từng trường dữ liệu. Nếu một trường về sau là lát cắt, bảng băm hoặc con trỏ, cấu trúc vẫn được sao chép nhưng trường đó có thể mang theo một tham chiếu chia sẻ; khi ấy lập trình viên phải phân tích tiếp giá trị của trường thay vì nhận định phiến diện rằng “cấu trúc luôn độc lập dữ liệu”.
 
-Nested struct hữu ích khi một phần của domain tự nó đã có ý nghĩa. Ví dụ, host và port thường đi cùng nhau hơn là hai field phẳng:
+Cấu trúc lồng nhau (*nested struct*) phát huy hiệu quả khi một phần của miền nghiệp vụ tự thân mang một ý nghĩa hoàn chỉnh. Ví dụ, máy chủ và cổng mạng thường đi liền với nhau thay vì khai báo thành hai trường độc lập trên cùng một mặt phẳng:
 
 ~~~go
 type Endpoint struct {
@@ -142,11 +142,14 @@ type Service struct {
 
 Việc nesting không tự động làm thiết kế tốt hơn. Nó có ích khi tạo ra một khái niệm đọc được, như `Endpoint`; gom chỉ để tránh thấy nhiều field thường làm model khó tìm hơn.
 
-## Khi function sửa một bản copy
+## Khi hàm biến đổi một bản sao cục bộ
 
 Ta muốn `opsprobe` đánh dấu service không khỏe sau một lần probe thất bại. Phiên bản đầu tiên trông rất có lý:
 
 ~~~go
+// Ví dụ mới, không dùng billing đã tăng Retries ở trên.
+billing := Service{Name: "billing", Healthy: true}
+
 func markUnhealthy(service Service) {
 	service.Healthy = false
 	service.Retries++
@@ -156,7 +159,7 @@ markUnhealthy(billing)
 fmt.Println(billing.Healthy, billing.Retries) // true 0
 ~~~
 
-Không có bug bí ẩn ở đây. `billing` được copy vào parameter `service`; function thay đổi struct copy rồi return. Caller còn giữ value cũ. Nếu đây là một transform thuần, ta có thể trả `Service` mới. Nếu ý định là mutate state caller đang quản lý, signature cần nói điều đó:
+Không có lỗi ẩn giấu nào ở đây. Biến `billing` được sao chép nguyên vẹn vào tham số `service`; hàm thay đổi trên bản sao cấu trúc đó rồi kết thúc. Phía bên gọi vẫn giữ nguyên giá trị cũ. Nếu đây là một thao tác chuyển đổi thuần túy (*pure transform*), hàm có thể trả về một đối tượng `Service` mới qua lệnh `return`. Nếu ý định là thay đổi trực tiếp trạng thái mà bên gọi đang quản lý, chữ ký hàm bắt buộc phải thể hiện rõ điều đó:
 
 ~~~go
 func markUnhealthy(service *Service) {
@@ -168,11 +171,11 @@ markUnhealthy(&billing)
 fmt.Println(billing.Healthy, billing.Retries) // false 1
 ~~~
 
-`T` và `*T` không có nghĩa "immutable" và "mutable". Một local value `Service` vẫn có thể bị gán field; một pointer parameter có thể chỉ được đọc. Khác biệt là một `T` parameter mang struct value riêng, còn một `*T` parameter mang khả năng truy cập pointee của caller. Chọn pointer khi function phải thay đổi pointee, khi biểu diễn sự vắng mặt bằng `nil` là một phần hữu ích của domain, hoặc khi API có lý do rõ ràng khác. Chọn value khi function cần snapshot cục bộ, transform rồi return, hoặc sharing sẽ làm contract khó hiểu hơn.
+Kiểu giá trị `T` và kiểu con trỏ `*T` không đồng nghĩa với khái niệm “bất biến” và “có thể thay đổi”. Một biến cục bộ kiểu `Service` vẫn có thể được gán lại các trường; một tham số con trỏ hoàn toàn có thể chỉ được dùng để đọc dữ liệu. Khác biệt cốt lõi là tham số kiểu `T` tiếp nhận một bản sao giá trị độc lập, còn tham số kiểu `*T` mở ra khả năng truy cập trực tiếp biến đích (*pointee*) của bên gọi. Hãy chọn con trỏ khi hàm có nhiệm vụ biến đổi biến đích, khi việc biểu diễn trạng thái vắng mặt bằng `nil` là một phần tự nhiên của nghiệp vụ, hoặc khi thiết kế giao diện lập trình có lý do kỹ thuật rõ ràng. Hãy chọn truyền giá trị khi hàm chỉ cần ảnh chụp dữ liệu cục bộ, chuyển đổi rồi trả về bản mới, hoặc khi việc chia sẻ ô nhớ làm giao ước kỹ thuật trở nên phức tạp.
 
 ### Cùng một lời gọi, bảy value khác nhau
 
-Đến đây có thể đọc nhiều signature bằng một quy tắc duy nhất: Go truyền argument theo value. "Theo value" không trả lời xong câu hỏi; ta còn phải nhìn value đó chứa dữ liệu nào hoặc reference nào.
+Đến đây chúng ta có thể đọc các chữ ký hàm bằng một quy tắc nhất quán: Go luôn truyền đối số theo giá trị (*pass-by-value*). Dù vậy, “theo giá trị” chưa giải đáp trọn vẹn bài toán; người đọc mã nguồn còn phải phân tích xem giá trị đó trực tiếp chứa dữ liệu hay đang giữ một tham chiếu trỏ tới vùng nhớ khác.
 
 @table Mỗi lời gọi đều copy argument value vào parameter; khả năng chia sẻ nằm trong value được copy.
 
@@ -186,11 +189,15 @@ fmt.Println(billing.Healthy, billing.Retries) // false 1
 | `v Service` | các field của struct value | Không với các field value; xem từng field nếu chúng chứa reference. |
 | `p *Service` | pointer value | Sửa field qua `p` sửa pointee của caller nếu pointer hợp lệ. |
 
-Bảng này không phải bảng để học thuộc type. Nó là cách lần một lời gọi: parameter mới nhận bản copy nào; bản copy ấy có dẫn đến dữ liệu chung hay variable chung không; expression nào là đích mutation? Đó cũng là lý do value receiver và pointer receiver sẽ được học sau cùng methods, thay vì biến dấu `*` thành một nghi thức.
+Bảng này không nhằm mục đích học thuộc lòng các kiểu dữ liệu. Nó cung cấp phương pháp luận để lần theo một lời gọi hàm: tham số mới tiếp nhận bản sao nào; bản sao ấy có dẫn tới vùng dữ liệu chung hay biến số chung hay không; biểu thức nào là đích gán cuối cùng? Đó cũng là lý do bộ tiếp nhận giá trị (*value receiver*) và bộ tiếp nhận con trỏ (*pointer receiver*) được giới thiệu song hành cùng phương thức, thay vì biến dấu hoa thị `*` thành một nghi thức cú pháp máy móc.
 
-> **Bài tập - sửa đúng contract:** Viết `recordFailure(service Service)` sao cho caller nhận được `Healthy == false` và `Retries` tăng một. Trước khi nhìn đáp án, chọn một trong hai contract: function return một `Service` mới, hoặc function nhận `*Service` và mutate pointee.
+### Bài thực hành: Sửa đúng khế ước kỹ thuật
 
-**Đáp án.** Nếu caller quản lý cùng một state và function được đặt tên như một command, pointer làm ý định trực tiếp:
+Viết `recordFailure(service Service)` sao cho bên gọi nhận được `Healthy == false` và `Retries` tăng một. Trước khi đối chiếu đáp án, hãy chọn một trong hai khế ước: hàm trả về một cấu trúc `Service` mới, hoặc hàm nhận `*Service` và trực tiếp biến đổi giá trị được trỏ tới.
+
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Nếu bên gọi cùng quản lý một trạng thái và hàm được đặt tên như một mệnh lệnh thực thi, con trỏ giúp thể hiện ý định kỹ thuật trực tiếp:
 
 ~~~go
 func recordFailure(service *Service) {
@@ -213,17 +220,21 @@ func failedCopy(service Service) Service {
 billing = failedCopy(billing)
 ~~~
 
-Hai phiên bản khác nhau ở trách nhiệm của caller. Phiên bản pointer cho phép function tác động lên state đã có; phiên bản return khiến việc thay state nằm rõ ở câu gán của caller. Không có "bản nhanh hơn" mặc định quan trọng hơn contract ở đây.
+Hai phiên bản khác biệt ở sự phân định trách nhiệm của bên gọi. Phiên bản truyền con trỏ cho phép hàm tác động trực tiếp lên trạng thái đã tồn tại; phiên bản trả về giá trị giúp việc thay đổi trạng thái được thể hiện minh bạch qua câu lệnh gán của bên gọi. Không có “phiên bản chạy nhanh hơn” mặc định nào quan trọng hơn một giao ước kỹ thuật rõ ràng.
 
-**Thực hành - một bug vẫn compile.** Trong `labs/part3-data-models`, mở `main_test.go` trước. Ở `recordProbe`, tạm bỏ câu `registry[name] = service`, rồi chạy riêng `TestRecordProbeUpdatesExistingMapEntry`. Code vẫn compile vì local struct copy được sửa hợp lệ; test mới chỉ ra entry trong map không hề nhận value mới. Khôi phục bằng đường mutation mà anh đã lần, không bằng cách sửa expectation. Sau đó xóa thân `recordFailure` và tự dựng lại nó từ `TestRecordFailureMutatesPointee`.
+### Bài thực hành: Lỗi logic khi mã nguồn vẫn biên dịch thành công
+
+Trong thư mục `labs/part3-data-models`, hãy mở tệp `main_test.go` trước. Trong hàm `recordProbe`, tạm thời lược bỏ câu lệnh `registry[name] = service`, rồi chạy riêng ca kiểm thử `TestRecordProbeUpdatesExistingMapEntry`. Mã nguồn vẫn biên dịch thành công vì bản sao cấu trúc cục bộ được sửa đổi hoàn toàn hợp lệ; tuy nhiên ca kiểm thử sẽ chỉ ra rằng phần tử trong bảng băm không hề nhận giá trị mới. Hãy khôi phục lại mã bằng đúng đường biến đổi dữ liệu mà bạn đã phân tích, thay vì sửa đổi kỳ vọng của bài kiểm thử. Sau đó, hãy xóa phần thân hàm `recordFailure` và tự viết lại dựa trên yêu cầu của `TestRecordFailureMutatesPointee`.
 
 ---
 
-**Đáp án — chỉ đọc sau khi đã tự làm.** Map lookup trả một `Service` value. Sửa local `service` chưa chạm map data; phép gán ngược vào `registry[name]` mới là mutation của registry. `recordFailure` cần nhận `*Service` và sửa pointee, vì test đòi caller quan sát cùng state thay đổi.
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
 
-## Nhiều service cần lookup, không cần thêm biến
+Thao tác tra cứu bảng băm trả về một giá trị `Service` độc lập. Việc chỉnh sửa biến cục bộ `service` chưa hề tác động đến dữ liệu của bảng băm; phép gán ngược trở lại `registry[name]` mới là thao tác biến đổi dữ liệu thực sự trên bảng băm. Hàm `recordFailure` cần tiếp nhận con trỏ `*Service` và chỉnh sửa trực tiếp biến đích, nhằm đáp ứng giao ước kiểm thử đòi hỏi bên gọi phải quan sát thấy sự thay đổi trên cùng một trạng thái.
 
-Một `Service` model một service. Khi `opsprobe` giữ nhiều service theo tên, ta không muốn `billing`, `search`, `checkout` thành các variable độc lập. Map diễn đạt một quan hệ key/value:
+## Quản lý nhiều dịch vụ qua bảng băm, không tạo thêm biến rời rạc
+
+Cấu trúc `Service` mô hình hóa một dịch vụ đơn lẻ. Khi công cụ `opsprobe` cần quản lý đồng thời nhiều dịch vụ theo tên, ta không thể để `billing`, `search`, `checkout` thành các biến số rời rạc. Kiểu bảng băm (*map*) thể hiện mối quan hệ ánh xạ giữa khóa (*key*) và giá trị (*value*):
 
 ~~~go
 services := map[string]Service{
@@ -238,7 +249,7 @@ billing, found := services["billing"]
 fmt.Println(found, billing.Port) // true 8080
 ~~~
 
-`string` là key type; `Service` là element type. `found` là kết quả thứ hai của map lookup, thường gọi là comma-ok. Nó phân biệt key không có mặt với element có zero value. Một lookup một-result vẫn hoàn toàn hợp lệ: `services["missing"].Retries` đọc `Retries` của zero value `Service{}`, nên cho `0`. Nhưng `0` khi ấy có thể là “chưa có service” hoặc “service có `Retries == 0`”; đó là lý do phải dùng comma-ok khi sự hiện diện của entry mang ý nghĩa.
+Kiểu `string` là kiểu của khóa; `Service` là kiểu của phần tử. Biến `found` là kết quả thứ hai của phép tra cứu bảng băm, thường được gọi là cơ chế *comma-ok*. Nó giúp phân biệt rõ giữa trường hợp khóa không tồn tại với trường hợp phần tử mang giá trị mặc định. Phép tra cứu nhận một kết quả vẫn hợp lệ về cú pháp: biểu thức `services["missing"].Retries` sẽ đọc trường `Retries` của cấu trúc rỗng `Service{}`, và cho kết quả `0`. Tuy nhiên con số `0` lúc đó có thể mang ý nghĩa “chưa có dịch vụ” hoặc “dịch vụ đã có nhưng số lần thử lại bằng 0”; đó là lý do bắt buộc phải sử dụng cơ chế *comma-ok* khi sự hiện diện thực tế của phần tử mang tính quyết định.
 
 ~~~go
 attempts := map[string]int{"billing": 0}
@@ -250,7 +261,7 @@ count, found = attempts["search"]
 fmt.Println(count, found) // 0 false
 ~~~
 
-Map literal tạo map đã sẵn sàng ghi. `make(map[string]Service)` cũng tạo map sẵn sàng ghi. Ngược lại, zero value của map là `nil`: đọc từ nil map cho zero value, `range` qua nó có zero iteration, nhưng gán entry vào nil map sẽ panic. Một map nhận từ caller vì thế cần contract rõ như pointer: caller có luôn khởi tạo nó không, hay function chịu trách nhiệm tạo nó trước khi ghi?
+Hằng bảng băm (*map literal*) tạo ra bảng băm đã sẵn sàng ghi dữ liệu. Lệnh `make(map[string]Service)` cũng khởi tạo một bảng băm sẵn sàng tiếp nhận phần tử. Ngược lại, giá trị mặc định của bảng băm là `nil`: thao tác đọc từ bảng băm `nil` sẽ trả về giá trị mặc định của kiểu phần tử, duyệt qua nó bằng vòng lặp `for range` sẽ lặp 0 lần mà không báo lỗi, nhưng việc gán phần tử mới vào bảng băm `nil` sẽ lập tức gây hoảng loạn (`panic`). Do đó, một bảng băm tiếp nhận từ bên gọi đòi hỏi một giao ước kỹ thuật rõ ràng tương tự như con trỏ: bên gọi có luôn khởi tạo bảng băm trước hay hàm có trách nhiệm tự khởi tạo nó trước khi ghi?
 
 ~~~go
 var services map[string]Service
@@ -262,11 +273,11 @@ services = make(map[string]Service)
 services["billing"] = billing
 ~~~
 
-`delete(services, "billing")` xóa một entry; xóa key không có mặt là an toàn. Nhưng `range` map không có thứ tự được chỉ định. Nếu CLI cần output ổn định, hãy lấy key, sort chúng, rồi in theo thứ tự đã chọn - đừng coi thứ tự đang tình cờ xuất hiện là contract của map.
+Lệnh `delete(services, "billing")` xóa một phần tử khỏi bảng băm; việc xóa một khóa không tồn tại hoàn toàn an toàn và không gây lỗi. Tuy nhiên, vòng lặp `for range` trên bảng băm không có thứ tự lặp cố định theo đặc tả ngôn ngữ. Nếu công cụ dòng lệnh cần xuất kết quả theo thứ tự ổn định, lập trình viên cần thu thập danh sách các khóa, sắp xếp chúng theo quy tắc định sẵn rồi mới in ra; tuyệt đối không xem thứ tự ngẫu nhiên trong một lần chạy là giao ước cố định của bảng băm.
 
-### Map copy value, chia sẻ map data
+### Sao chép giá trị map, chia sẻ các phần tử
 
-Map không phải pointer và ta không cần mô tả hash table internals để dùng nó đúng. Assignment và call copy map value. Nếu hai map value cùng reference map data, ghi qua một value hiện ra qua value kia:
+Ở tầng ngôn ngữ, `map[string]int` và `*int` là hai kiểu khác nhau. Phép gán và truyền đối số sao chép giá trị map; bản sao vẫn tham chiếu tới cùng dữ liệu map. Không cần giả định có một “tiêu đề map” với bố cục cố định để giải thích hành vi này. Trong đoạn chạy tuần tự dưới đây, cập nhật phần tử qua `alias` được đọc lại qua `registry`:
 
 ~~~go
 registry := map[string]int{"billing": 1}
@@ -278,15 +289,17 @@ fmt.Println(registry["billing"]) // 2
 
 ![Hai map value sau assignment: map value được copy, còn map data được cả hai value dùng để lookup và cập nhật.](../../assets/diagrams/map-sharing.png)
 
-@figure Assignment copy map value. Khi value ấy reference cùng map data, mutation entry qua `alias` hiện ra khi đọc qua `registry`; hình là conceptual diagram, không mô tả hash table implementation.
+@figure Phép gán sao chép giá trị map, không sao chép các phần tử. Hai giá trị dùng chung dữ liệu map; hình không khẳng định bố cục triển khai trong bộ nhớ.
 
-Một chi tiết làm map khác slice và array khi update struct value: map index không addressable. Vì vậy đoạn này không hợp lệ:
+Hãy phân biệt sửa phần tử với thay chính biến map. Nếu một hàm gán `registry = make(map[string]int)`, nó chỉ thay tham số cục bộ; biến map của bên gọi vẫn giữ giá trị cũ. Con trỏ cũng vậy: gán `p = &other` không đổi con trỏ của bên gọi, còn `*p = 7` sửa biến đích. Go vẫn truyền cả hai đối số theo giá trị, không tự tạo cơ chế truyền biến bằng tham chiếu. `TestPointerAndMapRebindingStayLocal` trong lab đặt hai thao tác cạnh nhau để anh kiểm chứng sự khác biệt.
+
+Một đặc điểm khiến bảng băm khác biệt với lát cắt và mảng khi cập nhật giá trị cấu trúc: phần tử truy xuất qua chỉ mục bảng băm (*map index*) không thể lấy địa chỉ ô nhớ (*not addressable*). Vì vậy đoạn mã sau sẽ không thể biên dịch:
 
 ~~~go
 // services["billing"].Healthy = false // không hợp lệ
 ~~~
 
-`services["billing"]` cho một `Service` value để đọc; nó không cho một variable mà ta có thể lấy địa chỉ field hay gán field trực tiếp. Cách value-oriented là lấy value ra, đổi, rồi gán lại:
+Biểu thức `services["billing"]` trả về một giá trị bản sao `Service` để đọc; nó không trả về một biến ô nhớ để ta có thể lấy địa chỉ của trường dữ liệu hay gán trực tiếp vào trường đó. Giải pháp theo định hướng truyền giá trị là: đọc giá trị ra biến cục bộ, chỉnh sửa trường dữ liệu, rồi gán ngược bản sao đã sửa trở lại bảng băm:
 
 ~~~go
 service := services["billing"]
@@ -294,7 +307,7 @@ service.Healthy = false
 services["billing"] = service
 ~~~
 
-Nếu domain muốn registry quản lý các `*Service`, thì mutation qua pointee có thể trực tiếp hơn, nhưng đổi lại registry có thể chứa nil pointer và ownership cần được làm rõ:
+Nếu miền nghiệp vụ đòi hỏi sổ đăng ký phải quản lý các con trỏ `*Service`, việc biến đổi dữ liệu qua con trỏ đích có thể trực tiếp hơn, nhưng đổi lại sổ đăng ký có nguy cơ chứa con trỏ `nil` và quyền sở hữu tài nguyên cần được quy định rõ ràng:
 
 ~~~go
 services := map[string]*Service{
@@ -308,11 +321,15 @@ services := map[string]*Service{
 services["billing"].Healthy = false
 ~~~
 
-Đây không phải lời mời chọn `map[string]*Service` mặc định. Với value nhỏ như `Service` hiện tại, `map[string]Service` và "lấy - sửa - gán lại" thường bộc lộ điểm mutation rõ hơn. Pointer trong map chỉ đáng dùng khi nó giải quyết một contract thực: object identity dùng chung, mutation phải đi qua nhiều nơi, hoặc value lớn và đã có lý do đo đạc/thiết kế.
+Đây không phải là lời khuyến khích chọn `map[string]*Service` theo quán tính. Với cấu trúc dung lượng nhỏ như `Service` hiện tại, mô hình `map[string]Service` kết hợp quy trình “lấy ra, sửa đổi, gán lại” giúp các điểm biến đổi trạng thái trở nên minh bạch và an toàn hơn. Con trỏ bên trong bảng băm chỉ thực sự đáng dùng khi giải quyết một giao ước kỹ thuật xác thực: danh tính đối tượng dùng chung, biến đổi cần phản ánh đồng thời ở nhiều nơi, hoặc dữ liệu có dung lượng lớn đi kèm số liệu đo đạc thực tế.
 
-> **Bài tập - đọc zero value:** Một probe trả về `latencyByService map[string]int`. Viết code phân biệt `billing` có latency `0` với `billing` chưa có kết quả. Sau đó xóa kết quả của `billing` mà không cần kiểm tra key có tồn tại.
+### Bài thực hành: Nhận diện giá trị mặc định của bảng băm
 
-**Đáp án.** Comma-ok mang thông tin hiện diện; `delete` tự xử lý key thiếu:
+Một lần thăm dò trả về bảng băm độ trễ `latencyByService map[string]int`. Viết đoạn mã phân biệt giữa hai trường hợp: dịch vụ `billing` có độ trễ bằng `0` và `billing` chưa hề có kết quả thăm dò. Sau đó, thực hiện xóa kết quả của `billing` mà không cần kiểm tra khóa có tồn tại hay không.
+
+#### Gợi ý giải pháp (chỉ đọc sau khi đã tự làm)
+
+Cơ chế kiểm tra hai giá trị trả về (*comma-ok*) cung cấp thông tin về sự hiện diện thực tế của phần tử; hàm tích hợp sẵn `delete` tự động xử lý an toàn khi khóa cần xóa không tồn tại trong bảng băm:
 
 ~~~go
 latency, found := latencyByService["billing"]
@@ -325,25 +342,25 @@ if !found {
 delete(latencyByService, "billing")
 ~~~
 
-## Ai có quyền giữ một entry mãi mãi?
+## Quyền hạn và trách nhiệm lưu giữ phần tử trong bộ nhớ
 
-Registry vừa giúp tìm service theo tên. Nhưng nếu tên không còn là tập hữu hạn mà mỗi request đưa vào một key mới, quyền sửa map còn bao gồm một trách nhiệm khác: quyết định khi nào bỏ dữ liệu. Hãy xét một cache sống cùng tiến trình. Mỗi lần miss, nó thêm `cache[key] = payload`; không có `delete`, không giới hạn key và không có ngày hết hạn. Vì owner vẫn giữ map, các value còn trong map vẫn được tham chiếu. GC không có quyền đoán rằng kết quả của request hôm qua đã hết giá trị nghiệp vụ rồi xóa hộ.
+Sổ đăng ký vừa giúp tra cứu dịch vụ theo tên. Nhưng nếu tên không còn thuộc một tập hữu hạn mà mỗi yêu cầu gửi đến lại thêm một khóa mới, quyền chỉnh sửa bảng băm sẽ đi kèm một trách nhiệm hệ trọng: quyết định thời điểm loại bỏ dữ liệu. Hãy xét một bộ nhớ đệm (*cache*) tồn tại suốt vòng đời tiến trình. Mỗi lần trượt bộ đệm, hệ thống thêm `cache[key] = payload`; không có lệnh `delete`, không giới hạn số lượng khóa và không có thời hạn hết hạn (*TTL*). Vì bên sở hữu vẫn giữ bảng băm, các giá trị bên trong vẫn luôn trong trạng thái có thể tiếp cận được. Bộ thu gom rác (GC) không thể tự đoán rằng kết quả của yêu cầu từ ngày hôm qua đã hết giá trị nghiệp vụ để tự động xóa giúp.
 
-Chưa thể kết luận “global map là leak”. Một bảng cấu hình hữu hạn sống suốt process là thiết kế bình thường. Một kho lịch sử có retention policy, dự báo tăng trưởng và ngân sách tương ứng cũng có thể tăng hợp lệ. Cache hứa tiết kiệm tài nguyên nhưng giữ mọi key từng thấy lại không có điểm dừng. Lỗi ở contract giữ dữ liệu, không ở vị trí khai báo map. Memory leak theo nghĩa vận hành là tài nguyên tiếp tục bị giữ sau khi nhu cầu đã hết; trong Go nó thường vẫn reachable, chứ không nhất thiết là allocation mất mọi pointer như cách người ta mô tả leak trong ngôn ngữ quản lý bộ nhớ thủ công.
+Chưa thể vội vã kết luận rằng “bảng băm toàn cục luôn là rò rỉ bộ nhớ”. Một bảng cấu hình có số phần tử hữu hạn sống suốt vòng đời tiến trình là một thiết kế hoàn toàn bình thường. Một kho lưu trữ lịch sử có chính sách lưu giữ (*retention policy*), có dự báo tăng trưởng và hạn mức tài nguyên tương ứng cũng có thể tăng trưởng một cách hợp lệ. Bộ nhớ đệm hứa hẹn tiết kiệm tài nguyên nhưng nếu lưu giữ mọi khóa từng gặp mà không có điểm dừng sẽ trở thành thảm họa. Sai lầm nằm ở giao ước lưu giữ dữ liệu, chứ không nằm ở vị trí khai báo bảng băm. Rò rỉ bộ nhớ theo nghĩa vận hành là tài nguyên tiếp tục bị chiếm dụng sau khi nhu cầu sử dụng đã chấm dứt; trong Go, vùng nhớ đó thường vẫn ở trạng thái tiếp cận được (*reachable*), chứ không nhất thiết là việc mất dấu toàn bộ con trỏ như khái niệm rò rỉ trong các ngôn ngữ quản lý bộ nhớ thủ công.
 
-Trước khi đọc `fixed` của lab `part10-resource-retention`, anh hãy viết contract cho một cache đơn chủ sở hữu: tối đa hai entry, mỗi value tối đa 4 MiB, key tối đa 128 byte; khi thêm key thứ ba thì bỏ key được thêm sớm nhất. Cập nhật key cũ không làm mới tuổi của nó. Input vượt giới hạn phải bị từ chối trước khi thay cache. Caller được sửa byte slice của mình sau `Put` mà không đổi bản cache đã nhận. Đây là FIFO, không phải LRU, và không có TTL ngầm.
+Trước khi tham khảo thư mục `fixed` của bài thực hành `part10-resource-retention`, bạn hãy thiết kế giao ước cho một bộ nhớ đệm đơn chủ sở hữu: tối đa hai phần tử, mỗi giá trị tối đa 4 MiB, mỗi khóa tối đa 128 byte; khi thêm khóa thứ ba thì tự động loại bỏ phần tử được thêm sớm nhất. Việc cập nhật khóa cũ không làm mới tuổi thọ của nó. Dữ liệu đầu vào vượt quá giới hạn phải bị từ chối ngay trước khi thay đổi trạng thái bộ đệm. Phía bên gọi được phép chỉnh sửa lát cắt byte của mình sau khi gọi `Put` mà không làm biến đổi bản sao bộ đệm đã lưu trữ. Đây là chiến lược vào trước ra trước (FIFO), không phải loại bỏ theo tần suất truy cập gần nhất (LRU), và hoàn toàn không có cơ chế thời hạn ngầm định.
 
-Chính sách ấy dẫn tới những test không cần đo RAM. Sau chuỗi `a, b, a, c`, cache phải còn `b` và `c`; cập nhật `a` không tạo entry thứ ba và không cứu nó khỏi bị loại. Gửi value quá lớn phải trả error, không được đẩy một entry hợp lệ ra ngoài. Chạy nhiều vòng key mới, `Len()` không vượt hai. Sửa input sau `Put` không được đổi value đã lưu. Các test nằm trong `fixed/retention_test.go`; hãy làm bản `exercise` chạy được trước khi đối chiếu implementation.
+Chính sách ấy dẫn tới những ca kiểm thử không cần đo RAM. Sau chuỗi `a, b, a, c`, bộ nhớ đệm (*cache*) phải còn `b` và `c`; cập nhật `a` không tạo phần tử (*entry*) thứ ba và không cứu nó khỏi bị loại. Gửi giá trị (*value*) quá lớn phải trả về lỗi (*error*), không được đẩy một phần tử hợp lệ ra ngoài. Chạy nhiều vòng khóa (*key*) mới, `Len()` không vượt hai. Sửa dữ liệu đầu vào (*input*) sau `Put` không được đổi giá trị đã lưu. Các ca kiểm thử nằm trong `fixed/retention_test.go`; hãy làm bản `exercise` chạy được trước khi đối chiếu phần triển khai (*implementation*).
 
-Giới hạn entry riêng lẻ chưa phải giới hạn byte: hai entry mỗi cái hàng gigabyte vẫn quá lớn. Ngược lại, kiểm `len(value)` rồi lưu thẳng một slice nhỏ cũng chưa đủ, vì nó có thể giữ backing array lớn như Chương 2. Bản sửa copy các byte thực sự được nhận; clone key string để một substring nhỏ không vô tình giữ storage của string lớn. Với chính sách lab, tổng độ dài payload được cache giữ không vượt `maxEntries * maxValueBytes`; key và metadata có chi phí riêng. Đây không phải trần RSS hay lời hứa rằng allocator trả bộ nhớ ngay sau eviction.
+Giới hạn từng phần tử (*entry*) riêng lẻ chưa phải giới hạn byte: hai phần tử mỗi cái hàng gigabyte vẫn quá lớn. Ngược lại, kiểm tra `len(value)` rồi lưu thẳng một lát cắt (*slice*) nhỏ cũng chưa đủ, vì nó có thể giữ mảng bên dưới (*backing array*) lớn như Chương 2. Bản sửa sao chép các byte thực sự được nhận; nhân bản chuỗi khóa (*key string*) để một chuỗi con nhỏ không vô tình giữ vùng lưu trữ (*storage*) của chuỗi lớn. Với chính sách bài thực hành, tổng độ dài tải trọng (*payload*) được bộ nhớ đệm giữ không vượt `maxEntries * maxValueBytes`; khóa và siêu dữ liệu (*metadata*) có chi phí riêng. Đây không phải mức trần RSS hay lời hứa rằng bộ cấp phát (*allocator*) trả bộ nhớ ngay sau khi thu hồi (*eviction*).
 
-Map mất entry thì đường tham chiếu từ map tới value cũ bị bỏ; alias ở nơi khác vẫn có thể giữ value ấy. Các slot trong hàng đợi FIFO cũng phải bỏ reference sau khi dịch, thay vì chỉ giảm length và để một string cũ nằm ở vùng capacity chưa dùng. Lab có đúng một owner nên không cần mutex; nếu cho nhiều goroutine gọi `Put`, ta phải thiết kế đồng bộ hóa trước, không suy ra map an toàn từ việc đã có capacity limit.
+Khi map mất phần tử, đường tham chiếu từ map tới giá trị cũ bị bỏ; một tham chiếu khác tới cùng dữ liệu vẫn có thể giữ nó sống. Các ô trong hàng đợi FIFO cũng phải bỏ tham chiếu sau khi dịch chuyển, thay vì chỉ giảm độ dài rồi để chuỗi cũ ở phần dung lượng chưa dùng. Lab có đúng một chủ sở hữu nên không cần mutex; nếu nhiều goroutine gọi `Put`, ta phải thiết kế đồng bộ hóa trước. Giới hạn dung lượng không làm map an toàn khi truy cập đồng thời.
 
-Trong ca đo ở Chương 10, cùng chuỗi key mới làm bản không giới hạn tăng từ hai lên tám entry, trong khi bản sửa dừng ở hai. Bằng chứng kết thúc không phải “RAM trông đẹp hơn”, mà là contract hữu hạn được test giữ đúng, cộng profile xác nhận payload bị loại không còn bị cache giữ. Nếu product thật sự cần lưu tất cả key, đổi requirement và nơi lưu dữ liệu; đừng gọi việc mất lịch sử vì eviction là một bản sửa thành công.
+Trong ca đo ở Chương 10, cùng chuỗi khóa mới làm phiên bản không giới hạn tăng từ hai lên tám phần tử, trong khi phiên bản sửa dừng lại ở hai. Bằng chứng kết thúc không phải “RAM trông đẹp hơn”, mà là giao ước (*contract*) hữu hạn được kiểm thử bảo toàn đúng đắn, cộng với hồ sơ phân tích (*profile*) xác nhận tải trọng bị loại bỏ không còn bị bộ nhớ đệm giữ lại. Nếu sản phẩm thật sự cần lưu tất cả khóa, hãy thay đổi yêu cầu và nơi lưu dữ liệu; đừng gọi việc mất lịch sử vì bị dọn dẹp (*eviction*) là một bản sửa thành công.
 
-## Một update có trách nhiệm trong registry
+## Một thao tác cập nhật có trách nhiệm trong sổ đăng ký
 
-`opsprobe` chưa cần network để hưởng lợi từ model này. Một update value-oriented cho registry không cần pointer: lấy struct value ra khỏi map, sửa bản local, rồi gán nó trở lại entry. Map parameter được truyền theo value, nhưng map value ấy vẫn mở đường tới map data của caller; chính phép gán cuối là mutation có chủ ý lên registry chung.
+`opsprobe` chưa cần đến mạng để hưởng lợi từ mô hình này. Một thao tác cập nhật hướng giá trị (*value-oriented update*) cho sổ đăng ký (*registry*) không cần con trỏ (*pointer*): lấy giá trị cấu trúc (*struct value*) ra khỏi map, sửa bản cục bộ, rồi gán nó trở lại phần tử trong map. Tham số map (*map parameter*) được truyền theo giá trị, nhưng giá trị map ấy vẫn dẫn tới dữ liệu map của bên gọi (*caller*); chính phép gán cuối là thao tác biến đổi có chủ ý lên sổ đăng ký chung.
 
 ~~~go
 func recordProbe(
@@ -365,13 +382,13 @@ func recordProbe(
 }
 ~~~
 
-Signature này nói rõ ba vai: `registry` là map value để lookup và gán entry; `name` là snapshot string; `healthy` là snapshot bool. `service` là struct copy lấy từ entry. Nếu key không có, function không bịa ra service mới mà trả `false`; nếu có, nó ghi value đã sửa về map. Khi công cụ bắt đầu đọc config và probe endpoint ở phần sau, cách đọc signature này sẽ giúp ta biết dữ liệu nào được chia sẻ, dữ liệu nào được snapshot, và mutation nào có thể lần lại.
+Signature này nói rõ ba vai: `registry` là giá trị map dùng để tra cứu (*lookup*) và gán phần tử; `name` là ảnh chụp chuỗi ký tự (*string snapshot*); `healthy` là ảnh chụp kiểu boolean (*bool snapshot*). Biến `service` là bản sao cấu trúc (*struct copy*) lấy từ phần tử. Nếu khóa (*key*) không tồn tại, hàm không tự tiện tạo ra dịch vụ mới mà trả về `false`; nếu có, nó ghi giá trị đã sửa trở lại map. Khi công cụ bắt đầu đọc cấu hình (*config*) và thăm dò điểm cuối (*probe endpoint*) ở phần sau, cách đọc chữ ký hàm này sẽ giúp ta hiểu rõ dữ liệu nào được chia sẻ, dữ liệu nào được chụp lại, và thao tác biến đổi nào có thể truy vết.
 
-Sau chương này, một signature không còn chỉ là tên type. Nó cho biết ta đang đưa vào function một snapshot, một cửa sổ tới storage dùng chung, một map value dẫn tới map data, hay một pointer mở đường tới variable caller. Khi cần debug mutation, hãy viết ra trước/sau lời gọi: variable nào tồn tại ở caller, parameter nào xuất hiện ở function, và expression nào thực sự là đích gán.
+Sau chương này, một chữ ký hàm (*signature*) không còn chỉ đơn thuần là tên kiểu dữ liệu. Nó cho biết ta đang đưa vào hàm một ảnh chụp dữ liệu (*snapshot*), một cửa sổ mở tới vùng lưu trữ (*storage*) dùng chung, một giá trị map dẫn tới dữ liệu map, hay một con trỏ mở đường tới biến của bên gọi (*caller variable*). Khi cần gỡ lỗi thao tác biến đổi, hãy viết rõ trạng thái trước và sau lời gọi: biến nào tồn tại ở bên gọi, tham số nào xuất hiện ở hàm, và biểu thức nào thực sự là đích tiếp nhận phép gán.
 
 ## Kiểu là ranh giới ý nghĩa, không chỉ cách chứa byte
 
-Một port và một số lần thử đều có thể nằm trong `uint16`, nhưng đổi chỗ chúng là bug nghiệp vụ. Khai báo kiểu có tên đặt một ranh giới compiler có thể kiểm tra:
+Một cổng mạng (*port*) và một số lần thử lại đều có thể nằm trong `uint16`, nhưng đổi chỗ chúng là lỗi nghiệp vụ. Khai báo kiểu có tên đặt một ranh giới mà trình biên dịch (*compiler*) có thể kiểm tra:
 
 ~~~go
 type Port uint16
@@ -384,15 +401,17 @@ var raw uint16 = uint16(port)
 var alias PortAlias = raw
 ~~~
 
-`Port` và `Attempts` là hai defined type khác nhau; cùng underlying type `uint16` không làm chúng có cùng identity. `PortAlias` lại là tên khác của chính `uint16`, không tạo một kiểu mới. Alias hữu ích khi chuyển API sang package khác mà vẫn giữ identity cho caller, không hữu ích nếu mục tiêu là ngăn nhầm hai đại lượng. Đừng đồng nhất assignability với convertibility: conversion tường minh có thể hợp lệ khi phép gán trực tiếp không hợp lệ; interface satisfaction còn dựa trên method set chứ không chỉ representation.
+`Port` và `Attempts` là hai kiểu được định nghĩa (*defined type*) khác nhau; việc có cùng kiểu nền tảng (*underlying type*) `uint16` không làm chúng có cùng danh tính (*identity*). Kiểu `PortAlias` lại là bí danh khác của chính `uint16`, không tạo ra một kiểu mới. Bí danh (*alias*) hữu ích khi tái cấu trúc giao diện lập trình (*API*) sang gói (*package*) khác mà vẫn giữ nguyên danh tính cho bên gọi (*caller*), nhưng không có tác dụng nếu mục tiêu là ngăn chặn nhầm lẫn giữa hai đại lượng nghiệp vụ. Đừng đồng nhất khả năng gán (*assignability*) với khả năng chuyển đổi (*convertibility*): chuyển đổi kiểu tường minh (*conversion*) có thể hợp lệ khi phép gán trực tiếp bị cấm; sự thỏa mãn giao diện (*interface satisfaction*) còn dựa trên tập phương thức (*method set*) chứ không chỉ hình thức biểu diễn bộ nhớ.
 
-Conversion không phải validation. Với variable `wide := uint32(65537)`, `Port(wide)` cho giá trị 1 do quy tắc chuyển số nguyên sang kiểu hẹp hơn. Ngược lại, `Port(65537)` với hằng số bị từ chối vì hằng số không biểu diễn được trong kiểu đích. Constructor nhận dữ liệu ngoài phải kiểm tra range trước conversion nếu contract là port `1..65535`. Kiểu có tên giúp phát hiện nhầm vai trò; nó không tự cấm zero value hoặc giá trị ngoài miền nghiệp vụ.
+Quy tắc không phải “khác tên thì luôn phải chuyển đổi”. Một giá trị có thể gán giữa hai kiểu có cùng kiểu nền nếu ít nhất một kiểu không có tên, chẳng hạn `type PortBox struct{ Port int }; var box PortBox; var plain struct{ Port int } = box`. Với hai kiểu được định nghĩa `Port` và `Attempts`, điều kiện ấy không thỏa. Hằng chưa định kiểu như `80` lại gán được cho `Port` khi biểu diễn được; đó là quy tắc về hằng, không phải Go tự đổi mọi biến số sang kiểu đích. Test biên dịch trong `part3-data-models` kiểm tra cả ví dụ được chấp nhận lẫn bị từ chối, bao gồm gọi method trên phần tử map và truyền `Service` vào `ProbeRecorder`.
 
-Để tự kiểm chứng, mở `TestConstantsAndIdentity` và `testdata/incompatible` trong `labs/edition-contracts`. Test compiler yêu cầu phép gán giữa hai defined type bị từ chối; đừng sửa fixture chỉ vì nó không build. Sau đó tự thiết kế `NewPort(n uint32) (Port, error)` và viết test cho 0, 1, 65535, 65536 trước implementation. Đây là một bài về contract tại boundary, không phải bài thuộc lòng syntax `type`.
+Chuyển đổi kiểu (*conversion*) không phải là kiểm tra tính hợp lệ (*validation*). Với biến `wide := uint32(65537)`, biểu thức `Port(wide)` cho giá trị 1 do quy tắc cắt ngắn số nguyên sang kiểu có kích thước hẹp hơn. Ngược lại, cú pháp `Port(65537)` với hằng số bị trình biên dịch từ chối vì giá trị vượt quá phạm vi biểu diễn của kiểu đích. Hàm khởi tạo (*constructor*) tiếp nhận dữ liệu từ bên ngoài bắt buộc phải kiểm tra phạm vi trước khi chuyển đổi kiểu nếu giao ước (*contract*) quy định cổng hợp lệ nằm trong khoảng 1–65535. Việc đặt tên kiểu giúp phát hiện nhầm lẫn vai trò; nó không tự động ngăn chặn giá trị khởi tạo mặc định (*zero value*) hoặc giá trị nằm ngoài miền nghiệp vụ.
+
+Để tự kiểm chứng, hãy mở `TestConstantsAndIdentity` và `testdata/incompatible` trong thư mục `labs/edition-contracts`. Ca kiểm thử biên dịch yêu cầu phép gán giữa hai kiểu được định nghĩa phải bị từ chối; không được chỉnh sửa mã mẫu (*fixture*) chỉ để dự án biên dịch thành công. Sau đó, hãy tự thiết kế hàm `NewPort(n uint32) (Port, error)` và viết ca kiểm thử cho các giá trị biên 0, 1, 65535, 65536 trước khi viết mã xử lý. Đây là bài học về giao ước tại ranh giới hệ thống, không phải bài học thuộc lòng cú pháp từ khóa `type`.
 
 ## Khi hành vi thuộc về service
 
-`recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một service, chữ ký bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho service, một hàm khác ghi kết quả probe, hàm nữa kiểm tra cấu hình. Lúc này method giúp đặt hành vi cạnh type mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc value semantics đã xây.
+`recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một dịch vụ (*service*), chữ ký hàm bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho dịch vụ, một hàm khác ghi kết quả thăm dò (*probe*), hàm nữa kiểm tra cấu hình. Lúc này phương thức (*method*) giúp đặt hành vi cạnh kiểu dữ liệu mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc ngữ nghĩa giá trị (*value semantics*) đã xây.
 
 ~~~go
 func (service Service) Summary() string {
@@ -407,7 +426,7 @@ func (service *Service) Record(healthy bool) {
 }
 ~~~
 
-Một method là function có receiver: phần parameter đặc biệt đứng trước tên method. `Summary` nhận `Service` value, nên receiver là một struct value được dùng để tạo kết quả. `Record` nhận `*Service`, vì hành vi này có ý định sửa pointee. Tên receiver không phải từ khóa và không phải một biến toàn cục bí mật; nó chỉ là parameter được viết ở vị trí riêng để gắn method với `Service`.
+Một phương thức (*method*) là hàm có bộ tiếp nhận (*receiver*): phần tham số đặc biệt đứng trước tên phương thức. `Summary` nhận giá trị `Service`, nên bộ tiếp nhận là một giá trị cấu trúc (*struct value*) được dùng để tạo kết quả. Phương thức `Record` nhận `*Service`, vì hành vi này có ý định sửa đổi đối tượng trỏ tới (*pointee*). Tên bộ tiếp nhận không phải từ khóa và không phải một biến toàn cục bí mật; nó chỉ là tham số được viết ở vị trí riêng để gắn phương thức với `Service`.
 
 ~~~go
 billing := Service{Name: "billing", Healthy: true}
@@ -417,13 +436,13 @@ billing.Record(false)
 fmt.Println(billing.Healthy, billing.Retries) // false 1
 ~~~
 
-`billing.Record(false)` hợp lệ vì `billing` là variable addressable. Trong trường hợp này, Go cho phép cách viết ngắn của `(&billing).Record(false)`. Sự tiện lợi ấy không biến value receiver thành pointer receiver: method set của `Service` chỉ có methods khai báo với receiver `Service`; method set của `*Service` có cả methods receiver `Service` lẫn `*Service`.
+Biểu thức `billing.Record(false)` hợp lệ vì `billing` là biến có thể lấy địa chỉ (*addressable variable*). Trong trường hợp này, Go cho phép cách viết ngắn gọn thay cho `(&billing).Record(false)`. Sự tiện lợi ấy không biến bộ tiếp nhận giá trị thành bộ tiếp nhận con trỏ: tập phương thức (*method set*) của `Service` chỉ chứa các phương thức khai báo với bộ tiếp nhận `Service`; trong khi tập phương thức của `*Service` chứa cả các phương thức có bộ tiếp nhận `Service` lẫn `*Service`.
 
 ![Hai lời gọi method trên cùng một Service variable: value receiver nhận value, pointer receiver đi qua địa chỉ của variable addressable.](../../assets/diagrams/method-receiver-trace.png)
 
-@figure Method vẫn dựa trên receiver value. `Summary` dùng Service value; `Record` cần `*Service` để chọn pointee làm đích mutation. Mũi tên là trace semantics, không mô tả bộ nhớ vật lý.
+@figure Phương thức vẫn dựa trên giá trị bộ tiếp nhận. `Summary` dùng giá trị Service; `Record` cần `*Service` để chọn biến được trỏ tới làm đích biến đổi (*mutation*). Mũi tên là ngữ nghĩa truy vết (*trace semantics*), không mô tả cách bố trí bộ nhớ vật lý.
 
-Map index không addressable theo spec, nên cách viết ngắn lấy địa chỉ để gọi pointer-receiver method không áp dụng cho nó. Đây là giới hạn ở tầng source, không phải kết luận rằng một địa chỉ vật lý “không ổn định” trong mọi implementation:
+Phần tử được truy xuất theo chỉ số map (*map index*) không có tính chất lấy được địa chỉ (*not addressable*) theo đặc tả ngôn ngữ, nên cú pháp viết tắt lấy địa chỉ để gọi phương thức có bộ tiếp nhận con trỏ (*pointer-receiver method*) không áp dụng được cho nó. Đây là giới hạn ở tầng mã nguồn, không phải kết luận rằng một địa chỉ vật lý “không ổn định” trong mọi bản cài đặt:
 
 ~~~go
 // services["billing"].Record(false) // không hợp lệ
@@ -433,11 +452,11 @@ service.Record(false)
 services["billing"] = service
 ~~~
 
-Đoạn sửa dùng đúng mô hình cũ: map lookup cho struct value, local variable `service` addressable, pointer-receiver method mutate local pointee, rồi caller gán struct value đã đổi về map. Nếu code thật cần nhiều nơi cùng giữ identity của một service, `map[string]*Service` có thể hợp lý; nhưng không dùng pointer chỉ để né phép gán lại mà chưa hiểu ownership.
+Đoạn mã sửa dùng đúng mô hình cũ: tra cứu map để lấy giá trị cấu trúc, biến cục bộ `service` có thể lấy địa chỉ, phương thức nhận con trỏ biến đổi giá trị cục bộ, rồi bên gọi gán giá trị cấu trúc đã đổi trở lại map. Nếu mã nguồn thực tế cần nhiều nơi cùng giữ danh tính (*identity*) của một dịch vụ, kiểu `map[string]*Service` có thể hợp lý; nhưng không nên dùng con trỏ chỉ để né tránh phép gán lại khi chưa làm rõ quyền sở hữu (*ownership*).
 
-### Composition trước, embedding sau
+### Kết hợp thành phần trước, nhúng cấu trúc sau
 
-Một service có endpoint và state; hai phần đó là các khái niệm riêng. Composition đơn giản nhất là đặt chúng vào những field có tên, để người đọc thấy quan hệ "có một":
+Một dịch vụ có điểm cuối (*endpoint*) và trạng thái (*state*); hai phần đó là các khái niệm riêng biệt. Kết hợp thành phần (*composition*) đơn giản nhất là đặt chúng vào những trường có tên, để người đọc thấy rõ mối quan hệ chứa đựng:
 
 ~~~go
 type Endpoint struct {
@@ -457,7 +476,7 @@ type Service struct {
 }
 ~~~
 
-`Service` có `Endpoint` và `ProbeState`; không có quan hệ kế thừa nào được ngụ ý. Đây là cách composition thường rõ nhất khi domain có các phần độc lập. Embedding thay đường viết selector, không biến object ngoài thành subtype của object trong:
+`Service` có `Endpoint` và `ProbeState`; không có quan hệ kế thừa nào được ngụ ý. Đây là cách kết hợp thành phần (*composition*) thường rõ ràng nhất khi miền nghiệp vụ (*domain*) có các phần độc lập. Nhúng cấu trúc (*embedding*) thay đổi đường dẫn truy xuất trường (*selector*), chứ không biến đối tượng ngoài thành kiểu con (*subtype*) của đối tượng trong:
 
 ~~~go
 type Named struct { Name string }
@@ -465,15 +484,15 @@ func (n Named) Label() string { return n.Name }
 type Tagged struct { Named }
 
 tag := Tagged{Named: Named{Name: "api"}}
-fmt.Println(tag.Label()) // selector được promote
+fmt.Println(tag.Label()) // phương thức được thăng cấp
 // var n Named = tag // Tagged không phải Named
 ~~~
 
-`Label` vẫn nhận receiver `Named`; lời gọi ngắn đi qua field được embed. Hai field embed có cùng selector ở cùng độ sâu có thể làm selector mơ hồ và bị compiler từ chối. Method được promote cũng có thể làm type ngoài thỏa một interface ngoài dự kiến. Vì vậy embedding là quyết định về public API, không phải mẹo tiết kiệm tên field. Khi caller cần nhìn rõ ownership, field có tên vẫn là lựa chọn dễ review hơn. Những quy tắc này thuộc Go specification về struct types, selectors và method sets, không phụ thuộc layout vật lý của struct.
+Phương thức `Label` vẫn nhận bộ tiếp nhận `Named`; lời gọi ngắn gọn đi xuyên qua trường được nhúng (*embedded field*). Hai trường nhúng có cùng tên bộ chọn ở cùng độ sâu có thể làm bộ chọn trở nên mơ hồ và bị trình biên dịch từ chối. Phương thức được thăng cấp (*promoted method*) cũng có thể khiến kiểu bên ngoài vô tình thỏa mãn một giao diện ngoài dự kiến. Vì vậy, nhúng cấu trúc là một quyết định về giao diện lập trình công khai (*public API*), không phải mẹo tiết kiệm thao tác gõ tên trường. Khi bên gọi cần nhìn rõ quyền sở hữu, trường có tên tường minh vẫn là lựa chọn an toàn và dễ duyệt mã hơn. Những quy tắc này thuộc đặc tả Go về kiểu cấu trúc, bộ chọn và tập phương thức, hoàn toàn không phụ thuộc vào cách sắp đặt bộ nhớ vật lý của cấu trúc.
 
 ## Interface xuất hiện ở nơi cần một hành vi
 
-Một interface không phải bản thiết kế cha để mọi struct đi theo. Nó là một contract nhỏ: code tiêu dùng nói mình cần method nào, còn type nào có method set phù hợp thì dùng được. Với `opsprobe`, phần in kết quả chưa cần toàn bộ `Service`; nó chỉ cần một dòng summary.
+Một giao diện (*interface*) không phải bản thiết kế cha để mọi cấu trúc phải rập khuôn theo. Nó là một giao ước (*contract*) tinh gọn: mã nguồn bên tiêu dùng (*consumer*) tuyên bố mình cần phương thức nào, còn bất kỳ kiểu dữ liệu nào sở hữu tập phương thức (*method set*) phù hợp đều có thể dùng được. Với `opsprobe`, phần hiển thị kết quả chưa cần toàn bộ thông tin của `Service`; nó chỉ cần một dòng tóm tắt (*summary*).
 
 ~~~go
 type SummarySource interface {
@@ -485,7 +504,7 @@ func renderSummary(source SummarySource) string {
 }
 ~~~
 
-`renderSummary` không hỏi caller là `Service`, `StaticTarget`, hay một type tương lai. Nó chỉ gọi `Summary`. Không có từ khóa `implements`: assignment hoặc argument hợp lệ khi method set của type thỏa interface. Vì `Summary` có value receiver, cả `Service` và `*Service` đều có method đó trong method set.
+Hàm `renderSummary` không đòi hỏi bên gọi phải là `Service`, `StaticTarget`, hay một kiểu dữ liệu cụ thể nào trong tương lai. Nó chỉ phát lời gọi `Summary`. Ngôn ngữ Go không có từ khóa `implements`: phép gán hoặc đối số truyền vào hoàn toàn hợp lệ miễn là tập phương thức của kiểu thỏa mãn giao diện. Vì `Summary` có bộ tiếp nhận giá trị, cả `Service` lẫn `*Service` đều sở hữu phương thức đó trong tập phương thức của mình.
 
 ~~~go
 type StaticTarget string
@@ -500,13 +519,13 @@ fmt.Println(renderSummary(
 ))
 ~~~
 
-Kết quả là hai dòng có cùng format dù hai type không có ancestor chung. Interface ở đây được rút ra sau khi có consumer và hai provider có ý nghĩa. Nếu chỉ có một `Service` duy nhất và không có ranh giới cần thay thế, nhận trực tiếp `Service` thường dễ đọc hơn là thêm interface vì dự đoán tương lai.
+Kết quả là hai dòng có cùng định dạng dù hai kiểu dữ liệu không hề có tổ tiên kế thừa chung. Giao diện ở đây được đúc kết tự nhiên sau khi đã xác định rõ bên tiêu dùng và hai bên cung cấp (*provider*) có ý nghĩa thực tế. Nếu hệ thống chỉ có một `Service` duy nhất và không có ranh giới cần hoán đổi, việc tiếp nhận trực tiếp `Service` thường mạch lạc và dễ đọc hơn nhiều so với việc cố tình bổ sung giao diện chỉ vì suy đoán tương lai.
 
 ![Một consumer phụ thuộc vào contract Summary nhỏ, còn Service và StaticTarget độc lập thỏa contract bằng method set của chính chúng.](../../assets/diagrams/interface-contract.png)
 
-@figure `renderSummary` chỉ cần `Summary() string`. Sơ đồ cho thấy dependency đi từ consumer tới contract nhỏ; Service và StaticTarget không cần khai báo một quan hệ kế thừa hay đăng ký implements.
+@figure `renderSummary` chỉ cần `Summary() string`. Sơ đồ cho thấy mối phụ thuộc đi từ bên tiêu dùng (*consumer*) tới giao ước (*contract*) nhỏ; `Service` và `StaticTarget` không cần khai báo bất kỳ quan hệ kế thừa hay đăng ký triển khai tường minh nào.
 
-Pointer receiver thay đổi interface satisfaction theo đúng rule method set. Nếu contract yêu cầu `Record(bool)`, `Service` value không thỏa vì method đó chỉ thuộc method set của `*Service`; `*Service` mới thỏa.
+Bộ tiếp nhận con trỏ (*pointer receiver*) thay đổi sự thỏa mãn giao diện (*interface satisfaction*) theo đúng quy tắc của tập phương thức (*method set*). Nếu giao ước đòi hỏi `Record(bool)`, giá trị `Service` sẽ không thỏa mãn vì phương thức đó chỉ thuộc về tập phương thức của `*Service`; chỉ có con trỏ `*Service` mới đáp ứng được.
 
 ~~~go
 type ProbeRecorder interface {
@@ -525,11 +544,11 @@ markFailed(&billing) // *Service thỏa ProbeRecorder
 
 ### Typed nil: có kiểu động nhưng giá trị pointer là nil
 
-Để dự đoán một interface có bằng `nil` hay không, hãy tách kiểu động khỏi giá trị động. Kiểu động là kiểu của giá trị được gán vào interface; giá trị động là giá trị cụ thể ấy. Interface nil chưa có cả hai. Đây là mô hình ngữ nghĩa đủ để giải thích ví dụ dưới đây, không cần biết địa chỉ hay bảng con trỏ hàm.
+Để dự đoán một giá trị giao diện (*interface*) có bằng `nil` hay không, hãy tách biệt kiểu động (*dynamic type*) khỏi giá trị động (*dynamic value*). Kiểu động là kiểu của giá trị được gán vào giao diện; giá trị động là giá trị cụ thể ấy. Giao diện `nil` chưa có cả hai thông tin này. Đây là mô hình ngữ nghĩa đủ để giải thích ví dụ dưới đây, không cần đi sâu vào địa chỉ hay bảng con trỏ hàm.
 
-Nếu muốn đối chiếu tầng triển khai, source Go 1.27.1 ở `runtime/runtime2.go` định nghĩa `iface` với `tab *itab` và `data unsafe.Pointer`, còn `eface` với `_type *_type` và `data`. Trên amd64, đó là hai trường con trỏ 64 bit. Cách concrete value được đưa vào trường data còn phụ thuộc kiểu; không coi nó như một object luôn được cấp phát riêng trên heap. Biểu diễn này không phải contract của specification và không cần dùng để quyết định nhánh `src == nil`.
+Nếu muốn đối chiếu tầng triển khai, mã nguồn Go 1.27.1 ở `runtime/runtime2.go` định nghĩa `iface` với `tab *itab` và `data unsafe.Pointer`, còn `eface` với `_type *_type` và `data`. Trên kiến trúc amd64, đó là hai trường con trỏ 64 bit. Cách giá trị cụ thể (*concrete value*) được đưa vào trường dữ liệu còn phụ thuộc vào kiểu; không nên coi nó như một đối tượng luôn được cấp phát riêng trên vùng nhớ heap. Biểu diễn này không phải giao ước của đặc tả ngôn ngữ và không cần dùng để quyết định nhánh kiểm tra `src == nil`.
 
-Hãy dự đoán phép so sánh trước khi nhìn representation:
+Hãy dự đoán kết quả phép so sánh trước khi nhìn vào hình thức biểu diễn bộ nhớ:
 
 ~~~go
 var s *Service = nil
@@ -542,13 +561,13 @@ if src == nil {
 }
 ~~~
 
-Một giá trị interface chỉ bằng `nil` khi chưa có kiểu động và giá trị động. Khi gán con trỏ `s` kiểu `*Service` có giá trị `nil` vào `src`, interface vẫn có kiểu động `*Service`, nên `src == nil` trả về `false`. Trong ví dụ này, `Summary` có value receiver `Service`: gọi `src.Summary()` cần giải tham chiếu con trỏ nil để tạo receiver value, nên panic xảy ra **trước khi vào thân method**. Với một method có pointer receiver, receiver nil có thể đi vào thân method; method ấy chỉ an toàn nếu contract và implementation chủ động xử lý nil. Đừng suy từ “interface không nil” thành “lời gọi method chắc chắn an toàn”.
+Một giá trị giao diện chỉ bằng `nil` khi chưa có cả kiểu động lẫn giá trị động. Khi gán con trỏ `s` kiểu `*Service` có giá trị `nil` vào `src`, giao diện vẫn mang kiểu động `*Service`, do đó `src == nil` trả về `false`. Trong ví dụ này, `Summary` sở hữu bộ tiếp nhận giá trị `Service`: việc gọi `src.Summary()` bắt buộc phải giải tham chiếu (*dereference*) con trỏ `nil` để tạo giá trị cho bộ tiếp nhận, vì vậy lỗi hoảng loạn (`panic`) xảy ra ngay trước khi bước vào thân phương thức. Với một phương thức có bộ tiếp nhận con trỏ, bộ tiếp nhận `nil` có thể đi thẳng vào thân phương thức; phương thức ấy chỉ an toàn nếu giao ước và bản cài đặt chủ động kiểm tra `nil`. Đừng bao giờ suy diễn từ “giao diện không `nil`” thành “lời gọi phương thức chắc chắn an toàn”.
 
 ## So sánh được chưa chắc so sánh an toàn
 
-Map key cần kiểu comparable; slice, map và function không có phép so sánh bằng giữa hai giá trị cùng loại, dù chúng có thể so với `nil`. Array comparable khi element comparable; struct comparable khi các field comparable. Điều này giải thích vì sao thêm field slice vào một struct có thể làm một API dùng struct ấy làm map key không còn compile.
+Khóa của bảng ánh xạ (*map key*) đòi hỏi kiểu có thể so sánh (*comparable*); lát cắt, map và hàm không hỗ trợ phép so sánh bằng giữa hai giá trị cùng loại, dù chúng có thể so sánh với `nil`. Mảng có thể so sánh khi từng phần tử so sánh được; cấu trúc so sánh được khi tất cả các trường đều có thể so sánh. Điều này giải thích vì sao việc bổ sung một trường lát cắt vào một cấu trúc có thể khiến giao diện lập trình dùng cấu trúc ấy làm khóa map lập tức bị lỗi biên dịch.
 
-Interface cần thêm một bước suy luận. Kiểu interface cho phép viết `==`, nhưng giá trị động bên trong có thể không comparable:
+Kiểu giao diện cần thêm một bước suy luận. Kiểu giao diện cho phép viết toán tử `==`, nhưng giá trị động thực tế bên trong có thể không thuộc loại so sánh được (*not comparable*):
 
 ~~~go
 var a any = []int{1}
@@ -556,19 +575,19 @@ var b any = []int{1}
 // a == b sẽ panic: kiểu động là []int
 ~~~
 
-Đây không phải bug của garbage collector. Compiler chỉ biết static type `any`; khi hai dynamic type giống nhau, phép so sánh phải áp dụng cho dynamic value và slice không có contract ấy. `TestDynamicComparabilityPanics` kiểm tra đúng phản ví dụ này. Muốn so nội dung slice, hãy định nghĩa nghĩa của “bằng nhau” rồi so phần tử; không ép nó vào interface để né lỗi compiler. Chương 19 sẽ quay lại giới hạn này khi thiết kế generic API dùng `comparable`.
+Đây không phải lỗi của bộ thu gom rác (*garbage collector*). Trình biên dịch chỉ biết kiểu tĩnh `any`; khi hai kiểu động giống nhau, phép so sánh phải áp dụng trực tiếp cho giá trị động, mà lát cắt thì không hỗ trợ giao ước so sánh đó. Ca kiểm thử `TestDynamicComparabilityPanics` kiểm chứng chính xác phản ví dụ này. Nếu muốn so sánh nội dung lát cắt, hãy định nghĩa rõ ràng thế nào là “bằng nhau” rồi so sánh từng phần tử; đừng ép nó vào giao diện nhằm né tránh kiểm tra của trình biên dịch. Chương 19 sẽ quay lại giới hạn này khi thiết kế giao diện lập trình tổng quát (*generic API*) sử dụng ràng buộc `comparable`.
 
-## Một API nhỏ, Đủ để Đọc bằng Semantics
+## Một API nhỏ gọn, Đủ để Đọc bằng Ngữ nghĩa
 
 Ở cuối mạch thiết kế này, công cụ `opsprobe` đã có thể diễn đạt ba ý định kiến trúc khác nhau một cách mạch lạc mà không cần dựa vào những danh xưng mơ hồ:
 
-`Summary` nhận bản copy receiver `Service`; với các field value đang có, nó chỉ đọc dữ liệu để tạo chuỗi. Nếu type được thêm field pointer, map hoặc slice, copy receiver vẫn có thể chia sẻ dữ liệu nền. Value receiver không bảo đảm mọi method tương lai không có side effect.
+Phương thức `Summary` nhận bản sao bộ tiếp nhận `Service`; với các trường giá trị hiện có, nó chỉ đọc dữ liệu để tạo chuỗi. Nếu cấu trúc được bổ sung trường con trỏ, map hoặc lát cắt, bản sao bộ tiếp nhận vẫn có thể chia sẻ dữ liệu nền bên dưới. Bộ tiếp nhận giá trị không thể bảo đảm mọi phương thức trong tương lai đều không gây tác dụng phụ (*side effect*).
 
-Hàm `func (service *Service) Record(bool)` tiếp nhận receiver dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
+Hàm `func (service *Service) Record(bool)` tiếp nhận bộ tiếp nhận dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
 
-Hàm `func renderSummary(SummarySource) string` nhận interface với hành vi mà consumer cần. Nó gọi `Summary` thay vì đọc field của một struct cụ thể; đây là boundary có thể thay provider mà không đổi code hiển thị.
+Hàm `func renderSummary(SummarySource) string` tiếp nhận giao diện mang hành vi mà bên tiêu dùng cần. Nó gọi `Summary` thay vì đọc trường của một cấu trúc cụ thể; đây chính là ranh giới trừu tượng cho phép thay thế bên cung cấp (*provider*) mà không cần sửa đổi mã nguồn hiển thị.
 
-Mô hình cấu thành (composition) giúp dữ liệu có đường đi rõ ràng; method đặt hành vi cạnh kiểu dữ liệu; interface xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi nhà cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.
+Mô hình kết hợp thành phần (*composition*) giúp dữ liệu có đường đi rõ ràng; phương thức đặt hành vi cạnh kiểu dữ liệu; giao diện xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi bên cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.
 
 @references
 1. Go Team. Go Specification, Map types và Deletion of map elements. go.dev/ref/spec#Map_types; go.dev/ref/spec#Deletion_of_map_elements

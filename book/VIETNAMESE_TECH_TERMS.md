@@ -48,7 +48,7 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **expression** | **biểu thức** | Cấu trúc tính toán sinh ra một giá trị cụ thể |
 | **statement** | **câu lệnh** | Đơn vị hành động làm thay đổi trạng thái chương trình |
 | **block** | **khối lệnh** | Đoạn mã nằm trong cặp dấu ngoặc nhọn `{}` |
-| **scope** | **phạm vi** / **phạm vi sống** | Vùng không gian trong mã mà một định danh có hiệu lực |
+| **scope** | **phạm vi định danh** | Vùng mã mà định danh có hiệu lực; không đồng nghĩa với lifetime (thời gian sống) của đối tượng được tham chiếu |
 | **shadowing** | **che khuất biến** | Biến ở scope con che khuất biến trùng tên ở scope cha |
 | **type inference** | **suy luận kiểu** | Compiler tự xác định kiểu dữ liệu dựa trên giá trị khởi tạo |
 | **type conversion** | **chuyển đổi kiểu** | Cú pháp tường minh `T(v)` đổi giá trị sang kiểu `T` |
@@ -134,6 +134,10 @@ Nguyên tắc cốt lõi: **TIẾNG VIỆT TỰ NHIÊN, CHUẨN XÁC, GIÀU TÍN
 | **retry** | **thử lại** | Thực hiện lại tác vụ khi gặp sự cố tạm thời (transient error) |
 | **idempotency** | **tính lũy đẳng** | Lặp operation giữ cùng tác động đã quy định như một lần, không nhất thiết cùng response; cần định nghĩa identity, state và crash boundary. Không nhầm với tính tất định. |
 | **artifact** | **tạo tác build / gói phát hành / artifact** | Sản phẩm sinh ra từ quá trình build (binary, image, OCI blob, package) — tuyệt đối không dịch là "hiện vật" |
+| **container image** / **image** | **ảnh container / container image / ảnh OCI** | Bản chụp snapshot nhị phân / các lớp tệp đóng gói OCI — tuyệt đối KHÔNG dịch là "hình ảnh vùng chứa" hay "hình ảnh" (tránh nhầm lẫn với file ảnh đồ họa/picture). |
+| **base image** | **ảnh cơ sở / ảnh nền (`base image`)** | Ảnh container gốc được dùng làm điểm xuất phát trong Dockerfile (`FROM ...`) — tuyệt đối không dịch là "hình ảnh cơ sở". |
+| **image digest** | **mã băm ảnh / mã băm ảnh container** | Định danh bất biến theo nội dung OCI (`sha256:...`), không bị trôi như nhãn (tag). |
+| **image manifest** | **bản kê ảnh container / manifest OCI** | Tài liệu JSON đặc tả các lớp dữ liệu và cấu hình của ảnh container. |
 | **health check** | **kiểm tra sức khỏe** | Cơ chế kiểm tra liveness và readiness của dịch vụ |
 | **circuit breaker** | **cầu dao ngắt mạch** | Cơ chế tự động ngắt kết nối đến dịch vụ hỏng để bảo vệ hệ thống |
 | **observability** | **năng lực quan sát** | Khả năng suy luận trạng thái nội tại qua dữ liệu phát ra |

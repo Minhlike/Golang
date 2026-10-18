@@ -1,14 +1,14 @@
 <!-- BOOK_ROLE: FOUNDATION_BRIDGE -->
 
-# Chương 11 — Lần theo một request HTTP
+# Chương 11 — Lần theo một yêu cầu HTTP
 
-Ở log, một HTTP call thường chỉ còn lại một dòng: `GET https://api.example/... 1.8s`. Dòng ấy có ích, nhưng nó che gần như toàn bộ câu chuyện. 1.8 giây có thể là DNS, chờ một connection rảnh, TCP dial, TLS handshake, server xử lý, đọc response body, proxy, hoặc deadline của chính caller. Nếu chỉ có một timeout lớn và một log cuối cùng, ta biết request thất bại nhưng chưa biết cần sửa lớp nào.
+Trong nhật ký vận hành (*log*), một lệnh gọi HTTP thường chỉ còn lại một dòng tóm tắt: `GET https://api.example/... 1.8s`. Dòng nhật ký đó hữu ích, nhưng lại che giấu gần như toàn bộ câu chuyện bên dưới. Khoảng thời gian 1.8 giây có thể là tra cứu DNS, chờ một kết nối rảnh trong bể kết nối, kết nối TCP (*TCP dial*), bắt tay bảo mật (*TLS handshake*), máy chủ xử lý, đọc thân phản hồi, trễ qua máy chủ ủy quyền (*proxy*), hoặc thời hạn chót (*deadline*) do chính bên gọi đặt ra. Nếu chỉ thiết lập một thời gian chờ tổng thể duy nhất và một dòng nhật ký sau cùng, ta chỉ biết yêu cầu thất bại nhưng hoàn toàn không biết cần khắc phục ở tầng nào.
 
-Mô hình tinh thần của chương này là: **một HTTP request là chuỗi hợp đồng theo từng chặng; một chặng chỉ xuất hiện khi connection và policy khiến nó cần thiết**. Request dùng connection idle có thể không DNS, không dial, không TLS lần nữa. Một request mới có thể gặp các chặng ấy. Vì vậy sơ đồ dưới đây là bản đồ khả năng, không phải lời hứa về một thứ tự máy móc cho mọi lần gọi.
+Mô hình tinh thần của chương này: một yêu cầu HTTP đi qua những chặng do địa chỉ đích, trạng thái kết nối và chính sách vận hành quyết định. Tái sử dụng kết nối có thể tránh DNS, TCP và TLS mới. Ngay cả khi phải tạo kết nối, địa chỉ IP trực tiếp không cần phân giải tên, HTTP không có TLS, còn proxy có thể thay đổi nơi quay số và cách phân giải. HTTP/2 còn cho nhiều yêu cầu dùng chung kết nối đang hoạt động. Vì vậy sơ đồ dưới đây giới hạn ở đường HTTP/1.x trực tiếp thông thường, không phải thứ tự bắt buộc của mọi lần gọi.
 
 ## Bắt đầu bằng dấu vết thay vì API
 
-`net/http/httptrace` gắn hook vào context của một outgoing request. Nó cho phép người điều tra đánh dấu các sự kiện như bắt đầu/kết thúc DNS, dial, TLS handshake, lấy được connection, ghi request và nhận byte response đầu tiên. Hook có thể chạy từ nhiều goroutine và một số có thể đến sau khi request đã complete hoặc failed, nên recorder phải đồng bộ nếu anh gom event vào cùng một slice.
+Gói `net/http/httptrace` đính kèm các điểm móc (*hook*) vào ngữ cảnh của một yêu cầu gửi ra ngoài. Nó cho phép người điều tra đánh dấu các sự kiện quan trọng như bắt đầu hoặc kết thúc tra cứu DNS, quay số kết nối TCP, bắt tay TLS, tiếp nhận kết nối mạng, gửi yêu cầu và nhận byte phản hồi đầu tiên. Các điểm móc này có thể được kích hoạt đồng thời từ nhiều goroutine và một số có thể đến sau khi yêu cầu đã hoàn tất hoặc thất bại; do đó, bộ ghi nhận (*recorder*) phải được đồng bộ hóa an toàn nếu gom các sự kiện vào cùng một lát cắt (*slice*).
 
 ~~~go
 type event struct {
@@ -33,26 +33,26 @@ traceCtx := httptrace.WithClientTrace(req.Context(), trace)
 req = req.WithContext(traceCtx)
 ~~~
 
-Điểm đáng chú ý là `GotConnInfo.Reused`, không phải chỉ timestamp. Nó tách một request dùng connection sẵn có khỏi request phải mở đường mới. Trace là dữ liệu quan sát của *một round trip*; nó không tự bao phủ chuỗi redirect và không thay thế log ngữ cảnh nghiệp vụ. Gắn request ID, target đã được chuẩn hóa và outcome vào log của anh; dùng trace khi một latency cần được bóc ra theo chặng.
+Trường `GotConnInfo.Reused` mang ý nghĩa quyết định, chứ không chỉ là mốc thời gian thông thường. Thông tin này phân biệt rõ một yêu cầu tái sử dụng kết nối sẵn có trong bể kết nối (*connection pool*) với một yêu cầu phải thiết lập kết nối mạng mới. Dấu vết quan sát (*trace*) là dữ liệu của *một vòng khứ hồi (round trip)*; nó không tự động bao phủ toàn bộ chuỗi chuyển hướng (*redirect*) và không thay thế nhật ký ngữ cảnh nghiệp vụ. Hãy gắn định danh yêu cầu (*request ID*), đích đến đã chuẩn hóa và kết quả vào nhật ký vận hành; chỉ dùng dấu vết truy vết khi cần bóc tách độ trễ (*latency*) chi tiết theo từng chặng kỹ thuật.
 
 ![Các chặng có thể của HTTP client request](../../assets/diagrams/http-client-request-path.png)
-@figure Bản đồ khái niệm của một request client. Nhánh “connection idle” bỏ qua DNS, TCP và TLS mới; response body vẫn là tài nguyên caller phải hoàn tất vòng đời.
+@figure Đường HTTP/1.x trực tiếp: DNS chỉ cần khi phải phân giải tên, TLS chỉ có với HTTPS. Đọc và đóng thân phản hồi tạo điều kiện tái sử dụng nhưng không bảo đảm socket sẽ được giữ lại; HTTP/2 và proxy nằm ngoài hình.
 
-## Tên, địa chỉ, connection và danh tính không phải một thứ
+## Tên miền, địa chỉ mạng, kết nối và danh tính không phải là một
 
-Tên miền là input ở mức application. `net.Resolver.LookupHost` hỏi resolver cục bộ và trả về một danh sách địa chỉ cho host. Resolver thực tế thay đổi theo hệ điều hành, cấu hình mạng và build; trên Unix, tài liệu `net` mô tả cả pure-Go resolver lẫn đường đi qua C library trong một số điều kiện. Đừng dạy chương trình rằng “Go luôn tự gửi một DNS packet đến đâu đó”. Hãy ghi nhận lỗi DNS là lỗi của lớp resolution, cùng với host và deadline, rồi để configuration mạng là một boundary riêng.
+Tên miền là dữ liệu đầu vào ở tầng ứng dụng. Phương thức `net.Resolver.LookupHost` truy vấn bộ phân giải (*resolver*) cục bộ và trả về danh sách địa chỉ mạng cho máy chủ đích. Bộ phân giải thực tế thay đổi tùy theo hệ điều hành, cấu hình mạng và cờ biên dịch; trên Unix, tài liệu gói `net` mô tả cả bộ phân giải thuần Go lẫn nhánh gọi qua thư viện C trong một số điều kiện. Đừng mặc định rằng “Go luôn tự gửi một gói tin DNS ra ngoài mạng”. Hãy ghi nhận lỗi DNS là lỗi của tầng phân giải tên miền, gắn liền với máy chủ đích và thời hạn chót, đồng thời xem cấu hình mạng là một ranh giới độc lập.
 
-Một địa chỉ khả dụng chưa phải identity đã được xác thực. Khi URL là HTTPS và cần một connection mới, TLS handshake thương lượng kết nối bảo mật. `tls.Config.ServerName` được dùng để xác minh hostname trên certificate, đồng thời thường được đưa vào handshake để hỗ trợ virtual hosting khi nó không phải IP. Đặt `InsecureSkipVerify=true` để “sửa certificate error” là bỏ xác minh chain và hostname mặc định, không phải sửa network. Mặc định false giữ bước xác minh ấy; nếu dùng callback để xác minh tùy chỉnh thì phải tự giữ contract tương ứng. Với CA nội bộ, cấu hình root CA và hostname policy có chủ đích thay vì bỏ xác minh.
+Một địa chỉ mạng khả dụng chưa phải là danh tính đã được chứng thực. Khi địa chỉ là HTTPS và cần một kết nối mới, quá trình bắt tay TLS sẽ thương lượng kênh truyền bảo mật. Thuộc tính `tls.Config.ServerName` được dùng để xác minh tên máy chủ (*hostname*) trên chứng chỉ, đồng thời được gửi trong quá trình bắt tay để hỗ trợ máy chủ ảo (*virtual hosting*) khi không dùng địa chỉ IP trực tiếp. Việc đặt `InsecureSkipVerify=true` để “sửa lỗi chứng chỉ” chính là hành vi vô hiệu hóa việc kiểm tra chuỗi chứng chỉ và tên miền mặc định, chứ không phải giải pháp sửa lỗi mạng. Giá trị mặc định `false` bảo toàn bước kiểm tra an ninh sống còn này; nếu sử dụng hàm gọi lại để kiểm tra tùy biến thì phải tự bảo đảm đúng giao ước an toàn. Với cơ quan cấp chứng chỉ (CA) nội bộ, hãy cấu hình chứng chỉ gốc (*root CA*) và chính sách tên máy chủ có chủ đích thay vì tắt bỏ khâu xác thực.
 
-TCP, TLS và HTTP là các lớp khác nhau. Connection được tạo tới địa chỉ/port; TLS xác minh peer và thương lượng; HTTP chạy request/response bên trên. Với HTTP/2, nhiều request có thể cùng chia một connection. Vì thế “một request = một TCP connection” là mental model sai ngay từ đầu.
+TCP, TLS và HTTP là các tầng giao thức hoàn toàn tách biệt. Kết nối TCP được thiết lập tới địa chỉ và cổng mạng; tầng TLS xác minh danh tính đối tác và thương lượng mã hóa; tầng HTTP thực thi chu trình gửi yêu cầu và nhận phản hồi bên trên. Với HTTP/2, nhiều yêu cầu có thể cùng chia sẻ một kết nối mạng duy nhất (*multiplexing*). Vì thế nhận định “mỗi yêu cầu tương ứng một kết nối TCP riêng biệt” là mô hình tinh thần sai lệch ngay từ đầu.
 
 ## Chứng chỉ hợp lệ, vì sao thao tác vẫn phải bị từ chối?
 
-Một caller có client certificate do CA nội bộ ký và TLS handshake thành công. Nó gọi `POST /write` kèm `X-Role: admin`. Service có được thực hiện không? Nếu câu trả lời chỉ dựa vào “đã mTLS” thì ta vừa biến quyền được vào kênh truyền thành quyền làm mọi việc trong kênh ấy.
+Một bên gọi có chứng chỉ máy khách do CA nội bộ ký và hoàn tất bắt tay TLS thành công. Nó gửi yêu cầu `POST /write` kèm tiêu đề `X-Role: admin`. Dịch vụ có được phép thực thi không? Nếu câu trả lời chỉ dựa vào việc “đã kết nối qua mTLS” thì ta vừa đồng nhất quyền được tham gia vào kênh truyền với quyền thực hiện mọi thao tác bên trong kênh truyền đó.
 
-Lab `labs/part11-request-path/identity` tạo CA, server certificate và client certificate mới trong runtime bằng `crypto/x509`. Listener chỉ ở loopback; không có private key ghi vào repository, không dùng trust store hệ điều hành và không bỏ qua verification. Client kết nối địa chỉ loopback nhưng đặt `ServerName=service.test`, đúng DNS SAN của server certificate. Địa chỉ để quay số và tên cần xác minh là hai input khác nhau; Common Name không thay SAN trong phép kiểm hostname này.
+Bài thực hành `labs/part11-request-path/identity` khởi tạo CA, chứng chỉ máy chủ và chứng chỉ máy khách mới trong thời gian chạy bằng gói `crypto/x509`. Trình lắng nghe chỉ mở trên giao diện cục bộ (*loopback*); không có khóa riêng tư nào ghi vào kho mã nguồn, không phụ thuộc vào kho tin cậy của hệ điều hành và tuyệt đối không bỏ qua khâu kiểm thực. Máy khách kết nối tới địa chỉ cục bộ nhưng thiết lập `ServerName=service.test`, khớp chính xác với trường DNS SAN của chứng chỉ máy chủ. Địa chỉ mạng để quay số kết nối và tên máy chủ cần xác minh là hai dữ liệu đầu vào riêng biệt; trường Common Name (CN) cũ không thể thay thế cho SAN trong phép kiểm tra tên máy chủ này.
 
-Mở `TestCertificateBoundaries` và dự đoán từng denial trước khi chạy. Client phải từ chối chain không thuộc CA đã tin và SAN không khớp. Server dùng `RequireAndVerifyClientCert`, từ chối thiếu chứng chỉ, CA client lạ, chứng chỉ hết hạn và chứng chỉ có mục đích sử dụng không phù hợp. Test đi qua handshake TLS thật của thư viện chuẩn, rồi kiểm tra không có mutation. Nó không dùng một struct giả để tự gắn nhãn authenticated.
+Hãy mở tệp kiểm thử `TestCertificateBoundaries` và dự đoán từng trường hợp bị từ chối trước khi chạy lệnh. Máy khách bắt buộc phải từ chối chuỗi chứng chỉ không thuộc CA tin cậy hoặc trường SAN không khớp. Máy chủ sử dụng cờ `RequireAndVerifyClientCert`, từ chối khi thiếu chứng chỉ, CA máy khách lạ, chứng chỉ hết hạn hoặc chứng chỉ có mục đích sử dụng không phù hợp. Ca kiểm thử đi qua quy trình bắt tay TLS thực tế của thư viện chuẩn, sau đó xác nhận không có biến đổi dữ liệu trái phép. Kiểm thử không dùng cấu trúc giả để tự gán nhãn đã xác thực.
 
 ~~~powershell
 cd labs/part11-request-path
@@ -60,15 +60,15 @@ go test -count=1 -v ./identity
 go test -race ./identity
 ~~~
 
-Sau handshake, `Authorize` chỉ lấy URI SAN từ leaf trong `VerifiedChains`, không lấy role từ header hoặc từ certificate chưa được xác minh. Policy của fixture cho `urn:go-book:reader` đọc `/read`; chỉ `urn:go-book:operator` được ghi `/write`. Certificate được CA tin ký nhưng mang identity lạ hoặc không có identity vẫn nhận 403. TLS không chọn policy này thay application. Chương 12 đặt nó trước handler có side effect; Chương 28 còn cần ràng buộc quyền với action, target và phê duyệt.
+Sau quá trình bắt tay, hàm `Authorize` chỉ trích xuất định danh URI SAN từ chứng chỉ lá (*leaf certificate*) trong `VerifiedChains`, không lấy vai trò từ tiêu đề HTTP hay từ chứng chỉ chưa được kiểm chứng. Chính sách mẫu cho phép `urn:go-book:reader` đọc dữ liệu tại `/read`; và chỉ tài khoản `urn:go-book:operator` mới được phép ghi dữ liệu tại `/write`. Chứng chỉ do CA tin cậy ký nhưng mang danh tính lạ hoặc thiếu thông tin danh tính đều nhận mã từ chối 403 Forbidden. Tầng TLS không thể thay tầng ứng dụng quyết định chính sách phân quyền này. Chương 12 đặt ranh giới này trước hàm xử lý có tác dụng phụ (*side effects*); Chương 28 tiếp tục ràng buộc thẩm quyền với hành động, đối tượng và quy trình phê duyệt.
 
-**Tự phản nghiệm.** Bật `RELIABILITY_MUTANT=trust_equals_role` rồi chạy `TestAuthorizationContract`. Biến thể lỗi cấp mọi action cho bất kỳ verified chain nào; cùng test phải đỏ vì reader ghi được và bộ đếm mutation tăng. Không chữa bằng cách tắt certificate verification: điều đó phá thêm boundary danh tính, không giải quyết authorization.
+> **Thử nghiệm đối chứng:** Kích hoạt biến môi trường `RELIABILITY_MUTANT=trust_equals_role` rồi chạy kiểm thử `TestAuthorizationContract`. Biến thể lỗi sẽ cấp quyền thực hiện mọi hành động cho bất kỳ chuỗi chứng chỉ hợp lệ nào; cùng ca kiểm thử đó sẽ thất bại (báo đỏ) vì tài khoản đọc ghi được dữ liệu và bộ đếm đột biến tăng lên. Không được khắc phục bằng cách tắt khâu kiểm thực chứng chỉ: điều đó sẽ phá vỡ ranh giới danh tính và không giải quyết được bài toán phân quyền.
 
-Lab chọn TLS 1.3 làm policy cục bộ, không gọi đây là yêu cầu của mọi deployment. Nó chưa kiểm tra rotation, revocation, proxy termination hay identity provider. mTLS là một lựa chọn khi có bài toán phân phối và quản lý certificate phù hợp; không phải điều kiện bắt buộc của mọi MCP transport.
+Bài thực hành chọn TLS 1.3 làm chính sách cục bộ, không áp đặt đây là yêu cầu cho mọi môi trường triển khai thực tế. Nó chưa đi sâu vào cơ chế xoay vòng chứng chỉ, thu hồi chứng chỉ (*revocation*), kết thúc TLS tại cổng trung gian hay nhà cung cấp danh tính tập trung. Cơ chế mTLS là một giải pháp khi có hạ tầng phân phối và quản lý chứng chỉ tương thích; đây không phải điều kiện bắt buộc cho mọi tầng truyền tải giao thức MCP.
 
-## Deadline có phạm vi, không phải một con số trang trí
+## Thời hạn chót có phạm vi, không phải một con số trang trí
 
-`http.NewRequestWithContext` ràng context vào toàn bộ vòng đời outgoing request: lấy connection, gửi request, đọc header và đọc body response. Đó là deadline gần nhất với mục đích caller: caller mất kiên nhẫn thì cả request nên biết lý do dừng.
+Hàm `http.NewRequestWithContext` ràng buộc ngữ cảnh vào toàn bộ vòng đời của yêu cầu gửi ra ngoài: tìm kết nối mạng, gửi yêu cầu, đọc tiêu đề và đọc toàn bộ thân phản hồi. Đó là thời hạn chót sát nhất với mục tiêu của bên gọi: khi bên gọi mất kiên nhẫn, toàn bộ yêu cầu cần nhận biết lý do để dừng lại.
 
 ~~~go
 ctx, cancel := context.WithTimeout(parent, 2*time.Second)
@@ -86,7 +86,7 @@ if err != nil {
 resp, err := client.Do(req)
 ~~~
 
-`http.Client.Timeout` cũng là giới hạn end-to-end cho request do client đó thực hiện, kể cả đọc body. `http.Transport` có các chốt hẹp hơn: `TLSHandshakeTimeout`, `ResponseHeaderTimeout`, các giới hạn connection và dialer deadline. Chúng trả lời các câu policy khác nhau, nên không nên đồng loạt gán một con số “5 giây” vào mọi field.
+Thuộc tính `http.Client.Timeout` thiết lập giới hạn toàn diện từ đầu đến cuối (*end-to-end*) cho các yêu cầu qua máy khách đó, bao gồm cả thời gian đọc thân phản hồi. Cấu hình `http.Transport` cung cấp các chốt chặn hẹp hơn: `TLSHandshakeTimeout`, `ResponseHeaderTimeout`, giới hạn số lượng kết nối và thời hạn quay số. Mỗi chốt chặn giải quyết một yêu cầu chính sách riêng biệt, vì vậy không nên áp đặt máy móc một con số “5 giây” chung chung cho mọi trường cấu hình.
 
 @table Timeout phải gắn với một khả năng chờ cụ thể
 
@@ -98,13 +98,13 @@ resp, err := client.Do(req)
 | `ResponseHeaderTimeout` | Sau khi gửi đủ request, chờ response headers | Server phải bắt đầu phản hồi trong bao lâu? |
 | `MaxConnsPerHost` | Tổng connection theo host; dial có thể block khi đầy | Bao nhiêu concurrency là quota có chủ đích? |
 
-Một timeout không trả lời retry có an toàn hay không. `Transport` có retry nội bộ hạn chế cho một số lỗi mạng trên connection đã dùng thành công, khi request idempotent và body có thể gửi lại; đó là documented behavior của implementation library, không phải lời hứa business. Nếu code của anh tự retry `POST`, anh phải định nghĩa idempotency key, retry budget, deadline chung và hậu quả khi server đã xử lý nhưng client chưa nhận response. “Network error” không đồng nghĩa operation chưa xảy ra.
+Thời gian chờ không thể tự trả lời câu hỏi liệu việc thử lại (*retry*) có an toàn hay không. Bộ điều vận `Transport` có cơ chế thử lại nội bộ có giới hạn cho một số lỗi mạng trên các kết nối đã từng dùng thành công, khi yêu cầu có tính lũy đẳng (*idempotent*) và phần thân có thể gửi lại; đó là hành vi được ghi trong tài liệu của thư viện, không phải cam kết của tầng nghiệp vụ. Nếu mã nguồn tự động thử lại yêu cầu `POST`, lập trình viên bắt buộc phải định nghĩa khóa lũy đẳng (*idempotency key*), ngân sách số lần thử lại, thời hạn chót chung và tiên liệu hậu quả khi máy chủ đã xử lý xong nhưng máy khách chưa kịp nhận phản hồi. “Lỗi mạng” không đồng nghĩa với việc thao tác nghiệp vụ chưa từng diễn ra.
 
-## Response body là khoản nợ của caller
+## Thân phản hồi là khoản nợ tài nguyên của bên gọi
 
-`Client.Do` trả `Response` với `Body` không nil khi không có error. Caller phải đóng nó. Đọc đến EOF rồi đóng tạo điều kiện reuse persistent HTTP/1.x connection, không hứa request kế tiếp sẽ dùng nó. Từ Go 1.27, khi `Close`, implementation HTTP/1 tự drain phần chưa đọc đến một giới hạn bảo thủ để hỗ trợ reuse. Điều đó không có nghĩa đóng một body bất kỳ sẽ đọc hết hoặc giữ được connection; không chuyển mẹo implementation này thành ownership policy. Helper hoặc trả `*http.Response` và document caller phải close, hoặc đọc body, close nó rồi trả một value độc lập.
+Phương thức `Client.Do` trả về cấu trúc `Response` với trường thân `Body` khác `nil` khi không có lỗi. Bên gọi bắt buộc phải đóng thân phản hồi này. Việc đọc hết đến ký tự kết thúc `io.EOF` rồi mới đóng sẽ tạo điều kiện để tái sử dụng kết nối HTTP/1.x duy trì (*keep-alive*), dù không cam đoan yêu cầu tiếp theo chắc chắn sẽ dùng lại kết nối đó. Từ Go 1.27, khi gọi lệnh `Close`, tầng hiện thực HTTP/1 sẽ tự động giải phóng phần dữ liệu chưa đọc tới một hạn mức thận trọng để hỗ trợ tái sử dụng kết nối. Điều đó không đồng nghĩa với việc đóng một phần thân bất kỳ đều sẽ đọc hết dữ liệu hoặc giữ lại được kết nối mạng; không nên biến chi tiết cài đặt này thành chính sách phân định quyền sở hữu tài nguyên. Hàm tiện ích hoặc trả về `*http.Response` và ghi rõ tài liệu yêu cầu bên gọi phải đóng thân phản hồi, hoặc chủ động đọc hết, đóng lại rồi chỉ trả về giá trị dữ liệu độc lập.
 
-Lab của chương chọn policy thứ hai. Contract bắt đầu bằng test đỏ: `Fetch` phải tạo request bằng context caller, đọc toàn bộ body, đóng body, và đổi status ngoài 2xx thành `StatusError`. Không dùng `http.DefaultClient`; test đưa một transport giả vào client để quan sát request mà không hề chạm network thật.
+Bài thực hành lựa chọn chính sách thứ hai cho phản hồi nhỏ, đáng tin. Hàm `Fetch` gắn ngữ cảnh bên gọi vào yêu cầu và đóng thân trên cả nhánh thành công lẫn lỗi đọc. Nó đọc thân trước rồi mới kiểm tra mã trạng thái cuối cùng sau chính sách chuyển hướng của `Client`; nếu đọc thành công mà mã ngoài dải 2xx, nó trả `StatusError`. Lỗi đọc thân được ưu tiên, không tự biến thành `StatusError`. `Client.Do` không coi mã ngoài 2xx là lỗi truyền tải. Bộ kiểm thử truyền máy khách và bộ điều vận giả để quan sát contract mà không cần mạng ngoài; `Fetch` hiện không có trần số byte, nên không phải hàm an toàn cho phản hồi lớn hoặc nguồn không đáng tin.
 
 ~~~powershell
 cd labs/part11-request-path
@@ -115,17 +115,17 @@ go test -race -tags traceexercise ./exercise
 go test ./fixed
 ~~~
 
-Sau `Fetch`, có một việc độc lập thứ hai: biến các hook trace thành dữ liệu có thể đọc mà không tạo race mới. Mở `exercise/trace_test.go`; test không yêu cầu mở DNS hay server thật. Nó đưa các hook `DNSStart`, `GotConn` và `GotFirstResponseByte` vào một recorder, rồi gọi `GotConn` đồng thời từ nhiều goroutine. Anh tự chọn cấu trúc dữ liệu, cơ chế đồng bộ và tên event, nhưng `Snapshot` phải trả bản copy để caller không sửa lịch sử của recorder. Đây là chương trình tái hiện tối thiểu cho đúng lời cảnh báo ở đầu chương: `httptrace` cho phép hook chạy đồng thời; trace dùng để điều tra request không được tự tạo một data race trong công cụ điều tra.
+Sau hàm `Fetch`, còn một nhiệm vụ độc lập thứ hai: chuyển các điểm móc truy vết thành dữ liệu có thể đọc mà không phát sinh xung đột dữ liệu (*data race*) mới. Mở tệp `exercise/trace_test.go`; kiểm thử không đòi hỏi kết nối DNS hay máy chủ thực tế. Bộ kiểm thử kết nối các điểm móc `DNSStart`, `GotConn` và `GotFirstResponseByte` vào một bộ ghi nhận, rồi gọi phương thức `GotConn` đồng thời từ nhiều goroutine. Bạn có thể tự chọn cấu trúc dữ liệu, cơ chế đồng bộ hóa và tên sự kiện, nhưng phương thức `Snapshot` bắt buộc phải trả về bản sao độc lập để bên gọi không can thiệp vào lịch sử của bộ ghi. Đây là bài kiểm tra tối thiểu cho đúng lời cảnh báo ở đầu chương: `httptrace` kích hoạt các điểm móc đồng thời; dấu vết dùng để điều tra yêu cầu không được phép tự gây ra xung đột dữ liệu ngay trong công cụ điều tra.
 
-Thứ tự event trong một snapshot tuần tự có thể là bằng chứng tốt cho một request cụ thể. Khi hook chạy đồng thời, recorder chỉ hứa giữ event đã nhận mà không bịa một thứ tự nhân quả không tồn tại. Hãy dùng thời điểm để hỗ trợ điều tra, rồi đối chiếu với `GotConnInfo.Reused`, deadline và kết quả; đừng suy ra riêng từ danh sách event rằng DNS, dial hay server luôn là chặng chậm nhất.
+Thứ tự sự kiện trong một ảnh chụp trạng thái tuần tự có thể là bằng chứng hữu ích cho một yêu cầu cụ thể. Khi các điểm móc kích hoạt đồng thời, bộ ghi nhận chỉ cam kết lưu giữ các sự kiện đã tiếp nhận mà không tự suy diễn thứ tự nhân quả thiếu cơ sở. Hãy dùng mốc thời gian để hỗ trợ điều tra, đối chiếu với trường `GotConnInfo.Reused`, thời hạn chót và kết quả cuối cùng; không nên vội vã kết luận từ danh sách sự kiện rằng tra cứu DNS, quay số hay máy chủ luôn là chặng gây chậm trễ nhất.
 
-Khi caller cần stream một response lớn, policy lab không còn đúng: không nên `io.ReadAll` chỉ để “cho đơn giản”. Khi ấy API phải trả stream và ownership của `Close` quay về caller, giống bài về I/O ở Chương 7. Một API nhỏ nhưng mơ hồ về body thường tạo connection leak lặng lẽ hơn một API có thêm một dòng document.
+Khi bên gọi cần truyền phát (*stream*) một phản hồi dung lượng lớn, chính sách của bài thực hành sẽ không còn phù hợp: không nên dùng `io.ReadAll` chỉ để “cho đơn giản”. Khi ấy giao diện lập trình bắt buộc phải trả về luồng dữ liệu và chuyển giao trách nhiệm gọi lệnh `Close` lại cho bên gọi, tương tự như bài toán vào/ra dữ liệu ở Chương 7. Một giao diện lập trình tinh gọn nhưng mơ hồ về việc đóng thân phản hồi thường gây rò rỉ kết nối mạng âm thầm và nguy hiểm hơn nhiều so với một hàm có thêm vài dòng tài liệu giải thích rõ ràng.
 
-Client và `Transport` an toàn khi dùng đồng thời; tài liệu `net/http` khuyên tạo rồi reuse chúng vì transport có state như connection cache. Reuse không có nghĩa dùng một global vô danh. Hãy đóng gói một client đã cấu hình đúng policy của service, truyền nó vào boundary cần gọi mạng, và giữ transport cũng như deadline có thể kiểm thử được.
+Cấu trúc `http.Client` và `http.Transport` an toàn khi sử dụng đồng thời từ nhiều luồng; tài liệu chuẩn `net/http` khuyến nghị nên khởi tạo và tái sử dụng chúng vì bộ điều vận lưu giữ trạng thái nội bộ như bộ đệm kết nối (*connection cache*). Việc tái sử dụng không đồng nghĩa với việc lạm dụng một biến toàn cục vô danh. Hãy đóng gói một máy khách đã được cấu hình chặt chẽ theo đúng chính sách vận hành của dịch vụ, truyền nó qua tham số vào ranh giới cần thực hiện lệnh gọi mạng, đồng thời duy trì khả năng kiểm thử độc lập cho cả bộ điều vận lẫn thời hạn chót.
 
-### Thí nghiệm local: request thứ hai có thật sự dùng connection cũ?
+### Thí nghiệm cục bộ: yêu cầu thứ hai có thực sự tái sử dụng kết nối cũ?
 
-`labs/part11-request-path/fixed/reuse_test.go` dùng `httptest.Server`, một `http.Transport` mới và `httptrace`. Không có DNS hoặc TLS trong thí nghiệm HTTP cục bộ này; đó là chủ ý để cô lập pool idle connection. Hai request tuần tự đọc hết rồi đóng body. Test kiểm tra `GotConnInfo.Reused` là `false` cho request đầu, `true` cho request sau. Nó không chứng minh mọi request production sẽ reuse: server có thể đóng connection, body có thể chưa được trả về pool, quota hay HTTP/2 có thể đổi đường đi. Nó chỉ cho ta bằng chứng tái lập được cho mệnh đề hẹp: sau khi transport có một idle connection phù hợp, round trip kế tiếp có thể bỏ qua việc tạo connection mới.
+Tệp `labs/part11-request-path/fixed/reuse_test.go` sử dụng `httptest.Server`, một đối tượng `http.Transport` mới và gói `httptrace`. Thí nghiệm này hoàn toàn không có bước tra cứu DNS hay mã hóa TLS; đó là chủ ý thiết kế nhằm cô lập hoàn toàn bể kết nối rảnh. Hai yêu cầu tuần tự đọc trọn vẹn dữ liệu rồi đóng thân phản hồi. Ca kiểm thử kiểm tra giá trị `GotConnInfo.Reused` mang giá trị `false` cho yêu cầu đầu tiên, và `true` cho yêu cầu tiếp theo. Điều này không khẳng định mọi yêu cầu trên môi trường thực tế đều sẽ được tái sử dụng: máy chủ có thể chủ động ngắt kết nối, thân phản hồi có thể chưa được hoàn trả về bể, hạn ngạch hoặc cơ chế ghép kênh HTTP/2 có thể làm thay đổi đường đi. Thí nghiệm chỉ mang lại bằng chứng có thể tái lập cho một mệnh đề xác thực: khi bộ điều vận đã sở hữu một kết nối rảnh tương thích, vòng khứ hồi tiếp theo có thể bỏ qua việc khởi tạo kết nối mạng mới.
 
 ~~~powershell
 cd labs/part11-request-path
@@ -133,7 +133,9 @@ go test -run TestTransportReusesIdleConnection ./fixed
 go test -race ./fixed
 ~~~
 
-Khi nhìn một request chậm, đừng hỏi “API nào chậm?”. Hãy hỏi connection có được reuse không, timeout nào đã hết, DNS/TLS/first byte nằm ở đâu trên trace, body đã được trả nợ chưa, và retry có giữ nguyên nghiệp vụ không. Những câu ấy biến một dòng log 1.8 giây thành một điều tra có thể kết thúc.
+Kiểm thử `TestLiteralIPNeedsNoDNSAndServerMayPreventReuse` đặt thêm một phản ví dụ: máy chủ cục bộ dùng địa chỉ IP và gửi `Connection: close`. Hai yêu cầu đều đọc hết và đóng thân nhưng không có điểm móc DNS nào và không tái sử dụng kết nối. Điều này tách trách nhiệm đóng tài nguyên của bên gọi khỏi quyền quyết định giữ kết nối của hai phía.
+
+Khi điều tra yêu cầu chậm, hãy kiểm tra kết nối có được tái sử dụng, giới hạn nào đã kích hoạt, các mốc DNS/TLS/byte đầu tiên nằm ở đâu, thân phản hồi có được đóng và việc thử lại có an toàn cho nghiệp vụ hay không. Một dòng nhật ký 1.8 giây là điểm khởi đầu; kết luận cần dữ liệu ở đúng chặng đang nghi ngờ.
 
 @references
 1. Go Team. Package `net`, phần Name Resolution và `Resolver.LookupHost`. pkg.go.dev/net

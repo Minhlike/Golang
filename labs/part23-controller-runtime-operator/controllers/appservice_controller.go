@@ -89,6 +89,10 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("failed to get child deployment: %w", err)
 	}
 
+	// A matching name is not ownership; never adopt or overwrite a foreign child.
+	if !metav1.IsControlledBy(deployment, appService) {
+		return ctrl.Result{}, fmt.Errorf("deployment is not controlled by this AppService")
+	}
 	// Child deployment exists: check for configuration drift
 	drifted := false
 	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != appService.Spec.Replicas {

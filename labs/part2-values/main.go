@@ -5,7 +5,9 @@ import "fmt"
 func redactedCopy(fields []string) []string {
 	preview := make([]string, len(fields))
 	copy(preview, fields)
-	preview[0] = "***"
+	if len(preview) > 0 {
+		preview[0] = "***"
+	}
 	return preview
 }
 

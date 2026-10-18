@@ -20,15 +20,21 @@ type mockRecordReader struct {
 // until Close is called. It prevents a cancellation test from passing merely
 // because a fake returned EOF immediately.
 type blockingRecordReader struct {
-	once   sync.Once
-	closed chan struct{}
+	once      sync.Once
+	startOnce sync.Once
+	started   chan struct{}
+	closed    chan struct{}
 }
 
 func newBlockingRecordReader() *blockingRecordReader {
-	return &blockingRecordReader{closed: make(chan struct{})}
+	return &blockingRecordReader{
+		started: make(chan struct{}),
+		closed:  make(chan struct{}),
+	}
 }
 
 func (r *blockingRecordReader) Read() ([]byte, error) {
+	r.startOnce.Do(func() { close(r.started) })
 	<-r.closed
 	return nil, ErrObserverClosed
 }
@@ -151,8 +157,16 @@ func TestObserverContextCancellation(t *testing.T) {
 	observer := NewObserver(reader, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	events, errs := observer.Start(ctx)
 
+	// Synchronize with entry into Read; cancellation before the read begins
+	// would not establish that closing the reader releases a blocked read.
+	select {
+	case <-reader.started:
+	case <-time.After(time.Second):
+		t.Fatal("reader did not begin Read")
+	}
 	// Cancel while Read is blocked. The cancellation path must call Close and
 	// release the read rather than relying on a cooperative fake EOF.
 	cancel()
@@ -170,6 +184,28 @@ func TestObserverContextCancellation(t *testing.T) {
 
 	if err := observer.Close(); err != nil {
 		t.Errorf("failed to close observer: %v", err)
+	}
+}
+
+func TestSecurityRulesMatchDocumentedFixtureScope(t *testing.T) {
+	for _, tc := range []struct {
+		event ExecEvent
+		rule  string
+	}{
+		{ExecEvent{Filename: "/var/tmp/tool"}, "SEC01_EXEC_FROM_TEMP_DIRECTORY"},
+		{ExecEvent{Filename: "/usr/bin/bash", Comm: "redis-server"}, "SEC02_SHELL_FROM_WEBSERVER"},
+		{ExecEvent{Filename: "/bin/dash", Comm: "nginx"}, "SEC02_SHELL_FROM_WEBSERVER"},
+		{ExecEvent{Filename: "/usr/bin/nmap", UID: 0}, "SEC03_ROOT_NETWORK_RECON"},
+		{ExecEvent{Filename: "/usr/bin/nmap", UID: 1000}, ""},
+	} {
+		alert := DetectSecurityAnomalies(&tc.event)
+		if tc.rule == "" {
+			if alert != nil {
+				t.Fatalf("unexpected alert: %+v", alert)
+			}
+		} else if alert == nil || alert.Rule != tc.rule {
+			t.Fatalf("event=%+v alert=%+v want=%s", tc.event, alert, tc.rule)
+		}
 	}
 }
 

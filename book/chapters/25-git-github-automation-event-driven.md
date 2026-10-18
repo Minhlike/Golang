@@ -2,13 +2,13 @@
 
 # Chương 25 — Git và GitHub dưới góc nhìn của một hệ thống tự động hóa
 
-Trong workflow GitOps, Git có thể là nguồn khai báo desired state. Nó không chứa toàn bộ state production: database, secret ngoài repo, status của controller và observation vận hành vẫn có owner riêng. Chương này xét cách một bot đọc source revision và metadata GitHub mà không trộn hai loại dữ liệu ấy.
+Trong quy trình vận hành dựa trên Git (GitOps), Git là nguồn khai báo trạng thái mong muốn (*desired state*). Tuy nhiên, nó không bao quát toàn bộ trạng thái thực tế trên môi trường vận hành: cơ sở dữ liệu, các chuỗi bí mật nằm ngoài kho mã nguồn, trạng thái của bộ điều khiển và các dữ liệu quan sát đều có chủ thể quản lý riêng biệt. Chương này phân tích cách một chương trình tự động hóa (*bot*) tiếp nhận phiên bản mã nguồn và siêu dữ liệu từ nền tảng GitHub mà không nhầm lẫn giữa hai tầng dữ liệu đó.
 
-Một commit được merge vào nhánh `main` có thể tự động kích hoạt ArgoCD triển khai ứng dụng lên Kubernetes. Một nhãn (label) được gắn vào Pull Request có thể kích hoạt bot tự động cấp phát môi trường kiểm thử tạm thời (Ephemeral Environment) trên AWS.
+Một cam kết mã nguồn được hợp nhất vào nhánh `main` có thể tự động kích hoạt công cụ điều phối triển khai ứng dụng lên cụm Kubernetes. Một nhãn phân loại được gắn vào yêu cầu kéo mã (*Pull Request*) có thể kích hoạt chương trình tự động cấp phát môi trường kiểm thử tạm thời trên hạ tầng đám mây.
 
-Chương này xét hai lỗi thiết kế bằng ví dụ: đánh đồng object Git cục bộ với dữ liệu GitHub qua API, và xử lý webhook mà không xét authentication, duplicate delivery hay crash window. Không cần giả định mọi kỹ sư đều mắc chúng để kiểm tra boundary.
+Chương này phân tích hai khiếm khuyết thiết kế điển hình qua các ví dụ thực nghiệm: việc đánh đồng đối tượng Git cục bộ với dữ liệu GitHub qua giao diện lập trình, và việc xử lý thông điệp tự động (*webhook*) mà bỏ qua khâu xác thực, khử trùng lặp gửi tin hay khoảng thời gian gián đoạn do tiến trình bị sập đột ngột. Việc thẩm định các ranh giới kỹ thuật này giúp thiết kế hệ thống trở nên vững chắc và tin cậy hơn.
 
-Chương này phân tích sâu bản chất kỹ thuật của Git và GitHub dưới góc nhìn của một hệ thống hướng sự kiện (Event-Driven System), từ đó hướng dẫn bạn xây dựng các bot tự động hóa chuẩn mực bằng Go.
+Nội dung chương đi sâu vào bản chất kỹ thuật của Git và nền tảng GitHub dưới lăng kính của một hệ thống hướng sự kiện, từ đó hướng dẫn xây dựng các công cụ tự động hóa chuẩn mực bằng Go.
 
 ---
 
@@ -22,9 +22,9 @@ Câu hỏi trung tâm của chương này là:
 
 ### Hai mô hình dữ liệu song hành
 
-Git cục bộ lưu commit, tree và blob trong đồ thị định danh nội dung. Đọc object đã có có thể không cần mạng, nhưng storage có thể là disk hoặc memory, còn clone/fetch cần transport tới remote. Không có latency microsecond chung cho mọi thao tác go-git; số liệu cần workload và storage cụ thể. GitHub metadata như pull request và review là một boundary khác, không nằm trong tree source của commit.
+Git lưu commit, cây thư mục (`tree`) và khối dữ liệu (`blob`) trong một đồ thị định danh theo nội dung. Đọc object đã có không đòi hỏi mạng. Clone/fetch cần truy cập kho nguồn nhưng nguồn có thể là đường dẫn cục bộ; chỉ transport qua mạng mới cần kết nối tới máy chủ. Siêu dữ liệu GitHub như Pull Request và review không nằm trong cây mã nguồn của commit.
 
-Metadata Pull Request, label và review không nằm trong Git tree của commit. Lab dùng `go-github/v92` cho REST API và `go-git/v5` cho object Git cục bộ. Một bot chỉ cần một trong hai cũng hợp lệ; chọn theo dữ liệu và thao tác thực sự cần, không theo một kiến trúc “toàn diện” bắt buộc.
+Siêu dữ liệu về Pull Request, nhãn phân loại và đánh giá xét duyệt không nằm trong cây Git của commit. Bài thực hành sử dụng `go-github/v92` cho REST API và `go-git/v5` cho đối tượng Git cục bộ. Một bot chỉ cần dùng một trong hai thư viện cũng hoàn toàn hợp lệ; hãy lựa chọn dựa trên dữ liệu và thao tác thực tế cần xử lý.
 
 ---
 
@@ -32,11 +32,11 @@ Metadata Pull Request, label và review không nằm trong Git tree của commit
 
 Khi GitHub gửi một sự kiện (ví dụ `pull_request.opened`) đến máy chủ của bạn qua HTTP Webhook, làm sao bạn biết chắc chắn thông điệp này thực sự do GitHub phát ra chứ không phải do một kẻ xấu giả mạo?
 
-GitHub ký toàn bộ nội dung gói tin (raw payload) bằng mã khóa bí mật (Webhook Secret) thông qua thuật toán HMAC-SHA256, và đính kèm vào header:
+GitHub thực hiện ký toàn bộ nội dung thô của gói tin (*raw payload*) bằng chuỗi khóa bí mật thông qua thuật toán HMAC-SHA256, sau đó đính kèm vào tiêu đề yêu cầu:
 `X-Hub-Signature-256: sha256=<hex_digest>`
 
 ![Xác minh chữ ký HMAC của webhook GitHub](../../assets/diagrams/webhook-hmac-verification.png)
-@figure Server tính chữ ký từ chính raw body đã nhận rồi so sánh với header. Không tuần tự hóa lại JSON trước khi kiểm tra chữ ký.
+@figure Máy chủ tính toán chữ ký từ chính phần thân dữ liệu thô nhận được rồi so sánh với giá trị tiêu đề. Tuyệt đối không giải mã và tuần tự hóa lại dữ liệu JSON trước khi kiểm tra chữ ký.
 
 ### Rủi ro rò rỉ thông tin qua thời gian thực thi (Timing Side-Channel)
 
@@ -44,7 +44,7 @@ Nếu bạn dùng toán tử thông thường để so sánh chữ ký:
 
 ~~~go
 // CẢNH BÁO: Rò rỉ thông tin qua thời gian thực thi!
-if actualSig == expectedSig { ... }
+if actualSig == expectedSig { /* so sánh sai */ }
 ~~~
 
 Toán tử so sánh chuỗi hoặc mảng byte mặc định trong hầu hết ngôn ngữ lập trình thường kết thúc sớm (early exit) ngay khi phát hiện byte không trùng khớp đầu tiên. Sự chênh lệch thời gian xử lý này vô tình tạo ra một kênh phụ (side-channel). Dù độ trễ biến thiên trên mạng Internet công cộng có thể làm nhiễu tín hiệu đo đạc, trong các môi trường nội bộ, mạng cục bộ tốc độ cao hoặc qua phương pháp phân tích thống kê trên lượng mẫu thử lớn, việc so sánh không hằng số thời gian vẫn có thể cung cấp manh mối để kẻ tấn công thu hẹp không gian tìm kiếm mã xác thực.
@@ -57,7 +57,8 @@ Trong Go, bạn bắt buộc phải dùng hàm `hmac.Equal` hoặc `subtle.Const
 func VerifyHMACSHA256(
 	payload []byte, signatureHeader string, secret []byte,
 ) bool {
-	if !strings.HasPrefix(signatureHeader, "sha256=") {
+	if len(secret) == 0 ||
+		!strings.HasPrefix(signatureHeader, "sha256=") {
 		return false
 	}
 	actualHex := strings.TrimPrefix(signatureHeader, "sha256=")
@@ -75,33 +76,33 @@ func VerifyHMACSHA256(
 }
 ~~~
 
-`hmac.Equal` so hai MAC mà không rò rỉ nội dung qua thời gian so sánh theo API contract. Nó không chứng minh toàn bộ endpoint constant-time hay không có side-channel; caller vẫn cần giới hạn payload, xử lý chữ ký và bảo vệ secret.
+Hàm `hmac.Equal` thực hiện so sánh hai mã xác thực thông điệp mà không làm rò rỉ nội dung qua thời gian tính toán theo đúng khế ước kỹ thuật. Cơ chế này không chứng minh toàn bộ điểm cuối đạt thời gian thực thi hằng số hay loại bỏ mọi kênh rò rỉ phụ; bên gọi vẫn bắt buộc phải giới hạn kích thước tải trọng, xác thực chữ ký và bảo vệ chuỗi bí mật cẩn trọng.
 
 ---
 
 ## 3. Khế ước phân tán: Delivery ID và Tính Lũy Đẳng
 
-Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho rằng GitHub sẽ tự động thử lại (auto-retry) mỗi khi máy chủ nhận trả về mã lỗi 5xx hoặc bị timeout. Trên thực tế, trong các cấu hình webhook tiêu chuẩn, GitHub không tự động redeliver khi endpoint nhận bị lỗi. Việc redelivery chỉ xảy ra khi có thao tác kích hoạt lại từ người vận hành qua giao diện quản trị (Operator UI), lời gọi REST API redeliver từ mã nguồn tự động hóa, hoặc các công cụ nội bộ gọi API này. Khi một lần chuyển giao được kích hoạt lại (redelivered), GitHub giữ nguyên giá trị GUID trong header `X-GitHub-Delivery`.
+Trong kiến trúc tích hợp webhook, một ngộ nhận phổ biến là cho rằng GitHub sẽ tự động thử lại mỗi khi máy chủ tiếp nhận trả về mã lỗi 5xx hoặc gặp sự cố quá thời gian chờ (timeout). Đối với các cấu hình webhook tiêu chuẩn, GitHub không tự động phát lại sự kiện khi điểm cuối tiếp nhận gặp lỗi. Việc gửi lại sự kiện chỉ diễn ra khi có thao tác kích hoạt thủ công từ người quản trị qua giao diện, lời gọi REST API từ mã nguồn tự động hóa, hoặc các công cụ nội bộ. Khi một lượt chuyển giao được kích hoạt lại, GitHub sẽ giữ nguyên giá trị định danh GUID trong tiêu đề `X-GitHub-Delivery`.
 
 Mỗi lần phát sự kiện, GitHub đính kèm một mã UUID duy nhất tại header:
 `X-GitHub-Delivery: 7a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d`
 
 ![Nhận diện webhook được gửi lại bằng Delivery ID](../../assets/diagrams/webhook-delivery-deduplication.png)
-@figure Lab nhận diện cùng Delivery ID để tránh lặp side effect trong đường chạy được kiểm thử. Lưu bền, xử lý crash và delivery đồng thời cần policy cùng cơ chế riêng.
+@figure Bài thực hành nhận diện cùng một mã Delivery ID để tránh lặp lại tác dụng phụ trong luồng chạy được kiểm thử. Việc lưu trữ bền vững, xử lý sự cố dừng đột ngột và các lượt gửi tin đồng thời đòi hỏi chính sách và cơ chế riêng biệt.
 
-Delivery ID giúp nhận diện cùng một delivery khi redeliver. Nó không được HMAC payload ký kèm như một phần header, nên riêng việc lưu ID chưa chống replay từ bên giữ payload/chữ ký hợp lệ rồi đổi ID. Sau xác thực, cần ràng buộc event, repository và operation identity; state xử lý phải bền vững nếu muốn giữ kết quả qua crash.
+Mã Delivery ID giúp nhận diện cùng một lượt gửi tin khi được phát lại. Tiêu đề này không nằm trong nội dung tải trọng được thuật toán HMAC ký, do đó riêng việc lưu giữ ID chưa đủ để ngăn chặn tấn công phát lại nếu kẻ tấn công giữ tải trọng và chữ ký hợp lệ rồi thay đổi ID. Sau bước xác thực, hệ thống cần ràng buộc chặt chẽ sự kiện, kho lưu trữ và định danh thao tác nghiệp vụ; trạng thái xử lý phải được lưu trữ bền vững nếu muốn bảo toàn kết quả qua các lần khởi động lại.
 
-Delivery ID chỉ khử trùng lặp **một lần chuyển giao**; nó không tự là khóa lũy đẳng của nghiệp vụ như “deploy commit X vào môi trường Y”. Cần có state machine tối thiểu `processing → completed`: redelivery đang xử lý bị giữ lại, attempt lỗi phải được đánh fail để có thể thử lại, còn completed mới bị suppress. Business mutation cần operation key riêng và, ở production, durable/transactional store có TTL. Lab giữ ledger trong RAM nên mọi bảo đảm chỉ tồn tại trong process lifetime.
+Mã Delivery ID chỉ giúp khử trùng lặp một lần chuyển giao; nó không tự biến thành khóa lũy đẳng của nghiệp vụ (như thao tác “triển khai commit X vào môi trường Y”). Hệ thống cần một máy trạng thái tối thiểu `processing → completed`: các lượt gửi lại trong lúc đang xử lý phải được giữ lại, lượt thực thi thất bại phải được đánh dấu lỗi để cho phép thử lại, và chỉ lượt đã hoàn tất mới được ngăn chặn thực thi lặp lại. Các thao tác biến đổi trạng thái nghiệp vụ đòi hỏi khóa thao tác riêng biệt, và trên môi trường sản xuất, cần kho dữ liệu phân tán bền vững có thời hạn tồn tại (TTL). Bài thực hành lưu giữ sổ ghi nhận trong bộ nhớ tạm (RAM), do đó các cam kết chỉ có hiệu lực trong vòng đời của tiến trình.
 
 Trên môi trường production thực tế, một hệ thống tự động hóa chịu lỗi đòi hỏi phải kết hợp một trong các cơ chế sau:
 
-Một là, kho lưu trữ phân tán bền bỉ (Durable idempotency store): Lưu trữ delivery ID vào kho dữ liệu phân tán có TTL (như Redis hoặc DynamoDB).
+Một là, kho lưu trữ phân tán bền vững: Lưu trữ mã định danh chuyển giao vào kho dữ liệu phân tán có cơ chế hết hạn theo thời gian (như Redis hoặc DynamoDB).
 
-Hai là, ràng buộc duy nhất trong cơ sở dữ liệu (Database uniqueness/transaction): Ghi delivery ID vào bảng sự kiện với ràng buộc khóa duy nhất (unique constraint) trong cùng transaction xử lý nghiệp vụ.
+Hai là, áp dụng ràng buộc duy nhất trong cơ sở dữ liệu: Ghi nhận mã định danh chuyển giao vào bảng sự kiện với ràng buộc khóa duy nhất trong cùng một giao dịch xử lý nghiệp vụ.
 
-Ba là, mã định danh thao tác (Operation identity): Sinh token lũy đẳng gắn với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện webhook.
+Ba là, thiết lập định danh thao tác nghiệp vụ: Tạo mã định danh lũy đẳng gắn chặt với trạng thái cụ thể của tài nguyên đích thay vì chỉ dựa vào sự kiện chuyển giao của giao thức mạng.
 
-Bốn là, thiết kế mutation lũy đẳng theo identity và trạng thái đã quan sát. Khai báo desired state giúp xác định đích nhưng không tự làm mọi thao tác create/delete lũy đẳng; precondition, ownership và retry sau partial failure vẫn cần được thiết kế như Ch21–23.
+Bốn là, thiết kế các thao tác biến đổi trạng thái có tính lũy đẳng dựa trên định danh và trạng thái quan sát thực tế. Việc khai báo trạng thái mong muốn giúp xác định đích đến nhưng không tự động biến mọi thao tác tạo mới hay xóa bỏ thành lũy đẳng; các tiền điều kiện, quyền sở hữu và chính sách thử lại sau thất bại cục bộ vẫn cần được thiết kế chặt chẽ như đã phân tích ở các Chương 21 đến Chương 23.
 
 Thiết kế bộ tiếp nhận có kiểm tra trùng lặp trong bộ nhớ:
 
@@ -116,8 +117,14 @@ func (r *WebhookReceiver) Process(
 	payload []byte,
 	handle func() error,
 ) (bool, error) {
+	if deliveryID == "" {
+		return false, ErrMissingDelivery
+	}
 	if !VerifyHMACSHA256(payload, signature, r.secret) {
 		return false, ErrInvalidSignature
+	}
+	if handle == nil {
+		return false, errors.New("webhook handler is required")
 	}
 	if _, accepted := r.ledger.Begin(deliveryID); !accepted {
 		return true, nil
@@ -131,25 +138,25 @@ func (r *WebhookReceiver) Process(
 }
 ~~~
 
-`Complete` xảy ra sau `handle`; lỗi giải phóng reservation để thử lại. Trong process còn sống, ledger của lab ngăn delivery đồng thời hoặc đã hoàn tất chạy lại handler. Production cần state bền, atomic claim và recovery; TTL/lease đơn lẻ không đóng crash window giữa side effect ngoài database và việc ghi Complete.
+Thao tác `Complete` diễn ra sau khi hàm xử lý `handle` hoàn tất; nếu phát sinh lỗi, hệ thống sẽ giải phóng lượt đặt chỗ để cho phép thử lại. Khi tiến trình còn đang hoạt động, sổ ghi nhận của bài thực hành ngăn chặn việc chuyển giao đồng thời hoặc việc chạy lại hàm xử lý với các lượt đã hoàn thành. Môi trường thực tế đòi hỏi trạng thái lưu trữ bền vững, cơ chế giành quyền nguyên tử và quy trình phục hồi sự cố; một thời hạn thuê đơn lẻ không thể che lấp khoảng thời gian tiến trình bị sập đột ngột giữa lúc phát sinh hiệu ứng phụ ngoài cơ sở dữ liệu và thời điểm ghi nhận trạng thái hoàn tất.
 
 ---
 
-### Ledger trong RAM không sống qua lần khởi động lại
+### Sổ ghi nhận trong bộ nhớ không tồn tại qua lần khởi động lại
 
-Giữ nguyên lab webhook ở trên để kiểm tra HMAC và cạnh tranh trong một process. Bây giờ thử đưa nó qua khe lỗi của Chương 13: handler đã tạo một thay đổi, nhưng process chết trước `Complete`. Sau restart, ledger RAM trống; delivery giống hệt có thể đi qua lần nữa. Đây không phải lỗi của mutex hay HMAC. Mutex bảo vệ state đang sống, còn chữ ký xác nhận payload; không thứ nào lưu nghĩa vụ nghiệp vụ sau khi process biến mất.
+Giữ nguyên bài thực hành webhook ở trên để kiểm tra thuật toán HMAC và sự cạnh tranh trong một tiến trình duy nhất. Bây giờ hãy đưa tình huống này qua ranh giới lỗi từng phân tích ở Chương 13: hàm xử lý đã tạo ra một thay đổi, nhưng tiến trình đột ngột tắt trước khi kịp gọi `Complete`. Sau khi khởi động lại, sổ ghi nhận trong bộ nhớ hoàn toàn trống rỗng; một lượt chuyển giao giống hệt có thể vượt qua cổng kiểm soát thêm một lần nữa. Đây không phải là khiếm khuyết của khóa đồng bộ hay chữ ký số HMAC. Khóa bảo vệ trạng thái đang vận hành, còn chữ ký xác nhận tính toàn vẹn của gói tin; không công cụ nào có khả năng lưu giữ cam kết nghiệp vụ sau khi tiến trình biến mất.
 
-Trong lab outbox của Chương 13, `credit-001` là operation identity nghiệp vụ, không tự lấy tên từ transport delivery ID. Khi nhận webhook, trước hết phải xác thực payload và ánh xạ nó sang operation mà application cho phép. Một delivery ID mới cho cùng operation không được tạo tác dụng phụ mới; ngược lại, hai operation khác nhau không được gộp chỉ vì tình cờ có cùng nội dung. Việc ánh xạ này là policy của bot, chưa được fixture GitHub cũ chứng minh.
+Trong bài thực hành hàng đợi gửi đi của Chương 13, mã `credit-001` là định danh thao tác nghiệp vụ, không tự động kế thừa từ mã chuyển giao của tầng truyền vận. Khi tiếp nhận thông điệp, trước hết phải xác thực tải trọng và ánh xạ nó sang thao tác nghiệp vụ được ứng dụng cho phép. Một mã chuyển giao mới cho cùng một thao tác nghiệp vụ tuyệt đối không được phép sinh ra hiệu ứng phụ mới; ngược lại, hai thao tác khác nhau không được gộp chung chỉ vì vô tình có cùng nội dung dữ liệu. Việc ánh xạ này là chính sách xử lý của chương trình tự động, chưa được các bộ thử nghiệm cũ chứng minh.
 
-Hãy tự dựng bảng ba checkpoint trong `TestRecoveryWindows`, rồi chạy test. Ở checkpoint sau send, phía nhận đã commit mà phía gửi vẫn pending. Lần dispatch mới bắt buộc có khả năng gửi lặp. `TestSendRetryAndReceiverConflict` kiểm tra hai attempts và một hiệu ứng, đồng thời từ chối payload xung đột ở phía nhận. Bằng chứng này dùng hai database cục bộ và sender gọi receiver trực tiếp; nó không xác nhận GitHub cung cấp một idempotency contract tương đương cho mọi endpoint.
+Hãy tự thiết lập bảng gồm ba điểm kiểm tra trong `TestRecoveryWindows`, sau đó thực thi ca kiểm thử. Tại điểm kiểm tra sau khi gửi, phía tiếp nhận đã lưu giao dịch thành công trong khi phía gửi vẫn ở trạng thái chờ. Lượt gửi lại mới bắt buộc phải có khả năng xử lý việc gửi trùng lặp. Bài kiểm thử `TestSendRetryAndReceiverConflict` kiểm tra hai lượt gửi và xác nhận chỉ một hiệu ứng duy nhất được ghi nhận, đồng thời chủ động từ chối dữ liệu xung đột ở phía tiếp nhận. Bằng chứng này sử dụng hai cơ sở dữ liệu cục bộ và bên gửi gọi trực tiếp bên nhận; nó không khẳng định nền tảng GitHub cung cấp một khế ước lũy đẳng tương đương cho mọi điểm cuối API.
 
-Một bot thật cần chọn side effect có thể lặp an toàn, đọc lại trạng thái có identity ổn định hoặc dùng cơ chế idempotency của API thực tế. Nếu một request tạo comment đã timeout sau khi server xử lý, không được suy “thất bại nên cứ tạo lại”. Outbox giữ việc chưa được xác nhận, không biến network thành transaction. Policy retry còn cần budget, delay, giới hạn số lần và đường đối soát; lab này giữ retry do người vận hành/test gọi lại, không thêm vòng retry nền vô hạn.
+Một chương trình tự động hóa thực tế cần lựa chọn các hiệu ứng phụ có khả năng lặp lại an toàn, đọc lại trạng thái dựa trên định danh ổn định hoặc tận dụng cơ chế lũy đẳng của giao diện lập trình thực tế. Nếu một yêu cầu tạo bình luận gặp sự cố quá thời hạn sau khi máy chủ đã xử lý, không thể suy đoán ngây thơ rằng “gặp lỗi nên cứ gửi lại”. Hàng đợi gửi đi chỉ lưu giữ các công việc chưa được xác nhận, không thể biến kết nối mạng thành một giao dịch nguyên tử. Chính sách thử lại đòi hỏi ngân sách thời gian, độ trễ lùi, giới hạn số lần và phương án đối soát; bài thực hành này chỉ kích hoạt thử lại do người vận hành hoặc ca kiểm thử yêu cầu, tuyệt đối không bổ sung vòng lặp thử lại vô hạn chạy ngầm.
 
 ## 4. Quản trị Rate Limit: Primary và Secondary
 
-Khi bot gọi GitHub API, rate limit là một budget cần quan sát. Nó không phải rủi ro production duy nhất hay luôn là nút thắt lớn nhất:
+Khi chương trình tự động gọi giao diện lập trình của GitHub, hạn ngạch tốc độ là một định mức tài nguyên bắt buộc phải quan sát. Nó không phải là rủi ro duy nhất trên môi trường thực tế và không phải lúc nào cũng là điểm nghẽn lớn nhất:
 
-Tuyệt đối không xem "5.000 requests/giờ" là con số phổ quát cố định. GitHub áp dụng hạn mức phân cấp tùy theo loại định danh và ngữ cảnh ủy quyền:
+Tuyệt đối không xem “5.000 requests/giờ” là con số phổ quát cố định. GitHub áp dụng hạn mức phân cấp tùy theo loại định danh và ngữ cảnh ủy quyền:
 
 | Loại định danh (Authentication Context) | Hạn mức Primary Quota | Dấu hiệu nhận diện |
 | :--- | :--- | :--- |
@@ -161,7 +168,7 @@ Tuyệt đối không xem "5.000 requests/giờ" là con số phổ quát cố �
 | **GITHUB_TOKEN trong GitHub Actions** | 1.000 requests/giờ cho mỗi repository (hoặc Enterprise rate nếu resource thuộc Enterprise Cloud) | Áp dụng cho runner tiêu chuẩn trong GitHub Actions |
 | **GitHub Enterprise Server (On-Premises)** | Cấu hình độc lập bởi quản trị viên hệ thống | Tùy biến theo chính sách triển khai tự lưu trữ |
 
-Ngoài primary rate limit, GitHub còn áp dụng secondary rate limit, chẳng hạn cho mức đồng thời hay tốc độ tạo nội dung. Khi vượt mức, response có thể là `403` hoặc `429`. Nếu có `Retry-After`, phải chờ ít nhất khoảng ấy; header này không được bảo đảm luôn có. Khi thiếu nó, đọc thông báo và các rate-limit header khác, rồi áp dụng budget chờ/thử lại theo hướng dẫn API, không loop tức thời.
+Bên cạnh hạn ngạch cơ bản, GitHub còn áp dụng hạn ngạch thứ cấp, ví dụ như giới hạn số yêu cầu đồng thời hoặc tốc độ tạo nội dung mới. Khi vượt quá ngưỡng này, phản hồi trả về có thể là mã `403` hoặc `429`. Nếu phản hồi có tiêu đề `Retry-After`, hệ thống bắt buộc phải chờ đợi ít nhất khoảng thời gian đó; tiêu đề này không được cam kết sẽ luôn hiện diện. Khi thiếu tiêu đề trên, cần phân tích thông báo lỗi cùng các tiêu đề hạn ngạch khác, sau đó áp dụng ngân sách chờ đợi và thử lại theo tài liệu hướng dẫn, tuyệt đối không lặp lại yêu cầu tức thì.
 
 ### Thuật toán bóc tách Rate Limit trong Go
 
@@ -170,6 +177,10 @@ func ParseRateLimit(
 	header http.Header, now time.Time,
 ) RateLimitStatus {
 	status := RateLimitStatus{}
+	if limit, err := strconv.Atoi(
+		header.Get("X-RateLimit-Limit")); err == nil {
+		status.Limit = limit
+	}
 
 	remStr := header.Get("X-RateLimit-Remaining")
 	if remStr != "" {
@@ -195,14 +206,23 @@ func ParseRateLimit(
 	// Secondary rate limit dùng header Retry-After
 	retryStr := header.Get("Retry-After")
 	if retryStr != "" {
-		if sec, err := strconv.Atoi(retryStr); err == nil {
-			status.RetryAfter = time.Duration(sec) * time.Second
+		sec, err := strconv.ParseInt(retryStr, 10, 64)
+		if err == nil && sec >= 0 {
+			delay := time.Duration(math.MaxInt64)
+			if sec <= math.MaxInt64/int64(time.Second) {
+				delay = time.Duration(sec) * time.Second
+			}
+			if delay > status.RetryAfter {
+				status.RetryAfter = delay
+			}
 			status.IsExhausted = true
 		}
 	}
 	return status
 }
 ~~~
+
+Lab đọc `Retry-After` dạng số giây theo hướng dẫn GitHub, bỏ qua giá trị âm/sai định dạng và bão hòa nếu duration không biểu diễn được. Khi đồng thời có primary reset và Retry-After, giữ khoảng chờ dài hơn; không ghi đè ngân sách một giờ thành một giây. Đây là parser metadata, không phải bộ cho phép retry: thiếu header không chứng minh còn quota, và dạng HTTP-date chưa được hỗ trợ. Caller vẫn phải đọc status/thông báo lỗi và chọn policy chờ theo API.
 
 ---
 
@@ -258,7 +278,7 @@ func (c *GitHubClient) GetRepository(
 
 ### Thao tác Git trên bộ nhớ (In-memory Git) với go-git
 
-Gọi Git CLI tạo dependency vào executable và lifecycle subprocess; thư mục làm việc cần ownership riêng nếu chạy đồng thời. `go-git` là lựa chọn khác: ví dụ này dùng `memory.NewStorage()` cho object store và `memfs.New()` cho working tree, không chứng minh mọi dùng CLI đều xung đột:
+Việc gọi trực tiếp công cụ dòng lệnh Git tạo ra sự phụ thuộc vào tệp thực thi bên ngoài và vòng đời của tiến trình con; thư mục làm việc đòi hỏi quyền sở hữu riêng biệt nếu vận hành đồng thời. Thư viện `go-git` là một giải pháp thay thế: ví dụ này sử dụng `memory.NewStorage()` cho kho lưu trữ đối tượng và `memfs.New()` cho cây thư mục làm việc trong bộ nhớ, không khẳng định rằng mọi trường hợp sử dụng dòng lệnh đều phát sinh xung đột:
 
 ~~~go
 func NewInMemGitRepository() (*InMemGitRepository, error) {
@@ -289,8 +309,17 @@ func (r *InMemGitRepository) WriteFileAndCommit(
 	if err != nil {
 		return "", err
 	}
-	_, _ = f.Write(content)
-	_ = f.Close()
+	n, err := f.Write(content)
+	if err == nil && n != len(content) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		_ = f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
 
 	if _, err := wt.Add(filePath); err != nil {
 		return "", err
@@ -310,13 +339,13 @@ func (r *InMemGitRepository) WriteFileAndCommit(
 }
 ~~~
 
-Với `memory.NewStorage()` và `memfs` của ví dụ, Git object và working tree không được chủ động ghi ra filesystem. Hashing, allocation và GC vẫn có chi phí; hệ điều hành có thể page/swap memory, nên không suy ra “không một byte xuống đĩa vật lý” hay một mức latency từ cấu hình in-memory.
+Với các cấu trúc `memory.NewStorage()` và `memfs` của ví dụ, đối tượng Git và cây làm việc không được chủ động ghi xuống hệ thống tệp đĩa cứng. Thao tác tính mã băm, cấp phát bộ nhớ và thu gom rác vẫn phát sinh chi phí nhất định; hệ điều hành vẫn có thể hoán đổi bộ nhớ ra đĩa, vì vậy không thể suy đoán rằng “không có một byte nào chạm tới đĩa vật lý” hay cam kết một mức độ trễ cố định chỉ từ cấu hình chạy trong bộ nhớ.
 
 ---
 
 ## 6. Bằng chứng kiểm thử: Chứng minh 5 quy luật tự động hóa
 
-Test trong `labs/part25-github-automation/` kiểm tra các case HMAC, ledger, rate-limit parser và Git trong memory; HTTP fixture kiểm tra đường dùng `go-github`. Chúng không chứng minh GitHub thật luôn delivery thành công, không có replay đổi header ID, hay mọi lịch crash đều an toàn:
+Các bài kiểm thử trong `labs/part25-github-automation/` kiểm tra các trường hợp xác thực HMAC, sổ ghi nhận, bộ phân tích hạn ngạch và thao tác Git trong bộ nhớ; bộ thử nghiệm HTTP kiểm tra luồng sử dụng thư viện `go-github`. Chúng không chứng minh nền tảng GitHub thật luôn chuyển giao thành công, không loại bỏ nguy cơ tấn công phát lại khi kẻ xấu thay đổi mã tiêu đề, và không cam kết mọi kịch bản sự cố tiến trình đều an toàn:
 
 ~~~
 === RUN   TestWebhookHMACVerification
@@ -364,10 +393,10 @@ Kiểm chứng việc khởi tạo client `google/go-github/v92`, định tuyế
 ## 8. Bài tập thực hành thiết kế Bot Tự động hóa
 
 ### Thử thách 1: Lọc sự kiện theo nhánh (Branch Filtering Middleware)
-**Yêu cầu:** Một webhook `push` được gửi tới mỗi khi có commit mới. Hãy viết hàm lọc sự kiện chỉ cho phép xử lý nếu sự kiện nhắm vào nhánh `refs/heads/main`. Bỏ qua tất cả các sự kiện của nhánh tính năng (`feature/*`) mà không kích hoạt quy trình triển khai.
+*Yêu cầu kỹ thuật:* Một webhook `push` được gửi tới mỗi khi có commit mới. Hãy viết hàm lọc sự kiện chỉ cho phép xử lý nếu sự kiện nhắm vào nhánh `refs/heads/main`. Bỏ qua tất cả các sự kiện của nhánh tính năng (`feature/*`) mà không kích hoạt quy trình triển khai.
 
 ### Thử thách 2: Bộ điều tốc thông minh (Smart Backoff with Jitter)
-**Yêu cầu:** Với fixture `Retry-After: 30`, tính thời gian chờ ít nhất 30 giây rồi thêm jitter 10–25%. Nếu nhiều worker cùng chờ, jitter có thể giảm nhịp gửi đồng loạt, không bảo đảm tránh secondary limit. Các tỷ lệ này là cấu hình bài tập, không phải ngưỡng GitHub hay security policy production.
+*Yêu cầu kỹ thuật:* Với fixture `Retry-After: 30`, tính thời gian chờ ít nhất 30 giây rồi thêm jitter 10–25%. Nếu nhiều worker cùng chờ, jitter có thể giảm nhịp gửi đồng loạt, không bảo đảm tránh secondary limit. Các tỷ lệ này là cấu hình bài tập, không phải ngưỡng GitHub hay security policy production.
 
 ---
 
@@ -391,7 +420,7 @@ return push.Ref == "refs/heads/main"
 }
 ~~~
 
-Đây chỉ là bộ lọc tối thiểu để luyện đọc payload, không phải policy triển khai. Endpoint production phải xác thực chữ ký trước khi parse, allowlist cả tên event và action, repository/owner, installation ID (nếu dùng GitHub App) và ref; sau đó ràng buộc các giá trị đó với cấu hình deployment. Chỉ kiểm tra `ref` sẽ cho phép một kho hoặc installation ngoài phạm vi kích hoạt hành động nhạy cảm.
+Đây chỉ là bộ lọc tối thiểu phục vụ bài học đọc dữ liệu tải trọng, không phải chính sách áp dụng trên môi trường vận hành thực tế. Điểm cuối tiếp nhận thực tế bắt buộc phải xác thực chữ ký trước khi phân tích cú pháp, thiết lập danh sách cho phép cho cả tên sự kiện, hành động cụ thể, kho mã nguồn, chủ sở hữu, mã cài đặt ứng dụng và nhánh tham chiếu; sau đó liên kết chặt chẽ các giá trị đó với cấu hình triển khai. Việc chỉ kiểm tra nhánh `ref` đơn thuần sẽ tạo kẽ hở cho phép một kho lưu trữ hoặc lượt cài đặt nằm ngoài phạm vi kích hoạt các hành động nhạy cảm.
 
 ### Lời giải Thử thách 2: Tính toán Backoff kết hợp Jitter
 
@@ -400,21 +429,27 @@ func CalculateBackoffWithJitter(
 	baseDelay time.Duration,
 	next func() float64,
 ) (time.Duration, error) {
+	if baseDelay < 0 {
+		return 0, errors.New("negative base backoff")
+	}
 	if next == nil {
 		return 0, errors.New("jitter source is required")
 	}
 	value := next() // contract: 0 <= value < 1
-	if value < 0 || value >= 1 {
+	if math.IsNaN(value) || value < 0 || value >= 1 {
 		return 0, errors.New("invalid jitter value")
 	}
-	return baseDelay + time.Duration(
-		float64(baseDelay)*(0.10+value*0.15),
-	), nil
+	fraction := 0.10 + value*0.15
+	jitter := time.Duration(float64(baseDelay) * fraction)
+	if baseDelay > time.Duration(math.MaxInt64)-jitter {
+		return 0, errors.New("backoff duration overflows")
+	}
+	return baseDelay + jitter, nil
 }
 ~~~
 
-Jitter chỉ giảm tương quan, không triệt tiêu hoàn toàn bão yêu cầu. Hàm nhận nguồn jitter qua dependency injection; production có thể bọc `crypto/rand` hoặc PRNG được sở hữu riêng, còn test truyền giá trị cố định để tái lập được. Không dùng global RNG như một contract ngầm.
+Độ trễ ngẫu nhiên chỉ làm giảm mức độ tương quan giữa các yêu cầu, không thể triệt tiêu hoàn toàn các đợt bùng nổ tải. Hàm xử lý tiếp nhận nguồn sinh số ngẫu nhiên qua cơ chế tiêm phụ thuộc; môi trường thực tế có thể sử dụng bộ sinh số ngẫu nhiên an toàn hoặc đối tượng sinh số có chủ thể quản lý riêng, trong khi bài kiểm thử truyền vào giá trị cố định để bảo đảm khả năng tái lập. Tuyệt đối không sử dụng bộ sinh số ngẫu nhiên toàn cục như một khế ước ngầm định.
 
 ---
 
-Nắm vững cách vận hành **HMAC-SHA256 + Delivery Idempotency + Rate-Limit-Aware Client + In-Memory Git** giúp bạn tự tin xây dựng những hệ thống GitOps và CI/CD bot an toàn, vững chắc. Trong Chương 26, chúng ta sẽ mở rộng năng lực bảo vệ phần mềm lên tầm chuỗi cung ứng: xây dựng **Cổng kiểm soát chuỗi cung ứng phần mềm có thể kiểm chứng (Supply Chain Verification Gate)** bằng Go với chữ ký số Cosign không cần khóa (keyless), OCI manifest digest bất biến và quét lỗ hổng mã nguồn bằng `govulncheck`.
+Nắm vững cách vận hành kết hợp giữa xác thực HMAC-SHA256, tính lũy đẳng trong chuyển giao thông điệp, cơ chế gọi giao diện lập trình có kiểm soát hạn ngạch và thư viện Git vận hành trong bộ nhớ giúp xây dựng các hệ thống tự động hóa an toàn và vững chắc. Trong Chương 26, chúng ta sẽ mở rộng năng lực bảo vệ phần mềm lên cấp độ chuỗi cung ứng: thiết lập cổng kiểm soát chuỗi cung ứng phần mềm có thể kiểm chứng bằng Go với chữ ký số Cosign không cần khóa, mã băm bản kê OCI bất biến và công cụ quét lỗ hổng mã nguồn `govulncheck`.

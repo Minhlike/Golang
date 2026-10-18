@@ -26,6 +26,7 @@ func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result 
 	in := make(chan Job)
 	var workersDone sync.WaitGroup
 	workersDone.Add(workers)
+	dispatcherDone := make(chan struct{})
 
 	for i := 0; i < workers; i++ {
 		go func() {
@@ -56,6 +57,7 @@ func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result 
 	}
 
 	go func() {
+		defer close(dispatcherDone)
 		defer close(in)
 		for _, job := range jobs {
 			select {
@@ -68,6 +70,7 @@ func Run(ctx context.Context, jobs []Job, workers int, work Work) <-chan Result 
 
 	go func() {
 		workersDone.Wait()
+		<-dispatcherDone
 		close(out)
 	}()
 

@@ -148,6 +148,10 @@ func TestReconcileDriftCorrection(t *testing.T) {
 		},
 	}
 
+	// This drift scenario concerns our owned child, not a name collision.
+	if err := controllerutil.SetControllerReference(app, dep, scheme); err != nil {
+		t.Fatal(err)
+	}
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(app, dep).
@@ -306,6 +310,9 @@ func TestReconcileStatusSubresource(t *testing.T) {
 		},
 	}
 
+	if err := controllerutil.SetControllerReference(app, dep, scheme); err != nil {
+		t.Fatal(err)
+	}
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(app, dep).
