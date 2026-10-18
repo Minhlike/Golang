@@ -277,7 +277,7 @@ def run_preflight() -> dict:
                         eff_dpi_w = px_w / disp_w_in
                         eff_dpi_h = px_h / disp_h_in
                         eff_dpi = min(eff_dpi_w, eff_dpi_h)
-                        if eff_dpi < 100:  # Flag severely low DPI
+                        if eff_dpi < 300.0:  # Fail when effective raster DPI < 300
                             low_dpi_images.append({
                                 "page": pno,
                                 "xref": xref,
@@ -326,21 +326,31 @@ def run_preflight() -> dict:
         report["unresolved_markup"]["pass"] = False
 
     # 9. Overall Status Evaluation
-    if (report["page_geometry"]["pass"] and
-        report["fonts"]["pass"] and
-        report["margins_and_clipping"]["pass"] and
-        len(report["duplicate_pages"]) == 0 and
-        report["bookmarks"].get("pass", True) and
-        report["unresolved_markup"]["pass"]):
+    critical_checks = [
+        report["page_geometry"]["pass"],
+        report["fonts"]["pass"],
+        len(report["fonts"]["non_embedded_rendered_fonts"]) == 0,
+        len(report["fonts"]["broken_glyphs"]) == 0,
+        report["margins_and_clipping"]["pass"],
+        len(report["margins_and_clipping"]["clipped_pages"]) == 0,
+        len(report["blank_pages"]) == 0,
+        len(report["duplicate_pages"]) == 0,
+        report["bookmarks"].get("pass", True),
+        report["images"].get("pass", True),
+        report["unresolved_markup"]["pass"],
+        len(report["unresolved_markup"]["hits"]) == 0,
+    ]
+    if all(critical_checks):
         report["overall_status"] = "PASS"
     else:
-        report["overall_status"] = "ISSUES_FOUND"
+        report["overall_status"] = "FAIL"
 
     WORKSPACE_QA.mkdir(parents=True, exist_ok=True)
     (WORKSPACE_QA / "preflight").mkdir(parents=True, exist_ok=True)
     with open(PREFLIGHT_JSON, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
 
+    doc.close()
     return report
 
 
@@ -363,3 +373,5 @@ if __name__ == "__main__":
     print(f"Unresolved Markup:         {len(rep['unresolved_markup']['hits'])} hits (Exceptions: {len(rep['unresolved_markup']['classified_exceptions'])})")
     print(f"Overall Status:            {rep['overall_status']}")
     print("=" * 80)
+    if rep["overall_status"] != "PASS":
+        sys.exit(1)

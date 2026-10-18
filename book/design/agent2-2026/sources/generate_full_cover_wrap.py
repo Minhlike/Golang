@@ -6,7 +6,8 @@ Architectural Cross-Section & Spatial Cut (Manual of Section / Princeton Arch Pr
 
 Specifications:
 - Format: ISO A4 Trim Size (210 x 297 mm per page)
-- Spine Width: 28.0 mm (calculated for ~500 pages on 80gsm Woodfree paper)
+- Spine Width: 28.0 mm (calculated for 602 pages / 301 leaves on 70 gsm bookpaper: 301 x 0.090 mm + 1.0 mm PUR binding ≈ 28.0 mm).
+  * Prepress Calibration Note: If printed on 80 gsm woodfree paper (caliper 0.098 mm), spine expands to ~30.5 mm and must be re-calibrated by the print shop.
 - Bleed: 3.0 mm on all 4 outer edges
 - Total Wrap Width: 3 + 210 + 28 + 210 + 3 = 454.0 mm (1286.93 pt)
 - Total Wrap Height: 3 + 297 + 3 = 303.0 mm (858.90 pt)
@@ -246,18 +247,18 @@ def generate_front_cover_page():
             fontsize=6.5, fontfamily="monospace", color="#444444", ha="right", va="bottom")
 
     # 2. Main Title Block
-    title_y = head_y - 42.0
+    title_y = head_y - 36.0
     ax.text(w_pt / 2.0, title_y, "G  O  L  A  N  G",
             fontsize=46, fontfamily="sans-serif", weight="bold", color="#000000",
             ha="center", va="top")
 
-    sub_y = title_y - 56.0
+    sub_y = title_y - 74.0
     ax.text(w_pt / 2.0, sub_y,
             "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
             fontsize=9.6, fontfamily="sans-serif", weight="bold", color="#111111",
             ha="center", va="top")
 
-    auth_y = sub_y - 20.0
+    auth_y = sub_y - 24.0
     ax.text(w_pt / 2.0, auth_y,
             "ĐOÀN NGỌC HOÀNG MINH",
             fontsize=9.2, fontfamily="sans-serif", color="#444444",
@@ -270,7 +271,7 @@ def generate_front_cover_page():
         ax.plot([cx_tick, cx_tick], [cal_y - 3, cal_y + 3], color="#000000", lw=0.75)
 
     # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
-    art_cx = 336.0
+    art_cx = 345.0
     art_cy = 385.0
     draw_axonometric_cross_section(ax, art_cx, art_cy, scale=1.04)
 
@@ -309,10 +310,10 @@ def generate_front_cover_page():
     sub_foot_y = 28.0
     ax.plot([left_m, right_m], [sub_foot_y, sub_foot_y], color="#999999", lw=0.4)
     ax.text(left_m, sub_foot_y - 5,
-            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
+            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURE",
             fontsize=6.0, fontfamily="monospace", color="#666666", va="top")
     ax.text(right_m, sub_foot_y - 5,
-            "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
+            "BUILD: 2026-RELEASE",
             fontsize=6.0, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # Save
@@ -380,19 +381,19 @@ def generate_full_cover_wrap():
             fontsize=6.5, fontfamily="monospace", color="#444444", ha="right", va="bottom")
 
     # 2. Main Title Block
-    f_title_y = f_head_y - 42.0
+    f_title_y = f_head_y - 36.0
     f_cx_center = FRONT_LEFT_PT + f_w_pt / 2.0
     ax.text(f_cx_center, f_title_y, "G  O  L  A  N  G",
             fontsize=46, fontfamily="sans-serif", weight="bold", color="#000000",
             ha="center", va="top")
 
-    f_sub_y = f_title_y - 56.0
+    f_sub_y = f_title_y - 74.0
     ax.text(f_cx_center, f_sub_y,
             "GIÁO TRÌNH CẬP NHẬT LIÊN TỤC VỀ KỸ NGHỆ PHẦN MỀM VÀ DEVOPS/SRE",
             fontsize=9.6, fontfamily="sans-serif", weight="bold", color="#111111",
             ha="center", va="top")
 
-    f_auth_y = f_sub_y - 20.0
+    f_auth_y = f_sub_y - 24.0
     ax.text(f_cx_center, f_auth_y,
             "ĐOÀN NGỌC HOÀNG MINH",
             fontsize=9.2, fontfamily="sans-serif", color="#444444",
@@ -404,8 +405,8 @@ def generate_full_cover_wrap():
     for cx_tick in [f_left_m + 15, f_cx_center, f_right_m - 15]:
         ax.plot([cx_tick, cx_tick], [f_cal_y - 3, f_cal_y + 3], color="#000000", lw=0.75)
 
-    # 3. Expanded Architectural Section Artwork (Fills page, no clipping)
-    f_art_cx = FRONT_LEFT_PT + 336.0
+    # 3. Expanded Architectural Section Artwork (Fills page, no clipping, clears spine fold)
+    f_art_cx = FRONT_LEFT_PT + 355.0
     f_art_cy = BOTTOM_TRIM_PT + 385.0
     draw_axonometric_cross_section(ax, f_art_cx, f_art_cy, scale=1.04)
 
@@ -444,10 +445,10 @@ def generate_full_cover_wrap():
     f_sub_foot_y = BOTTOM_TRIM_PT + 28.0
     ax.plot([f_left_m, f_right_m], [f_sub_foot_y, f_sub_foot_y], color="#999999", lw=0.4)
     ax.text(f_left_m, f_sub_foot_y - 5,
-            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURAL ENGINEERING",
+            "TECHNICAL MONOGRAPH SERIES // COMPUTING & ARCHITECTURE",
             fontsize=6.0, fontfamily="monospace", color="#666666", va="top")
     ax.text(f_right_m, f_sub_foot_y - 5,
-            "BUILD: 2026-RELEASE // VERIFIED PRINT-READY EDITION",
+            "BUILD: 2026-RELEASE",
             fontsize=6.0, fontfamily="monospace", color="#666666", ha="right", va="top")
 
     # --------------------------------------------------------------------------
@@ -504,14 +505,12 @@ def generate_full_cover_wrap():
     ax.plot([b_x0 + 10, b_x0 + b_w - 10], [b_head_y, b_head_y], color="#000000", lw=0.5)
     ax.text(b_x0 + 14, b_head_y + 4, "GOLANG LIVING TEXTBOOK // ARCHITECTURAL MONOGRAPH",
             fontsize=6.2, fontfamily="monospace", weight="bold", color="#333333", va="bottom")
-    ax.text(b_x0 + b_w - 14, b_head_y + 4, "ISBN 978-604-0-2026-X",
-            fontsize=6.2, fontfamily="monospace", color="#555555", ha="right", va="bottom")
 
     # Book Title on Back
     b_title_y = b_head_y - 25
     ax.text(b_x0 + 20, b_title_y, "G O L A N G", fontsize=22, fontfamily="sans-serif", weight="bold", color="#000000", va="top")
     
-    b_sub_y = b_title_y - 30
+    b_sub_y = b_title_y - 42
     ax.text(b_x0 + 20, b_sub_y, "Giáo trình Cập nhật Liên tục về Kỹ nghệ Phần mềm và DevOps/SRE",
             fontsize=8.8, fontfamily="sans-serif", weight="bold", color="#333333", va="top")
 
@@ -577,25 +576,19 @@ def generate_full_cover_wrap():
             fontsize=6.5, fontfamily="sans-serif", weight="bold", va="top")
     ax.text(b_x0 + 20, colophon_div_y - 27,
             "Tác giả: Đoàn Ngọc Hoàng Minh\n"
-            "Định dạng: ISO A4 (210 x 297 mm) // Khâu chỉ dán gáy keo PUR\n"
-            "Chế bản: Đơn sắc High-Density Grayscale // Bản in thử nghiệm 2026\n"
-            "Phần mềm mã nguồn mở: https://github.com/Minhlike/Golang",
-            fontsize=6.0, fontfamily="monospace", color="#444444", linespacing=1.35, va="top")
+            "Định dạng: ISO A4 // Khâu chỉ dán gáy keo PUR\n"
+            "Chế bản: Đơn sắc Grayscale // Bản thảo 2026\n"
+            "Kho mã nguồn: github.com/Minhlike/Golang",
+            fontsize=6.2, fontfamily="DejaVu Sans", color="#444444", linespacing=1.4, va="top")
 
-    # Right: Barcode Box Placeholder
-    bc_w = 95
-    bc_h = 48
+    # Right: Placeholder Box for Official Distribution Barcode (No synthetic stripes/ISBN)
+    bc_w = 110
+    bc_h = 44
     bc_x = b_x0 + b_w - bc_w - 20
-    bc_y = colophon_div_y - 70
-    ax.add_patch(patches.Rectangle((bc_x, bc_y), bc_w, bc_h, facecolor="#FFFFFF", edgecolor="#000000", lw=0.6))
-    
-    # Barcode stripes
-    for s in range(25):
-        sx = bc_x + 6 + s * 3.4
-        sw = 1.0 if (s % 3 != 0) else 1.8
-        ax.plot([sx, sx], [bc_y + 13, bc_y + bc_h - 7], color="#000000", lw=sw)
-    ax.text(bc_x + bc_w / 2.0, bc_y + 4.5, "9 786040 202601",
-            fontsize=6.0, fontfamily="monospace", color="#000000", ha="center")
+    bc_y = colophon_div_y - 68
+    ax.add_patch(patches.Rectangle((bc_x, bc_y), bc_w, bc_h, facecolor="#FAFAFA", edgecolor="#999999", lw=0.6, ls="--"))
+    ax.text(bc_x + bc_w / 2.0, bc_y + bc_h / 2.0, "VỊ TRÍ DÁN MÃ VẠCH\nKHI PHÁT HÀNH CHÍNH THỨC",
+            fontsize=6.0, fontfamily="sans-serif", color="#777777", ha="center", va="center", linespacing=1.3)
 
     # Save Full Cover Wrap Outputs
     out_wrap_pdf = OUTPUT_DIR / "full_cover_wrap_print.pdf"

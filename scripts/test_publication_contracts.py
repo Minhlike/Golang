@@ -265,6 +265,109 @@ class PublicationContracts(unittest.TestCase):
             report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
             self.assertEqual(len(report["dpi_issues"]), 0)
             self.assertEqual(len(report["color_issues"]), 0)
+            self.assertEqual(len(report["decoding_issues"]), 0)
+            self.assertEqual(len(report["pairing_issues"]), 0)
+
+    def test_audit_diagrams_rejects_out_of_order_captions(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'img.png'
+            PILImage.new('RGB', (1000, 500), (200, 200, 200)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_out_of_order.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(600, 600),
+                                    leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_path), width=200, height=100)
+            img2 = RLImage(str(img_path), width=200, height=100)
+            # Hình 2 on page 2, Hình 1 on page 3
+            doc.build([
+                Spacer(1, 10), PageBreak(),
+                img1, Paragraph("Hình 2 — Out of order first", book_style.get_book_styles()["caption"]),
+                PageBreak(),
+                img2, Paragraph("Hình 1 — Out of order second", book_style.get_book_styles()["caption"])
+            ])
+            report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
+            self.assertTrue(len(report["order_issues"]) > 0, "Audit must catch out-of-order captions")
+
+    def test_audit_diagrams_rejects_orphaned_image_without_caption(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'img.png'
+            PILImage.new('RGB', (1000, 500), (200, 200, 200)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_orphan.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(600, 600),
+                                    leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_path), width=200, height=100)
+            # Image without caption on page 2
+            doc.build([Spacer(1, 10), PageBreak(), img, Spacer(1, 20)])
+            report = audit_pdf_diagrams.audit_diagrams_and_images(pdf_path)
+            self.assertTrue(len(report["pairing_issues"]) > 0, "Audit must fail on orphaned image")
+
+    def test_validate_publication_pdf_fails_overall_on_low_dpi(self):
+        import validate_publication_pdf
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            img_path = Path(task_dir) / 'low_dpi.png'
+            PILImage.new('RGB', (100, 100), (200, 200, 200)).save(img_path)
+            pdf_path = Path(task_dir) / 'test_preflight_fail.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(595.28, 841.89),
+                                    leftMargin=68.03, rightMargin=51.02, topMargin=56.69, bottomMargin=56.69)
+            img = RLImage(str(img_path), width=200, height=200) # 100px / (200/72 in) = 36 DPI
+            doc.build([Paragraph("Title", book_style.get_book_styles()["body"]), img])
+            with patch.object(validate_publication_pdf, 'PDF_PATH', pdf_path):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertEqual(rep["overall_status"], "FAIL", "Overall status must fail on low DPI image")
+
+    def test_validate_publication_pdf_fails_overall_on_blank_page(self):
+        import validate_publication_pdf
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as task_dir:
+            pdf_path = Path(task_dir) / 'test_blank_page.pdf'
+            doc = SimpleDocTemplate(str(pdf_path), pagesize=(595.28, 841.89),
+                                    leftMargin=68.03, rightMargin=51.02, topMargin=56.69, bottomMargin=56.69)
+            doc.build([
+                Paragraph("Page 1 Content", book_style.get_book_styles()["body"]),
+                PageBreak(),
+                Spacer(1, 10), # Blank page 2
+                PageBreak(),
+                Paragraph("Page 3 Content", book_style.get_book_styles()["body"]),
+            ])
+            with patch.object(validate_publication_pdf, 'PDF_PATH', pdf_path):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertTrue(any(b['page'] == 2 for b in rep["blank_pages"]))
+                self.assertEqual(rep["overall_status"], "FAIL", "Overall status must fail on blank pages")
+
+    def test_cover_bounding_boxes_have_zero_collisions(self):
+        import fitz
+        paths = [
+            Path('book/design/agent2-2026/artwork/front_cover_page.pdf'),
+            Path('book/design/agent2-2026/artwork/full_cover_wrap_print.pdf')
+        ]
+        for p in paths:
+            self.assertTrue(p.exists(), f"Cover file {p} must exist")
+            doc = fitz.open(p)
+            try:
+                page = doc[0]
+                blocks = page.get_text('blocks')
+                collisions = []
+                for i in range(len(blocks)):
+                    for j in range(i + 1, len(blocks)):
+                        b1, t1 = blocks[i][:4], blocks[i][4].strip().replace('\n', ' ')
+                        b2, t2 = blocks[j][:4], blocks[j][4].strip().replace('\n', ' ')
+                        ho = max(0.0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
+                        vo = max(0.0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
+                        if ho > 0.5 and vo > 0.5:
+                            collisions.append((t1, t2, ho, vo))
+                self.assertEqual(len(collisions), 0, f"Collisions found on {p.name}: {collisions}")
+            finally:
+                doc.close()
 
 
 if __name__ == '__main__':

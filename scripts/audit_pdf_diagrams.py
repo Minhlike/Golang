@@ -49,14 +49,19 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
     overflow_issues = []
     dpi_warnings = []
     color_issues = []
-    caption_issues = []
     unrendered_figure_tags = []
+    decoding_issues = []
+    pairing_issues = []
+    position_issues = []
+    order_issues = []
 
     # Regex for figure captions in text
     figure_caption_regex = re.compile(r"Hình\s+(\d+)\s*[—–-]\s*([^\n]+)")
     unrendered_figure_regex = re.compile(r"@figure\b")
 
     figures_found = []  # list of (page, figure_num, caption_text)
+    expected_fig_num = 1
+    last_fig_page = 1
 
     for pno in range(1, total_pages + 1):
         page = doc[pno - 1]
@@ -66,15 +71,26 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
         if unrendered_figure_regex.search(text):
             unrendered_figure_tags.append(pno)
 
-        # Extract figure captions
+        # Extract figure captions on current page
+        page_captions = []
         for match in figure_caption_regex.finditer(text):
             f_num = int(match.group(1))
             f_title = match.group(2).strip()
-            figures_found.append({
+            item_cap = {
                 "page": pno,
                 "num": f_num,
                 "title": f_title,
-            })
+            }
+            figures_found.append(item_cap)
+            page_captions.append(item_cap)
+
+            # Monotonic order check
+            if f_num != expected_fig_num:
+                order_issues.append(f"Caption numbering out of sequence on page {pno}: found Hình {f_num}, expected Hình {expected_fig_num}")
+            if pno < last_fig_page:
+                order_issues.append(f"Caption page order non-monotonic: Hình {f_num} on page {pno} appears after page {last_fig_page}")
+            expected_fig_num = f_num + 1
+            last_fig_page = pno
 
         # Mirrored margins for current page
         is_recto = (pno % 2 != 0)
@@ -87,10 +103,50 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
 
         # Check images on page
         images = page.get_images(full=True)
+        if pno > 1:
+            # 1:1 image-to-caption pairing check on interior pages
+            if len(images) != len(page_captions):
+                pairing_issues.append({
+                    "page": pno,
+                    "images": len(images),
+                    "captions": len(page_captions),
+                    "desc": f"Trang {pno} có {len(images)} ảnh nhưng có {len(page_captions)} chú thích (yêu cầu đối ứng 1:1)",
+                })
+            # Relative position check: caption must be below image
+            if len(images) == 1 and len(page_captions) == 1:
+                img_xref = images[0][0]
+                img_rects = page.get_image_rects(img_xref)
+                if img_rects:
+                    img_bottom = img_rects[0].y1
+                    cap_search = page.search_for(f"Hình {page_captions[0]['num']}")
+                    if cap_search:
+                        cap_top = cap_search[0].y0
+                        if cap_top < (img_bottom - 10.0):
+                            position_issues.append({
+                                "page": pno,
+                                "num": page_captions[0]["num"],
+                                "img_bottom": round(img_bottom, 1),
+                                "cap_top": round(cap_top, 1),
+                                "desc": f"Chú thích Hình {page_captions[0]['num']} (y0={cap_top:.1f}pt) không nằm bên dưới hình ảnh (y1={img_bottom:.1f}pt)",
+                            })
+
         for img_info in images:
             xref = img_info[0]
-            base = doc.extract_image(xref)
-            if not base:
+            try:
+                base = doc.extract_image(xref)
+                if not base:
+                    decoding_issues.append({
+                        "page": pno,
+                        "xref": xref,
+                        "desc": f"Không thể giải mã/trích xuất luồng ảnh xref {xref} tại trang {pno}",
+                    })
+                    continue
+            except Exception as e:
+                decoding_issues.append({
+                    "page": pno,
+                    "xref": xref,
+                    "desc": f"Lỗi giải mã ảnh xref {xref} tại trang {pno}: {e}",
+                })
                 continue
 
             px_w = base["width"]
@@ -167,33 +223,35 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
                         "error": f"DPI {eff_dpi:.1f} < 300.0 (preferred >= 320.0)",
                     })
 
-                # 3. Grayscale check: fail when ANY pixel violates R == G == B (zero tolerance, no downsampling)
-                if cs > 1:  # Multi-channel (e.g. RGB, RGBA, CMYK)
-                    try:
-                        pil_img = PILImage.open(io.BytesIO(img_bytes))
-                        if pil_img.mode in ("RGB", "RGBA", "CMYK", "YCbCr", "LAB"):
-                            rgb_data = pil_img.convert("RGB")
-                            r_band, g_band, b_band = rgb_data.split()
-                            diff_rg = ImageChops.difference(r_band, g_band)
-                            diff_gb = ImageChops.difference(g_band, b_band)
-                            max_diff = max(diff_rg.getextrema()[1], diff_gb.getextrema()[1])
-                            if max_diff > 0:
-                                color_issues.append({
-                                    "page": pno,
-                                    "xref": xref,
-                                    "mode": pil_img.mode,
-                                    "max_diff": max_diff,
-                                    "desc": f"Image contains colored pixels (R!=G!=B, max diff={max_diff})",
-                                })
-                    except Exception as e:
-                        pass
+                # 3. Grayscale check & decoding check: fail when ANY pixel violates R == G == B (zero tolerance)
+                try:
+                    pil_img = PILImage.open(io.BytesIO(img_bytes))
+                    if cs > 1 and pil_img.mode in ("RGB", "RGBA", "CMYK", "YCbCr", "LAB"):
+                        rgb_data = pil_img.convert("RGB")
+                        r_band, g_band, b_band = rgb_data.split()
+                        diff_rg = ImageChops.difference(r_band, g_band)
+                        diff_gb = ImageChops.difference(g_band, b_band)
+                        max_diff = max(diff_rg.getextrema()[1], diff_gb.getextrema()[1])
+                        if max_diff > 0:
+                            color_issues.append({
+                                "page": pno,
+                                "xref": xref,
+                                "mode": pil_img.mode,
+                                "max_diff": max_diff,
+                                "desc": f"Image contains colored pixels (R!=G!=B, max diff={max_diff})",
+                            })
+                except Exception as e:
+                    decoding_issues.append({
+                        "page": pno,
+                        "xref": xref,
+                        "desc": f"Lỗi đọc dữ liệu pixel ảnh xref {xref} tại trang {pno}: {e}",
+                    })
 
     # 4. Check Figure Numbering Sequence
     # Expected sequential: 1, 2, 3, ...
     sorted_figs = sorted(figures_found, key=lambda x: (x["num"], x["page"]))
     seen_nums = set()
     num_seq_issues = []
-    expected = 1
     for f in sorted_figs:
         n = f["num"]
         if n in seen_nums:
@@ -218,6 +276,10 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
         "dpi_warnings": dpi_warnings,
         "color_issues": color_issues,
         "unrendered_figure_tags": unrendered_figure_tags,
+        "decoding_issues": decoding_issues,
+        "pairing_issues": pairing_issues,
+        "position_issues": position_issues,
+        "order_issues": order_issues,
         "figures_found_count": len(figures_found),
         "figures": figures_found,
         "numbering_issues": num_seq_issues,
@@ -238,6 +300,10 @@ if __name__ == "__main__":
     print(f"Lỗi tràn khung/lề (Overflow):   {len(report['overflow_issues'])}")
     print(f"Lỗi độ phân giải (<300 DPI):    {len(report['dpi_issues'])}")
     print(f"Lỗi màu (chứa pixel R!=G!=B):   {len(report['color_issues'])}")
+    print(f"Lỗi giải mã ảnh (Decoding):     {len(report['decoding_issues'])}")
+    print(f"Lỗi ghép cặp 1:1 hình-caption:  {len(report['pairing_issues'])}")
+    print(f"Lỗi vị trí hình-caption:        {len(report['position_issues'])}")
+    print(f"Lỗi thứ tự trang caption:       {len(report['order_issues'])}")
     print(f"Lỗi nhảy số thứ tự hình ảnh:    {len(report['numbering_issues'])}")
     print("=" * 80)
 
@@ -256,6 +322,26 @@ if __name__ == "__main__":
         for c in report["color_issues"]:
             print(f"Trang {c['page']} (xref {c['xref']}): {c['desc']}")
 
+    if report["decoding_issues"]:
+        print("\n--- CHI TIẾT LỖI GIẢI MÃ ẢNH ---")
+        for d in report["decoding_issues"]:
+            print(f"Trang {d['page']} (xref {d['xref']}): {d['desc']}")
+
+    if report["pairing_issues"]:
+        print("\n--- CHI TIẾT LỖI GHÉP CẶP 1:1 HÌNH - CHÚ THÍCH ---")
+        for p in report["pairing_issues"]:
+            print(f"- {p['desc']}")
+
+    if report["position_issues"]:
+        print("\n--- CHI TIẾT LỖI VỊ TRÍ HÌNH - CHÚ THÍCH ---")
+        for pos in report["position_issues"]:
+            print(f"- {pos['desc']}")
+
+    if report["order_issues"]:
+        print("\n--- CHI TIẾT LỖI THỨ TỰ TRANG CHÚ THÍCH ---")
+        for o in report["order_issues"]:
+            print(f"- {o}")
+
     if report["numbering_issues"]:
         print("\n--- CHI TIẾT LỖI ĐÁNH SỐ THỨ TỰ HÌNH ---")
         for n in report["numbering_issues"]:
@@ -270,6 +356,10 @@ if __name__ == "__main__":
         or report["color_issues"]
         or report["numbering_issues"]
         or report["unrendered_figure_tags"]
+        or report["decoding_issues"]
+        or report["pairing_issues"]
+        or report["position_issues"]
+        or report["order_issues"]
     )
     if not has_errors:
         print("\n>>> KẾT QUẢ: 100% HOÀN HẢO! TOÀN BỘ SƠ ĐỒ VÀ HÌNH ẢNH ĐẠT CHUẨN IN ẤN VÀ HIỂN THỊ <<<")
