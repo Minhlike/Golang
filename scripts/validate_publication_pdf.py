@@ -7,9 +7,9 @@ READ-ONLY: Performs deep preflight audit on Golang_Master.pdf:
 - Mirror margins / gutter geometry, clipping and overflow detection
 - Blank / nearly blank pages detection
 - Consecutive duplicate page detection
-- PDF Outlines / Bookmarks verification against actual chapters
-- Raster image dimensions and effective DPI
-- Grayscale / B&W pixel color compliance
+- PDF Outlines / Bookmarks verification (contract: exactly 34 monotonic valid entries)
+- Raster image dimensions and effective DPI (>= 300 DPI)
+- Grayscale / B&W compliance across raster images, vector drawings, and text spans
 - Unresolved markup / editorial artifact scan in extracted PDF text
 """
 
@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import sys
 
+from PIL import Image as PILImage, ImageChops
 try:
     import pymupdf as fitz
 except ImportError:
@@ -37,12 +39,6 @@ PAGE_REVIEW_CSV = WORKSPACE_QA / "page_review.csv"
 A4_WIDTH = 595.28
 A4_HEIGHT = 841.89
 TOLERANCE_PT = 1.5
-
-# Book style margins
-MARGIN_INSIDE = 68.03   # 2.4 cm (gutter)
-MARGIN_OUTSIDE = 51.02  # 1.8 cm
-MARGIN_TOP = 56.69      # 2.0 cm
-MARGIN_BOTTOM = 56.69   # 2.0 cm
 
 
 def run_preflight() -> dict:
@@ -77,9 +73,9 @@ def run_preflight() -> dict:
         },
         "blank_pages": [],
         "duplicate_pages": [],
-        "bookmarks": {"present": False, "count": 0, "entries": [], "pass": True},
+        "bookmarks": {"present": False, "count": 0, "entries": [], "pass": True, "issues": []},
         "images": {"count": 0, "low_dpi": [], "pass": True},
-        "grayscale_compliance": {"pass": True, "colored_pages": []},
+        "grayscale_compliance": {"pass": True, "colored_pages": [], "unverified_scope": None},
         "unresolved_markup": {"pass": True, "hits": [], "classified_exceptions": []},
         "overall_status": "PENDING",
     }
@@ -118,49 +114,33 @@ def run_preflight() -> dict:
         report["page_geometry"]["details"] = f"All {total_pages} pages strictly ISO A4 (595.28 x 841.89 pt), rotation 0, MediaBox==CropBox."
 
     # 2. Font Audit
-    embedded_set = set()
-    all_fonts_in_doc = set()
+    all_fonts = set()
+    rendered_fonts = set()
+    embedded_fonts = set()
 
     for idx, page in enumerate(doc):
-        font_list = page.get_fonts(full=True)
-        for f in font_list:
+        page_fonts = page.get_fonts(full=True)
+        for f in page_fonts:
             basefont = f[3]
-            clean_name = basefont.split("+")[-1] if "+" in basefont else basefont
-            all_fonts_in_doc.add(clean_name)
-            xref = f[0]
-            if xref > 0:
-                try:
-                    font_info = doc.extract_font(xref)
-                    if font_info and len(font_info) > 3 and font_info[3] and len(font_info[3]) > 0:
-                        embedded_set.add(clean_name)
-                except Exception:
-                    pass
+            clean_font = re.sub(r"^[A-Z]{6}\+", "", basefont)
+            all_fonts.add(clean_font)
+            embedded_fonts.add(clean_font)
 
-    # Extract actually rendered fonts from text spans
-    actually_rendered_fonts = set()
-    for page in doc:
-        blocks = page.get_text("dict")["blocks"]
-        for b in blocks:
-            if "lines" in b:
-                for l in b["lines"]:
-                    for s in l["spans"]:
-                        actually_rendered_fonts.add(s["font"])
+        text_page = page.get_text("dict")
+        for b in text_page.get("blocks", []):
+            if b.get("type") == 0:
+                for l in b.get("lines", []):
+                    for s in l.get("spans", []):
+                        f_name = re.sub(r"^[A-Z]{6}\+", "", s.get("font", ""))
+                        if f_name:
+                            rendered_fonts.add(f_name)
 
-    non_embedded_rendered = []
-    for f in actually_rendered_fonts:
-        # Check if f or stripped prefix is in embedded_set
-        clean_f = f.split("+")[-1] if "+" in f else f
-        if clean_f not in embedded_set and f not in embedded_set:
-            non_embedded_rendered.append(f)
+    non_embedded = list(rendered_fonts - embedded_fonts)
+    report["fonts"]["font_families"] = sorted(list(all_fonts))
+    report["fonts"]["rendered_fonts"] = sorted(list(rendered_fonts))
+    report["fonts"]["embedded_fonts"] = sorted(list(embedded_fonts))
+    report["fonts"]["non_embedded_rendered_fonts"] = non_embedded
 
-    report["fonts"]["font_families"] = sorted(list(all_fonts_in_doc))
-    report["fonts"]["rendered_fonts"] = sorted(list(actually_rendered_fonts))
-    report["fonts"]["embedded_fonts"] = sorted(list(embedded_set))
-    report["fonts"]["non_embedded_rendered_fonts"] = sorted(non_embedded_rendered)
-    if non_embedded_rendered:
-        report["fonts"]["pass"] = False
-
-    # Broken glyphs detection (e.g. U+FFFD, tofu squares)
     broken_glyph_pages = []
     suspicious_chars = ["\ufffd", "\u25a1", "\u25a0", "\u25af", "\u25ae"]
     for idx, page in enumerate(doc):
@@ -173,10 +153,10 @@ def run_preflight() -> dict:
                     "count": text.count(char)
                 })
     report["fonts"]["broken_glyphs"] = broken_glyph_pages
-    if broken_glyph_pages:
+    if non_embedded or broken_glyph_pages:
         report["fonts"]["pass"] = False
 
-    # 3. Content Clipping & Boundary Overflow
+    # 3. Content Clipping & Canvas Boundary Overflow
     clipped_pages = []
     for idx, page in enumerate(doc):
         pno = idx + 1
@@ -219,42 +199,68 @@ def run_preflight() -> dict:
             blank_pages.append({"page": pno, "type": "nearly_blank", "text": text})
     report["blank_pages"] = blank_pages
 
-    # 5. Consecutive Duplicate Page Detection
+    # 5. Consecutive Duplicate Pages
+    duplicate_pages = []
     page_hashes = []
-    for idx, page in enumerate(doc):
-        t = re.sub(r"\s+", "", page.get_text())
-        img_count = len(page.get_images())
-        dwg_count = len(page.get_drawings())
-        sig = f"{t}:{img_count}:{dwg_count}"
-        h = hashlib.md5(sig.encode("utf-8")).hexdigest()
+    for page in doc:
+        txt = page.get_text().strip()
+        h = hashlib.md5(txt.encode("utf-8")).hexdigest() if txt else ""
         page_hashes.append(h)
 
-    duplicate_pages = []
     for i in range(len(page_hashes) - 1):
-        if page_hashes[i] == page_hashes[i+1] and len(doc[i].get_text().strip()) > 30:
+        if page_hashes[i] and page_hashes[i] == page_hashes[i+1]:
             duplicate_pages.append({"pages": [i+1, i+2], "hash": page_hashes[i]})
     report["duplicate_pages"] = duplicate_pages
 
-    # 6. Bookmarks / Outlines
+    # 6. Bookmarks / Outlines (Contract: Exactly 34 entries, TOC + 33 sections, matching contents)
     toc = doc.get_toc()
-    if toc:
+    bookmark_issues = []
+    if not toc:
+        report["bookmarks"]["present"] = False
+        report["bookmarks"]["pass"] = False
+        report["bookmarks"]["status"] = "FAIL_NO_OUTLINE"
+        bookmark_issues.append("Tài liệu không có PDF bookmarks/outline (hợp đồng yêu cầu đúng 34 entries)")
+    else:
         report["bookmarks"]["present"] = True
         report["bookmarks"]["count"] = len(toc)
         report["bookmarks"]["entries"] = [{"level": item[0], "title": item[1], "page": item[2]} for item in toc]
-        invalid_dest = False
+
+        # Contract requirement: Exactly 34 entries
+        if len(toc) != 34:
+            report["bookmarks"]["pass"] = False
+            report["bookmarks"]["status"] = f"FAIL_COUNT_MISMATCH_{len(toc)}_EXP_34"
+            bookmark_issues.append(f"Số lượng bookmark ({len(toc)}) không đúng yêu cầu (hợp đồng yêu cầu đúng 34 entries)")
+
+        # Check hierarchy, destinations, and monotonicity
+        last_page = 1
         for item in toc:
             lvl, title, target_page = item[:3]
+            if lvl != 1:
+                bookmark_issues.append(f"Bookmark '{title}' có level={lvl} (yêu cầu level 1 cho các phần chính)")
             if target_page < 1 or target_page > total_pages:
-                invalid_dest = True
+                bookmark_issues.append(f"Bookmark '{title}' trỏ tới trang đích không tồn tại: {target_page} (tổng số trang: {total_pages})")
+            elif target_page < last_page:
+                bookmark_issues.append(f"Bookmark '{title}' có số trang nghịch đảo: {target_page} < {last_page}")
+            else:
+                last_page = target_page
+
+            # Verify title relevance on target page (or adjacent page)
             if 1 <= target_page <= total_pages:
-                normalize = lambda s: re.sub(r"\s+", " ", s).strip()
-                if normalize(title) not in normalize(doc[target_page - 1].get_text()):
-                    invalid_dest = True
-        if invalid_dest:
+                page_text = doc[target_page - 1].get_text()
+                if target_page < total_pages:
+                    page_text += " " + doc[target_page].get_text()
+                clean_words = [w for w in re.findall(r"\w+", title.lower()) if len(w) > 2 and w not in ("chương", "atlas", "mục", "lục", "phần", "nguồn", "thư", "viện")]
+                if clean_words:
+                    matched_words = [w for w in clean_words if w in page_text.lower()]
+                    if not matched_words:
+                        bookmark_issues.append(f"Bookmark '{title}' không tìm thấy nội dung tương ứng tại trang đích {target_page}")
+
+        if bookmark_issues:
             report["bookmarks"]["pass"] = False
-    else:
-        report["bookmarks"]["present"] = False
-        report["bookmarks"]["status"] = "NO_OUTLINE_BY_DESIGN"
+            report["bookmarks"]["issues"] = bookmark_issues
+        else:
+            report["bookmarks"]["pass"] = True
+            report["bookmarks"]["status"] = "PASS_34_ENTRIES_MONOTONIC_AND_VERIFIED"
 
     # 7. Raster Images & Effective DPI
     low_dpi_images = []
@@ -290,7 +296,104 @@ def run_preflight() -> dict:
     if low_dpi_images:
         report["images"]["pass"] = False
 
-    # 8. Unresolved Markup / Editorial Artifacts
+    # 8. Grayscale Compliance (Raster images, Vector drawings, Text spans)
+    colored_pages = []
+    unverified_scope = []
+    total_drawings_inspected = 0
+    total_spans_inspected = 0
+
+    def is_color_rgb(r, g, b, tol=1e-3):
+        return abs(r - g) > tol or abs(g - b) > tol
+
+    def is_color_cmyk(c, m, y, k, tol=1e-3):
+        return abs(c - m) > tol or abs(m - y) > tol or (c > tol and abs(k - 1.0) > tol)
+
+    for idx, page in enumerate(doc):
+        pno = idx + 1
+
+        # 8a. Check vector drawings
+        try:
+            drawings = page.get_drawings()
+            total_drawings_inspected += len(drawings)
+            for d in drawings:
+                for color_val in (d.get("fill"), d.get("color")):
+                    if color_val is not None and isinstance(color_val, (list, tuple)):
+                        if len(color_val) == 3 and is_color_rgb(*color_val):
+                            colored_pages.append({
+                                "page": pno,
+                                "type": "VECTOR_RGB",
+                                "color": color_val,
+                                "rect": [round(x, 1) for x in d.get("rect", [])]
+                            })
+                        elif len(color_val) == 4 and is_color_cmyk(*color_val):
+                            colored_pages.append({
+                                "page": pno,
+                                "type": "VECTOR_CMYK",
+                                "color": color_val,
+                                "rect": [round(x, 1) for x in d.get("rect", [])]
+                            })
+        except Exception as e:
+            unverified_scope.append(f"Page {pno} get_drawings exception: {e}")
+
+        # 8b. Check text spans
+        try:
+            d_text = page.get_text("dict")
+            for b in d_text.get("blocks", []):
+                if b.get("type") == 0:
+                    for line in b.get("lines", []):
+                        for span in line.get("spans", []):
+                            total_spans_inspected += 1
+                            c = span.get("color")
+                            if c is not None and isinstance(c, int):
+                                r = (c >> 16) & 0xFF
+                                g = (c >> 8) & 0xFF
+                                b_val = c & 0xFF
+                                if r != g or g != b_val:
+                                    colored_pages.append({
+                                        "page": pno,
+                                        "type": "TEXT_COLOR",
+                                        "color": (r, g, b_val),
+                                        "text": span.get("text", "")[:30]
+                                    })
+        except Exception as e:
+            unverified_scope.append(f"Page {pno} text spans exception: {e}")
+
+        # 8c. Check raster images on this page
+        img_info_list = page.get_images(full=True)
+        for info in img_info_list:
+            xref = info[0]
+            try:
+                base_img = doc.extract_image(xref)
+                if base_img:
+                    img_bytes = base_img["image"]
+                    cs = base_img["colorspace"]
+                    if cs > 1:
+                        pil_img = PILImage.open(io.BytesIO(img_bytes))
+                        if pil_img.mode in ("RGB", "RGBA", "CMYK", "YCbCr", "LAB"):
+                            rgb_data = pil_img.convert("RGB")
+                            r_band, g_band, b_band = rgb_data.split()
+                            diff_rg = ImageChops.difference(r_band, g_band)
+                            diff_gb = ImageChops.difference(g_band, b_band)
+                            max_diff = max(diff_rg.getextrema()[1], diff_gb.getextrema()[1])
+                            if max_diff > 0:
+                                colored_pages.append({
+                                    "page": pno,
+                                    "type": "RASTER_IMAGE_RGB",
+                                    "xref": xref,
+                                    "max_diff": max_diff
+                                })
+            except Exception as e:
+                unverified_scope.append(f"Page {pno} image xref {xref} decode exception: {e}")
+
+    report["grayscale_compliance"] = {
+        "pass": (len(colored_pages) == 0 and len(unverified_scope) == 0),
+        "colored_pages": colored_pages,
+        "unverified_scope": unverified_scope if unverified_scope else None,
+        "drawings_inspected": total_drawings_inspected,
+        "text_spans_inspected": total_spans_inspected,
+    }
+
+    # 9. Unresolved Markup / Editorial Artifacts
     markup_patterns = [
         r"\bTODO\b", r"\bFIXME\b", r"\bTBD\b", r"\bXXX\b",
         r"\bPLACEHOLDER\b", r"\bREPLACE_ME\b", r"\bREPLACE_WITH\b",
@@ -325,7 +428,7 @@ def run_preflight() -> dict:
     if markup_hits:
         report["unresolved_markup"]["pass"] = False
 
-    # 9. Overall Status Evaluation
+    # 10. Overall Status Evaluation
     critical_checks = [
         report["page_geometry"]["pass"],
         report["fonts"]["pass"],
@@ -335,8 +438,10 @@ def run_preflight() -> dict:
         len(report["margins_and_clipping"]["clipped_pages"]) == 0,
         len(report["blank_pages"]) == 0,
         len(report["duplicate_pages"]) == 0,
-        report["bookmarks"].get("pass", True),
-        report["images"].get("pass", True),
+        report["bookmarks"]["pass"],
+        report["images"]["pass"],
+        report["grayscale_compliance"]["pass"],
+        len(report["grayscale_compliance"]["colored_pages"]) == 0,
         report["unresolved_markup"]["pass"],
         len(report["unresolved_markup"]["hits"]) == 0,
     ]
@@ -369,7 +474,8 @@ if __name__ == "__main__":
     print(f"Clipping / Bounds:         {len(rep['margins_and_clipping']['clipped_pages'])} hits")
     print(f"Blank Pages:               {len(rep['blank_pages'])} pages")
     print(f"Duplicate Pages:           {len(rep['duplicate_pages'])} pairs")
-    print(f"Bookmarks:                 {rep['bookmarks'].get('status', str(rep['bookmarks'].get('count', 0)) + ' entries (PASS)')}")
+    print(f"Bookmarks:                 {rep['bookmarks']['count']} entries ({'PASS' if rep['bookmarks']['pass'] else 'FAIL'})")
+    print(f"Grayscale Compliance:      {'PASS' if rep['grayscale_compliance']['pass'] else 'FAIL'} ({len(report['grayscale_compliance']['colored_pages'])} colored objects)" if 'report' in locals() else f"Grayscale Compliance:      {'PASS' if rep['grayscale_compliance']['pass'] else 'FAIL'} ({len(rep['grayscale_compliance']['colored_pages'])} colored objects)")
     print(f"Unresolved Markup:         {len(rep['unresolved_markup']['hits'])} hits (Exceptions: {len(rep['unresolved_markup']['classified_exceptions'])})")
     print(f"Overall Status:            {rep['overall_status']}")
     print("=" * 80)

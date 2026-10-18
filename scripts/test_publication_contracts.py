@@ -370,5 +370,230 @@ class PublicationContracts(unittest.TestCase):
                 doc.close()
 
 
+    def test_pairing_one_image_one_caption_pass(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_one_pair.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_p), width=200, height=100)
+            cap = Paragraph("Hình 1 — Sơ đồ hợp lệ", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), img, Spacer(1, 4), cap])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertEqual(len(rep["pairing_issues"]), 0)
+            self.assertEqual(len(rep["position_issues"]), 0)
+
+    def test_pairing_two_images_two_captions_pass(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_two_pairs.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_p), width=200, height=100)
+            cap1 = Paragraph("Hình 1 — Sơ đồ số một", book_style.get_book_styles()["caption"])
+            img2 = RLImage(str(img_p), width=200, height=100)
+            cap2 = Paragraph("Hình 2 — Sơ đồ số hai", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), img1, Spacer(1, 4), cap1, Spacer(1, 20), img2, Spacer(1, 4), cap2])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertEqual(len(rep["pairing_issues"]), 0)
+            self.assertEqual(len(rep["position_issues"]), 0)
+            self.assertEqual(len(rep["order_issues"]), 0)
+
+    def test_pairing_two_images_captions_wrong_order_fails(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_inv_order.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_p), width=200, height=100)
+            cap1 = Paragraph("Hình 1 — Sơ đồ số một", book_style.get_book_styles()["caption"])
+            img2 = RLImage(str(img_p), width=200, height=100)
+            cap2 = Paragraph("Hình 2 — Sơ đồ số hai", book_style.get_book_styles()["caption"])
+            # Inverted captions: cap2 below img1, cap1 below img2
+            doc.build([Spacer(1, 10), PageBreak(), img1, Spacer(1, 4), cap2, Spacer(1, 20), img2, Spacer(1, 4), cap1])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertTrue(len(rep["order_issues"]) > 0 or len(rep["pairing_issues"]) > 0)
+
+    def test_pairing_caption_above_image_fails(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_cap_above.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_p), width=200, height=100)
+            cap = Paragraph("Hình 1 — Sơ đồ đặt sai", book_style.get_book_styles()["caption"])
+            # Caption placed ABOVE image
+            doc.build([Spacer(1, 10), PageBreak(), cap, Spacer(1, 10), img])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertTrue(len(rep["position_issues"]) > 0, "Audit must fail when caption is above image")
+
+    def test_pairing_caption_too_far_fails(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_cap_far.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_p), width=200, height=100)
+            cap = Paragraph("Hình 1 — Sơ đồ quá xa", book_style.get_book_styles()["caption"])
+            # Caption placed 120pt below image (> MAX_GAP 70pt)
+            doc.build([Spacer(1, 10), PageBreak(), img, Spacer(1, 120), cap])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertTrue(len(rep["position_issues"]) > 0, "Audit must fail when caption is too far from image")
+
+    def test_pairing_two_captions_one_image_fails(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_two_caps_one_img.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img = RLImage(str(img_p), width=200, height=100)
+            cap1 = Paragraph("Hình 1 — Chú thích một", book_style.get_book_styles()["caption"])
+            cap2 = Paragraph("Hình 2 — Chú thích hai", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), img, Spacer(1, 4), cap1, cap2])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertTrue(len(rep["pairing_issues"]) > 0, "Audit must fail on count mismatch (2 captions, 1 image)")
+
+    def test_pairing_same_image_used_twice_checked(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_same_img_twice.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_p), width=200, height=100)
+            cap1 = Paragraph("Hình 1 — Lần xuất hiện một", book_style.get_book_styles()["caption"])
+            img2 = RLImage(str(img_p), width=200, height=100)
+            cap2 = Paragraph("Hình 2 — Lần xuất hiện hai", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), img1, Spacer(1, 4), cap1, Spacer(1, 20), img2, Spacer(1, 4), cap2])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertEqual(len(rep["pairing_issues"]), 0)
+
+    def test_pairing_ambiguous_side_by_side_fails(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage, Table
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_ambig.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_p), width=200, height=100)
+            img2 = RLImage(str(img_p), width=200, height=100)
+            tbl = Table([[img1, img2]], colWidths=[250, 250])
+            cap1 = Paragraph("Hình 1 — Sơ đồ một", book_style.get_book_styles()["caption"])
+            cap2 = Paragraph("Hình 2 — Sơ đồ hai", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), tbl, Spacer(1, 10), cap1, Spacer(1, 10), cap2])
+            rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+            self.assertTrue(any("AMBIGUOUS_PAIRING" in p.get("desc", "") for p in rep["pairing_issues"]),
+                            "Audit must detect ambiguous side-by-side pairings")
+
+    def test_validate_publication_pdf_fails_without_bookmarks(self):
+        import validate_publication_pdf
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            pdf_p = Path(td) / 'test_no_bm.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(595.28, 841.89), leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+            doc.build([Paragraph("Hello", book_style.get_book_styles()["body"])])
+            with patch.object(validate_publication_pdf, 'PDF_PATH', pdf_p):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertFalse(rep["bookmarks"]["pass"])
+                self.assertEqual(rep["overall_status"], "FAIL")
+
+    def test_validate_publication_pdf_fails_on_33_bookmarks(self):
+        import validate_publication_pdf
+        import pymupdf as fitz
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            pdf_p = Path(td) / 'test_bm.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(595.28, 841.89), leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+            doc.build([Paragraph("Hello", book_style.get_book_styles()["body"])])
+            fdoc = fitz.open(pdf_p)
+            fdoc.set_toc([[1, f"Chap {i}", 1] for i in range(33)])
+            out_p = Path(td) / 'test_bm33.pdf'
+            fdoc.save(str(out_p))
+            fdoc.close()
+            with patch.object(validate_publication_pdf, 'PDF_PATH', out_p):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertFalse(rep["bookmarks"]["pass"])
+                self.assertEqual(rep["overall_status"], "FAIL")
+
+    def test_validate_publication_pdf_fails_on_invalid_bookmark_destination(self):
+        import validate_publication_pdf
+        import pymupdf as fitz
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            pdf_p = Path(td) / 'test_bm.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(595.28, 841.89), leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+            doc.build([Paragraph("Hello", book_style.get_book_styles()["body"])])
+            fdoc = fitz.open(pdf_p)
+            toc = [[1, f"Chap {i}", 1] for i in range(33)] + [[1, "Invalid Chapter", 9999]]
+            fdoc.set_toc(toc)
+            out_p = Path(td) / 'test_bm_inv.pdf'
+            fdoc.save(str(out_p))
+            fdoc.close()
+            with patch.object(validate_publication_pdf, 'PDF_PATH', out_p):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertFalse(rep["bookmarks"]["pass"])
+                self.assertEqual(rep["overall_status"], "FAIL")
+
+    def test_validate_publication_pdf_fails_on_colored_vector_or_text(self):
+        import validate_publication_pdf
+        import pymupdf as fitz
+        from reportlab.graphics.shapes import Drawing, Rect
+        from reportlab.lib.colors import red
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            pdf_color = Path(td) / 'test_color.pdf'
+            d = Drawing(100, 100)
+            d.add(Rect(0, 0, 100, 100, fillColor=red))
+            doc_c = SimpleDocTemplate(str(pdf_color), pagesize=(595.28, 841.89), leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+            doc_c.build([d])
+            fdoc = fitz.open(pdf_color)
+            fdoc.set_toc([[1, f"Chap {i}", 1] for i in range(34)])
+            out_p = Path(td) / 'test_color_ready.pdf'
+            fdoc.save(str(out_p))
+            fdoc.close()
+            with patch.object(validate_publication_pdf, 'PDF_PATH', out_p):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertFalse(rep["grayscale_compliance"]["pass"])
+                self.assertEqual(rep["overall_status"], "FAIL")
+
+    def test_validate_publication_pdf_candidate_passes_all(self):
+        import validate_publication_pdf
+        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf")
+        if candidate_pdf.exists():
+            with patch.object(validate_publication_pdf, 'PDF_PATH', candidate_pdf):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertEqual(rep["overall_status"], "PASS", f"Candidate PDF must PASS preflight: {rep.get('bookmarks', {}).get('issues', [])}")
+
+
 if __name__ == '__main__':
     unittest.main()
