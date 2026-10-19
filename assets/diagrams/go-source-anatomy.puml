@@ -19,7 +19,7 @@ title GIẢI PHẪU TRỰC QUAN CẤU TRÚC MỘT TỆP NGUỒN GO (main.go)
 
 left to right direction
 
-rectangle "Mã nguồn main.go\n---\n01: package main\n02:\n03: import \"fmt\"\n04:\n05: const service = \"checkout\"\n06:\n07: func classify(status int) string {\n08:     if status >= 500 {\n09:         return \"failed\"\n10:     }\n11:     return \"healthy\"\n12: }\n13:\n14: func main() {\n15:     status := 503\n16:     label := classify(status)\n17:     fmt.Println(service, label)\n18: }" as code
+rectangle "Mã nguồn main.go\n---\npackage main\n\nimport \"fmt\"\n\nconst service = \"checkout\"\n\nfunc classify(status int) string {\n    if status >= 500 {\n        return \"failed\"\n    }\n    return \"healthy\"\n}\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as code
 
 rectangle "1. Khai báo Package\n---\n• Xác định không gian tên & đơn vị biên dịch\n• Package 'main' báo hiệu tạo executable độc lập" as zone1
 
@@ -31,9 +31,9 @@ rectangle "4. Hàm Khởi điểm (func main)\n---\n• Entry point thực thi s
 
 rectangle "5. Biến Cục bộ & Lời Gọi Hàm\n---\n• status := 503: Khai báo biến ngắn trong phạm vi hàm main\n• fmt.Println: Lời gọi hàm đưa dữ liệu ra stdout tiêu chuẩn" as zone5
 
-code --> zone1 : dòng 01
-code --> zone2 : dòng 03
-code --> zone3 : dòng 05-12
-code --> zone4 : dòng 14
-code --> zone5 : dòng 15-17
+code --> zone1 : Khối cú pháp 1
+code --> zone2 : Khối cú pháp 2
+code --> zone3 : Khối cú pháp 3
+code --> zone4 : Khối cú pháp 4
+code --> zone5 : Khối cú pháp 5
 @enduml

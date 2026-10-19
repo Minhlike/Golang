@@ -641,6 +641,54 @@ class PublicationContracts(unittest.TestCase):
             rep = validate_publication_pdf.run_preflight()
             self.assertEqual(rep["overall_status"], "PASS", f"Candidate PDF must PASS preflight: {rep.get('bookmarks', {}).get('issues', [])}")
 
+    def test_render_fig1_text_overflow_raises_error_strictly(self):
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # Test wrap_text_strictly raises ValueError if text exceeds max_lines
+        long_text = "Đây là một đoạn văn bản rất dài và phức tạp nhằm kiểm tra việc phát hiện tràn dòng tự động của hệ thống dàn chữ đồ họa khoa học trong render_fig1 mà không được phép cắt bỏ âm thầm hay làm mất dữ liệu."
+        with self.assertRaises(ValueError):
+            render_figures_1_6.wrap_text_strictly(long_text, max_chars_per_line=20, max_lines=2, context="TestMilestone")
+
+    def test_figures_1_6_font_size_contract(self):
+        import re
+        render_script = Path("scripts/render_figures_1_6.py").read_text(encoding="utf-8")
+        matches = re.findall(r'fontsize\s*=\s*([0-9\.]+)', render_script)
+        self.assertTrue(len(matches) > 0, "Must find fontsize definitions in render_figures_1_6.py")
+        for fs_str in matches:
+            fs = float(fs_str)
+            self.assertGreaterEqual(fs, 6.0, f"All fontsizes in render_figures_1_6.py must be >= 6.0 pt, found {fs}")
+
+    def test_figures_1_6_grayscale_and_dimensions(self):
+        from PIL import Image
+        import numpy as np
+        target_figures = [
+            "go-history-timeline.png",
+            "go-idea-lineage.png",
+            "feedback-loop.png",
+            "go-source-anatomy.png",
+            "compiler-doc-go.png",
+            "go-scope-trace.png",
+        ]
+        assets_dir = Path("assets/diagrams")
+        for fig_name in target_figures:
+            fig_path = assets_dir / fig_name
+            self.assertTrue(fig_path.exists(), f"Figure file {fig_name} must exist")
+            with Image.open(fig_path) as im:
+                rgb = im.convert("RGB")
+                w, h = rgb.size
+                self.assertEqual(w, 2116, f"{fig_name} must have width 2116 px for 320 DPI across 168 mm")
+                arr = np.array(rgb)
+                r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+                max_diff = np.max(np.abs(r.astype(int) - g.astype(int))) + np.max(np.abs(r.astype(int) - b.astype(int)))
+                self.assertEqual(max_diff, 0, f"{fig_name} must be pure grayscale (R=G=B everywhere)")
+
+    def test_figures_1_6_no_line_numbers_in_code_blocks(self):
+        fig_script = Path("scripts/render_figures_1_6.py").read_text(encoding="utf-8")
+        import re
+        self.assertIsNone(re.search(r"\'[0-9]{1,2}:\s*package", fig_script), "Code block must not contain line number prefixes")
+        self.assertIsNone(re.search(r"\'[0-9]{1,2}:\s*func", fig_script), "Code block must not contain line number prefixes")
+
 
 if __name__ == '__main__':
     unittest.main()

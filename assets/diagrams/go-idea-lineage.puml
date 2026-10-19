@@ -21,9 +21,9 @@ rectangle "DÒNG DÕI C (Kernighan, Ritchie)\n---\n• Cú pháp biểu thức t
 
 rectangle "DÒNG DÕI PASCAL (Modula-2, Oberon-2)\n---\n• Cú pháp khai báo tên trước kiểu (name type)\n• Cấu trúc package tường minh, phân tách ranh giới\n• An toàn bộ nhớ tĩnh, loại bỏ header files" as Pascal_Lang
 
-rectangle "TIẾN TRÌNH CSP (Hoare, Newsqueak, Alef, Limbo)\n---\n• Giao tiếp tuần tự qua kênh (channels, goroutines)\n• Không chia sẻ bộ nhớ; giao tiếp để đồng bộ\n• Điều khiển phi tuần tự qua select đa kênh" as CSP_Lang
+rectangle "TIẾN TRÌNH CSP (Hoare, Newsqueak, Alef, Limbo)\n---\n• Giao tiếp tuần tự qua kênh (channels, goroutines)\n• Khuyến khích giao tiếp để đồng bộ trạng thái\n• Hỗ trợ cả bộ nhớ chia sẻ có đồng bộ (sync.Mutex/atomic)" as CSP_Lang
 
-rectangle "GOLANG (HỘI TỤ THỰC DỤNG)\n---\nKẾ THỪA CHỌN LỌC:\n• Tốc độ biên dịch cực nhanh & runtime tinh gọn\n• Giao diện ngầm định (static duck typing)\n• Mô hình đồng thời CSP hạng nhất (first-class)\n---\nLỌC BỎ CỐ Ý:\n• Không kế thừa lớp phân cấp (no inheritance)\n• Không nạp chồng toán tử (no overloading)\n• Không số học con trỏ nguy hiểm\n• Không ép kiểu ngầm định (zero implicit conversion)" as Go_Lang
+rectangle "GOLANG (HỘI TỤ THỰC DỤNG)\n---\nKẾ THỪA CHỌN LỌC:\n• Cú pháp gọn, con trỏ an toàn & mã máy tối ưu (C)\n• Package tường minh, an toàn định danh (Pascal)\n• Đồng thời CSP hạng nhất (channels, goroutines)\n---\nLỌC BỎ CỐ Ý:\n• Không kế thừa lớp phân cấp (no inheritance)\n• Không nạp chồng toán tử (no overloading)\n• Không số học con trỏ bừa bãi\n• Không ép kiểu ngầm định (zero implicit conversion)" as Go_Lang
 
 C_Lang -right-> Go_Lang : Hội tụ cú pháp &\nhiệu năng mã máy
 Pascal_Lang -right-> Go_Lang : Hội tụ cấu trúc package &\nan toàn định danh

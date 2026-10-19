@@ -18,14 +18,14 @@ skinparam ArrowThickness 1.1
 title TRỰC QUAN HÓA RANH GIỚI PHẠM VI TỪ VỰNG (LEXICAL SCOPE)
 
 package "SCOPE 1: Khối hàm func main()" {
-  rectangle "status := 503 (Dòng 2)\n[Khả kiến trong toàn bộ main]" as status_var
+  rectangle "status := 503\n[Khả kiến trong toàn bộ main]" as status_var
 
   package "SCOPE 2: Khối con if block" {
-    rectangle "label := \"failed\" (Dòng 4)\n[Chỉ khả kiến bên trong if]" as label_var
-    rectangle "fmt.Println(label) (Dòng 5)\n[PASS: Phân giải label thành công]" as pass_label
+    rectangle "label := \"failed\"\n[Chỉ khả kiến bên trong if]" as label_var
+    rectangle "fmt.Println(label)\n[PASS: Phân giải label thành công]" as pass_label
   }
 
-  rectangle "fmt.Println(label) (Dòng 7 - Sau dấu đóng '}')\n[FAIL: undefined: label — DỪNG BIÊN DỊCH]" as fail_label
+  rectangle "fmt.Println(label) (Ngoài khối if)\n[Ví dụ lỗi minh họa: undefined: label — DỪNG BIÊN DỊCH]" as fail_label
 }
 
 label_var ..> pass_label : Tham chiếu hợp lệ (nội bộ khối)

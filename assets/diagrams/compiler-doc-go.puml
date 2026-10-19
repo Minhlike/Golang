@@ -19,21 +19,24 @@ title MÔ HÌNH CÁC LỚP XỬ LÝ CỦA GO COMPILER & LINKER
 
 top to bottom direction
 
-rectangle "TẦNG 1: FRONTEND (TỪ VỰNG & CÚ PHÁP)\n---\n• Scanner / Lexer: Tách ký tự thành Tokens\n• Parser: Kiểm tra cấu trúc cú pháp → Untyped AST" as layer1
+rectangle "TẦNG 1: FRONTEND (cmd/compile/internal/syntax)\n---\n• Scanner / Lexer: Tách luồng ký tự thành tokens\n• Parser: Xây dựng cây cú pháp trừu tượng (syntax tree)" as layer1
 
 rectangle "CỔNG CHẶN 1: SYNTAX ERROR\n---\n• Lỗi ngữ pháp, thiếu ngoặc, token lạ\n• Compiler DỪNG NGAY tại Frontend" as err1
 
-rectangle "TẦNG 2: PHÂN TÍCH NGỮ NGHĨA & KIỂM TRA KIỂU\n---\n• Name Resolution: Xác định phạm vi (scope) & định danh\n• Strict Type Checker: Kiểm tra kiểu tĩnh & unused var/import" as layer2
+rectangle "TẦNG 2: PHÂN TÍCH KIỂU & NGỮ NGHĨA (cmd/compile/internal/types2)\n---\n• Type Checking: Kiểm tra tính đúng đắn kiểu tĩnh\n• Name Resolution: Xác định phạm vi định danh & hằng số" as layer2
 
-rectangle "CỔNG CHẶN 2: TYPE ERROR\n---\n• Sai kiểu dữ liệu, undefined, unused var/import\n• Zero warnings: Mọi sai phạm là lỗi; DỪNG BIÊN DỊCH" as err2
+rectangle "CỔNG CHẶN 2: TYPE ERROR\n---\n• Sai kiểu dữ liệu, biến không tồn tại\n• Zero warnings: Mọi sai phạm là lỗi; DỪNG BIÊN DỊCH" as err2
 
-rectangle "TẦNG 3: MIDDLE & BACKEND (SSA, TỐI ƯU & HẠ MÃ)\n---\n• SSA Lowering: Chuyển AST sang Static Single Assignment IR\n• Optimization: Inlining, dead-code & bounds-check elimination\n• Code Generation: Phát sinh mã máy cho CPU đích (.a / .o)" as layer3
+rectangle "TẦNG 3: MIDDLE-END & IR (cmd/compile/internal/ir, walk)\n---\n• Noding: Chuyển syntax tree sang biểu diễn trung gian IR\n• Transforms: AST rewrite, devirtualization, escape analysis" as layer3
 
-rectangle "TẦNG 4: LINKER & LIÊN KẾT HỆ THỐNG (cmd/link)\n---\n• Symbol Resolution: Hợp nhất bảng địa chỉ hàm, biến, hằng\n• Runtime Integration: Gắn runtime (GC, goroutine scheduler)\n• Binary Packaging: Đóng gói tệp thực thi độc lập (ELF / PE / Mach-O)" as layer4
+rectangle "TẦNG 4: BACKEND SSA & HẠ MÃ (cmd/compile/internal/ssa, genssa)\n---\n• SSA Lowering & Tối ưu hóa (dead code, bounds check)\n• Code Generation: Phát sinh mã máy cho kiến trúc CPU (.a/.o)" as layer4
 
-layer1 --> layer2 : Cây cú pháp thô (Untyped AST)
+rectangle "TẦNG 5: LINKER & ĐÓNG GÓI HỆ THỐNG (cmd/link)\n---\n• Symbol Resolution: Hợp nhất bảng ký hiệu hàm, biến, hằng\n• Runtime Integration: Tích hợp Go runtime (GC, scheduler, stack)\n• Executable Packaging: Xuất nhị phân thực thi độc lập" as layer5
+
+layer1 --> layer2 : Cây cú pháp (syntax tree)
 layer1 .right.> err1 : Nếu lỗi cú pháp
-layer2 --> layer3 : Cây cú pháp có kiểu (Typed AST)
+layer2 --> layer3 : Cú pháp đã kiểm tra kiểu
 layer2 .right.> err2 : Nếu sai kiểu dữ liệu
-layer3 --> layer4 : Tệp đối tượng trung gian (.a / .o)
+layer3 --> layer4 : Biểu diễn trung gian (IR)
+layer4 --> layer5 : Tệp đối tượng trung gian (.a / .o)
 @enduml
