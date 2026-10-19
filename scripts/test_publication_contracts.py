@@ -642,22 +642,141 @@ class PublicationContracts(unittest.TestCase):
             self.assertEqual(rep["overall_status"], "PASS", f"Candidate PDF must PASS preflight: {rep.get('bookmarks', {}).get('issues', [])}")
 
     def test_render_fig1_text_overflow_raises_error_strictly(self):
+        import copy
         import sys
         sys.path.insert(0, str(Path("scripts").resolve()))
         import render_figures_1_6
-        # Test wrap_text_strictly raises ValueError if text exceeds max_lines
-        long_text = "Đây là một đoạn văn bản rất dài và phức tạp nhằm kiểm tra việc phát hiện tràn dòng tự động của hệ thống dàn chữ đồ họa khoa học trong render_fig1 mà không được phép cắt bỏ âm thầm hay làm mất dữ liệu."
+        # 1. Test wrap_text_strictly raises ValueError when line count exceeds max_lines
+        long_text = (
+            "Đây là một đoạn văn bản rất dài và phức tạp nhằm kiểm tra việc phát hiện tràn dòng tự động "
+            "của hệ thống dàn chữ đồ họa khoa học trong render_fig1 mà không được phép cắt bỏ âm thầm hay làm mất dữ liệu."
+        )
         with self.assertRaises(ValueError):
-            render_figures_1_6.wrap_text_strictly(long_text, max_chars_per_line=20, max_lines=2, context="TestMilestone")
+            render_figures_1_6.wrap_text_strictly(
+                long_text, max_chars_per_line=20, max_lines=2, context="TestMilestone"
+            )
+        # 2. Test wrap_text_strictly raises ValueError on real glyph width overflow even with few characters
+        wide_glyph_token = "W" * 24  # 24 chars (< 30 chars) but physically wider than 31.8 mm at 6.2 pt
+        with self.assertRaises(ValueError):
+            render_figures_1_6.wrap_text_strictly(
+                wide_glyph_token, max_chars_per_line=30, max_lines=3, max_width_mm=31.8, context="WideGlyphTest"
+            )
+        # 3. Test render_fig1 raises ValueError when milestone description overflows 3 lines
+        bad_milestones = copy.deepcopy(render_figures_1_6.FIG1_SPEC)
+        bad_milestones['row1'][0]['desc'] = long_text
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig1(custom_milestones=bad_milestones, save=False)
 
-    def test_figures_1_6_font_size_contract(self):
+    def test_render_fig2_negative_arrow_and_conclusion_overflow_detected(self):
+        import copy
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # Reproduce old Fig 2 defect 1: single-line wide arrow label colliding with column borders
+        bad_spec_arrow = copy.deepcopy(render_figures_1_6.FIG2_SPEC)
+        bad_spec_arrow['pillars'][0]['conn_lines'] = ['Cú pháp & hiệu năng biên dịch trực tiếp']
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig2(custom_spec=bad_spec_arrow, save=False)
+
+        # Reproduce old Fig 2 defect 2: single-line wide bottom conclusion overflowing note_box
+        bad_spec_conc = copy.deepcopy(render_figures_1_6.FIG2_SPEC)
+        bad_spec_conc['conclusion_lines'] = [
+            'Nguyên lý thiết kế: Go kết hợp có chọn lọc các ý tưởng kinh điển đã qua kiểm chứng '
+            '(hỗ trợ cả giao tiếp channel lẫn đồng bộ bộ nhớ chia sẻ), đồng thời kiên quyết từ bỏ '
+            'các tính năng làm phức tạp hóa mô hình tư duy.'
+        ]
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig2(custom_spec=bad_spec_conc, save=False)
+
+    def test_render_fig3_negative_step_and_connector_collision_detected(self):
+        import copy
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # Reproduce old Fig 3 defect 1: Step 1 description overflowing 2 lines / right border
+        bad_spec_step1 = copy.deepcopy(render_figures_1_6.FIG3_SPEC)
+        bad_spec_step1['steps'][0]['desc'] = (
+            "Xác định kỳ vọng cụ thể trước khi chạy: đoạn mã sẽ trả về giá trị gì, "
+            "thay đổi trạng thái nào, phát sinh tác dụng phụ gì trên hệ thống hoặc báo lỗi biên dịch gì?"
+        )
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig3(custom_spec=bad_spec_step1, save=False)
+
+        # Reproduce old Fig 3 defect 2: edge label wide enough to collide with vertical dashed connector x=94.0
+        bad_spec_edge = copy.deepcopy(render_figures_1_6.FIG3_SPEC)
+        bad_spec_edge['branch_yes']['edge_label'] = 'CÓ (Bác bỏ giả thuyết thực nghiệm ban đầu)'
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig3(custom_spec=bad_spec_edge, save=False)
+
+    def test_render_fig5_negative_subbox_overflow_and_semantic_contract(self):
+        import copy
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # Reproduce old Fig 5 defect: text in Layer 3 SSA sub-box touching/exceeding sub-box border
+        bad_spec_ssa = copy.deepcopy(render_figures_1_6.FIG5_SPEC)
+        bad_spec_ssa['layers'][2]['boxes'][0] = (
+            '1. Noding & IR',
+            ['Chuyển cây cú pháp sang IR (noder, ir)', 'Inlining & Escape Analysis toàn cục']
+        )
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig5(custom_spec=bad_spec_ssa, save=False)
+
+        # Verify inaccurate "Zero warnings" claim is completely absent from Fig 5 spec and PUML
+        puml_map = render_figures_1_6.build_expected_puml_contents()
+        fig5_puml = puml_map['compiler-doc-go.puml'].lower()
+        self.assertNotIn("zero warnings", fig5_puml)
+        self.assertNotIn("mọi sai lệch là lỗi", fig5_puml)
+
+    def test_render_fig6_negative_scope2_border_cutting_code_detected(self):
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # Reproduce old Fig 6 defect: Scope 2 left border at x=16.0 cutting across 'if status >= 500 {' and '}' at x=13.5
+        with self.assertRaises(ValueError):
+            render_figures_1_6.render_fig6(custom_s2_x=16.0, save=False)
+
+    def test_figures_1_6_font_size_and_live_geometric_audit_contract(self):
         import re
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import render_figures_1_6
+        # 1. Static check on script source
         render_script = Path("scripts/render_figures_1_6.py").read_text(encoding="utf-8")
         matches = re.findall(r'fontsize\s*=\s*([0-9\.]+)', render_script)
         self.assertTrue(len(matches) > 0, "Must find fontsize definitions in render_figures_1_6.py")
         for fs_str in matches:
             fs = float(fs_str)
             self.assertGreaterEqual(fs, 6.0, f"All fontsizes in render_figures_1_6.py must be >= 6.0 pt, found {fs}")
+
+        # 2. Live Matplotlib FigureGeometryAuditor check across all 6 figures (verifies real Text.get_fontsize() >= 6.0,
+        #    min_container_padding_pt >= 4.0, min_border_clearance_pt >= 4.0, and zero line/text collisions)
+        render_fns = [
+            render_figures_1_6.render_fig1,
+            render_figures_1_6.render_fig2,
+            render_figures_1_6.render_fig3,
+            render_figures_1_6.render_fig4,
+            render_figures_1_6.render_fig5,
+            render_figures_1_6.render_fig6,
+        ]
+        for fn in render_fns:
+            report = fn(save=False)
+            self.assertGreaterEqual(
+                report['min_container_padding_pt'], 4.0,
+                f"{report['fig_name']} min_container_padding_pt={report['min_container_padding_pt']} < 4.0 pt"
+            )
+            self.assertGreaterEqual(
+                report['min_border_clearance_pt'], 4.0,
+                f"{report['fig_name']} min_border_clearance_pt={report['min_border_clearance_pt']} < 4.0 pt"
+            )
+            self.assertGreaterEqual(
+                report['min_connector_clearance_pt'], 1.2,
+                f"{report['fig_name']} min_connector_clearance_pt={report['min_connector_clearance_pt']} < 1.2 pt"
+            )
+
+        # 3. Verify companion .puml files are 100% synchronized with authoritative renderer
+        drifted = render_figures_1_6.sync_puml_sources(check_only=True)
+        self.assertEqual(drifted, [], f"PUML files drifted from authoritative renderer: {drifted}")
 
     def test_figures_1_6_grayscale_and_dimensions(self):
         from PIL import Image

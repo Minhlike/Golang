@@ -1,31 +1,19 @@
 @startuml
+' AUTHORITATIVE SOURCE OF TRUTH: scripts/render_figures_1_6.py
+' Auto-synchronized from the canonical specification in scripts/render_figures_1_6.py.
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 13
 skinparam defaultFontColor #000000
-
-skinparam rectangle {
-  BackgroundColor #F9F9F9
-  BorderColor #444444
-  FontColor #000000
-  RoundCorner 4
-}
-
-skinparam arrowColor #333333
-skinparam ArrowThickness 1.1
-
 title DÒNG DÕI Ý TƯỞNG VÀ SỰ HỘI TỤ THỰC DỤNG VÀO GO
 
-rectangle "DÒNG DÕI C (Kernighan, Ritchie)\n---\n• Cú pháp biểu thức trực quan\n• Con trỏ định vị ô nhớ vật lý\n• Biên dịch mã máy tối ưu, hiệu năng cao" as C_Lang
+rectangle "DÒNG DÕI C (Kernighan, Ritchie)\n---\n• Cú pháp biểu thức gọn: khối lệnh {}, toán tử cơ bản.\n• Con trỏ định vị ô nhớ trực tiếp (bỏ số học con trỏ).\n• Biên dịch thẳng ra mã máy tối ưu, hiệu năng cao." as C_Lang
+rectangle "DÒNG DÕI PASCAL (Wirth: Modula-2, Oberon-2)\n---\n• Khai báo tên trước kiểu (name type) sáng sủa.\n• Cấu trúc package tường minh, phân tách ranh giới.\n• An toàn bộ nhớ tĩnh; loại bỏ hoàn toàn header files." as Pascal_Lang
+rectangle "TIẾN TRÌNH CSP (Hoare, Newsqueak, Alef, Limbo)\n---\n• Giao tiếp tuần tự qua kênh (channels, goroutines).\n• Khuyến khích đồng bộ hóa qua gửi nhận thông điệp.\n• Điều phối ghép kênh phi tuần tự với toán tử select." as CSP_Lang
+rectangle "GOLANG: HỘI TỤ THỰC DỤNG\n---\nKẾ THỪA & DUNG HÒA CHỌN LỌC\n• Biên dịch nhanh, tạo mã máy & runtime tự hành.\n• Đồng thời: hỗ trợ cả channel (CSP) lẫn chia sẻ\n  bộ nhớ có đồng bộ (sync.Mutex, sync/atomic).\n• Giao diện ngầm định (static structural typing).\n---\nTRIẾT LÝ TINH GIẢN (TỪ CHỐI CỐ Ý)\n• KHÔNG kế thừa lớp phân cấp (no inheritance).\n• KHÔNG nạp chồng hàm/toán tử (no overloading).\n• KHÔNG số học con trỏ mặc định.\n• KHÔNG ép kiểu ngầm định (zero implicit cast)." as Go_Lang
 
-rectangle "DÒNG DÕI PASCAL (Modula-2, Oberon-2)\n---\n• Cú pháp khai báo tên trước kiểu (name type)\n• Cấu trúc package tường minh, phân tách ranh giới\n• An toàn bộ nhớ tĩnh, loại bỏ header files" as Pascal_Lang
-
-rectangle "TIẾN TRÌNH CSP (Hoare, Newsqueak, Alef, Limbo)\n---\n• Giao tiếp tuần tự qua kênh (channels, goroutines)\n• Khuyến khích giao tiếp để đồng bộ trạng thái\n• Hỗ trợ cả bộ nhớ chia sẻ có đồng bộ (sync.Mutex/atomic)" as CSP_Lang
-
-rectangle "GOLANG (HỘI TỤ THỰC DỤNG)\n---\nKẾ THỪA CHỌN LỌC:\n• Cú pháp gọn, con trỏ an toàn & mã máy tối ưu (C)\n• Package tường minh, an toàn định danh (Pascal)\n• Đồng thời CSP hạng nhất (channels, goroutines)\n---\nLỌC BỎ CỐ Ý:\n• Không kế thừa lớp phân cấp (no inheritance)\n• Không nạp chồng toán tử (no overloading)\n• Không số học con trỏ bừa bãi\n• Không ép kiểu ngầm định (zero implicit conversion)" as Go_Lang
-
-C_Lang -right-> Go_Lang : Hội tụ cú pháp &\nhiệu năng mã máy
-Pascal_Lang -right-> Go_Lang : Hội tụ cấu trúc package &\nan toàn định danh
-CSP_Lang -right-> Go_Lang : Hội tụ mô hình đồng thời\n& kênh truyền dữ liệu
+C_Lang -right-> Go_Lang : Cú pháp & hiệu năng
+Pascal_Lang -right-> Go_Lang : Package & an toàn kiểu
+CSP_Lang -right-> Go_Lang : Mô hình đồng thời
 @enduml

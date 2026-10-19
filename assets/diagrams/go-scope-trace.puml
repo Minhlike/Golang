@@ -1,33 +1,21 @@
 @startuml
+' AUTHORITATIVE SOURCE OF TRUTH: scripts/render_figures_1_6.py
+' Auto-synchronized from the canonical specification in scripts/render_figures_1_6.py.
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 13
 skinparam defaultFontColor #000000
-
-skinparam rectangle {
-  BackgroundColor #F9F9F9
-  BorderColor #444444
-  FontColor #000000
-  RoundCorner 4
-}
-
-skinparam arrowColor #333333
-skinparam ArrowThickness 1.1
-
 title TRỰC QUAN HÓA RANH GIỚI PHẠM VI TỪ VỰNG (LEXICAL SCOPE)
 
 package "SCOPE 1: Khối hàm func main()" {
   rectangle "status := 503\n[Khả kiến trong toàn bộ main]" as status_var
-
   package "SCOPE 2: Khối con if block" {
     rectangle "label := \"failed\"\n[Chỉ khả kiến bên trong if]" as label_var
     rectangle "fmt.Println(label)\n[PASS: Phân giải label thành công]" as pass_label
   }
-
-  rectangle "fmt.Println(label) (Ngoài khối if)\n[Ví dụ lỗi minh họa: undefined: label — DỪNG BIÊN DỊCH]" as fail_label
+  rectangle "fmt.Println(label) (Ngoài khối if)\n[[Ví dụ lỗi minh họa]: undefined: label]" as fail_label
 }
-
 label_var ..> pass_label : Tham chiếu hợp lệ (nội bộ khối)
 status_var ..> label_var : Tham chiếu hợp lệ (từ con ra cha)
 fail_label ..> label_var : Vi phạm ranh giới từ vựng (chặn bởi '}')

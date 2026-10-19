@@ -1,34 +1,23 @@
 @startuml
+' AUTHORITATIVE SOURCE OF TRUTH: scripts/render_figures_1_6.py
+' Auto-synchronized from the canonical specification in scripts/render_figures_1_6.py.
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
 skinparam defaultFontSize 13
 skinparam defaultFontColor #000000
-
-skinparam activity {
-  BackgroundColor #F9F9F9
-  BorderColor #444444
-  FontColor #000000
-  DiamondBackgroundColor #EEEEEE
-  DiamondBorderColor #222222
-  RoundCorner 4
-}
-
-skinparam arrowColor #333333
-skinparam ArrowThickness 1.1
-
 title VÒNG LẶP PHẢN HỒI THỰC NGHIỆM KHI HỌC VÀ LẬP TRÌNH GO
 
 start
 repeat
-  :1. Đặt giả thuyết kỹ thuật;
-  :2. Chỉnh sửa nhỏ nhất (Minimal edit - một biến số);
-  :3. Thực thi bộ công cụ tiêu chuẩn\n• go fmt ./...\n• go vet ./...\n• go test ./...;
-  if (Kết quả thực tế bác bỏ giả thuyết?) then (Có - Bác bỏ)
-    :Nhánh Có: Chẩn đoán lỗi\n• Đọc tín hiệu từ compiler / test failure\n• Xác định nguyên nhân gốc rễ (Root Cause);
-  else (Không - Phù hợp)
-    :Nhánh Không: Xác nhận tri thức\n• Ghi nhận kiến thức xác thực\n• Tạo commit sạch;
+  :BƯỚC 1: Đặt Giả Thuyết Kỹ Thuật\nXác định kỳ vọng cụ thể trước khi chạy: đoạn mã sẽ trả về giá trị gì, thay đổi trạng thái nào hoặc báo lỗi gì?;
+  :BƯỚC 2: Chỉnh Sửa Nhỏ Nhất (Minimal Edit)\nThay đổi đúng một biến số độc lập để cô lập nguyên nhân; tránh sửa dồn nhiều chỗ cùng lúc.;
+  :BƯỚC 3: Đo Lường Bằng Bộ Công Cụ Chuẩn\n• go fmt: Chuẩn hóa định dạng mã nguồn.\n• go vet: Phân tích tĩnh các cấu trúc đáng ngờ.\n• go test: Kiểm chứng hành vi theo kịch bản test.;
+  if (Kết quả thực tế bác bỏ giả thuyết?) then (CÓ (Bác bỏ))
+    :NHÁNH CÓ (BÁC BỎ): CHẨN ĐOÁN LỖI\n• Đọc chẩn đoán từ compiler, go vet hoặc test.\n• Khoanh vùng nguyên nhân gốc rễ (Root Cause).\n• Cập nhật giả thuyết và lặp lại từ Bước 1.;
+  else (KHÔNG (Phù hợp))
+    :NHÁNH KHÔNG (PHÙ HỢP): GHI NHẬN\n• Kết quả đo phù hợp với phạm vi kịch bản thử.\n• Củng cố mô hình tư duy bằng thực nghiệm.\n• Lưu commit sạch và chuyển sang bước kế tiếp.;
     stop
   endif
-repeat while (Điều chỉnh lại giả thuyết & lặp lại)
+repeat while (Điều chỉnh giả thuyết & lặp lại)
 @enduml
