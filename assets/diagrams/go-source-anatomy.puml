@@ -1,32 +1,39 @@
 @startuml
-skinparam dpi 300
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam defaultFontName "JetBrains Mono"
-skinparam defaultFontSize 17
+skinparam defaultFontName "Source Sans 3"
+skinparam defaultFontSize 13
 skinparam defaultFontColor #000000
+
 skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
+  BackgroundColor #F9F9F9
+  BorderColor #444444
   FontColor #000000
   RoundCorner 4
 }
-skinparam note {
-  BackgroundColor #FFFFFF
-  BorderColor #555555
-  FontName "Source Sans 3"
-  FontSize 16
-  FontColor #000000
-}
-skinparam arrowColor #000000
+
+skinparam arrowColor #333333
+skinparam ArrowThickness 1.1
+
+title GIẢI PHẪU TRỰC QUAN CẤU TRÚC MỘT TỆP NGUỒN GO (main.go)
+
 left to right direction
 
-rectangle "package main\n\nimport "fmt"\n\nconst service = "checkout"\n\nfunc classify(status int) string { ... }\n\nfunc main() {\n    status := 503\n    label := classify(status)\n    fmt.Println(service, label)\n}" as source
-note right of source
-  package main: khai báo tên gói (package)
-  import: khai báo phụ thuộc và tên trong tệp
-  const và func: khai báo cấp package
-  main: hàm khởi điểm của chương trình thực thi
-  status, label: biến cục bộ trong khối lệnh main
-end note
+rectangle "Mã nguồn main.go\n---\n01: package main\n02:\n03: import \"fmt\"\n04:\n05: const service = \"checkout\"\n06:\n07: func classify(status int) string {\n08:     if status >= 500 {\n09:         return \"failed\"\n10:     }\n11:     return \"healthy\"\n12: }\n13:\n14: func main() {\n15:     status := 503\n16:     label := classify(status)\n17:     fmt.Println(service, label)\n18: }" as code
+
+rectangle "1. Khai báo Package\n---\n• Xác định không gian tên & đơn vị biên dịch\n• Package 'main' báo hiệu tạo executable độc lập" as zone1
+
+rectangle "2. Khai báo Import\n---\n• Đặt package 'fmt' vào phạm vi tệp để tham chiếu\n• Giải quyết tại compile-time, không phải nạp động" as zone2
+
+rectangle "3. Khai báo Cấp Package\n---\n• const 'service': Hằng số chuỗi bất biến compile-time\n• func 'classify': Hàm logic nhận int, trả string theo giá trị" as zone3
+
+rectangle "4. Hàm Khởi điểm (func main)\n---\n• Entry point thực thi sau khi hoàn tất init runtime\n• Không nhận tham số và không trả mã lỗi trực tiếp" as zone4
+
+rectangle "5. Biến Cục bộ & Lời Gọi Hàm\n---\n• status := 503: Khai báo biến ngắn trong phạm vi hàm main\n• fmt.Println: Lời gọi hàm đưa dữ liệu ra stdout tiêu chuẩn" as zone5
+
+code --> zone1 : dòng 01
+code --> zone2 : dòng 03
+code --> zone3 : dòng 05-12
+code --> zone4 : dòng 14
+code --> zone5 : dòng 15-17
 @enduml

@@ -1,52 +1,31 @@
-@startmindmap
+@startuml
 skinparam backgroundColor white
+skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 14
-<style>
-mindmapDiagram {
-  node {
-    BackgroundColor #F4F4F4
-    LineColor #000000
-    LineThickness 1.2
-    FontColor #000000
-    FontSize 13
-    RoundCorner 8
-    Padding 8
-  }
-  :depth(0) {
-    BackgroundColor #2E2E2E
-    FontColor #FFFFFF
-    FontSize 16
-    LineThickness 2.5
-    RoundCorner 12
-    Padding 12
-  }
-  :depth(1) {
-    BackgroundColor #E5E5E5
-    FontColor #000000
-    FontSize 14
-    LineThickness 1.8
-    RoundCorner 8
-    Padding 10
-  }
+skinparam defaultFontSize 13
+skinparam defaultFontColor #000000
+
+skinparam rectangle {
+  BackgroundColor #F9F9F9
+  BorderColor #444444
+  FontColor #000000
+  RoundCorner 4
 }
-</style>
-* GOLANG\n(Hội tụ ý tưởng)
-** DÒNG DÕI C
-*** Cú pháp biểu thức
-*** Quản lý con trỏ ô nhớ
-*** Tốc độ thực thi mã máy
-** DÒNG DÕI PASCAL
-*** Modula-2
-**** Khai báo module
-*** Oberon-2
-**** Khai báo tên trước kiểu
-**** Hệ thống package gọn nhẹ
-** TIẾN TRÌNH CSP
-*** Tony Hoare (1978)
-**** Tiến trình tuần tự giao tiếp
-*** Newsqueak & Alef
-**** Thử nghiệm channel & select
-*** Limbo (Hệ điều hành Inferno)
-**** Kênh truyền channel kiểu mạnh
-@endmindmap
+
+skinparam arrowColor #333333
+skinparam ArrowThickness 1.1
+
+title DÒNG DÕI Ý TƯỞNG VÀ SỰ HỘI TỤ THỰC DỤNG VÀO GO
+
+rectangle "DÒNG DÕI C (Kernighan, Ritchie)\n---\n• Cú pháp biểu thức trực quan\n• Con trỏ định vị ô nhớ vật lý\n• Biên dịch mã máy tối ưu, hiệu năng cao" as C_Lang
+
+rectangle "DÒNG DÕI PASCAL (Modula-2, Oberon-2)\n---\n• Cú pháp khai báo tên trước kiểu (name type)\n• Cấu trúc package tường minh, phân tách ranh giới\n• An toàn bộ nhớ tĩnh, loại bỏ header files" as Pascal_Lang
+
+rectangle "TIẾN TRÌNH CSP (Hoare, Newsqueak, Alef, Limbo)\n---\n• Giao tiếp tuần tự qua kênh (channels, goroutines)\n• Không chia sẻ bộ nhớ; giao tiếp để đồng bộ\n• Điều khiển phi tuần tự qua select đa kênh" as CSP_Lang
+
+rectangle "GOLANG (HỘI TỤ THỰC DỤNG)\n---\nKẾ THỪA CHỌN LỌC:\n• Tốc độ biên dịch cực nhanh & runtime tinh gọn\n• Giao diện ngầm định (static duck typing)\n• Mô hình đồng thời CSP hạng nhất (first-class)\n---\nLỌC BỎ CỐ Ý:\n• Không kế thừa lớp phân cấp (no inheritance)\n• Không nạp chồng toán tử (no overloading)\n• Không số học con trỏ nguy hiểm\n• Không ép kiểu ngầm định (zero implicit conversion)" as Go_Lang
+
+C_Lang -right-> Go_Lang : Hội tụ cú pháp &\nhiệu năng mã máy
+Pascal_Lang -right-> Go_Lang : Hội tụ cấu trúc package &\nan toàn định danh
+CSP_Lang -right-> Go_Lang : Hội tụ mô hình đồng thời\n& kênh truyền dữ liệu
+@enduml

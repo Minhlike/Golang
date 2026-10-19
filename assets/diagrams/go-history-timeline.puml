@@ -1,40 +1,39 @@
 @startuml
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam note {
-  BackgroundColor #F5F5F5
-  BorderColor #777777
-  FontColor #000000
-}
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 18
+skinparam defaultFontSize 14
 skinparam defaultFontColor #000000
+
 skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
+  BackgroundColor #F8F8F8
+  BorderColor #444444
   FontColor #000000
-  RoundCorner 6
+  RoundCorner 4
 }
-skinparam arrowColor #000000
-skinparam ArrowThickness 1.2
-skinparam nodesep 55
-skinparam ranksep 38
-top to bottom direction
 
-rectangle "2007\nMục tiêu được phác thảo\nTên Go được đề xuất" as y2007
-rectangle "2008\nTrình biên dịch thử nghiệm\nBộ tiền xử lý GCC và bộ công cụ" as y2008
-rectangle "2009\nMở mã nguồn chính thức\nNgày 10 tháng 11" as y2009
-rectangle "2012\nGo 1 phát hành\nCam kết tương thích dài hạn" as y2012
-rectangle "2015\nGo 1.5 tự thân\nToolchain/runtime thuần Go\nBộ gom rác GC đồng thời" as y2015
-rectangle "2018\nGo 1.11\nKhởi đầu quản lý Go Modules" as y2018
-rectangle "2022\nGo 1.18\nTham số kiểu (Generics)" as y2022
-rectangle "2026\nGo 1.27\nPhương thức tổng quát (Generic methods)" as y2026
+skinparam arrowColor #333333
+skinparam ArrowThickness 1.1
 
-y2007 --> y2008
-y2008 --> y2009
-y2009 --> y2012
-y2012 -right-> y2015
-y2015 --> y2018
-y2018 --> y2022
-y2022 --> y2026
+title DÒNG THỜI GIAN CÁC CỘT MỐC TIẾN HÓA CỦA GO (2007 – 2026)
+
+rectangle "2007: Khởi thảo Ý tưởng\n---\nPhác thảo mục tiêu giải quyết\nbế tắc scale tại Google" as y2007
+rectangle "2008: Compiler Thử nghiệm\n---\nTrình biên dịch mẫu;\ncú pháp ngôn ngữ dần ổn định" as y2008
+rectangle "2009: Mở Mã Nguồn\n---\nCông bố mã nguồn mở (10/11/2009)\nCộng đồng toàn cầu tham gia" as y2009
+rectangle "2012: Go 1.0 Ra Mắt\n---\nCam kết tương thích dài hạn\n(Go 1 Compatibility Promise)" as y2012
+
+rectangle "2015: Go 1.5 Tự thân\n---\nCompiler/runtime viết bằng Go & asm\nConcurrent Garbage Collector" as y2015
+rectangle "2018: Go 1.11 Modules\n---\nQuản lý phụ thuộc chuẩn hóa (go.mod)\nGiải phóng khỏi $GOPATH" as y2018
+rectangle "2022: Go 1.18 Generics\n---\nBổ sung Tham số kiểu (Generics)\nTrừu tượng hóa an toàn kiểu tĩnh" as y2022
+rectangle "2026: Go 1.27 Đương đại\n---\nGeneric Methods trên kiểu dữ liệu\nTối ưu hóa PGO & toolchain hiện đại" as y2026
+
+y2007 -right-> y2008
+y2008 -right-> y2009
+y2009 -right-> y2012
+
+y2012 --> y2015 : Tiến trình tự lưu chuyển & mở rộng
+
+y2015 -right-> y2018
+y2018 -right-> y2022
+y2022 -right-> y2026
 @enduml

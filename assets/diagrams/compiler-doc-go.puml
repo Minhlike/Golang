@@ -2,38 +2,38 @@
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName "Source Sans 3"
-skinparam defaultFontSize 21
+skinparam defaultFontSize 13
 skinparam defaultFontColor #000000
+
 skinparam rectangle {
-  BackgroundColor #F4F4F4
-  BorderColor #000000
+  BackgroundColor #F9F9F9
+  BorderColor #444444
   FontColor #000000
-  RoundCorner 6
+  RoundCorner 4
 }
-skinparam arrowColor #000000
-skinparam ArrowThickness 1.2
-skinparam note {
-  BackgroundColor #FFFFFF
-  BorderColor #555555
-  FontColor #000000
-  FontName "Source Sans 3"
-  FontSize 15
-}
+
+skinparam arrowColor #333333
+skinparam ArrowThickness 1.1
+
+title MÔ HÌNH CÁC LỚP XỬ LÝ CỦA GO COMPILER & LINKER
+
 top to bottom direction
 
-rectangle "Mã nguồn .go\ntệp văn bản bạn viết" as source
-rectangle "Token từ vựng\npackage · định danh · số · toán tử" as tokens
-rectangle "Cú pháp ngữ pháp (AST)\nkhai báo · biểu thức · khối lệnh" as syntax
-rectangle "Kiểm tra kiểu (Type Check)\nint, string, bool, chữ ký hàm" as types
-rectangle "Mã máy thực thi\nchương trình khởi chạy" as run
+rectangle "TẦNG 1: FRONTEND (TỪ VỰNG & CÚ PHÁP)\n---\n• Scanner / Lexer: Tách ký tự thành Tokens\n• Parser: Kiểm tra cấu trúc cú pháp → Untyped AST" as layer1
 
-source -right-> tokens : tách từ vựng
-tokens -down-> syntax : dựng cây cú pháp
-syntax -left-> types : phân tích ngữ nghĩa
-types -down-> run : hợp lệ thực thi
+rectangle "CỔNG CHẶN 1: SYNTAX ERROR\n---\n• Lỗi ngữ pháp, thiếu ngoặc, token lạ\n• Compiler DỪNG NGAY tại Frontend" as err1
 
-note bottom of types
-  Mô hình tinh thần trừu tượng.
-  Compiler thực tế có thêm SSA, inlining và tối ưu mã.
-end note
+rectangle "TẦNG 2: PHÂN TÍCH NGỮ NGHĨA & KIỂM TRA KIỂU\n---\n• Name Resolution: Xác định phạm vi (scope) & định danh\n• Strict Type Checker: Kiểm tra kiểu tĩnh & unused var/import" as layer2
+
+rectangle "CỔNG CHẶN 2: TYPE ERROR\n---\n• Sai kiểu dữ liệu, undefined, unused var/import\n• Zero warnings: Mọi sai phạm là lỗi; DỪNG BIÊN DỊCH" as err2
+
+rectangle "TẦNG 3: MIDDLE & BACKEND (SSA, TỐI ƯU & HẠ MÃ)\n---\n• SSA Lowering: Chuyển AST sang Static Single Assignment IR\n• Optimization: Inlining, dead-code & bounds-check elimination\n• Code Generation: Phát sinh mã máy cho CPU đích (.a / .o)" as layer3
+
+rectangle "TẦNG 4: LINKER & LIÊN KẾT HỆ THỐNG (cmd/link)\n---\n• Symbol Resolution: Hợp nhất bảng địa chỉ hàm, biến, hằng\n• Runtime Integration: Gắn runtime (GC, goroutine scheduler)\n• Binary Packaging: Đóng gói tệp thực thi độc lập (ELF / PE / Mach-O)" as layer4
+
+layer1 --> layer2 : Cây cú pháp thô (Untyped AST)
+layer1 .right.> err1 : Nếu lỗi cú pháp
+layer2 --> layer3 : Cây cú pháp có kiểu (Typed AST)
+layer2 .right.> err2 : Nếu sai kiểu dữ liệu
+layer3 --> layer4 : Tệp đối tượng trung gian (.a / .o)
 @enduml
