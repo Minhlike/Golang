@@ -410,11 +410,21 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
 
     # 6. Semantic verification against manuscript
     ms_figures = load_manuscript_figures()
-    if ms_figures and len(figures_found) == len(ms_figures):
-        for cap in figures_found:
-            f_num = cap["num"]
-            if f_num in ms_figures:
-                exp = ms_figures[f_num]
+    if ms_figures:
+        if len(figures_found) != len(ms_figures):
+            semantic_issues.append({
+                "num": 0,
+                "desc": f"Số lượng sơ đồ/hình ảnh trích xuất từ PDF ({len(figures_found)}) không khớp với số lượng trong bản thảo chuẩn ({len(ms_figures)})",
+            })
+        found_map = {f["num"]: f for f in figures_found}
+        for f_num, exp in ms_figures.items():
+            if f_num not in found_map:
+                semantic_issues.append({
+                    "num": f_num,
+                    "desc": f"Hình {f_num} có trong bản thảo chuẩn ({exp['file']}) nhưng không tìm thấy trong PDF",
+                })
+            else:
+                cap = found_map[f_num]
                 cap_words = set(re.findall(r"\w+", cap["title"].lower()))
                 exp_words = set(re.findall(r"\w+", exp["caption"].lower()))
                 common = cap_words.intersection(exp_words)
@@ -425,6 +435,13 @@ def audit_diagrams_and_images(pdf_path: Path = PDF_PATH) -> dict:
                         "expected_caption": exp["caption"],
                         "desc": f"Hình {f_num} có tiêu đề không khớp ngữ nghĩa bản thảo: '{cap['title']}' != '{exp['caption']}'",
                     })
+        for f in figures_found:
+            if f["num"] not in ms_figures:
+                semantic_issues.append({
+                    "num": f["num"],
+                    "desc": f"Hình {f['num']} xuất hiện trong PDF nhưng không có trong danh mục bản thảo chuẩn",
+                })
+
 
     doc.close()
 

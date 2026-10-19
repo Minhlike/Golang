@@ -41,6 +41,50 @@ A4_HEIGHT = 841.89
 TOLERANCE_PT = 1.5
 
 
+def load_canonical_bookmark_titles() -> list[str]:
+    """Load canonical list of 34 bookmark titles: 'MỤC LỤC' + 33 manuscript H1 titles."""
+    try:
+        try:
+            from scripts.build_pdf import get_manuscript, manuscript_titles
+        except ImportError:
+            from build_pdf import get_manuscript, manuscript_titles
+        chaps, apps = get_manuscript()
+        return ["MỤC LỤC"] + manuscript_titles(chaps, apps)
+    except Exception:
+        return []
+
+
+def compute_section_opening_pages(doc: fitz.Document, canonical_titles: list[str]) -> dict[str, int]:
+    """Find actual opening page for each canonical section in the PDF document."""
+    if not canonical_titles or len(doc) == 0:
+        return {}
+    pages: dict[str, int] = {}
+    titles_to_find = [t for t in canonical_titles if t != "MỤC LỤC"]
+
+    # Locate TOC page if present
+    for pno in range(1, min(10, len(doc) + 1)):
+        txt = " ".join((doc[pno - 1].get_text() or "").split())
+        if "MỤC LỤC" in txt:
+            pages["MỤC LỤC"] = pno
+            break
+    if "MỤC LỤC" not in pages:
+        pages["MỤC LỤC"] = 2
+
+    if not titles_to_find:
+        return pages
+
+    start_search_pno = pages.get("MỤC LỤC", 2) + 1
+    for pno in range(start_search_pno, len(doc) + 1):
+        txt = " ".join((doc[pno - 1].get_text() or "").split())
+        for title in titles_to_find:
+            if title not in pages and " ".join(title.split()) in txt:
+                pages[title] = pno
+        if len(pages) == len(canonical_titles):
+            break
+
+    return pages
+
+
 def run_preflight() -> dict:
     if not PDF_PATH.exists():
         print(f"ERROR: {PDF_PATH} does not exist!")
@@ -231,9 +275,13 @@ def run_preflight() -> dict:
             report["bookmarks"]["status"] = f"FAIL_COUNT_MISMATCH_{len(toc)}_EXP_34"
             bookmark_issues.append(f"Số lượng bookmark ({len(toc)}) không đúng yêu cầu (hợp đồng yêu cầu đúng 34 entries)")
 
-        # Check hierarchy, destinations, and monotonicity
+        # Canonical manuscript comparison
+        canonical_titles = load_canonical_bookmark_titles()
+        expected_pages = compute_section_opening_pages(doc, canonical_titles) if canonical_titles else {}
+
+        # Check hierarchy, destinations, monotonicity, and exact manuscript alignment
         last_page = 1
-        for item in toc:
+        for idx, item in enumerate(toc):
             lvl, title, target_page = item[:3]
             if lvl != 1:
                 bookmark_issues.append(f"Bookmark '{title}' có level={lvl} (yêu cầu level 1 cho các phần chính)")
@@ -244,16 +292,31 @@ def run_preflight() -> dict:
             else:
                 last_page = target_page
 
-            # Verify title relevance on target page (or adjacent page)
+            # Check alignment against canonical manuscript if available
+            if canonical_titles and idx < len(canonical_titles):
+                exp_title = canonical_titles[idx]
+                if " ".join(title.split()).lower() != " ".join(exp_title.split()).lower():
+                    bookmark_issues.append(
+                        f"Bookmark thứ {idx+1} có tiêu đề '{title}' không khớp bản thảo chuẩn '{exp_title}'"
+                    )
+                exp_page = expected_pages.get(exp_title)
+                if exp_page is not None and target_page != exp_page:
+                    bookmark_issues.append(
+                        f"Bookmark thứ {idx+1} ('{title}') trỏ tới trang {target_page}, nhưng trang bắt đầu thực tế theo bản thảo là {exp_page}"
+                    )
+
+            # Strict destination page content check (strictly on target page doc[target_page - 1], no adjacent page merging)
             if 1 <= target_page <= total_pages:
-                page_text = doc[target_page - 1].get_text()
-                if target_page < total_pages:
-                    page_text += " " + doc[target_page].get_text()
-                clean_words = [w for w in re.findall(r"\w+", title.lower()) if len(w) > 2 and w not in ("chương", "atlas", "mục", "lục", "phần", "nguồn", "thư", "viện")]
-                if clean_words:
-                    matched_words = [w for w in clean_words if w in page_text.lower()]
-                    if not matched_words:
-                        bookmark_issues.append(f"Bookmark '{title}' không tìm thấy nội dung tương ứng tại trang đích {target_page}")
+                page_text = " ".join((doc[target_page - 1].get_text() or "").split())
+                norm_title = " ".join(title.split())
+                if idx > 0 and "MỤC LỤC" in page_text and target_page <= 2:
+                    bookmark_issues.append(f"Bookmark '{title}' trỏ nhầm vào trang Mục lục (trang {target_page}) thay vì trang mở đầu chương")
+                elif norm_title not in page_text:
+                    clean_words = [w for w in re.findall(r"\w+", title.lower()) if len(w) > 2 and w not in ("chương", "atlas", "mục", "lục", "phần", "nguồn", "thư", "viện")]
+                    page_words = set(re.findall(r"\w+", page_text.lower()))
+                    matched_words = [w for w in clean_words if w in page_words]
+                    if len(matched_words) < max(2, len(clean_words) // 2):
+                        bookmark_issues.append(f"Bookmark '{title}' không tìm thấy nội dung/tiêu đề tương ứng tại trang đích {target_page}")
 
         if bookmark_issues:
             report["bookmarks"]["pass"] = False

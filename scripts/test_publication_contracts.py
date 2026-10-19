@@ -586,14 +586,62 @@ class PublicationContracts(unittest.TestCase):
                 self.assertFalse(rep["grayscale_compliance"]["pass"])
                 self.assertEqual(rep["overall_status"], "FAIL")
 
+    def test_audit_diagrams_fails_when_diagram_missing_from_end_of_book(self):
+        import audit_pdf_diagrams
+        from PIL import Image as PILImage
+        from reportlab.platypus import Image as RLImage
+        build_pdf.register_fonts()
+        with tempfile.TemporaryDirectory() as td:
+            img_p = Path(td) / 'test.png'
+            PILImage.new('L', (400, 200), 128).save(img_p)
+            pdf_p = Path(td) / 'test_missing_last_fig.pdf'
+            doc = SimpleDocTemplate(str(pdf_p), pagesize=(600, 800), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+            img1 = RLImage(str(img_p), width=200, height=100)
+            cap1 = Paragraph("Hình 1 — Sơ đồ kiến trúc đầu", book_style.get_book_styles()["caption"])
+            doc.build([Spacer(1, 10), PageBreak(), img1, Spacer(1, 4), cap1])
+            fake_ms = {
+                1: {"num": 1, "file": "chap1.md", "image_rel": "img1.png", "caption": "Sơ đồ kiến trúc đầu"},
+                2: {"num": 2, "file": "chap2.md", "image_rel": "img2.png", "caption": "Sơ đồ kiến trúc cuối sách"},
+            }
+            with patch.object(audit_pdf_diagrams, 'load_manuscript_figures', return_value=fake_ms):
+                rep = audit_pdf_diagrams.audit_diagrams_and_images(pdf_p)
+                self.assertTrue(len(rep["semantic_issues"]) > 0, "Audit must fail when last diagram is missing")
+                self.assertTrue(any("không khớp" in str(x) or "không tìm thấy" in str(x) for x in rep["semantic_issues"]))
+
+    def test_validate_publication_pdf_fails_when_bookmark_points_to_adjacent_page(self):
+        import validate_publication_pdf
+        import pymupdf as fitz
+        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf").resolve()
+        self.assertTrue(candidate_pdf.exists(), f"Candidate PDF {candidate_pdf} must exist")
+        with tempfile.TemporaryDirectory() as td:
+            tampered_pdf = Path(td) / "tampered_adjacent.pdf"
+            doc = fitz.open(candidate_pdf)
+            toc = doc.get_toc()
+            self.assertEqual(len(toc), 34, "Candidate must have exactly 34 bookmarks")
+            orig_page = toc[7][2]
+            toc[7][2] = orig_page - 1
+            doc.set_toc(toc)
+            doc.save(str(tampered_pdf))
+            doc.close()
+            with patch.object(validate_publication_pdf, 'PDF_PATH', tampered_pdf):
+                rep = validate_publication_pdf.run_preflight()
+                self.assertFalse(rep["bookmarks"]["pass"], "Preflight bookmarks must fail when bookmark points to adjacent page")
+                self.assertEqual(rep["overall_status"], "FAIL", "Overall status must fail on bookmark destination error")
+                self.assertTrue(any("trang" in iss.lower() or "không khớp" in iss.lower() for iss in rep["bookmarks"]["issues"]))
+
     def test_validate_publication_pdf_candidate_passes_all(self):
         import validate_publication_pdf
-        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf")
-        if candidate_pdf.exists():
-            with patch.object(validate_publication_pdf, 'PDF_PATH', candidate_pdf):
-                rep = validate_publication_pdf.run_preflight()
-                self.assertEqual(rep["overall_status"], "PASS", f"Candidate PDF must PASS preflight: {rep.get('bookmarks', {}).get('issues', [])}")
+        import pymupdf as fitz
+        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf").resolve()
+        self.assertTrue(candidate_pdf.exists(), f"Candidate PDF {candidate_pdf} must exist for preflight QA")
+        self.assertGreater(candidate_pdf.stat().st_size, 1_000_000, "Candidate PDF must not be empty")
+        with fitz.open(candidate_pdf) as doc:
+            self.assertGreater(len(doc), 0, "Candidate PDF must be readable and contain pages")
+        with patch.object(validate_publication_pdf, 'PDF_PATH', candidate_pdf):
+            rep = validate_publication_pdf.run_preflight()
+            self.assertEqual(rep["overall_status"], "PASS", f"Candidate PDF must PASS preflight: {rep.get('bookmarks', {}).get('issues', [])}")
 
 
 if __name__ == '__main__':
     unittest.main()
+
