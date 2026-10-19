@@ -659,7 +659,8 @@ FIG2_SPEC = {
             '• KHÔNG kế thừa lớp phân cấp (no inheritance).',
             '• KHÔNG nạp chồng hàm/toán tử (no overloading).',
             '• KHÔNG số học con trỏ mặc định.',
-            '• KHÔNG ép kiểu ngầm định (zero implicit cast).'
+            '• KHÔNG tự chuyển đổi giữa các kiểu số đã định',
+            '  kiểu (trừ hằng chưa định kiểu / untyped const).'
         ]),
     ],
     'conclusion_lines': [
@@ -832,8 +833,8 @@ FIG5_SPEC = {
             'side_title': 'PHÂN ĐỊNH LỖI & CÔNG CỤ',
             'side_lines': [
                 '• Compiler: chặn lỗi cú pháp & kiểu tĩnh.',
-                '• go vet: cảnh báo cấu trúc đáng ngờ.',
-                '• Runtime/Test: bắt panic, race & logic.'
+                '• go test: kiểm theo test case đã viết.',
+                '• go test -race: dò race trên đường chạy.'
             ],
         },
         {

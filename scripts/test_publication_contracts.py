@@ -722,11 +722,17 @@ class PublicationContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             render_figures_1_6.render_fig5(custom_spec=bad_spec_ssa, save=False)
 
-        # Verify inaccurate "Zero warnings" claim is completely absent from Fig 5 spec and PUML
+        # Verify inaccurate "Zero warnings", "zero implicit cast", and "bắt panic, race & logic" claims are absent,
+        # and exact Go Specification / toolchain distinctions are present in Fig 2 and Fig 5 specs/PUMLs
         puml_map = render_figures_1_6.build_expected_puml_contents()
+        fig2_puml = puml_map['go-idea-lineage.puml'].lower()
+        self.assertNotIn("zero implicit cast", fig2_puml)
+        self.assertIn("untyped const", fig2_puml)
         fig5_puml = puml_map['compiler-doc-go.puml'].lower()
         self.assertNotIn("zero warnings", fig5_puml)
         self.assertNotIn("mọi sai lệch là lỗi", fig5_puml)
+        self.assertNotIn("bắt panic, race & logic", fig5_puml)
+        self.assertIn("go test -race", fig5_puml)
 
     def test_render_fig6_negative_scope2_border_cutting_code_detected(self):
         import sys

@@ -15,7 +15,7 @@ rectangle "CỔNG CHẶN: SYNTAX ERROR\n---\n• Lỗi cú pháp, thiếu dấu,
 rectangle "TẦNG 2: KIỂM TRA KIỂU & NGỮ NGHĨA (cmd/compile/internal/types2)\n---\n• Name & Constant Check: Phân giải tên theo phạm vi (scope), Đánh giá hằng & suy luận kiểu\n• Strict Type Checker: Kiểm tra tương thích kiểu tĩnh, Chặn biến hoặc import thừa" as layer2
 rectangle "CỔNG CHẶN: TYPE ERROR\n---\n• Sai kiểu, undefined, biến/import thừa.\n• Báo lỗi biên dịch (compiler error).\n• Dừng ngay, không tạo IR hay mã máy." as side2
 rectangle "TẦNG 3: IR, MIDDLE-END & SSA BACKEND (noder, ir, walk, ssa, obj)\n---\n• 1. Noding & IR: Chuyển sang IR, Inlining & escape\n• 2. Walk & SSA: Hạ cấu trúc lệnh, Dựng & tối ưu SSA\n• 3. Codegen (obj): Hạ mã theo CPU, Tạo tệp .a / .o" as layer3
-rectangle "PHÂN ĐỊNH LỖI & CÔNG CỤ\n---\n• Compiler: chặn lỗi cú pháp & kiểu tĩnh.\n• go vet: cảnh báo cấu trúc đáng ngờ.\n• Runtime/Test: bắt panic, race & logic." as side3
+rectangle "PHÂN ĐỊNH LỖI & CÔNG CỤ\n---\n• Compiler: chặn lỗi cú pháp & kiểu tĩnh.\n• go test: kiểm theo test case đã viết.\n• go test -race: dò race trên đường chạy." as side3
 rectangle "TẦNG 4: LINKER & ĐÓNG GÓI THỰC THI (cmd/link)\n---\n• 1. Symbol Link: Phân giải ký hiệu, giữa các package\n• 2. Runtime Link: Gắn Go runtime, (GC, scheduler)\n• 3. Emit Binary: Xuất tệp thực thi, (ELF / PE / Mach-O)" as layer4
 rectangle "TỆP THỰC THI ĐỘC LẬP\n---\n• Đóng gói sẵn Go runtime & GC.\n• Không phụ thuộc máy ảo (Zero VM).\n• Chạy trực tiếp trên hệ điều hành đích." as side4
 
