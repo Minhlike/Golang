@@ -16,10 +16,10 @@
 
 | Thông số kỹ thuật | Bản Master Hiện hành (Golang_Master.pdf) | Bản Sao lưu Rollback (Golang_Master.prev.pdf) | Bản Ứng viên (Golang_Master.candidate.pdf) |
 | :--- | :--- | :--- | :--- |
-| **Trạng thái** | **OFFICIAL PRODUCTION MASTER** | **ROLLBACK BACKUP VERIFIED** | **RELEASE CANDIDATE (586P)** |
+| **Trạng thái** | **OFFICIAL PRODUCTION MASTER** | **ROLLBACK BACKUP VERIFIED** | **RELEASE CANDIDATE (588P)** |
 | **Mã băm SHA-256** | da7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5 | VERIFIED | da7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5 |
-| **Dung lượng byte** | 14,814,976 bytes | 14,829,560 bytes | 14,814,976 bytes |
-| **Tổng số trang** | **586 trang ISO A4** | 590 trang | **586 trang ISO A4** |
+| **Dung lượng byte** | 14,816,578 bytes | 14,829,560 bytes | 14,816,578 bytes |
+| **Tổng số trang** | **588 trang ISO A4** | 590 trang | **588 trang ISO A4** |
 | **Trang Bìa** | **Bìa kiến trúc Concept 1 ISO A4 Monograph** | Bìa Concept 1 | **Bìa kiến trúc Concept 1 ISO A4 Monograph** |
 | **Zero References** | **Đã xóa 100% trích dẫn rác / @references trong văn xuôi** | — | **100% Clean Narrative** |
 | **PDF Bookmarks** | **34 mục phân cấp chuẩn** | 34 mục | **34 mục phân cấp chuẩn** |
@@ -76,8 +76,8 @@ Reviewer đã phát hiện sự khác biệt giữa con số 57 methods trong `s
 AUTOMATED PUBLICATION PDF PREFLIGHT SUMMARY
 ================================================================================
 File:                      D:\Golang\Golang_Master.pdf
-SHA-256:                   ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5
-Total Pages:               586
+SHA-256:                   c3db08a711809bbb79cf5326442c836688b1c887c5018484abb6d31183b12136
+Total Pages:               588
 Page Geometry:             PASS (ISO A4 595.28 x 841.89 pt)
 Actually Rendered Fonts:   JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular
 Fonts Embedded:            PASS (100% embedded)

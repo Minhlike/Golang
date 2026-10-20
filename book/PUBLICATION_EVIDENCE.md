@@ -4,16 +4,16 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 
 ---
 
-# PHẦN A: BẰNG CHỨNG ẤN BẢN MASTER ĐÃ PROMOTE (PROMOTED PRODUCTION MASTER EVIDENCE — 586 TRANG)
+# PHẦN A: BẰNG CHỨNG ẤN BẢN MASTER ĐÃ PROMOTE (PROMOTED PRODUCTION MASTER EVIDENCE — 588 TRANG)
 
 ## 1. Định danh ấn bản Production Master (Golang_Master.pdf)
 
 - **Tập tin Production Master**: Golang_Master.pdf (**PROMOTED & VERIFIED**)
-- **Mã băm SHA-256**: ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5
-- **Dung lượng chính xác**: 14,814,976 bytes
-- **Số trang thực tế**: **586 trang** (ISO A4 dọc .28 \times 841.89\text{ pt}$)
+- **Mã băm SHA-256**: c3db08a711809bbb79cf5326442c836688b1c887c5018484abb6d31183b12136
+- **Dung lượng chính xác**: 14,816,578 bytes
+- **Số trang thực tế**: **588 trang** (ISO A4 dọc .28 \times 841.89\text{ pt}$)
 - **Tập tin Sao lưu Rollback**: Golang_Master.prev.pdf — **VERIFIED**
-- **Tập tin Ứng viên Đối chiếu**: tmp/pdfs/Golang_Master.candidate.pdf (14,814,976 bytes, SHA-256: ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5)
+- **Tập tin Ứng viên Đối chiếu**: tmp/pdfs/Golang_Master.candidate.pdf (14,816,578 bytes, SHA-256: c3db08a711809bbb79cf5326442c836688b1c887c5018484abb6d31183b12136)
 - **Khớp nguyên byte**: MASTER_SHA256 == CANDIDATE_SHA256 (**100% MATCH**)
 - **Trang bìa**: Concept 1 Systems Architecture Spec ISO A4 Monograph (artwork/front_cover_page.pdf)
 - **Mục lục**: Trang 2 (MỤC LỤC) đồng bộ 1:1 với 34 bookmark và số trang thực tế toàn sách
@@ -21,23 +21,23 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Nhánh khắc phục**: fix/final-book-acceptance
 - **Trạng thái xuất bản**: MASTER_PROMOTED_AND_VERIFIED
 
-## 2. Phương pháp và phân loại kiểm định trên ấn bản Master 586 trang
+## 2. Phương pháp và phân loại kiểm định trên ấn bản Master 588 trang
 
 Hệ thống thẩm định áp dụng ranh giới phân định chặt chẽ giữa kiểm tra tự động và kiểm tra trực quan trực tiếp:
 
 1. **AUTOMATED_GEOMETRY_PASS (Kiểm định hình học tự động qua PDF AST/DOM):**
-   - **Phạm vi:** **586/586 trang (100%)**
+   - **Phạm vi:** **586/588 trang (100%)**
    - **Tiêu chuẩn kiểm tra:** Kích thước ISO A4 (.28 \times 841.89\text{ pt}$), rotation = 0, lề đối xứng (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), 100% font nhúng hợp lệ (JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular), 0 ký tự lỗi (mojibake/�), 0 trang trắng, 0 trang trùng lặp, 0 tràn viền (clipping), 0 điểm ảnh màu (grayscale 100%), và 34 mục bookmarks phân cấp chuẩn xác.
 
 2. **DIRECT_VISUAL_PASS (Kiểm tra trực quan trực tiếp):**
-   - **Phạm vi:** **64 trang** đã được quan sát và thẩm định qua tệp ảnh raster.
+   - **Phạm vi:** **65 trang** đã được quan sát và thẩm định qua tệp ảnh raster.
    - **Danh mục trang đã kiểm tra trực quan:**
      - Trang 1 (Bìa kiến trúc Concept 1) & Trang 2 (Mục lục 4 Phần vĩ mô).
      - Toàn bộ 58 trang chứa sơ đồ Hình 01–58.
      - Các trang khắc phục lỗi phân trang tiêu biểu (Đóng Chương 1 & Mở Chương 2, Đóng Chương 25 & Mở Chương 26, Đóng Chương 28 & Mở Chương 29).
 
 3. **PENDING_DIRECT_VISUAL_REVIEW (Chờ nghiệm thu trực quan độc lập):**
-   - **Phạm vi:** **522 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
+   - **Phạm vi:** **523 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
    - Toàn bộ thông số trạng thái được theo dõi minh bạch tại ledger [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
 ---

@@ -343,18 +343,33 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             for c in range(columns)
         ]
         # Token-aware minimum: ensure column is wide enough for longest
-        # unbreakable mono token (JetBrains Mono 11pt ≈ 6.6pt/char + 14pt padding)
+        # unbreakable token (mono code token ~6.6pt/char or text word ~5.5pt/char + 14pt padding)
         MONO_CHAR_PT = 6.6
+        SERIF_CHAR_PT = 5.5
         COL_PAD_PT = 14.0
         def _token_min(c: int) -> float:
             codes_in_col = []
+            words_in_col = []
             for row in [rows[0], *rows[2:]]:
                 codes_in_col.extend(re.findall(r"`([^`]+)`", row[c]))
-            if not codes_in_col:
-                return 2.2 * cm
-            longest = max(len(t) for t in codes_in_col)
-            needed = longest * MONO_CHAR_PT + COL_PAD_PT
-            return min(max(needed, 2.2 * cm), 6.0 * cm)  # cap at 6cm
+                clean = re.sub(r"[\*\_`]", "", row[c])
+                for w in clean.split():
+                    words_in_col.append(w)
+
+            needed_mono = 0
+            if codes_in_col:
+                longest_mono = max(len(t) for t in codes_in_col)
+                needed_mono = longest_mono * MONO_CHAR_PT + COL_PAD_PT
+
+            needed_word = 0
+            if words_in_col:
+                longest_word = max(len(w) for w in words_in_col)
+                needed_word = longest_word * SERIF_CHAR_PT + COL_PAD_PT
+
+            needed = max(needed_mono, needed_word)
+            min_col = max((avail_width / columns) * 0.35, 1.6 * cm)
+            max_cap = min(6.0 * cm, avail_width * 0.45)
+            return min(max(needed, min_col), max_cap)
 
         col_mins = [_token_min(c) for c in range(columns)]
 
