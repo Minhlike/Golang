@@ -17,6 +17,10 @@ from pypdf import PdfReader
 
 
 class PublicationContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        build_pdf.register_fonts()
+
     def test_character_diagram_preflight_blocks_render_before_pdf_write(self):
         with patch('validate_manuscript_diagrams.validate', return_value=['chapter:21: character diagram']):
             with patch.object(build_pdf, 'build_document') as renderer:
@@ -953,6 +957,100 @@ class PublicationContracts(unittest.TestCase):
                 zombie_s = next(s for s in strings if "zombie process trong OS" in s.text)
                 delta_y = abs(subreaper_s.y - zombie_s.y)
                 self.assertLessEqual(delta_y, 18.0, f"Figure 54 zombie process text must not fall to bottom: delta_y={delta_y} pt")
+
+    def test_lead_in_colon_stays_with_following_table(self):
+        build_pdf.register_fonts()
+        styles = book_style.get_book_styles()
+        with tempfile.TemporaryDirectory() as task_dir:
+            source = Path(task_dir) / 'test_chapter.md'
+            source.write_text('TABLE_INTRO_COLON:\n\n| H1 | H2 |\n| --- | --- |\n| CELL_A | CELL_B |\n', encoding='utf-8')
+            story = []
+            build_pdf.add_markdown(story, source, styles, 'BookMono', False, {'figure': 0, 'table': 0})
+        self.assertTrue(story[0].getKeepWithNext())
+        merged = build_pdf.keep_headings_with_content(story)
+        self.assertTrue(any(isinstance(f, KeepTogether) for f in merged))
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 600), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30).build(
+            build_pdf.keep_headings_with_content([Spacer(1, 490), *story])
+        )
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertEqual(len(pages), 2)
+        self.assertNotIn('TABLE_INTRO_COLON', pages[0])
+        self.assertIn('TABLE_INTRO_COLON', pages[1])
+        self.assertIn('CELL_A', pages[1])
+
+    def test_multiline_table_splits_across_pages_with_repeated_header(self):
+        build_pdf.register_fonts()
+        styles = book_style.get_book_styles()
+        with tempfile.TemporaryDirectory() as task_dir:
+            source = Path(task_dir) / 'test_chapter.md'
+            rows = ["| Verb | Meaning | Example |", "| :--- | :--- | :--- |"]
+            for i in range(12):
+                rows.append(f"| %v{i} | Description for verb {i} | fmt.Printf example {i} |")
+            source.write_text("\n".join(rows) + "\n", encoding='utf-8')
+            story = []
+            build_pdf.add_markdown(story, source, styles, 'BookMono', False, {'figure': 0, 'table': 0})
+        tables = [f for f in story if isinstance(f, Table)]
+        self.assertEqual(len(tables), 1)
+        self.assertEqual(tables[0].repeatRows, 1)
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 300), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30).build(
+            build_pdf.keep_headings_with_content(story)
+        )
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertGreaterEqual(len(pages), 2, "12-row table should split cleanly across pages")
+        for p in pages:
+            self.assertIn("Verb", p, "Header row must repeat across split pages")
+
+    def test_heading_with_short_lead_in_moves_with_following_code_box(self):
+        build_pdf.register_fonts()
+        styles = book_style.get_book_styles()
+        with tempfile.TemporaryDirectory() as task_dir:
+            source = Path(task_dir) / 'test_chapter.md'
+            source.write_text('## HEADING_SENTINEL\n\nShort lead-in sentence.\n\n```go\nCODE_PAYLOAD_SENTINEL\n```\n', encoding='utf-8')
+            story = []
+            build_pdf.add_markdown(story, source, styles, 'BookMono', False, {'figure': 0, 'table': 0})
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 600), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30).build(
+            build_pdf.keep_headings_with_content([Spacer(1, 480), *story])
+        )
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertEqual(len(pages), 2)
+        self.assertNotIn('HEADING_SENTINEL', pages[0])
+        self.assertIn('HEADING_SENTINEL', pages[1])
+        self.assertIn('CODE_PAYLOAD_SENTINEL', pages[1])
+
+    def test_heading_before_figure_moves_with_figure(self):
+        heading = Paragraph('FIGURE_HEADING_SENTINEL', ParagraphStyle('H2', keepWithNext=True))
+        figure_box = KeepTogether([Spacer(1, 4), Table([['IMAGE']], rowHeights=[350]), Paragraph('Caption', ParagraphStyle('Caption'))])
+        merged = build_pdf.keep_headings_with_content([heading, figure_box])
+        self.assertEqual(len(merged), 1)
+        self.assertIsInstance(merged[0], KeepTogether)
+        output = BytesIO()
+        SimpleDocTemplate(output, pagesize=(400, 600), leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30).build(
+            [Spacer(1, 250), *merged]
+        )
+        pages = [page.extract_text() for page in PdfReader(output).pages]
+        self.assertEqual(len(pages), 2)
+        self.assertNotIn('FIGURE_HEADING_SENTINEL', pages[0])
+        self.assertIn('FIGURE_HEADING_SENTINEL', pages[1])
+
+    def test_long_lead_in_over_160_chars_stays_with_follower(self):
+        build_pdf.register_fonts()
+        styles = book_style.get_book_styles()
+        long_lead_in = (
+            "Dưới đây là bảng tổng hợp các quy tắc ngữ nghĩa quan trọng nhất mà kỹ sư cần ghi nhớ "
+            "để tránh các lỗi cấp phát vùng nhớ heap không đáng có trong quá trình tối ưu hóa mã nguồn:"
+        )
+        self.assertGreater(len(long_lead_in), 160)
+        self.assertLessEqual(len(long_lead_in), 280)
+        with tempfile.TemporaryDirectory() as task_dir:
+            source = Path(task_dir) / 'test_chapter.md'
+            source.write_text(f"{long_lead_in}\n\n| K1 | K2 |\n| --- | --- |\n| V1 | V2 |\n", encoding='utf-8')
+            story = []
+            build_pdf.add_markdown(story, source, styles, 'BookMono', False, {'figure': 0, 'table': 0})
+        self.assertTrue(story[0].getKeepWithNext())
+        self.assertEqual(story[0].style.name, 'body-intro')
 
 
 if __name__ == '__main__':

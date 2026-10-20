@@ -289,16 +289,27 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
     pending_image: Image | None = None
     in_references = False
     in_code = False
+    after_heading = False
 
-    def flush_paragraph(before_code: bool = False) -> None:
-        nonlocal paragraph_lines
+    def is_follower_start(candidate_line: str) -> bool:
+        c = candidate_line.strip()
+        return c.startswith(("```", "~~~", "|", "@table", "!["))
+
+    def flush_paragraph(before_follower: bool = False) -> None:
+        nonlocal paragraph_lines, after_heading
         if paragraph_lines:
             prose = " ".join(paragraph_lines)
             style = s["body"]
-            if before_code and prose.rstrip().endswith(":") and len(prose) <= 160:
+            is_colon = prose.rstrip().endswith(":")
+            is_short_after_heading = after_heading and len(prose) <= 220
+            is_explicit_intro = any(k in prose.lower() for k in ("bảng dưới", "sơ đồ dưới", "hình dưới", "đoạn mã dưới", "ví dụ dưới"))
+            if before_follower and (is_colon or is_short_after_heading or is_explicit_intro):
+                style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
+            elif is_colon and len(prose) <= 280:
                 style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
             story.append(Paragraph(inline(prose, mono), style))
             paragraph_lines = []
+            after_heading = False
 
     def flush_table() -> None:
         nonlocal table_lines, table_caption
@@ -379,17 +390,17 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
         flowables = []
         if table_caption:
             numbering["table"] += 1
-            flowables.extend([
+            cap_style = ParagraphStyle("table_caption", parent=s["caption"], keepWithNext=True)
+            flowables.append(
                 Paragraph(f"Bảng {numbering['table']} — {inline(table_caption, mono)}",
-                          s["caption"]),
-                Spacer(1, 4),
-            ])
+                          cap_style)
+            )
         flowables.append(table)
         flowables.append(Spacer(1, 10))
-        # Fix #2: use len(data) — actual rendered rows (header + data, no separator).
-        # len(rows) includes the Markdown separator row causing off-by-one.
-        # Threshold 14: format-verb table has 13 rendered rows (1 header + 12 verbs).
-        if len(data) <= 14:
+        # Fix ISS-04: small tables (<= 5 rows) remain unified with KeepTogether.
+        # Larger tables (> 5 rows) split cleanly across pages with repeatRows=1,
+        # preventing large artificial bottom whitespace gaps.
+        if len(data) <= 5:
             story.append(KeepTogether(flowables))
         else:
             story.extend(flowables)
@@ -465,7 +476,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         flush_image()
         if line.startswith(("```", "~~~")):
-            flush_paragraph(before_code=not in_code)
+            flush_paragraph(before_follower=not in_code)
             if in_code:
                 add_code_block()
             in_code = not in_code
@@ -474,12 +485,12 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             code_lines.append(line)
             continue
         if line.startswith("|"):
-            flush_paragraph()
+            flush_paragraph(before_follower=True)
             table_lines.append(line)
             continue
         flush_table()
         if line.startswith("@table "):
-            flush_paragraph()
+            flush_paragraph(before_follower=True)
             table_caption = line[7:]
             continue
         if line.strip() == "@references":
@@ -493,7 +504,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         image = re.fullmatch(r"!\[[^]]*\]\(([^)]+)\)", line)
         if image:
-            flush_paragraph()
+            flush_paragraph(before_follower=True)
             asset = (chapter.parent / image.group(1)).resolve()
             if not asset.exists():
                 raise FileNotFoundError(f"Thiếu diagram: {asset}")
@@ -519,12 +530,13 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         if not line.strip():
             following = next((candidate for candidate in lines[line_index + 1:] if candidate.strip()), '')
-            flush_paragraph(before_code=following.startswith(('```', '~~~')))
+            flush_paragraph(before_follower=is_follower_start(following))
             continue
         heading = re.match(r"^(#{1,4})\s+(.+)$", line)
         if heading:
             flush_paragraph()
             in_references = False
+            after_heading = True
             level = len(heading.group(1))
             # H4 answer labels use the existing minor-heading style. Retain
             # the structural boundary without introducing a new design system.
