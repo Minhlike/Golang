@@ -291,9 +291,3 @@ Nếu câu trả lời là “không”, vẫn cần xét các thành phần bê
 Khi một hàm tiếp nhận hoặc trả về lát cắt, câu hỏi thiết kế không phải là “Go có sao chép hay không?” mà là: thực thể nào được quyền thay đổi vùng lưu trữ này, và trong khoảng thời gian nào? Một hàm lọc dữ liệu có thể trả về một góc nhìn (*view*) để triệt tiêu chi phí cấp phát bộ nhớ; khi đó bên gọi (*caller*) phải được thông báo rằng góc nhìn này vẫn dùng chung vùng đệm dữ liệu. Một hàm tạo phản hồi (*response*) hoặc bản xem trước (*preview*) cần trả về một khối dữ liệu độc lập, bởi bên gọi không có lý do để dự đoán một thay đổi tiếp theo lại làm biến dạng dữ liệu đầu vào.
 
 Không có lựa chọn nào là miễn phí. Thao tác sao chép tiêu tốn tài nguyên cấp phát bộ nhớ và thời gian tính toán; chia sẻ vùng nhớ tiết kiệm chi phí nhưng đòi hỏi khế ước về quyền sở hữu phải nghiêm ngặt. Trước khi tối ưu hóa, hãy thiết lập ca kiểm thử khẳng định rõ hành vi biến đổi dữ liệu mà giao diện API cam kết. Sau đó, khi điều tra một lỗi bất thường, hãy tuần tự lần theo ba câu hỏi: giá trị nào được gán, giá trị đó tham chiếu tới vùng lưu trữ nào, và những luồng thực thi nào còn có thể chạm tới vùng nhớ ấy. Đó là phương pháp biến hiện tượng “lát cắt khó lường” thành một quy trình điều tra kỹ thuật có thể kiểm chứng được.
-
-@references
-1. Go Team. Go Specification, Slice types và Full slice expressions. go.dev/ref/spec#Slice_types; go.dev/ref/spec#Full_slice_expressions
-2. Go Team. Package `bytes`, `Clone`, Go 1.27.1. pkg.go.dev/bytes@go1.27.1#Clone
-3. Go Team. Package `slices`, `Clone`, Go 1.27.1. pkg.go.dev/slices@go1.27.1#Clone
-4. Go Team. Go Garbage Collector Guide, Tracing Garbage Collection. go.dev/doc/gc-guide#Tracing_Garbage_Collection

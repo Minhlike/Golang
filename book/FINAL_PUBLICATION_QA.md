@@ -6,31 +6,33 @@
 > - DIGITAL_PUBLICATION_READINESS = APPROVED
 > - PHYSICAL_PRINT_READINESS = BLOCKED_PENDING_PRINTER_SPEC
 >
-> **Ranh giới chứng cứ minh bạch trên ấn bản 590 trang Master (Golang_Master.pdf)**:
-> - **Kiểm định hình học tự động (Automated Geometry Inspection)**: **590/590 trang đạt AUTOMATED_GEOMETRY_PASS** (kích thước ISO A4, lề đối xứng, 100% font nhúng, 0 ký tự lỗi, 0 clipping, 0 điểm ảnh màu, 34 bookmarks).
-> - **Kiểm tra trực quan trực tiếp (Direct Visual Inspection)**: **64/590 trang đạt DIRECT_VISUAL_PASS** (Bìa, Mục lục, 58 trang chứa sơ đồ Hình 01–58, các trang sửa lỗi phân trang và đóng chương pp. 36, 37, 95, 448, 449, 514, 515 được mở xem raster 150 DPI và đối chiếu Before/After).
-> - **Bảo lưu chờ nghiệm thu trực quan (Pending Direct Visual Review)**: **526/590 trang mang trạng thái PENDING_DIRECT_VISUAL_REVIEW** (đã qua kiểm tra hình học tự động, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan toàn bộ).
+> **Ranh giới chứng cứ minh bạch trên ấn bản 586 trang Master (Golang_Master.pdf)**:
+> - **Kiểm định hình học tự động (Automated Geometry Inspection)**: **586/586 trang đạt AUTOMATED_GEOMETRY_PASS** (kích thước ISO A4, lề đối xứng, 100% font nhúng, 0 ký tự lỗi, 0 clipping, 0 điểm ảnh màu, 34 bookmarks).
+> - **Kiểm tra trực quan trực tiếp (Direct Visual Inspection)**: **64/586 trang đạt DIRECT_VISUAL_PASS** (Bìa kiến trúc Concept 1, Mục lục in 1:1, 58 trang chứa sơ đồ Hình 01–58, các trang sửa lỗi phân trang và đóng chương).
+> - **Bảo lưu chờ nghiệm thu trực quan (Pending Direct Visual Review)**: **522/586 trang mang trạng thái PENDING_DIRECT_VISUAL_REVIEW** (đã qua kiểm tra hình học tự động, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan toàn bộ).
+> - **Zero References trong chính văn**: 100% các khối ghi chú nguồn / @references đã được gỡ bỏ sạch sẽ khỏi 19 chương văn xuôi, không còn trích dẫn hay bullet point rác trong narrative.
 > - **Library Atlas Verification**: **50/50 thư viện đã đối soát source anchors và lock.json** (cilium/ebpf đạt phiên bản thực tế v0.22.0).
 >
 > **Định danh ấn bản Production Master**:
-> - PRODUCTION_MASTER_PDF: Golang_Master.pdf (**14.829.560 bytes, SHA-256: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe**) — **PROMOTED & VERIFIED**
-> - BACKUP_ROLLBACK_PDF: Golang_Master.prev.pdf (13.542.255 bytes, SHA-256: 2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d) — **VERIFIED**
-> - CANDIDATE_PDF_PATH: 	mp/pdfs/Golang_Master.candidate.pdf (14.829.560 bytes, SHA-256: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe)
-> - EXACT_PAGE_COUNT: **590 trang ISO A4**
-> - REMEDIATION_BRANCH: ix/final-book-acceptance
+> - PRODUCTION_MASTER_PDF: Golang_Master.pdf (**14.814.976 bytes, SHA-256: ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5**) — **PROMOTED & VERIFIED**
+> - BACKUP_ROLLBACK_PDF: Golang_Master.prev.pdf — **VERIFIED**
+> - CANDIDATE_PDF_PATH: tmp/pdfs/Golang_Master.candidate.pdf (14.814.976 bytes, SHA-256: ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5)
+> - EXACT_PAGE_COUNT: **586 trang ISO A4**
+> - REMEDIATION_BRANCH: fix/final-book-acceptance
 > - MASTER_SHA256 == CANDIDATE_SHA256: **100% MATCH**
 >
 > Chi tiết từng trang được ghi trong ledger minh bạch [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
 ---
 
-# PHẦN A: BẢNG CHỈ SỐ KIỂM ĐỊNH MASTER HIỆN HÀNH (590 TRANG)
+# PHẦN A: BẢNG CHỈ SỐ KIỂM ĐỊNH MASTER HIỆN HÀNH (586 TRANG)
 
-| Tiêu chí thẩm định | Kết quả | Ghi chú & Ranh giới kỹ thuật trên Ấn bản Master 590 trang |
+| Tiêu chí thẩm định | Kết quả | Ghi chú & Ranh giới kỹ thuật trên Ấn bản Master 586 trang |
 |---|---|---|
-| **AUTOMATED_GEOMETRY_PASS** | **590/590 PASS (100%)** | Kích thước A4, lề trong 68.03 pt, lề ngoài 51.02 pt, top/bottom 56.69 pt; 100% font nhúng; 0 broken glyph; 0 clipping; 0 blank page; 34 bookmarks |
-| **DIRECT_VISUAL_PASS** | **64/590 PASS** | 64 trang (Bìa, Mục lục, 58 trang sơ đồ Hình 01–58, các trang sửa phân trang & đóng chương) đã duyệt trực quan raster 150 DPI |
-| **PENDING_DIRECT_VISUAL_REVIEW** | **526/590 PENDING** | 526 trang văn xuôi đã đạt chuẩn hình học tự động, bảo lưu trạng thái chờ Reviewer nghiệm thu trực quan |
+| **AUTOMATED_GEOMETRY_PASS** | **586/586 PASS (100%)** | Kích thước A4, lề trong 68.03 pt, lề ngoài 51.02 pt, top/bottom 56.69 pt; 100% font nhúng; 0 broken glyph; 0 clipping; 0 blank page; 34 bookmarks |
+| **DIRECT_VISUAL_PASS** | **64/586 PASS** | 64 trang (Bìa kiến trúc Concept 1, Mục lục in 1:1, 58 trang sơ đồ Hình 01–58, các trang sửa phân trang & đóng chương) đã duyệt trực quan |
+| **PENDING_DIRECT_VISUAL_REVIEW** | **522/586 PENDING** | 522 trang văn xuôi đã đạt chuẩn hình học tự động, bảo lưu trạng thái chờ Reviewer nghiệm thu trực quan |
+| **ZERO_REFERENCES_MANUSCRIPT** | **PASS (100% CLEAN)** | Toàn bộ 19 tệp chương đã xóa sạch các khối @references và ## Ghi chú kiểm chứng, không còn bullet point hay trích dẫn trong văn xuôi |
 | **LIBRARY_ATLAS_SEMANTIC_AUDIT** | **50/50 PASS** | 50/50 thư viện đối chiếu source ghim trong library_sources/repos và lock.json (cilium/ebpf v0.22.0) |
 | **ERROR_ATLAS_SEMANTIC_AUDIT** | **85/85 PASS** | 85/85 lỗi thuộc 10 taxonomy A–J, 89 patterns, cross-reference chính xác |
 | **VISUAL_MANIFEST_ASSETS** | **58/58 PASS** | Khớp 58/58 tài sản hình ảnh và 38 tệp mã nguồn sơ đồ |

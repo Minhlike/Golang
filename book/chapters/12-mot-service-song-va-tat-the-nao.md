@@ -239,12 +239,3 @@ Giá trị zero không có cùng nghĩa ở mọi trường. `ReadTimeout` và `
 Phương thức `Server.Shutdown` không ngắt các yêu cầu đang hoạt động và không tự hủy `r.Context()` của hàm xử lý. Hàm xử lý vẫn phải tôn trọng `r.Context()` khi tương tác với cơ sở dữ liệu, máy khách gọi ra ngoài hoặc luồng xử lý nền, bởi vì yêu cầu gửi đến có vòng đời độc lập. Chương 9 và Chương 11 đã cung cấp hai mảnh ghép còn lại: goroutine phải có đường thoát khi ngữ cảnh bị hủy; yêu cầu của máy khách phải tiếp nhận ngữ cảnh từ bên gọi. Việc tắt êm dịu chỉ thực sự đạt được khi các ranh giới bên trong sẵn sàng trả lại quyền điều khiển.
 
 Một dịch vụ đáng tin cậy được đo lường tại các ranh giới: đầu vào bị giới hạn ở đâu, mã nghiệp vụ tiếp nhận dữ liệu gì, phản hồi và nhật ký có phân tách rõ ràng giữa thông tin công khai và nội bộ hay không, máy chủ ngừng nhận việc khi nào và yêu cầu cũ được bao nhiêu thời gian để kết thúc. Kết nối WebSocket cần một bên sở hữu riêng biệt. Trả lời trọn vẹn những câu hỏi đó, dịch vụ mới có một vòng đời hoàn chỉnh để vận hành thay vì chỉ gọi `ListenAndServe` một cách phó mặc.
-
-@references
-1. Go Team. Package `net/http`, phần Handler, Server fields, `Shutdown` và `ResponseWriter`. pkg.go.dev/net/http
-2. Go Team. Package `net/http/httptest`, phần `ResponseRecorder` và test server. pkg.go.dev/net/http/httptest
-3. Go Team. Package `os/signal`, phần `NotifyContext`. pkg.go.dev/os/signal
-4. Go Team. Security Best Practices for Go Developers. go.dev/doc/security/best-practices
-5. Go Team. Package `context`, Overview và `WithTimeout`, Go 1.27.1. pkg.go.dev/context@go1.27.1#WithTimeout
-6. Go Team. Source `context/context.go`, `cancelCtx.propagateCancel` và `timerCtx.cancel`, tag go1.27.1. github.com/golang/go/blob/go1.27.1/src/context/context.go
-7. Go Team. Analyzer `lostcancel`, kiểm tra CancelFunc và giới hạn phân tích tại lời gọi. pkg.go.dev/golang.org/x/tools/go/analysis/passes/lostcancel

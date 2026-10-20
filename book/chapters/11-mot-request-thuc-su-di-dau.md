@@ -136,11 +136,3 @@ go test -race ./fixed
 Kiểm thử `TestLiteralIPNeedsNoDNSAndServerMayPreventReuse` đặt thêm một phản ví dụ: máy chủ cục bộ dùng địa chỉ IP và gửi `Connection: close`. Hai yêu cầu đều đọc hết và đóng thân nhưng không có điểm móc DNS nào và không tái sử dụng kết nối. Điều này tách trách nhiệm đóng tài nguyên của bên gọi khỏi quyền quyết định giữ kết nối của hai phía.
 
 Khi điều tra yêu cầu chậm, hãy kiểm tra kết nối có được tái sử dụng, giới hạn nào đã kích hoạt, các mốc DNS/TLS/byte đầu tiên nằm ở đâu, thân phản hồi có được đóng và việc thử lại có an toàn cho nghiệp vụ hay không. Một dòng nhật ký 1.8 giây là điểm khởi đầu; kết luận cần dữ liệu ở đúng chặng đang nghi ngờ.
-
-@references
-1. Go Team. Package `net`, phần Name Resolution và `Resolver.LookupHost`. pkg.go.dev/net
-2. Go Team. Package `crypto/tls`, phần `Config.ServerName` và `InsecureSkipVerify`. pkg.go.dev/crypto/tls
-3. Go Team. Package `net/http`, phần Clients and Transports, `Request`, `Client` và `Transport`. pkg.go.dev/net/http
-4. Go Team. Package `net/http/httptrace`. pkg.go.dev/net/http/httptrace
-5. Go Team. Go 1.27 Release Notes, net/http: bounded drain khi đóng HTTP/1 response body. go.dev/doc/go1.27
-6. Go Team. `crypto/tls` và `crypto/x509`, Go 1.27.1: `RequireAndVerifyClientCert`, `VerifiedChains`, `ServerName`, `Certificate.Verify` và `VerifyHostname`. pkg.go.dev/crypto/tls@go1.27.1; pkg.go.dev/crypto/x509@go1.27.1

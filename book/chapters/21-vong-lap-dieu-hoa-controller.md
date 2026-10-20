@@ -257,10 +257,3 @@ Bộ kiểm thử dùng kênh truyền để xác nhận bộ thực thi nhận 
 Chương này xây dựng mô hình điều hòa tối giản: quan sát, so sánh sai lệch, thực thi hành động, rồi quan sát lại. Kết hợp với tín hiệu từ `opsprobe` (Chương 20), nó cho ta một nơi để thấy rõ vì sao kết quả hành động và trạng thái quan sát thực tế là hai bằng chứng kỹ thuật hoàn toàn độc lập.
 
 Đây là nền tảng trực tiếp cho Chương 22, nơi cùng các câu hỏi ấy gặp List/Watch, bộ nhớ đệm và hàng đợi công việc của `client-go`; Chương 23 mới thêm API riêng, trạng thái, quyền sở hữu và cơ chế dọn dẹp trước khi xóa (finalizer) của một operator. Hàng đợi trong chương này là mô hình tái lập để nắm bắt cơ chế, không phải bản thay thế cho mã nguồn chính thức của Kubernetes.
-
-@references
-1. Kubernetes Authors. Controller pattern and declarative state management. kubernetes.io/docs/concepts/architecture/controller/
-2. B. Grant. Declarative application management in Kubernetes. github.com/kubernetes/community
-3. Kubernetes Authors. Package `client-go/util/workqueue` reference and design. pkg.go.dev/k8s.io/client-go/util/workqueue
-4. S. Newman. Building Microservices: Designing Fine-Grained Systems and Self-Healing Architecture. O'Reilly Media.
-5. Go Team. Advanced Go Concurrency Patterns: Pipelines and cancellation. go.dev/blog/pipelines

@@ -179,11 +179,3 @@ Trong môi trường thực thi Go 1.27.1, tệp `src/runtime/proc.go` mô tả 
 Goroutine chia sẻ tài nguyên điều phối nhưng vẫn giữ ngăn xếp, siêu dữ liệu và có thể giữ đối tượng sống; việc tạo thêm goroutine còn làm tăng gánh nặng lập lịch và gốc quét thu gom rác (GC root). Giới hạn xử lý đồng thời phải xuất phát từ tài nguyên thực tế của khối lượng công việc (kết nối mạng, bộ mô tả tệp, dung lượng RAM, tải CPU hoặc năng lực của hệ thống hạ nguồn), chứ không xuất phát từ một con số kích thước ngăn xếp hay số lượng goroutine truyền miệng.
 
 Phiên bản môi trường thực thi này cài đặt kênh thông qua cấu trúc `hchan`, bao gồm khóa bảo vệ và hàng đợi chờ nội bộ; đó cũng không phải một giao diện lập trình hay cam kết về chi phí vận hành của ngôn ngữ. Dưới áp lực tranh chấp tài nguyên (*contention*), với các mức dung lượng bộ đệm khác nhau, hoặc khi goroutine phải chuyển sang trạng thái ngủ rồi được đánh thức, chi phí vận hành kênh có thể trở nên đáng kể. Tuy nhiên, không tồn tại quy tắc phổ quát khẳng định `Mutex`, thao tác nguyên tử `atomic` hay kênh luôn có tốc độ cao hơn: chúng mô tả các giao ước đồng bộ hóa khác nhau. Hãy sử dụng kênh khi cần bàn giao quyền sở hữu công việc hoặc phối hợp vòng đời; nếu một đường dẫn thực thi trọng yếu (*hot path*) phát sinh vấn đề hiệu năng, hãy đo kiểm chuẩn (*benchmark*) trên khối lượng công việc thực tế và kiểm tra xung đột dữ liệu (*race condition*) trước khi thay đổi nguyên hàm đồng bộ hóa (*synchronization primitive*).
-
-## Ghi chú kiểm chứng
-
-@references
-1. Go Team. The Go Programming Language Specification, mục Channel types, Send statements, Receive operator, Close và Select statements. go.dev/ref/spec
-2. Go Team. The Go Memory Model, mục Channel communication; và Package context. go.dev/ref/mem, pkg.go.dev/context
-3. Go Team. Package `time`, `NewTicker` và `Ticker.Stop`, Go 1.27.1; Go 1.23 Timer Channel Changes, điều kiện module và `GODEBUG`. pkg.go.dev/time@go1.27.1#NewTicker; pkg.go.dev/time@go1.27.1#Ticker.Stop; go.dev/wiki/Go123Timer
-4. Go Team. Go 1.27 Release Notes, Runtime: bỏ `asynctimerchan`. go.dev/doc/go1.27#runtime

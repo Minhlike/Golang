@@ -350,12 +350,3 @@ Dự án tổng kết xâu chuỗi các bằng chứng kỹ thuật thu hẹp: n
 Khi mở rộng công cụ, hãy luôn duy trì các khế ước kỹ thuật này làm tiêu chí đánh giá mã nguồn: dữ liệu đầu vào nào được tin cậy, tài nguyên nào có chủ thể chịu trách nhiệm, hiệu ứng phụ nào có thể lặp lại an toàn, và quan sát nào xác nhận kết quả cuối cùng. Chương 21 sẽ áp dụng chính những câu hỏi cốt lõi này cho một bộ điều khiển (*controller*).
 
 Việc hoàn thành dự án `opsprobe` chốt lại baseline vững chắc của cuốn sách sống (*living textbook*), đồng thời mở ra những bài toán hệ thống ở quy mô hạ tầng cao hơn: khi hệ thống không chỉ thăm dò thụ động mà cần liên tục tự điều hòa, dung hòa sai lệch giữa trạng thái mong muốn và thực tế để tự phục hồi.
-
-@references
-1. Go Team. The Go Programming Language Specification: memory model, concurrency semantics, channels và types. go.dev/ref/spec
-2. Go Team. Package `net/http`: Client, Transport, Request and Response lifecycle. pkg.go.dev/net/http
-3. Go Team. Package `database/sql`: connection pooling, transactions, prepared statements. pkg.go.dev/database/sql
-4. Go Team. Package `log/slog`: Structured Logging in Go. pkg.go.dev/log/slog
-5. Prometheus Authors. Prometheus Go client library documentation. prometheus.io/docs/guides/go-application/
-6. OpenTelemetry Authors. OpenTelemetry Go Documentation and Tracing API. opentelemetry.io/docs/languages/go/
-7. Google Container Tools. Distroless Container Images. github.com/GoogleContainerTools/distroless

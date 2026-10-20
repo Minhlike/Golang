@@ -313,14 +313,3 @@ Bốn là, coi schema như một trạng thái bền vững cần tiến hóa c�
 Năm là, nhận thức rõ ranh giới giữa cơ sở dữ liệu và bộ nhớ đệm, luôn xác định nguồn chân lý và chấp nhận đánh đổi tính nhất quán dựa trên yêu cầu bất biến của nghiệp vụ.
 
 Khi các ranh giới này được phân định rõ ràng, hệ thống giảm thiểu các trạng thái dữ liệu mơ hồ, cho phép kỹ sư xác lập và kiểm chứng được các ranh giới thất bại từ mã nguồn ứng dụng đến tầng lưu trữ bền vững.
-
-@references
-1. Go Team. Package `database/sql`: `DB`, `Tx`, `Rows`, `Stmt`, `DBStats`, context cancellation và pool behavior. pkg.go.dev/database/sql
-2. Go Team. Executing prepared statements. go.dev/doc/database/prepared-statements
-3. Go Team. Avoiding SQL injection risk. go.dev/doc/database/sql-injection
-4. SQLite. Transaction and ALTER TABLE support. sqlite.org/lang_transaction.html, sqlite.org/lang_altertable.html
-5. modernc.org. Package `sqlite`, driver thuần Go dùng trong lab cục bộ. pkg.go.dev/modernc.org/sqlite
-6. PostgreSQL Global Development Group. Transactional DDL. postgresql.org/docs/current/mvcc.html
-7. MySQL Authors. Statements That Cause an Implicit Commit & Atomic DDL. dev.mysql.com/doc/refman/8.0/en/implicit-commit.html, dev.mysql.com/doc/refman/8.0/en/atomic-ddl.html
-8. SQLite. Atomic Commit In SQLite: rollback journal, hot journal recovery và giả định khóa/flush của OS/storage. sqlite.org/atomiccommit.html
-9. modernc.org. SQLite driver v1.59.0: DSN `_pragma` áp dụng khi mở mỗi connection. pkg.go.dev/modernc.org/sqlite@v1.59.0

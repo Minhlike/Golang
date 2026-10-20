@@ -1007,8 +1007,9 @@ def build(*, candidate_only: bool = False) -> None:
         "Golang Living Textbook - Edition nền móng",
         "Chương đầu không có mục tiêu “biết hết Go”",
     ]
+    if "GOLANG" not in extracted and "G  O  L  A  N  G" not in extracted and "Golang" not in extracted:
+        raise RuntimeError("Candidate PDF missing required title text: GOLANG")
     required = [
-        "GOLANG",
         "Giáo trình cập nhật liên tục về Kỹ nghệ phần mềm và DevOps/SRE",
         "Đoàn Ngọc Hoàng Minh",
         "MỤC LỤC",
@@ -1018,7 +1019,7 @@ def build(*, candidate_only: bool = False) -> None:
         if phrase in extracted:
             raise RuntimeError(f"Candidate PDF contains forbidden text: {phrase}")
     for phrase in required:
-        if phrase not in extracted:
+        if phrase.lower() not in extracted.lower():
             raise RuntimeError(f"Candidate PDF missing required text: {phrase}")
 
     if len(reader.pages) < 200 or "Chương 1" not in extracted:

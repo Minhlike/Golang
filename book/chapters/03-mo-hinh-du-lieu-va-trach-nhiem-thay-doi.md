@@ -592,8 +592,3 @@ Hàm `func (service *Service) Record(bool)` tiếp nhận biến nhận dưới 
 Hàm `func renderSummary(SummarySource) string` tiếp nhận giao diện mang hành vi mà bên tiêu dùng cần. Nó gọi `Summary` thay vì đọc trường của một cấu trúc cụ thể; đây chính là ranh giới trừu tượng cho phép thay thế bên cung cấp (*provider*) mà không cần sửa đổi mã nguồn hiển thị.
 
 Mô hình kết hợp thành phần (*composition*) giúp dữ liệu có đường đi rõ ràng; phương thức đặt hành vi cạnh kiểu dữ liệu; giao diện xác lập ranh giới lỏng lẻo khi xuất hiện nhu cầu hoán đổi bên cung cấp. Từ nền tảng này, chương tiếp theo sẽ trang bị cho các API này một cơ chế báo cáo thất bại tường minh: lỗi kiểm tra probe không được phép chỉ âm thầm đổi trường `Healthy` rồi biến mất, mà phải vượt qua ranh giới hàm với đầy đủ ngữ cảnh để bên gọi chủ động ra quyết định xử lý.
-
-@references
-1. Go Team. Go Specification, Map types và Deletion of map elements. go.dev/ref/spec#Map_types; go.dev/ref/spec#Deletion_of_map_elements
-2. Go Team. Package `strings`, `Clone`, Go 1.27.1. pkg.go.dev/strings@go1.27.1#Clone
-3. Go Team. Go Garbage Collector Guide, Tracing Garbage Collection. go.dev/doc/gc-guide#Tracing_Garbage_Collection

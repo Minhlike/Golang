@@ -133,10 +133,3 @@ Trong ca kiểm thử `TestCondPredicateAndAtomicPublication`, mỗi cấu hình
 Một cờ atomic có thể công bố dữ liệu thường nếu giao thức là một lần chuẩn bị rồi chỉ đọc. Thay `ready bool` trong ví dụ đầu bằng `ready atomic.Bool`, gọi `ready.Store(true)` sau khi ghi `latest`, và chỉ đọc `latest` sau khi `ready.Load()` quan sát `true`: lần Store đó đồng bộ trước Load quan sát nó; kết hợp thứ tự trong hai goroutine, lần ghi `latest` đứng trước lần đọc. Không được tiếp tục ghi `latest` sau công bố trong khi người đọc còn dùng nó. Reset cờ rồi dùng lại cùng ô nhớ cũng không tự chờ người đọc cũ kết thúc. Nếu một vị trí được truy cập bằng cả atomic lẫn thao tác thường mà không có quan hệ thứ tự thích hợp, nó vẫn có thể race; atomic không “bao bọc” mọi truy cập khác. `TestAtomicFlagPublishesImmutablePayload` kiểm tra giao thức một lần, còn đối chứng sửa payload đã công bố được chạy riêng với race detector. Vòng quay chờ trong phép thử chỉ cô lập quan hệ bộ nhớ; chương trình thực tế thường nên chờ bằng cơ chế không quay CPU.
 
 Chương này kết thúc khi người học quan sát hai goroutine không còn hỏi “có chạy cùng lúc không?”, mà hỏi “lần truy cập nào cùng dữ liệu, bất biến nào cần giữ, và đường happens-before nào làm điều đó đúng?”. Câu hỏi ấy sẽ tiếp tục đồng hành qua channel, bộ xử lý HTTP, bộ nhớ đệm và mã nguồn runtime; cơ chế kỹ thuật có thể thay đổi, nhưng trách nhiệm chứng minh thứ tự luôn bất biến.
-
-## Ghi chú kiểm chứng
-
-@references
-1. Go Team. The Go Memory Model, phiên bản 6 June 2022. go.dev/ref/mem
-2. Go Team. Data Race Detector. go.dev/doc/articles/race_detector
-3. Go Team. Package sync. pkg.go.dev/sync

@@ -196,7 +196,3 @@ Chương này không bổ sung tệp cấu hình vào `opsprobe`: hiện tại c
 Trước khi tiếp cận một giao diện vào/ra mới, hãy tự đặt ra ba câu hỏi: Các byte dữ liệu truyền đến theo từng lượt phân đoạn nào? Đâu là dấu hiệu kết thúc luồng được chấp thuận? Và thực thể nào sẽ quan sát lỗi thất bại của tài nguyên sau cùng? Ba câu hỏi này không thay thế cho tài liệu đặc tả của định dạng hay giao thức cụ thể, nhưng chúng triệt tiêu một quan niệm sai lầm phổ biến: xem nhẹ thao tác nhập/xuất như những đường ống phụ trợ nằm ngoài giao ước kỹ thuật của chương trình.
 
 Phần tiếp theo sẽ đặt thêm một áp lực vận hành mới lên chương trình: nhiều goroutine cùng đồng thời hoạt động trong một tiến trình. Trước khi lựa chọn kênh truyền (*channel*) hay khóa loại trừ tương hỗ (*mutex*), ta cần nhìn nhận hiện tượng chạy đua dữ liệu (*data race*) không phải như một câu khẩu hiệu mơ hồ về tính an toàn luồng (*thread safety*), mà là hai thao tác truy cập dữ liệu không tồn tại trật tự xảy ra trước (*happens-before*) an toàn.
-
-@references
-1. Go Team. Go 1.27 Release Notes, encoding/json/v2 và encoding/json/jsontext. go.dev/doc/go1.27
-2. Go Team. Package encoding/json: khác biệt semantics v1/v2. pkg.go.dev/encoding/json

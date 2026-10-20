@@ -39,14 +39,3 @@ Việc không có cây phân cấp kiểu dữ liệu giải phóng người đ�
 Nhìn lịch sử theo cách này giúp lý giải cảm nhận đầu tiên khi tiếp cận Go. Ta sẽ nhận thấy nhiều câu lệnh ngắn gọn, ít từ khóa rườm rà, khai báo rõ ràng và bộ công cụ hiện diện từ rất sớm. Những đặc điểm ấy là dấu vết của một mục tiêu nhất quán: giảm thiểu ma sát cho các kỹ sư cùng hợp tác xây dựng, đọc hiểu và bảo trì phần mềm qua nhiều năm tháng.
 
 Sau gần hai thập kỷ tiến hóa, cách tiếp cận các quyết định thiết kế này không phải là đọc thêm những trang lịch sử. Hãy đặt chúng ngay trước mắt trong một tệp mã nguồn `.go` tinh gọn.
-
-## Ghi chú kiểm chứng
-
-@references
-1. Go Team. Frequently Asked Questions: Origins and Design. go.dev/doc/faq
-2. Cox, Russ. Toward Go 2. 13 July 2017. go.dev/blog/toward-go2
-3. Go Team. Go 1 and the Future of Go Programs. March 2012. go.dev/doc/go1compat
-4. Gerrand, Andrew. Go 1.5 is released. 19 August 2015. go.dev/blog/go1.5
-5. Bonventre, Andrew. Go 1.11 is released. 24 August 2018. go.dev/blog/go1.11
-6. Go Team. Go 1.18 is released! 15 March 2022. go.dev/blog/go1.18
-7. Go Team. Go 1.27 Release Notes. 2026. go.dev/doc/go1.27

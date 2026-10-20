@@ -366,13 +366,3 @@ Khi yêu cầu kỹ thuật đòi hỏi đóng gói và đẩy ảnh container, 
 Điểm kết thúc của chương là một góc nhìn thoát khỏi tư duy giản lược “triển khai chỉ là chạy câu lệnh”. Định danh bất biến của gói phát hành, vòng đời tiến trình và trạng thái mong muốn là ba khế ước kỹ thuật liên tiếp. Chương 16 cung cấp các tín hiệu đo lường để nắm bắt hiện trạng phiên bản; chương này cung cấp tư duy bộ điều khiển để hiểu thấu đáo vì sao phiên bản có thể bị tạo mới, thay thế hoặc rút khỏi luồng lưu lượng truy cập.
 
 `NextAction` chỉ là một lần quan sát và một hành động kế tiếp; nó cố ý chưa có hàng đợi, cơ chế thử lại hay máy chủ API. Sau dự án tổng kết ở Chương 20, Chương 21 sẽ xây dựng các cơ chế điều phối đó trên một mô hình tái lập độc lập. Chương 22 mới gắn kết mô hình tư duy này vào `client-go`, bộ nhớ đệm và cơ chế `List/Watch` của Kubernetes. Trình tự này giúp cho Dockerfile, tệp YAML và các bộ khung công cụ không che khuất câu hỏi nền tảng: tại lần quan sát này, hành động nào là hợp lệ và còn điều gì vẫn chưa thể kết luận?
-
-@references
-1. Open Container Initiative. Image configuration: platform, `Entrypoint`, `Cmd`, `WorkingDir`, `User` và default execution parameters. github.com/opencontainers/image-spec/blob/main/config.md
-2. Docker Authors. Dockerfile reference: `RUN`, `CMD`, `ENTRYPOINT`, exec form và shell form. docs.docker.com/reference/dockerfile/
-3. Kubernetes Authors. Controllers: desired state, current state và control loops. kubernetes.io/docs/concepts/architecture/controller/
-4. Kubernetes Authors. Pod lifecycle: Pod spec/status, restart policy, readiness và container lifecycle. kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
-5. Kubernetes Authors. Package `client-go`: programmatic interface cho Kubernetes API. pkg.go.dev/k8s.io/client-go
-6. GoogleContainerTools. Distroless: language focused docker images, non-root user và minimal runtime footprint. github.com/GoogleContainerTools/distroless
-7. Kubernetes Authors. Configure probes: failureThreshold và restart policy; Resource management: CPU throttling và memory limits. kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/; kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-8. Kubernetes Authors. API concepts: get/list/watch và resourceVersion. kubernetes.io/docs/reference/using-api/api-concepts/

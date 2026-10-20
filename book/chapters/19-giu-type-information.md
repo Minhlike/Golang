@@ -248,9 +248,3 @@ go vet ./...
 Ba nhiệm vụ thực hành lần lượt yêu cầu người học xây dựng hàm `Unique[T comparable]` xuất phát từ ca kiểm thử, phản biện thiết kế `Load[T any]` khi chưa xác định rõ định dạng, quyền sở hữu dữ liệu và quy trình giải mã, đồng thời khắc phục khiếm khuyết con trỏ rỗng có kiểu để nhánh thành công trả về đúng giá trị lỗi `nil` thực sự. Chỉ sau khi đã hoàn thành các bước tự làm, người học mới nên tham khảo tài liệu hướng dẫn và mã nguồn đối chiếu; chúng là tài liệu tham khảo để đối chiếu mạch tư duy logic, không phải khuôn mẫu duy nhất cho việc đặt tên.
 
 Điểm dừng nhận thức của chương không phải là “hễ nhìn thấy cặp ngoặc vuông là áp dụng kiểu tổng quát”. Hãy luôn tự đặt câu hỏi: thao tác tính toán cần bảo toàn thông tin kiểu nào, ràng buộc nào thực sự cho phép thực thi thao tác đó, hành vi nào nên được trừu tượng hóa thành giao diện, và siêu dữ liệu nào chỉ có thể biết được lúc chương trình vận hành. Khi trả lời thấu đáo được bốn câu hỏi đó, tầng trừu tượng sẽ không còn giống một màn ảo thuật khó lường mà sẽ trở thành một khế ước kỹ thuật trong sáng và có thể kiểm chứng độc lập.
-
-@references
-1. Go Team. The Go Programming Language Specification: interface values, type assertions, type switches, type constraints, instantiation và method declarations. go.dev/ref/spec
-2. Go Team. Go 1.27 Release Notes: generic methods và các thay đổi về type inference. go.dev/doc/go1.27
-3. Go Team. FAQ: `nil` interface value và `nil` pointer được lưu trong interface. go.dev/doc/faq
-4. Go Team. Generic Methods. go.dev/blog/generic-methods

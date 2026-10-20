@@ -202,11 +202,3 @@ Hãy đọc Chương 20 để chủ động lựa chọn bằng chứng phân bi
 Khi yêu cầu kỹ thuật đòi hỏi điểm cuối `/metrics`, biểu đồ tần suất đo thời lượng, mẫu điểm nổi bật (*exemplars*), lan truyền ngữ cảnh dấu vết, bộ thu thập hoặc truy vấn hạ tầng lưu trữ, hãy sử dụng thư viện máy khách chuẩn mực và quy ước ngữ nghĩa được duy trì ổn định thay vì tự sáng chế định dạng truyền tải trên đường truyền. Tuy nhiên, bộ công cụ phát triển phần mềm không thể lựa chọn chỉ số SLI thay cho đội ngũ kỹ thuật. Trước khi bổ sung một công cụ đo lường, hãy xác định rõ câu hỏi vận hành cần giải đáp, ranh giới phát sinh sự kiện, đơn vị đo, số lượng chiều nhãn, hành vi khi khởi động lại, đội ngũ sở hữu và hành động can thiệp khi tín hiệu suy thoái. Nếu chưa trả lời được những câu hỏi then chốt đó, việc bổ sung thêm chỉ số đo lường chỉ tạo thêm rác dữ liệu chứ không giúp cải thiện khả năng quan sát hệ thống.
 
 Điểm dừng của chương đánh dấu một bước chuyển trong nhận thức: kết quả từ Chương 15 không còn là một giá trị `Result` bị in ra màn hình rồi lãng quên. Nó có thể chuyển hóa thành bằng chứng xác thực theo chuỗi thời gian, nhưng chỉ sau khi ta quy ước trung thực kết quả nào được thống kê, tín hiệu nào lưu giữ chi tiết bối cảnh, và những suy diễn nào mà số liệu hiện thời chưa đủ căn cứ chứng minh. Chương 17 sẽ chuyển dịch từ “thể hiện tiến trình có thể quan sát” sang “tạo phẩm được đóng gói và điều phối”; khi ấy tín hiệu sẵn sàng sẽ kết nối trực tiếp với một mặt phẳng điều khiển thực sự, thay vì chỉ dừng lại ở một điểm cuối hình thức.
-
-@references
-1. OpenTelemetry Authors. Signals: traces, metrics, logs và profiles. opentelemetry.io/docs/concepts/signals/
-2. Prometheus Authors. Instrumentation: naming, labels, counters và metric design. prometheus.io/docs/practices/instrumentation/
-3. Google SRE. Alerting on SLOs: SLI, objective, error budget và alert policy. sre.google/workbook/alerting-on-slos/
-4. Go Team. Package `sync`: `Mutex` và synchronization primitives. pkg.go.dev/sync
-5. Prometheus Authors. Prometheus Go client: metric primitives và HTTP exposition. pkg.go.dev/github.com/prometheus/client_golang/prometheus
-6. OpenTelemetry Authors. Go exporters: console exporter cho local debugging; collector/backend cho telemetry path thực tế. opentelemetry.io/docs/languages/go/exporters/

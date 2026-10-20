@@ -292,13 +292,3 @@ Hai là, thiết lập kiểm thử đơn vị để cố định hợp đồng 
 Ba là, kết hợp bài đo chuẩn, phân tích thoát bộ nhớ và công cụ đo hồ sơ hiệu năng để thu thập số liệu định lượng trước khi can thiệp mã nguồn.
 
 Bốn là, đối chiếu lại số liệu sau khi sửa đổi; nếu mức cải thiện không đủ lớn để bù đắp cho độ phức tạp gia tăng của mã nguồn, kiên quyết giữ lại giải pháp đơn giản và dễ bảo trì nhất.
-
-@references
-1. Go Team. Package testing, phần Benchmarks và `B.Loop`. pkg.go.dev/testing
-2. Go Team. Diagnostics, phần Profiling và Tracing. go.dev/doc/diagnostics
-3. Go Team. Command trace. go.dev/cmd/trace
-4. Go Team. Go Garbage Collector Guide. go.dev/doc/gc-guide
-5. Go Team. Profile-guided optimization. go.dev/doc/pgo
-6. Go Team. Package `runtime/pprof`, heap và goroutine profiles, Go 1.27.1. pkg.go.dev/runtime/pprof@go1.27.1#Profile
-7. Go Team. Package `runtime`, `MemStats`, `MemProfile`, `MemProfileRate`, `NumGoroutine` và `KeepAlive`, Go 1.27.1. pkg.go.dev/runtime@go1.27.1#MemStats; pkg.go.dev/runtime@go1.27.1#MemProfile
-8. Go Team. Package `context`, lifecycle của derived context, Go 1.27.1. pkg.go.dev/context@go1.27.1

@@ -180,9 +180,3 @@ Tạo ngữ cảnh con sau khi xác thực dữ liệu, dùng `exec.CommandConte
 Bộ chạy lệnh này chưa tiếp nhận luồng nhập chuẩn `stdin`, chưa thiết lập thư mục làm việc hay biến môi trường riêng biệt, chưa truyền dòng dữ liệu đầu ra, chưa che giấu dữ liệu bí mật, chưa hỗ trợ thử lại, và chưa được coi là bộ thực thi tổng quát cho dữ liệu người dùng tùy ý. Mỗi tính năng trên đều làm thay đổi bề mặt tấn công (*attack surface*) hoặc vòng đời tiến trình. Chẳng hạn, trường `Cmd.Env` sẽ thay thế hoàn toàn biến môi trường của tiến trình con chứ không tự động hợp nhất với môi trường hiện hành; trường `Cmd.Dir` biến thư mục làm việc thành một đầu vào khác cần kiểm tra hợp lệ. Tuyệt đối không thêm các trường này chỉ vì cấu trúc dữ liệu còn chỗ trống.
 
 Điểm dừng của chương ghi nhận một bước tiến vững chắc: chuyển dịch từ thói quen gõ lệnh cảm tính khi hoảng loạn sang việc kiểm soát câu lệnh có hợp đồng hành vi chặt chẽ về tiến trình. Ứng dụng `opsprobe` sau này có thể tận dụng bộ chạy này để kích hoạt một công cụ chẩn đoán đã được lựa chọn, nhưng chỉ khi yêu cầu xử lý sự cố thực sự đòi hỏi. Trước khi nghĩ đến việc bổ sung chỉ số đo lường, bảng điều khiển hay Kubernetes, kỹ sư phải hiểu tường minh một lượt thực thi đơn lẻ đã bắt đầu, kết thúc và thất bại như thế nào.
-
-@references
-1. Go Team. Package `os/exec`: `Command`, `CommandContext`, `Cmd`, `ExitError`, `WaitDelay` và quy tắc tìm executable. pkg.go.dev/os/exec
-2. Go Team. Package `context`: cancellation, deadline và propagation. pkg.go.dev/context
-3. Go Team. Package `flag`: `FlagSet` và parse command-line flags. pkg.go.dev/flag
-4. Go Team. Package `log/slog`: structured logging và handler. pkg.go.dev/log/slog

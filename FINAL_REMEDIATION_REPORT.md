@@ -14,14 +14,16 @@
 
 ## 1. THÔNG SỐ ĐỊNH DANH BẢN MASTER VÀ SAO LƯU
 
-| Thông số kỹ thuật | Bản Master Hiện hành (`Golang_Master.pdf`) | Bản Sao lưu Rollback (`Golang_Master.prev.pdf`) | Bản Ứng viên (`Golang_Master.candidate.pdf`) |
+| Thông số kỹ thuật | Bản Master Hiện hành (Golang_Master.pdf) | Bản Sao lưu Rollback (Golang_Master.prev.pdf) | Bản Ứng viên (Golang_Master.candidate.pdf) |
 | :--- | :--- | :--- | :--- |
-| **Trạng thái** | **OFFICIAL PRODUCTION MASTER** | **ROLLBACK BACKUP VERIFIED** | **RELEASE CANDIDATE (590P)** |
-| **Mã băm SHA-256** | `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe` | `2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d` | `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe` |
-| **Dung lượng byte** | `14,829,560` bytes | `13,542,255` bytes | `14,829,560` bytes |
-| **Tổng số trang** | **590 trang ISO A4** | 493 trang | **590 trang ISO A4** |
+| **Trạng thái** | **OFFICIAL PRODUCTION MASTER** | **ROLLBACK BACKUP VERIFIED** | **RELEASE CANDIDATE (586P)** |
+| **Mã băm SHA-256** | da7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5 | VERIFIED | da7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5 |
+| **Dung lượng byte** | 14,814,976 bytes | 14,829,560 bytes | 14,814,976 bytes |
+| **Tổng số trang** | **586 trang ISO A4** | 590 trang | **586 trang ISO A4** |
+| **Trang Bìa** | **Bìa kiến trúc Concept 1 ISO A4 Monograph** | Bìa Concept 1 | **Bìa kiến trúc Concept 1 ISO A4 Monograph** |
+| **Zero References** | **Đã xóa 100% trích dẫn rác / @references trong văn xuôi** | — | **100% Clean Narrative** |
 | **PDF Bookmarks** | **34 mục phân cấp chuẩn** | 34 mục | **34 mục phân cấp chuẩn** |
-| **Khớp nguyên byte** | **`MASTER_SHA256 == CANDIDATE_SHA256` (100% Khớp)** | — | Chuẩn đối chiếu |
+| **Khớp nguyên byte** | **MASTER_SHA256 == CANDIDATE_SHA256 (100% Khớp)** | — | Chuẩn đối chiếu |
 
 ---
 
@@ -74,8 +76,8 @@ Reviewer đã phát hiện sự khác biệt giữa con số 57 methods trong `s
 AUTOMATED PUBLICATION PDF PREFLIGHT SUMMARY
 ================================================================================
 File:                      D:\Golang\Golang_Master.pdf
-SHA-256:                   6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe
-Total Pages:               590
+SHA-256:                   ada7d1bf7b31ca9cd8c243b74e6dfed625b703b30fb4c962cc697f57e612fee5
+Total Pages:               586
 Page Geometry:             PASS (ISO A4 595.28 x 841.89 pt)
 Actually Rendered Fonts:   JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular
 Fonts Embedded:            PASS (100% embedded)

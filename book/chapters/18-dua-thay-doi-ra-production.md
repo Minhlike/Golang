@@ -316,15 +316,3 @@ blocker này rõ ràng, không tự cài và không tạo tài nguyên cloud th�
 Đường ống CI/CD, liên kết OIDC, chứng thực nguồn gốc, đối tượng Deployment và cơ chế quay lui không làm phần mềm tự động an toàn. Chúng biến toàn bộ lộ trình của một thay đổi thành một chuỗi có thể kiểm chứng độc lập: mã nguồn nào, gói phát hành nào, cổng kiểm soát nào, đặc quyền nào, tiến trình phát hành nào và phương án ứng phó nào khi xảy ra sự cố. Đó chính là nền tảng kỹ thuật vững chắc để một dịch vụ Go có thể được phát hành liên tục mà không biến mỗi đợt triển khai thành một canh bạc của niềm tin mơ hồ.
 
 Từ đây, cuốn sách bước vào một nghiên cứu điển hình lớn hơn: một dịch vụ tiếp nhận dữ liệu đầu vào, thực thi tác vụ có thời hạn kết thúc (*deadline*), phát tín hiệu giám sát, được đóng gói hoàn chỉnh, rồi được chuyển giao qua chính sách phân phối và sẵn sàng phục hồi dựa trên đầy đủ bằng chứng kỹ thuật. Mỗi công cụ chỉ được giới thiệu khi câu hỏi vận hành thực tế đã xuất hiện và đòi hỏi lời giải.
-
-@references
-1. GitHub Docs. Secure use reference: least privilege, `GITHUB_TOKEN`, secret risks và OIDC. docs.github.com/en/actions/reference/security/secure-use
-2. GitHub Docs. OpenID Connect: token ngắn hạn, trust relationship và cloud authorization. docs.github.com/en/actions/concepts/security/openid-connect
-3. GitHub Docs. Security for GitHub Actions: artifact attestations và deployment hardening. docs.github.com/en/actions/how-tos/secure-your-work
-4. Kubernetes Authors. Deployments: rollout status, revision, rollback và giới hạn của revision history. kubernetes.io/docs/concepts/workloads/controllers/deployment/
-5. AWS Documentation. Creating OpenID Connect (OIDC) identity providers và IAM role trust policies. docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
-6. HashiCorp Terraform. AWS Provider: `aws_iam_openid_connect_provider` và `aws_iam_role`. registry.terraform.io/providers/hashicorp/aws/latest/docs
-7. AWS Documentation. Actions, resources, and condition keys for Amazon Elastic Container Registry. docs.aws.amazon.com/service-authorization/latest/reference/list_ecr.html
-8. OCI. Image Format Specification: image manifest, image index và OCI image layout. github.com/opencontainers/image-spec
-9. AWS IAM. OIDC condition context keys: GitHub claims, including ref. docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html
-10. AWS. ECR CreateRepository and IAM CreateRole: naming patterns and length limits. docs.aws.amazon.com/AmazonECR/latest/APIReference/API_CreateRepository.html; docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html
