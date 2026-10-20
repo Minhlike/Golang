@@ -1114,6 +1114,69 @@ class PublicationContracts(unittest.TestCase):
             self.assertEqual(runt_defects, [], f"Found trailing chapter runt pages with 1-3 lines: {runt_defects}")
 
 
+    def test_printed_toc_and_bookmarks_exact_1to1_match_actual_pages(self):
+        """Regression test for post-repagination TOC and outline fidelity:
+        Verifies that every entry in the printed Table of Contents (Page 2)
+        and all 34 PDF outline bookmarks match the actual chapter/appendix start
+        pages in tmp/pdfs/Golang_Master.candidate.pdf with 1:1 exact equality."""
+        import re
+        import pymupdf as fitz
+        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf").resolve()
+        self.assertTrue(candidate_pdf.exists(), f"Candidate PDF {candidate_pdf} must exist")
+        with fitz.open(candidate_pdf) as doc:
+            toc = doc.get_toc()
+            self.assertEqual(len(toc), 34, f"Must have exactly 34 bookmarks, got {len(toc)}")
+
+            # Extract printed TOC from Page 2
+            p2_text = doc[1].get_text()
+            lines = [l.strip() for l in p2_text.splitlines() if l.strip()]
+            printed_entries = []
+            for i, line in enumerate(lines):
+                if line.isdigit() and int(line) >= 2:
+                    pno = int(line)
+                    title_parts = []
+                    j = i - 1
+                    while (
+                        j >= 0
+                        and not lines[j].isdigit()
+                        and not lines[j].startswith("PHẦN")
+                        and lines[j] != "MỤC LỤC"
+                        and lines[j] != "BACK MATTER // TÀI LIỆU TRA CỨU"
+                    ):
+                        title_parts.insert(0, lines[j])
+                        j -= 1
+                    title = " ".join(title_parts)
+                    printed_entries.append((title, pno))
+
+            self.assertEqual(len(printed_entries), 34, f"Printed TOC must have 34 entries (header + 33 items), got {len(printed_entries)}")
+
+            # 1. First entry must be TOC itself on Page 2
+            self.assertEqual(toc[0][2], 2)
+            self.assertEqual(printed_entries[0][1], 2)
+
+            # 2. Check each remaining entry for 1:1 exact match
+            for idx in range(1, 34):
+                bm_lvl, bm_title, bm_pno = toc[idx]
+                pr_title, pr_pno = printed_entries[idx]
+                self.assertEqual(
+                    bm_pno, pr_pno,
+                    f"Mismatch at index {idx}: bookmark page {bm_pno} != printed TOC page {pr_pno} ('{bm_title}')"
+                )
+
+                # 3. Check actual target page content
+                page_text = doc[bm_pno - 1].get_text()
+                clean_words = [
+                    w for w in re.findall(r"\w+", bm_title.lower())
+                    if len(w) > 2 and w not in ("chương", "atlas", "mục", "lục", "phần", "nguồn", "thư", "viện")
+                ]
+                page_words = set(re.findall(r"\w+", page_text.lower()))
+                matched = [w for w in clean_words if w in page_words]
+                self.assertGreaterEqual(
+                    len(matched), max(2, len(clean_words) // 2),
+                    f"Target page {bm_pno} does not contain heading keywords for '{bm_title}'"
+                )
+
+
 if __name__ == '__main__':
     unittest.main()
 

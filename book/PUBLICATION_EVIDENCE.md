@@ -4,46 +4,48 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 
 ---
 
-# PHẦN A: BẰNG CHỨNG ỨNG VIÊN PHÁT HÀNH HIỆN HÀNH (CURRENT CANDIDATE EVIDENCE — 590 TRANG)
+# PHẦN A: BẰNG CHỨNG ẤN BẢN MASTER ĐÃ PROMOTE (PROMOTED PRODUCTION MASTER EVIDENCE — 590 TRANG)
 
-## 1. Định danh ấn bản ứng viên (Candidate Artifact)
+## 1. Định danh ấn bản Production Master (Golang_Master.pdf)
 
-- **Tập tin ứng viên phát hành**: 	mp/pdfs/Golang_Master.candidate.pdf
+- **Tập tin Production Master**: Golang_Master.pdf (**PROMOTED & VERIFIED**)
 - **Mã băm SHA-256**: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89
-- **Dung lượng chính xác**: 14.770.325 bytes (14,1 MB)
-- **Số trang thực tế**: **590 trang** (A4 dọc ,28 \times 841,89\text{ pt}$)
+- **Dung lượng chính xác**: 14,770,325 bytes (14.1 MB)
+- **Số trang thực tế**: **590 trang** (ISO A4 dọc .28 \times 841.89\text{ pt}$)
+- **Tập tin Sao lưu Rollback**: Golang_Master.prev.pdf (13,542,255 bytes, SHA-256: 2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d) — **VERIFIED**
+- **Tập tin Ứng viên Đối chiếu**: 	mp/pdfs/Golang_Master.candidate.pdf (14,770,325 bytes, SHA-256: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89)
+- **Khớp nguyên byte**: MASTER_SHA256 == CANDIDATE_SHA256 (**100% MATCH**)
 - **Baseline PDF đối chiếu**: 086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c (603 trang)
-- **Tập tin Production gốc**: Golang_Master.pdf (13.542.255 bytes, SHA-256 2d70b44e...) **ĐƯỢC BẢO LƯU NGUYÊN VẸN** (chưa promote)
 - **Nhánh khắc phục**: ix/final-book-acceptance
-- **Trạng thái xuất bản**: AWAITING_MANUAL_APPROVAL
+- **Trạng thái xuất bản**: MASTER_PROMOTED_AND_VERIFIED
 
-## 2. Phương pháp và phân loại kiểm định trên ứng viên 590 trang
+## 2. Phương pháp và phân loại kiểm định trên ấn bản Master 590 trang
 
 Hệ thống thẩm định áp dụng ranh giới phân định chặt chẽ giữa kiểm tra tự động và kiểm tra trực quan trực tiếp:
 
 1. **AUTOMATED_GEOMETRY_PASS (Kiểm định hình học tự động qua PDF AST/DOM):**
    - **Phạm vi:** **590/590 trang (100%)**
-   - **Tiêu chuẩn kiểm tra:** Kích thước ISO A4 (,28 \times 841,89\text{ pt}$), rotation = 0, lề đối xứng (inside 68,03 pt, outside 51,02 pt, top/bottom 56,69 pt), 100% font nhúng hợp lệ (JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular), 0 ký tự lỗi (mojibake/\ufffd), 0 trang trắng, 0 trang trùng lặp, 0 tràn viền (clipping), 0 điểm ảnh màu (grayscale 100%), và 34 mục bookmarks phân cấp chuẩn xác.
+   - **Tiêu chuẩn kiểm tra:** Kích thước ISO A4 (.28 \times 841.89\text{ pt}$), rotation = 0, lề đối xứng (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), 100% font nhúng hợp lệ (JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular), 0 ký tự lỗi (mojibake/\ufffd), 0 trang trắng, 0 trang trùng lặp, 0 tràn viền (clipping), 0 điểm ảnh màu (grayscale 100%), và 34 mục bookmarks phân cấp chuẩn xác.
 
 2. **DIRECT_VISUAL_PASS (Kiểm tra trực quan trực tiếp qua mô hình thị giác / Vision Review):**
    - **Phạm vi:** **64 trang** đã được quan sát và thẩm định qua tệp ảnh raster 150 DPI.
    - **Danh mục trang đã kiểm tra trực quan:**
      - Trang 1 (Bìa kiến trúc Concept 1) & Trang 2 (Mục lục 4 Phần vĩ mô).
      - Toàn bộ 58 trang chứa sơ đồ Hình 01–58: Trang 4, 6, 13, 17, 19, 27, 41, 42, 44, 46, 56, 58, 60, 68, 77, 81, 88, 99, 104, 164, 173 (Hình 21), 200, 207, 218 (Hình 24), 234, 273, 284, 293, 301, 303, 311, 322, 332 (Hình 33), 341 (Hình 34), 371, 385, 386, 403, 404, 409, 425, 428, 441, 442, 445, 463, 466, 468, 487, 540, 547 (Hình 51), 551 (Hình 52), 556 (Hình 53), 559 (Hình 54), 568 (Hình 55), 579 (Hình 56), 581 (Hình 57), 600 (Hình 58).
-     - Các trang khắc phục lỗi phân trang tiêu biểu: Trang 14 (Bảng 1.1), Trang 30–31 (Bảng khai báo), Trang 57 (Cụm heading Ch03).
+     - Các trang khắc phục lỗi phân trang tiêu biểu: Trang 36 & 37 (Đóng Chương 1 & Mở Chương 2), Trang 95 (Mật độ trang 95), Trang 448 & 449 (Đóng Chương 25 & Mở Chương 26), Trang 514 & 515 (Đóng Chương 28 & Mở Chương 29).
    - **Hồ sơ hình ảnh lưu trữ:**
      - 12 tệp mẫu trang đầy đủ tại .workspace/full-book-final-acceptance/QA_EVIDENCE/figure_pages/.
      - 12 tệp đối chiếu Before/After tại .workspace/full-book-final-acceptance/QA_EVIDENCE/comparison_specimens/.
+     - 3 tệp đối chiếu Before/After các lỗi phân trang P1 tại .workspace/full-book-final-acceptance/QA_EVIDENCE/pagination_remediation/.
 
 3. **PENDING_DIRECT_VISUAL_REVIEW (Chờ nghiệm thu trực quan độc lập):**
    - **Phạm vi:** **526 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
-   - Toàn bộ thông số trạng thái được theo dõi minh bạch tại ledger [ook/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
+   - Toàn bộ thông số trạng thái được theo dõi minh bạch tại ledger [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
-4. **Contact Sheets bao phủ toàn bộ 611 trang:**
+4. **Contact Sheets bao phủ toàn bộ 590 trang:**
    - 24 tập contact sheets (mỗi tấm 25 trang, tấm 24 gồm 15 trang cuối) tại .workspace/full-book-final-acceptance/QA_EVIDENCE/contact_sheets_590p/ (sheet_01_p001_025.png đến sheet_24_p576_590.png).
 
 ---
-
 # PHẦN B: KỶ YẾU BẰNG CHỨNG LỊCH SỬ (HISTORICAL EVIDENCE ARCHIVE — LƯU TRỮ TRUY NGUYÊN)
 
 > [!NOTE]

@@ -7,18 +7,19 @@
 
 ---
 
-## 1. Phân định giữa PDF Ứng viên (611 trang) và Tệp Chế bản In (612 trang)
+## 1. Phân định giữa PDF Master (590 trang) và Tệp Chế bản In (592 trang)
 
-1. **PDF Ứng viên Nội dung (Content Candidate PDF):**
-   - Vị trí: `tmp/pdfs/Golang_Master.candidate.pdf`
-   - Số trang: **ĐÚNG 611 TRANG** (Toàn bộ 29 chương, Atlas Thư viện và Phụ lục A).
-   - SHA-256: `c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b`
-   - Trạng thái: Ứng viên nghiệm thu độc lập (`AWAITING_MANUAL_APPROVAL`).
+1. **PDF Production Master (Content Production Master PDF):**
+   - Vị trí: `Golang_Master.pdf`
+   - Số trang: **ĐÚNG 590 TRANG** (Toàn bộ 29 chương, Atlas Thư viện và Phụ lục A).
+   - SHA-256: `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89`
+   - Dung lượng: `14,770,325` bytes
+   - Trạng thái: **OFFICIAL PRODUCTION MASTER — PROMOTED & VERIFIED**.
 
 2. **Tệp Ruột Sách Chế bản In Hai Mặt (Duplex Prepress Book Block):**
    - Vị trí: [`02_RUOT_SACH_GOLANG_612TRANG_A4.pdf`](02_RUOT_SACH_GOLANG_612TRANG_A4.pdf)
-   - Lưu ý quan trọng: Tệp tin `02_RUOT_SACH_GOLANG_612TRANG_A4.pdf` hiện lưu trong kho mã nguồn là tệp bản in của đợt release trước (SHA-256: `2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d`, khớp với `Golang_Master.pdf` gốc).
-   - Quy trình chế bản in hai mặt: Khi Reviewer phê duyệt promote candidate 611 trang, khâu prepress sẽ bổ sung thêm đúng 01 trang trắng ở cuối (Trang 612) nhằm thỏa mãn quy cách in hai mặt (duplex) và đóng tay sách chẵn chia hết cho 4 ($612 = 153 \times 4$). Thao tác này **BẢO LƯU NGUYÊN VẸN 100% NỘI DUNG VÀ HÌNH HỌC CỦA 611 TRANG ĐẦU TIÊN**.
+   - Lưu ý quan trọng: Tệp tin `02_RUOT_SACH_GOLANG_612TRANG_A4.pdf` hiện lưu trong kho mã nguồn là tệp bản in của đợt release trước (SHA-256: `2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d`, khớp với `Golang_Master.prev.pdf` rollback).
+   - Quy trình chế bản in hai mặt: Đối với ấn bản 590 trang Master hiện hành, khâu prepress sẽ bổ sung thêm đúng 02 trang trắng ở cuối (Trang 591–592) nhằm thỏa mãn quy cách in hai mặt (duplex) và đóng tay sách chẵn chia hết cho 4 ($592 = 148 \times 4$). Thao tác này **BẢO LƯU NGUYÊN VẸN 100% NỘI DUNG VÀ HÌNH HỌC CỦA 590 TRANG ĐẦU TIÊN**.
 
 ---
 
@@ -31,7 +32,7 @@
 
 2. **[`02_RUOT_SACH_GOLANG_612TRANG_A4.pdf`](02_RUOT_SACH_GOLANG_612TRANG_A4.pdf)**
    - Khổ in: ISO A4 ($210.0 \times 297.0\,\text{mm}$)
-   - Số trang dự kiến: 612 trang (611 trang nội dung ứng viên + 1 trang trắng đệm cuối).
+   - Số trang dự kiến bản mới: 592 trang (590 trang nội dung master + 2 trang trắng đệm cuối).
    - Giấy ruột dự kiến: Woodfree / Ford $80\,\text{gsm}$, in 2 mặt đen trắng (1/1 Monochrome).
    - Đóng cuốn dự kiến: Khâu chỉ dán gáy keo nhiệt PUR áp lực cao.
 
