@@ -5,9 +5,18 @@ TÁC GIẢ: ĐOÀN NGỌC HOÀNG MINH
 NĂM XUẤT BẢN: 2026
 ================================================================================
 
+TRẠNG THÁI CHẾ BẢN VẬT LÝ: PHYSICAL_PRINT_READINESS = BLOCKED_PENDING_PRINTER_SPEC
+LƯU Ý QUAN TRỌNG CHO NHÀ IN:
+1. Gáy 28.0 mm là thông số ước tính danh nghĩa ban đầu, CHƯA ĐƯỢC PHÊ DUYỆT LỆNH IN.
+   Nhà in cần đo caliper thực tế của ram giấy Ford 80 gsm trước khi ra kẽm bìa.
+2. Nội dung ứng viên phát hành chính thức gồm 611 trang (Golang_Master.candidate.pdf).
+   Tệp chế bản ruột in hai mặt (02_RUOT_SACH_GOLANG_612TRANG_A4.pdf) sẽ bổ sung
+   thêm 01 trang trắng ở vị trí trang 612 để khớp tay sách chẵn (153 x 4 trang).
+   Nghiêm cấm làm xê dịch hoặc thay đổi 611 trang nội dung đầu tiên.
+
 Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Production)
 
-Đơn hàng bao gồm đúng 02 tệp PDF vector chuẩn in ấn công nghiệp:
+Đơn hàng bàn giao bao gồm 02 tệp PDF vector:
 
 --------------------------------------------------------------------------------
 1. TỆP 1: BÌA SÁCH TRẢI RỘNG (COVER WRAP)
@@ -17,7 +26,7 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 - Khổ thành phẩm sau xén (TrimBox):    448.0 x 297.0 mm
 - Chi tiết cấu trúc bìa:
   + Bìa 4 (Mặt sau):       210.0 mm
-  + Gáy sách (Spine):      28.0 mm (Dành cho ruột 612 trang giấy 80gsm)
+  + Gáy sách (Spine):      28.0 mm (Ước lượng danh định, CHỜ PHIẾU ĐO THỰC TẾ)
   + Bìa 1 (Mặt trước):     210.0 mm
   + Tràn lề (Bleed):       3.0 mm mỗi cạnh (trên, dưới, trái, phải)
 - Dấu định vị:             Đã có sẵn dấu chữ thập xén (Crop marks) & vạch nếp gấp gáy
@@ -31,11 +40,12 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 --------------------------------------------------------------------------------
 - Tên tệp: 02_RUOT_SACH_GOLANG_612TRANG_A4.pdf
 - Khổ thành phẩm (TrimBox / MediaBox): ISO A4 (210.0 x 297.0 mm)
-- Tổng số trang ruột:      ĐÚNG 612 TRANG (Không tính bìa ngoài)
+- Tổng số trang ruột:      ĐÚNG 612 TRANG (611 trang nội dung + 1 trang trắng đệm cuối)
 - Cấu trúc trang:
   + Trang 1:               Trang Tiêu đề Kiến trúc (Architectural Title Page)
   + Trang 2:               Mục lục (Table of Contents)
-  + Trang 3 - 612:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Phụ lục Lỗi)
+  + Trang 3 - 611:         Nội dung kỹ thuật (Ch00 - Ch29, Labs, Atlas, Phụ lục A)
+  + Trang 612:             Trang trắng phục vụ gấp tay sách in hai mặt duplex
 - Quy cách giấy đề xuất:   Giấy Woodfree / Bãi Bằng / Ford 80 gsm trắng tự nhiên
 - Chế bản & In ấn:         In 2 mặt đen trắng (1/1 Monochrome)
 - Đóng cuốn đề xuất:       Khâu chỉ dán keo nhiệt PUR (Smyth Sewn + PUR Softcover)
@@ -46,7 +56,9 @@ Kính gửi: Bộ phận Chế bản & Vận hành Máy in (Prepress & Print Pro
 --------------------------------------------------------------------------------
 - SHA-256 (01_BIA_TRAI...):
   ebe852e004d1e310932fda3ee09a666b741cab4f33e5e1c5043ccc1711db1106
-- SHA-256 (02_RUOT_SACH...):
+- SHA-256 (Candidate PDF 611 trang hiện hành):
+  c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b
+- SHA-256 (02_RUOT_SACH baseline release f2211520):
   2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d
 
 ================================================================================

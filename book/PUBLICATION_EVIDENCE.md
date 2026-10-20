@@ -2,60 +2,63 @@
 
 Tài liệu này xác lập ranh giới bằng chứng thực tế, phương pháp thẩm định và khả năng truy xuất nguồn gốc của ấn bản phát hành.
 
-## 1. Định danh ấn bản xuất bản
+---
 
-- **File ứng viên phát hành**: `tmp/pdfs/Golang_Master.candidate.pdf`
-- **SHA-256 Ứng viên**: `c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b`
-- **Số trang thực tế**: 611 trang (29 chương, Atlas Thư viện, Phụ lục A)
-- **Baseline PDF**: `b086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c` (603 trang)
-- **Production Golang_Master.pdf**: Giữ nguyên không đè đợt này (`AWAITING_MANUAL_APPROVAL`)
-- **Remediation Branch**: `fix/final-book-acceptance`
+# PHẦN A: BẰNG CHỨNG ỨNG VIÊN PHÁT HÀNH HIỆN HÀNH (CURRENT CANDIDATE EVIDENCE — 611 TRANG)
 
-## 2. Phương pháp và phân loại Visual Review
+## 1. Định danh ấn bản ứng viên (Candidate Artifact)
 
-- **Phương pháp thẩm định**:
-  - `GEOMETRIC_AST_INSPECTION`: 611/611 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
-  - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
-- **Số trang được xem trực tiếp (Direct Visual Reviews)**: **352 trang**
-  - Danh sách và phạm vi trang:
-    - Trang 1 (Bìa) & Trang 2 (Mục lục)
-    - Trang 3–13: Lời mở đầu & Toàn bộ Chương 00 (11 trang)
-    - Trang 14–34: Toàn bộ Chương 01 (21 trang: cú pháp, kiểu dữ liệu, điều khiển luồng, hàm, con trỏ, compiler Plan 9 vs objdump)
-    - Trang 35–44: Toàn bộ Chương 02 (10 trang: mảng, slice header, mutation, growslice, full slice expression, UTF-8 strings)
-    - Trang 45–67: Toàn bộ Chương 03 (23 trang: pass-by-value, pointer semantics, struct nesting, map internals, type identity, method receiver, embedding, interfaces, typed nil, comparability)
-    - Trang 68–80: Toàn bộ Chương 04 (13 trang: biên lỗi, sentinel errors, %w wrapping, errors.Is/As, error contracts, context cancellation vs health, defer cleanup, recover anti-pattern, Bảng 3 & Bảng 4, Hình 17 & Hình 18)
-    - Trang 81–93: Toàn bộ Chương 05 (13 trang: package boundary, DAG khởi tạo gói, import cycle, cấu hình an toàn, net.SplitHostPort, IPv6, loại bỏ bool không rõ nghĩa, go.mod/MVS/replace, go.work, toolchain Go 1.27 vs language version, build tags //go:build, cross-compilation, Hình 19)
-    - Trang 94–113: Toàn bộ Chương 06 (20 trang: refactor kiểm chứng quanh app.Run, Bảng 3 phạm vi unit test, Bảng 4 policy lỗi cấu hình vs probe, table-driven test, ngữ nghĩa biến lặp Go 1.22+, bẫy &tt, lọc test -run, race detector, Bảng 5 race report, sync.Mutex, sync.WaitGroup, fuzzing với invariant property, seed corpus, benchmark với b.Loop() Go 1.24/1.27.1, contract stdout/stderr process boundary)
-    - Trang 114–123: Toàn bộ Chương 07 (10 trang: mô hình stream byte-by-byte, io.Reader/Writer contract, io.EOF, Bảng 6 kết quả Read, io.LimitReader, json.NewDecoder xử lý trailing data, encoding/json v1 vs v2 duplicate keys, flush/close defer, short write sentinel, bufio user-space buffering 4096B, Bảng đối chiếu 5 Reader vs Syscall, Linux fd_unix vs Windows IOCP, io/fs, embed.FS, os.Root, bufio.Scanner giới hạn token)
-    - Trang 124–131: Toàn bộ Chương 08 (8 trang: race hazards, Go Memory Model, Happens-before, Mutex vs WaitGroup, sync.Once, sync.Cond, atomic.Pointer, Hình 20, Bảng 7)
-    - Trang 132–139: Toàn bộ Chương 09 (8 trang: channel backpressure, select timeout/cancellation, buffer backlog, ownership đóng kênh, worker pool contract, G/M/P coordination, hchan internals, Hình 21, Bảng 8)
-    - Trang 140–152: Toàn bộ Chương 10 (13 trang: compiler escape analysis, SSA prove / bounds check elimination, GC mark-sweep & mgcpacer, Green Tea GC, GOGC, GOMEMLIMIT, benchmark b.Loop(), pprof CPU/mem, execution trace G/M/P states, PGO, Hình 22, Bảng đối chiếu chẩn đoán)
-    - Trang 153–159: Toàn bộ Chương 11 (7 trang: HTTP request lifecycle, net/http/httptrace, TLS handshake, context deadlines, connection reuse, body draining contract, Hình 23, Bảng 9)
-    - Trang 160–169: Toàn bộ Chương 12 (10 trang: service graceful shutdown, ServeUntilStopped, signal.NotifyContext, MaxBytesReader, JSON decoding EOF strictness, server timeouts, Hình 24, Bảng 10)
-    - Trang 170–181: Toàn bộ Chương 13 (12 trang: transaction atomicity, db.BeginTx, defer tx.Rollback, RowsAffected, database/sql connection pool, SetMaxOpenConns/IdleConns, prepared statements, Hình 25, migration ordering, cache-aside, transaction boundaries)
-    - Trang 182–196: Toàn bộ Chương 14 (15 trang: reflection, reflect.Type/ValueOf, rtype/abi.Type, CanSet, Bảng 11 Type vs Kind, struct tags, ApplyEnv, unsafe.Pointer, uintptr GC hazard, unsafe.StringData/SliceData, Cgo boundaries, runtime pinning, cgo memory leaks, Bảng so sánh đánh đổi)
-    - Trang 197–207: Toàn bộ Chương 15 (11 trang: os/exec CLI automation, exec.Cmd, môi trường và cwd, Hình 26 sequence diagram, Bảng 12 exit methods, CommandContext, timeout, orphan process trees, Setpgid, ProcessRunner buffer pipeline, test runner exit codes)
-    - Trang 208–220: Toàn bộ Chương 16 (13 trang: observability, log/slog, JSONHandler/TextHandler, Hình 27 tree handler, Bảng 13 slog.Attr/Group, trace context propagation, OpenTelemetry Tracing, TracerProvider, batch processor, Metrics types, Hình 28 Prometheus architecture, Bảng 14 telemetry hazards, SLO dashboards)
-    - Trang 221–235: Toàn bộ Chương 17 (15 trang: Linux namespaces và cgroups, Bảng 15 namespaces, Hình 29 controller reconciliation loop, multi-stage Dockerfile, distroless/scratch tradeoffs, Hình 30 NASA servers, non-root user, GOMEMLIMIT, NextAction controller reconciler, Bảng 16 Pod lifecycle, Hình 31 Kubernetes architecture, Kind cluster, rollout status / ImagePullBackOff, client-go observer, Generation vs ObservedGeneration, Bảng 17 control layers, Dừng để dự đoán)
-    - Trang 236–247: Toàn bộ Chương 18 (12 trang: đóng gói OCI, ký số Cosign, tự động hóa chuyển giao, 7 lớp delivery, Hình 32 & 33, Bảng 18 & 19, promote-gate CLI, OIDC IAM constraints, Terraform)
-    - Trang 248–263: Toàn bộ Chương 19 (16 trang: generic vs interface, Unique[T comparable], Measurable constraints, Hình 34, generic method Go 1.27, typed nil, probe layout, labs/part19)
-    - Trang 264–276: Toàn bộ Chương 20 (13 trang: capstone dự án opsprobe, Bảng 20, worker pool backpressure, SQLite transaction atomic BeginTx, bounded drain 16 KiB, socket leak incident, distroless, curl commands)
-    - Trang 277–286: Toàn bộ Chương 21 (10 trang: reconcile loop, level vs edge trigger, Hình 35, 4 pha điều hòa, WorkQueue dirty/processing, exponential backoff, SelfHealingReconciler, graceful shutdown, labs/part21)
-    - Trang 287–304: Toàn bộ Chương 22 (18 trang: Từ watch đến một controller Kubernetes thật, Informer cache, Reflector, DeltaFIFO, SharedInformer, giao thức List/Watch và resourceVersion, xử lý Tombstone và DeletedFinalStateUnknown, cấu trúc WorkQueue với 3 tập hợp queue/dirty/processing, Reconciler interface và Run loop, WaitForNamedCacheSyncWithContext, processNextItem, AddRateLimited, xử lý xung đột 409 qua retry.RetryOnConflict, 6 bài kiểm thử controller đạt PASS, bài tập CleanUpReconciler).
-    - Trang 305–321: Toàn bộ Chương 23 (17 trang: Từ Controller đến Operator, định nghĩa Operator, kiến trúc controller-runtime, Manager/Scheme/Controller, 4 trụ cột controller-runtime, CRD Spec vs Status subresource, OwnerReference cascading deletion, vòng đời Finalizer và deadlock pitfall, Reconcile loop đa nhánh return error/RequeueAfter/Requeue, ExternalCleaner, đồng bộ drift cấu hình, meta.SetStatusCondition, 5 bài kiểm thử Operator đạt PASS).
-    - Trang 322–338: Toàn bộ Chương 24 (17 trang: Tự động hóa AWS bằng Go, Default credential chain, STS temporary credentials qua AssumeRoleWithWebIdentity, IRSA, ECS Task Role, EKS Pod Identity, CredentialsCache, đường ống thực thi Smithy middleware với 5 giai đoạn Initialize/Serialize/Build/Finalize/Deserialize, SigV4 signing, NewListObjectsV2Paginator xử lý phân trang S3 1000 items, phân loại lỗi smithy.APIError và NoSuchKey/NoSuchBucket, AuditHeaderMiddleware, S3 Waiters; trong đó trang 322 đã có bản ghi PASS từ trước).
-    - Trang 339–345: Phần mở đầu và cơ chế then chốt Chương 25 (7 trang: Git và GitHub Automation, so sánh hai mô hình dữ liệu Local Git repo vs Hosted GitHub service, xác thực Webhook HMAC an toàn với hmac.Equal chống tấn công kênh kề timing attack, cơ chế Delivery ID & Idempotency ledger, khử trùng lặp redelivery, WebhookReceiver Process trong bộ nhớ).
-    - 7 trang chốt trọng yếu rải đều các chương sau: Trang 397 (Ch27 End Transition), Trang 399 (Ch28 Opener), Trang 419 (Ch29 Opener), Trang 424 (Ch29 Policy figure / text break), Trang 429 (Back Matter 50 Libraries Opener), Trang 484 (Phụ lục A Error Atlas Opener), Trang 493 (Trang kết thúc sách / J06–J11). (Trang 224 đã nằm trong Chương 17, Trang 322 đã nằm trong Chương 24).
-  - Trạng thái kiểm tra trực quan: 352/352 trang đạt chuẩn layout, không tràn viền, không mất nét, không orphan heading, typography sắc nét, sơ đồ kiến trúc và bảng biểu căn giữa chuẩn xác.
-- **Số trang chỉ được kiểm bằng thuật toán hình học (Automated-only Geometry Reviews)**: **141 trang** (`visual_status = PENDING`).
-- **Số trang chưa có evidence (Not Verifiable)**: 0 trang (toàn bộ 493 trang đều có bản ghi kiểm định hình học).
-- **Ledger bằng chứng thị giác chi tiết**:
-  - Đường dẫn: [book/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv)
-  - Bao gồm từng hàng với: `page`, `pdf_sha256`, `render_sha256`, `review_method`, `reviewer_type`, `visual_status`, `reviewed_at`, `observation`.
-- **Thư mục ảnh render để tái kiểm tra**:
-  - Lệnh render: `page.get_pixmap(dpi=150)` qua PyMuPDF.
-  - Vị trí tệp: `.workspace/final-publication-gate/renders/page_XXX.png`.
-  - Manifest mã băm 493 ảnh: `.workspace/final-publication-gate/render_manifest.json`.
+- **Tập tin ứng viên phát hành**: 	mp/pdfs/Golang_Master.candidate.pdf
+- **Mã băm SHA-256**: c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b
+- **Dung lượng chính xác**: 14.787.368 bytes (14,1 MB)
+- **Số trang thực tế**: **611 trang** (A4 dọc ,28 \times 841,89\text{ pt}$)
+- **Baseline PDF đối chiếu**: 086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c (603 trang)
+- **Tập tin Production gốc**: Golang_Master.pdf (13.542.255 bytes, SHA-256 2d70b44e...) **ĐƯỢC BẢO LƯU NGUYÊN VẸN** (chưa promote)
+- **Nhánh khắc phục**: ix/final-book-acceptance
+- **Trạng thái xuất bản**: AWAITING_MANUAL_APPROVAL
+
+## 2. Phương pháp và phân loại kiểm định trên ứng viên 611 trang
+
+Hệ thống thẩm định áp dụng ranh giới phân định chặt chẽ giữa kiểm tra tự động và kiểm tra trực quan trực tiếp:
+
+1. **AUTOMATED_GEOMETRY_PASS (Kiểm định hình học tự động qua PDF AST/DOM):**
+   - **Phạm vi:** **611/611 trang (100%)**
+   - **Tiêu chuẩn kiểm tra:** Kích thước ISO A4 (,28 \times 841,89\text{ pt}$), rotation = 0, lề đối xứng (inside 68,03 pt, outside 51,02 pt, top/bottom 56,69 pt), 100% font nhúng hợp lệ (JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular), 0 ký tự lỗi (mojibake/\ufffd), 0 trang trắng, 0 trang trùng lặp, 0 tràn viền (clipping), 0 điểm ảnh màu (grayscale 100%), và 34 mục bookmarks phân cấp chuẩn xác.
+
+2. **DIRECT_VISUAL_PASS (Kiểm tra trực quan trực tiếp qua mô hình thị giác / Vision Review):**
+   - **Phạm vi:** **64 trang** đã được quan sát và thẩm định qua tệp ảnh raster 150 DPI.
+   - **Danh mục trang đã kiểm tra trực quan:**
+     - Trang 1 (Bìa kiến trúc Concept 1) & Trang 2 (Mục lục 4 Phần vĩ mô).
+     - Toàn bộ 58 trang chứa sơ đồ Hình 01–58: Trang 4, 6, 13, 17, 19, 27, 41, 42, 44, 46, 56, 58, 60, 68, 77, 81, 88, 99, 104, 164, 173 (Hình 21), 200, 207, 218 (Hình 24), 234, 273, 284, 293, 301, 303, 311, 322, 332 (Hình 33), 341 (Hình 34), 371, 385, 386, 403, 404, 409, 425, 428, 441, 442, 445, 463, 466, 468, 487, 540, 547 (Hình 51), 551 (Hình 52), 556 (Hình 53), 559 (Hình 54), 568 (Hình 55), 579 (Hình 56), 581 (Hình 57), 600 (Hình 58).
+     - Các trang khắc phục lỗi phân trang tiêu biểu: Trang 14 (Bảng 1.1), Trang 30–31 (Bảng khai báo), Trang 57 (Cụm heading Ch03).
+   - **Hồ sơ hình ảnh lưu trữ:**
+     - 12 tệp mẫu trang đầy đủ tại .workspace/full-book-final-acceptance/QA_EVIDENCE/figure_pages/.
+     - 12 tệp đối chiếu Before/After tại .workspace/full-book-final-acceptance/QA_EVIDENCE/comparison_specimens/.
+
+3. **PENDING_DIRECT_VISUAL_REVIEW (Chờ nghiệm thu trực quan độc lập):**
+   - **Phạm vi:** **547 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
+   - Toàn bộ thông số trạng thái được theo dõi minh bạch tại ledger [ook/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
+
+4. **Contact Sheets bao phủ toàn bộ 611 trang:**
+   - 25 tập contact sheets (mỗi tấm 25 trang, tấm 25 gồm 11 trang cuối) tại .workspace/full-book-final-acceptance/QA_EVIDENCE/contact_sheets/ (sheet_01_p001_025.png đến sheet_25_p601_611.png).
+
+---
+
+# PHẦN B: KỶ YẾU BẰNG CHỨNG LỊCH SỬ (HISTORICAL EVIDENCE ARCHIVE — LƯU TRỮ TRUY NGUYÊN)
+
+> [!NOTE]
+> Phần này bảo lưu nguyên vẹn bằng chứng và kết luận của các đợt kiểm thử lịch sử trước đó nhằm đảm bảo tính toàn vẹn và khả năng truy vết của hồ sơ xuất bản.
+
+### 1. Kỷ yếu Đợt Thẩm định Bản 493 trang (2211520 — 08/10/2026)
+- **Đối tượng:** Ấn bản PDF 493 trang (2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09).
+- **Kết quả lịch sử:** 352 trang visual pass (RASTER_IMAGE_INSPECTION), 141 trang pending geometry heuristic (GEOMETRY_HEURISTIC_ONLY).
+- **Atlas Thư viện:** 24/50 thư viện semantic verified (SEMANTIC_CLAIM_VERIFIED), 26/50 thư viện source-file verified (SOURCE_FILE_VERIFIED).
+
+### 2. Kỷ yếu Đợt Thẩm định Bản 603 trang Baseline (db5672 — 20/10/2026)
+- **Đối tượng:** Ấn bản PDF baseline 603 trang (086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c).
+- **Kết quả lịch sử:** Báo cáo FINAL_BOOK_ACCEPTANCE.md phát hiện 14 vấn đề (ISS-01 đến ISS-14). Toàn bộ 14 vấn đề đã được khắc phục triệt để trên nhánh ix/final-book-acceptance.
+
+---
 
 ## 3. Bằng chứng đối soát Atlas 50 Thư viện & 85 Mục Lỗi
 
