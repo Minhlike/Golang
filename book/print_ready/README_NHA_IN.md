@@ -1,14 +1,18 @@
 # Hướng Dẫn In Ấn — Sách Golang 2026
 
+> [!WARNING]
+> **TRẠNG THÁI CHẾ BẢN VẬT LÝ:** `PHYSICAL_PRINT_READINESS = BLOCKED_PENDING_PRINTER_SPEC`  
+> Cần xác nhận định lượng gáy thực tế, độ ẩm và loại giấy thực tế từ nhà in đối tác trước khi ký duyệt lệnh in công nghiệp.
+
 Tài liệu bàn giao 02 tệp chế bản chuẩn cho nhà in:
 
 1. **[`01_BIA_TRAI_GOLANG_A4_GAY28MM.pdf`](01_BIA_TRAI_GOLANG_A4_GAY28MM.pdf)**
    - Khổ in: $454.0 \times 303.0\,\text{mm}$ (Bìa 4 + Gáy $28\,\text{mm}$ + Bìa 1 + Bleed $3\,\text{mm}$)
    - Giấy bìa: Couche $300\,\text{gsm}$, cán màng mờ, cấn 4 đường gáy.
 
-2. **[`02_RUOT_SACH_GOLANG_493TRANG_A4.pdf`](02_RUOT_SACH_GOLANG_493TRANG_A4.pdf)**
+2. **[`02_RUOT_SACH_GOLANG_612TRANG_A4.pdf`](02_RUOT_SACH_GOLANG_612TRANG_A4.pdf)**
    - Khổ in: ISO A4 ($210.0 \times 297.0\,\text{mm}$)
-   - Số trang: Đúng 493 trang ruột.
+   - Số trang: Đúng 612 trang ruột (bản in hiện hành).
    - Giấy ruột: Woodfree / Ford $80\,\text{gsm}$, in 2 mặt đen trắng (1/1).
    - Đóng cuốn: Khâu chỉ dán gáy keo PUR.
 

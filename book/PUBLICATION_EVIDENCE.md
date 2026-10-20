@@ -4,17 +4,17 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 
 ## 1. Định danh ấn bản xuất bản
 
-- **File phát hành**: `Golang_Master.pdf`
-- **SHA-256**: `f2211520a13e878a275546e6aa1519c1d0d32fb665caa224f95efe1dc566ce09`
-- **Số trang thực tế**: 493 trang
-- **Reviewed Source HEAD**: `0a4cea0bef424430cae87519697c5eeed60a7aad`
-- **Release Commit**: `24267405bfa6bdaa81901691cf56d182ba8cfd47`
-- **Tương đồng Candidate**: Byte-identical với `tmp/pdfs/Golang_Master.candidate.pdf` (100% khớp từng byte).
+- **File ứng viên phát hành**: `tmp/pdfs/Golang_Master.candidate.pdf`
+- **SHA-256 Ứng viên**: `c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b`
+- **Số trang thực tế**: 611 trang (29 chương, Atlas Thư viện, Phụ lục A)
+- **Baseline PDF**: `b086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c` (603 trang)
+- **Production Golang_Master.pdf**: Giữ nguyên không đè đợt này (`AWAITING_MANUAL_APPROVAL`)
+- **Remediation Branch**: `fix/final-book-acceptance`
 
 ## 2. Phương pháp và phân loại Visual Review
 
 - **Phương pháp thẩm định**:
-  - `GEOMETRIC_AST_INSPECTION`: 493/493 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
+  - `GEOMETRIC_AST_INSPECTION`: 611/611 trang được kiểm tra bằng thuật toán duyệt qua cấu trúc AST/PDF DOM (PyMuPDF): kích thước A4 (595.28 x 841.89 pt), góc xoay (rotation = 0), lề trang mirror/gutter (inside 68.03 pt, outside 51.02 pt, top/bottom 56.69 pt), font nhúng (100%), ký tự lỗi/mojibake (\ufffd), trang trắng (0 trang), trang trùng lặp (0 cặp), và bounding box của từng khối văn bản/mã nguồn/hình vẽ.
   - `RASTER_IMAGE_INSPECTION`: Trực tiếp mở và quan sát tệp ảnh raster 150 DPI bằng mô hình thị giác (Vision Model).
 - **Số trang được xem trực tiếp (Direct Visual Reviews)**: **352 trang**
   - Danh sách và phạm vi trang:
@@ -63,7 +63,7 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 - **Tập tin bản thảo**: `book/appendices/devops-library-atlas.md` (50 mục Rank 01–50).
 - **Bảng đối soát chi tiết**: [book/publication/library_atlas_evidence_ledger.md](publication/library_atlas_evidence_ledger.md)
   - **`SEMANTIC_CLAIM_VERIFIED`**: **24/50 thư viện** (48%)
-    - Đã clone/checkout và đối soát toàn diện mã nguồn nội bộ tại repo local ở commit đã ghim trong `library_sources/repos/`, đối chiếu trực tiếp tập tin source, symbol triển khai và cơ chế hỗ trợ claim:
+    - Đối soát toàn diện mã nguồn nội bộ ở commit đã ghim (trong đó 9 thư viện cốt lõi gồm `aws-sdk-go-v2`, `cilium-ebpf`, `controller-runtime`, `go-git`, `go-github`, `k8s-client-go`, `mcp-go-sdk`, `opentelemetry-go`, `prometheus-client-golang` được clone tại `library_sources/repos/`, các thư viện còn lại đối chiếu trực tiếp tập tin source, symbol triển khai và cơ chế hỗ trợ claim từ commit ghim chính thức):
       1. `k8s-client-go` (`28076445520055420e3be4255b4cd27fd19df1f9`)
       2. `controller-runtime` (`67b72c2517be1d2b0dec612477eb20c3c959a8aa`)
       3. `aws-sdk-go-v2` (`b189f382f4924bc6c948c9942e17c547553faf0d`)
