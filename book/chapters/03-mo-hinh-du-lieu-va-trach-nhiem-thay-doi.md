@@ -416,7 +416,8 @@ Chuyển đổi kiểu (*conversion*) không phải là kiểm tra tính hợp l
 `recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một dịch vụ (*service*), chữ ký hàm bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho dịch vụ, một hàm khác ghi kết quả thăm dò (*probe*), hàm nữa kiểm tra cấu hình. Lúc này phương thức (*method*) giúp đặt hành vi cạnh kiểu dữ liệu mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc ngữ nghĩa giá trị (*value semantics*) đã xây.
 
 ~~~go
-// Trích đoạn sư phạm tối giản (bài lab mở rộng xuất đủ %s healthy=%t retries=%d)
+// Trích đoạn sư phạm tối giản
+// (bản lab mở rộng xuất đủ %s healthy=%t retries=%d)
 func (service Service) Summary() string {
 	return service.Name
 }
