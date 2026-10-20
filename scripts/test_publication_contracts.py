@@ -1053,6 +1053,67 @@ class PublicationContracts(unittest.TestCase):
         self.assertEqual(story[0].style.name, 'body-intro')
 
 
+    def test_chapter_tail_paragraph_never_splits_before_pagebreak(self):
+        """Test that keep_headings_with_content wraps the last paragraph before PageBreak
+        in KeepTogether to prevent 1-3 line orphan spills across chapter boundaries."""
+        para = Paragraph("Final paragraph of chapter", ParagraphStyle("Body"))
+        story = [para, PageBreak()]
+        processed = build_pdf.keep_headings_with_content(story)
+        self.assertEqual(len(processed), 2)
+        self.assertIsInstance(processed[0], KeepTogether)
+        self.assertEqual(processed[0]._content[0], para)
+        self.assertIsInstance(processed[1], PageBreak)
+
+    def test_no_trailing_chapter_runt_pages(self):
+        """Regression test for confirmed P1 pagination defect:
+        Assert that no page immediately preceding a new chapter opener contains only
+        1-3 continuation lines spilled from the previous page.
+        Excludes reference/bibliography lists and intentional structural back matter layouts."""
+        import pymupdf as fitz
+        candidate_pdf = Path("tmp/pdfs/Golang_Master.candidate.pdf").resolve()
+        self.assertTrue(candidate_pdf.exists(), f"Candidate PDF {candidate_pdf} must exist")
+        with fitz.open(candidate_pdf) as doc:
+            chapter_pages = []
+            for pno in range(1, len(doc) + 1):
+                text = doc[pno - 1].get_text()
+                lines = [l.strip() for l in text.splitlines() if l.strip() and l.strip() != str(pno)]
+                if not lines:
+                    continue
+                first = lines[0]
+                if (first.startswith("Chương ") and "—" in first) or first.startswith("Phụ lục ") or first.startswith("Atlas Lỗi"):
+                    chapter_pages.append((pno, first))
+
+            self.assertGreaterEqual(len(chapter_pages), 29, "Must detect all chapter openers in the manuscript")
+
+            runt_defects = []
+            for pno, title in chapter_pages:
+                if pno <= 1:
+                    continue
+                pre_pno = pno - 1
+                pre_text = doc[pre_pno - 1].get_text()
+                pre_lines = [l.strip() for l in pre_text.splitlines() if l.strip() and l.strip() != str(pre_pno)]
+
+                # Exclude intentional layouts:
+                # 1. Reference/bibliography listings (numbered entries or citation domains)
+                is_reference_list = any(
+                    l.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.")) or "Go Team" in l or "go.dev" in l
+                    for l in pre_lines
+                )
+                if is_reference_list:
+                    continue
+
+                # If pre-chapter page only contains 1-3 lines
+                if len(pre_lines) in (1, 2, 3):
+                    runt_defects.append({
+                        "page": pre_pno,
+                        "lines_count": len(pre_lines),
+                        "lines": pre_lines,
+                        "preceding_chapter": title,
+                    })
+
+            self.assertEqual(runt_defects, [], f"Found trailing chapter runt pages with 1-3 lines: {runt_defects}")
+
+
 if __name__ == '__main__':
     unittest.main()
 

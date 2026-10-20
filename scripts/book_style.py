@@ -130,20 +130,20 @@ def get_book_styles() -> dict[str, ParagraphStyle]:
         # H2 — Section heading: clear visual break
         "h2": ParagraphStyle(
             "H2", parent=base["Heading2"], fontName=FONT_SANS_BOLD, fontSize=15.5,
-            leading=21, textColor=COLOR_BLACK, spaceBefore=20, spaceAfter=7,
+            leading=21, textColor=COLOR_BLACK, spaceBefore=18, spaceAfter=6,
             keepWithNext=True,
         ),
         # H3 — Subsection: weight distinction only
         "h3": ParagraphStyle(
             "H3", parent=base["Heading3"], fontName=FONT_SANS_BOLD, fontSize=13.0,
-            leading=18, textColor=COLOR_TEXT_PRIMARY, spaceBefore=13, spaceAfter=5,
+            leading=18, textColor=COLOR_TEXT_PRIMARY, spaceBefore=10, spaceAfter=3,
             keepWithNext=True,
         ),
 
         # ── Body & Lists ─────────────────────────────────────────────────────
         "body": ParagraphStyle(
             "Body", parent=base["BodyText"], fontName=FONT_SERIF, fontSize=14.0,
-            leading=21.5, alignment=TA_LEFT, textColor=COLOR_TEXT_PRIMARY, spaceAfter=9,
+            leading=21.5, alignment=TA_LEFT, textColor=COLOR_TEXT_PRIMARY, spaceAfter=7,
             allowWidows=False, allowOrphans=False,
         ),
         "bullet": ParagraphStyle(

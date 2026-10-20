@@ -6,16 +6,16 @@
 > - EVIDENCE_CORRECTION_STATUS = CLOSED_WITH_DECLARED_LIMITATIONS
 > - PHYSICAL_PRINT_READINESS = BLOCKED_PENDING_PRINTER_SPEC
 >
-> **Ranh giới chứng cứ minh bạch trên ứng viên 611 trang hiện hành (Current 611-Page Candidate)**:
-> - **Kiểm định hình học tự động (Automated Geometry Inspection)**: **611/611 trang đạt AUTOMATED_GEOMETRY_PASS** (kích thước ISO A4, lề đối xứng, 100% font nhúng, 0 ký tự lỗi, 0 clipping, 0 điểm ảnh màu, 34 bookmarks).
-> - **Kiểm tra trực quan trực tiếp (Direct Visual Inspection)**: **64/611 trang đạt DIRECT_VISUAL_PASS** (Bìa, Mục lục, 58 trang chứa sơ đồ Hình 01–58, các trang sửa lỗi phân trang pp. 14, 30, 31, 57 được mở xem raster 150 DPI và tạo specimen đối chiếu).
-> - **Bảo lưu chờ nghiệm thu trực quan (Pending Direct Visual Review)**: **547/611 trang mang trạng thái PENDING_DIRECT_VISUAL_REVIEW** (đã qua kiểm tra hình học tự động, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan toàn bộ).
+> **Ranh giới chứng cứ minh bạch trên ứng viên 611 trang hiện hành (Current 590-Page Candidate)**:
+> - **Kiểm định hình học tự động (Automated Geometry Inspection)**: **590/590 trang đạt AUTOMATED_GEOMETRY_PASS** (kích thước ISO A4, lề đối xứng, 100% font nhúng, 0 ký tự lỗi, 0 clipping, 0 điểm ảnh màu, 34 bookmarks).
+> - **Kiểm tra trực quan trực tiếp (Direct Visual Inspection)**: **64/590 trang đạt DIRECT_VISUAL_PASS** (Bìa, Mục lục, 58 trang chứa sơ đồ Hình 01–58, các trang sửa lỗi phân trang pp. 14, 30, 31, 57 được mở xem raster 150 DPI và tạo specimen đối chiếu).
+> - **Bảo lưu chờ nghiệm thu trực quan (Pending Direct Visual Review)**: **526/590 trang mang trạng thái PENDING_DIRECT_VISUAL_REVIEW** (đã qua kiểm tra hình học tự động, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan toàn bộ).
 > - **Library Atlas Verification**: **50/50 thư viện đã đối soát source anchors và lock.json** (cilium/ebpf đạt phiên bản thực tế 0.22.0).
 >
 > **Định danh ấn bản ứng viên hiện hành**:
 > - CANDIDATE_PDF_PATH: 	mp/pdfs/Golang_Master.candidate.pdf
-> - CANDIDATE_PDF_SHA256: c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b
-> - EXACT_PAGE_COUNT: 611
+> - CANDIDATE_PDF_SHA256: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89
+> - EXACT_PAGE_COUNT: 590
 > - REMEDIATION_BRANCH: ix/final-book-acceptance
 > - PRODUCTION_MASTER_PDF: Golang_Master.pdf (13.542.255 bytes, SHA-256 2d70b44e...) **ĐƯỢC BẢO LƯU NGUYÊN VẸN 100%** (chưa promote).
 >
@@ -23,18 +23,18 @@
 
 ---
 
-# PHẦN A: BẢNG CHỈ SỐ KIỂM ĐỊNH ỨNG VIÊN HIỆN HÀNH (611 TRANG)
+# PHẦN A: BẢNG CHỈ SỐ KIỂM ĐỊNH ỨNG VIÊN HIỆN HÀNH (590 TRANG)
 
-| Tiêu chí thẩm định | Kết quả | Ghi chú & Ranh giới kỹ thuật trên Ứng viên 611 trang |
+| Tiêu chí thẩm định | Kết quả | Ghi chú & Ranh giới kỹ thuật trên Ứng viên 590 trang |
 |---|---|---|
-| **AUTOMATED_GEOMETRY_PASS** | **611/611 PASS (100%)** | Kích thước A4, lề trong 68.03 pt, lề ngoài 51.02 pt, top/bottom 56.69 pt; 100% font nhúng; 0 broken glyph; 0 clipping; 0 blank page; 34 bookmarks |
-| **DIRECT_VISUAL_PASS** | **64/611 PASS** | 64 trang (Bìa, Mục lục, 58 trang sơ đồ Hình 01–58, các trang sửa phân trang) đã duyệt trực quan raster 150 DPI |
-| **PENDING_DIRECT_VISUAL_REVIEW** | **547/611 PENDING** | 547 trang văn xuôi đã đạt chuẩn hình học tự động, bảo lưu trạng thái chờ Reviewer nghiệm thu trực quan |
+| **AUTOMATED_GEOMETRY_PASS** | **590/590 PASS (100%)** | Kích thước A4, lề trong 68.03 pt, lề ngoài 51.02 pt, top/bottom 56.69 pt; 100% font nhúng; 0 broken glyph; 0 clipping; 0 blank page; 34 bookmarks |
+| **DIRECT_VISUAL_PASS** | **64/590 PASS** | 64 trang (Bìa, Mục lục, 58 trang sơ đồ Hình 01–58, các trang sửa phân trang) đã duyệt trực quan raster 150 DPI |
+| **PENDING_DIRECT_VISUAL_REVIEW** | **526/590 PENDING** | 547 trang văn xuôi đã đạt chuẩn hình học tự động, bảo lưu trạng thái chờ Reviewer nghiệm thu trực quan |
 | **LIBRARY_ATLAS_SEMANTIC_AUDIT** | **50/50 PASS** | 50/50 thư viện đối chiếu source ghim trong library_sources/repos và lock.json (cilium/ebpf v0.22.0) |
 | **ERROR_ATLAS_SEMANTIC_AUDIT** | **85/85 PASS** | 85/85 lỗi thuộc 10 taxonomy A–J, 89 patterns, cross-reference chính xác |
 | **VISUAL_MANIFEST_ASSETS** | **58/58 PASS** | Khớp 58/58 tài sản hình ảnh và 38 tệp mã nguồn sơ đồ |
 | **CODE_WIDTH_LIMITS** | **PASS (0 overflow)** | 100% khối mã nằm trong độ rộng an toàn 448.22 pt |
-| **PUBLICATION_CONTRACTS** | **55/55 PASS** | Chạy đủ 55/55 tests trong 87.040s; 0 failures; 0 errors |
+| **PUBLICATION_CONTRACTS** | **66/66 PASS** | Chạy đủ 66/66 tests trong 88.922s; 0 failures; 0 errors (bổ sung 2 regression tests kiểm soát runt-page và chapter-tail KeepTogether) |
 | **GO_MODULES_VERIFIED** | **7/7 PASS (Exit 0)** | Chạy bằng Go 1.27.1 nội bộ (.tools/go1.27.1/bin/go.exe): part24, part25, part27, part28, part22, part11, part3 đạt go mod verify (exit 0) & go test -count=1 (exit 0) |
 | **PHYSICAL_PRINT_READINESS** | **BLOCKED** | Đang chờ phiếu đo caliper thực tế gáy sách từ nhà in; gáy 28 mm là kích thước ước tính danh nghĩa |
 
@@ -47,7 +47,7 @@ Biên bản thẩm định và nghiệm thu xuất bản toàn diện (Final Who
 - STARTING_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - FINAL_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - SOURCE_FREEZE_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
-- CANDIDATE_PDF_SHA256: `c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b`
+- CANDIDATE_PDF_SHA256: `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89`
 - PAGE_COUNT: `611`
 - PUBLICATION_STATUS: `AWAITING_MANUAL_APPROVAL`
 - BOOK_STATUS: `REMEDIATION_COMPLETE_VERIFIED`

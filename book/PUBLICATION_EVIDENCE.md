@@ -4,25 +4,25 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 
 ---
 
-# PHẦN A: BẰNG CHỨNG ỨNG VIÊN PHÁT HÀNH HIỆN HÀNH (CURRENT CANDIDATE EVIDENCE — 611 TRANG)
+# PHẦN A: BẰNG CHỨNG ỨNG VIÊN PHÁT HÀNH HIỆN HÀNH (CURRENT CANDIDATE EVIDENCE — 590 TRANG)
 
 ## 1. Định danh ấn bản ứng viên (Candidate Artifact)
 
 - **Tập tin ứng viên phát hành**: 	mp/pdfs/Golang_Master.candidate.pdf
-- **Mã băm SHA-256**: c799ddeb95b3695e4109ca7e041f21ed0098b22dbbb436d61b75ecee7207f09b
-- **Dung lượng chính xác**: 14.787.368 bytes (14,1 MB)
-- **Số trang thực tế**: **611 trang** (A4 dọc ,28 \times 841,89\text{ pt}$)
+- **Mã băm SHA-256**: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89
+- **Dung lượng chính xác**: 14.770.325 bytes (14,1 MB)
+- **Số trang thực tế**: **590 trang** (A4 dọc ,28 \times 841,89\text{ pt}$)
 - **Baseline PDF đối chiếu**: 086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c (603 trang)
 - **Tập tin Production gốc**: Golang_Master.pdf (13.542.255 bytes, SHA-256 2d70b44e...) **ĐƯỢC BẢO LƯU NGUYÊN VẸN** (chưa promote)
 - **Nhánh khắc phục**: ix/final-book-acceptance
 - **Trạng thái xuất bản**: AWAITING_MANUAL_APPROVAL
 
-## 2. Phương pháp và phân loại kiểm định trên ứng viên 611 trang
+## 2. Phương pháp và phân loại kiểm định trên ứng viên 590 trang
 
 Hệ thống thẩm định áp dụng ranh giới phân định chặt chẽ giữa kiểm tra tự động và kiểm tra trực quan trực tiếp:
 
 1. **AUTOMATED_GEOMETRY_PASS (Kiểm định hình học tự động qua PDF AST/DOM):**
-   - **Phạm vi:** **611/611 trang (100%)**
+   - **Phạm vi:** **590/590 trang (100%)**
    - **Tiêu chuẩn kiểm tra:** Kích thước ISO A4 (,28 \times 841,89\text{ pt}$), rotation = 0, lề đối xứng (inside 68,03 pt, outside 51,02 pt, top/bottom 56,69 pt), 100% font nhúng hợp lệ (JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular), 0 ký tự lỗi (mojibake/\ufffd), 0 trang trắng, 0 trang trùng lặp, 0 tràn viền (clipping), 0 điểm ảnh màu (grayscale 100%), và 34 mục bookmarks phân cấp chuẩn xác.
 
 2. **DIRECT_VISUAL_PASS (Kiểm tra trực quan trực tiếp qua mô hình thị giác / Vision Review):**
@@ -36,11 +36,11 @@ Hệ thống thẩm định áp dụng ranh giới phân định chặt chẽ gi
      - 12 tệp đối chiếu Before/After tại .workspace/full-book-final-acceptance/QA_EVIDENCE/comparison_specimens/.
 
 3. **PENDING_DIRECT_VISUAL_REVIEW (Chờ nghiệm thu trực quan độc lập):**
-   - **Phạm vi:** **547 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
+   - **Phạm vi:** **526 trang** (Đã đạt chuẩn AUTOMATED_GEOMETRY_PASS, bảo lưu trạng thái chờ Reviewer / con người mở duyệt trực quan).
    - Toàn bộ thông số trạng thái được theo dõi minh bạch tại ledger [ook/publication/page_visual_evidence.csv](publication/page_visual_evidence.csv).
 
 4. **Contact Sheets bao phủ toàn bộ 611 trang:**
-   - 25 tập contact sheets (mỗi tấm 25 trang, tấm 25 gồm 11 trang cuối) tại .workspace/full-book-final-acceptance/QA_EVIDENCE/contact_sheets/ (sheet_01_p001_025.png đến sheet_25_p601_611.png).
+   - 24 tập contact sheets (mỗi tấm 25 trang, tấm 24 gồm 15 trang cuối) tại .workspace/full-book-final-acceptance/QA_EVIDENCE/contact_sheets_590p/ (sheet_01_p001_025.png đến sheet_24_p576_590.png).
 
 ---
 

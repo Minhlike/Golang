@@ -303,7 +303,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             is_colon = prose.rstrip().endswith(":")
             is_short_after_heading = after_heading and len(prose) <= 220
             is_explicit_intro = any(k in prose.lower() for k in ("bảng dưới", "sơ đồ dưới", "hình dưới", "đoạn mã dưới", "ví dụ dưới"))
-            if before_follower and (is_colon or is_short_after_heading or is_explicit_intro):
+            if before_follower and ((is_colon and len(prose) <= 280) or is_short_after_heading or is_explicit_intro):
                 style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
             elif is_colon and len(prose) <= 280:
                 style = ParagraphStyle("body-intro", parent=s["body"], keepWithNext=True)
@@ -384,8 +384,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 7),
             ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]))
         flowables = []
         if table_caption:
@@ -396,7 +396,7 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                           cap_style)
             )
         flowables.append(table)
-        flowables.append(Spacer(1, 10))
+        flowables.append(Spacer(1, 8))
         # Fix ISS-04: small tables (<= 5 rows) remain unified with KeepTogether.
         # Larger tables (> 5 rows) split cleanly across pages with repeatRows=1,
         # preventing large artificial bottom whitespace gaps.
@@ -442,15 +442,15 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                 ("LINEBEFORE", (0, 0), (0, -1), LINE_WEIGHT_ACCENT, COLOR_BORDER_STRONG),
                 ("LEFTPADDING", (0, 0), (-1, -1), 12),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
             ]))
             if len(chunks) == 1:
                 # Single block: always KeepTogether regardless of line count
-                story.append(KeepTogether([Spacer(1, 6), box, Spacer(1, 13)]))
+                story.append(KeepTogether([Spacer(1, 3), box, Spacer(1, 6)]))
             else:
                 top_spacer = 6 if idx == 0 else 2
-                bottom_spacer = 13 if idx == len(chunks) - 1 else 4
+                bottom_spacer = 10 if idx == len(chunks) - 1 else 4
                 story.extend([Spacer(1, top_spacer), box, Spacer(1, bottom_spacer)])
         code_lines = []
 
@@ -523,8 +523,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
                 ("LINEBEFORE", (0, 0), (0, -1), LINE_WEIGHT_ACCENT, COLOR_BORDER_MEDIUM),
                 ("LEFTPADDING", (0, 0), (-1, -1), 14),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ]))
             story.extend([Spacer(1, 5), note, Spacer(1, 12)])
             continue
@@ -548,8 +548,8 @@ def add_markdown(story: list, chapter: Path, s: dict[str, ParagraphStyle], mono:
             continue
         if line.strip() == "---":
             flush_paragraph()
-            story.extend([Spacer(1, 3), HRFlowable(width="100%", thickness=LINE_WEIGHT_BORDER,
-                         color=COLOR_BORDER_LIGHT), Spacer(1, 5)])
+            story.extend([Spacer(1, 1), HRFlowable(width="100%", thickness=LINE_WEIGHT_BORDER,
+                         color=COLOR_BORDER_LIGHT), Spacer(1, 2)])
             continue
         bullet = re.match(r"^[-*]\s+(.+)$", line)
         numbered = re.match(r"^(\d+)\.\s+(.+)$", line)
@@ -782,7 +782,18 @@ def keep_headings_with_content(story: list) -> list:
                 spacing.keepWithNext = True
             result.extend(prefix)
             index = end
-    return result
+    # Protect trailing paragraphs before PageBreak from orphan/widow chapter-boundary splitting
+    final_story = []
+    for idx, item in enumerate(result):
+        if isinstance(item, Paragraph) and idx + 1 < len(result):
+            nxt = idx + 1
+            while nxt < len(result) and isinstance(result[nxt], (Spacer, HRFlowable)):
+                nxt += 1
+            if nxt < len(result) and isinstance(result[nxt], PageBreak):
+                final_story.append(KeepTogether([item]))
+                continue
+        final_story.append(item)
+    return final_story
 
 
 def build_document(story: list, body: str, body_bold: str, heading: str,
