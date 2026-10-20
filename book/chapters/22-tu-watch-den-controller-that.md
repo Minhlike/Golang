@@ -73,7 +73,7 @@ Trong vòng đời của một tài nguyên, sự kiện xóa (`OnDelete`) ẩn 
 
 Khi không nhận được sự kiện xóa nhưng một lần `List` lại cho thấy khóa đã biến mất, `DeltaFIFO` có thể tạo đối tượng `DeletedFinalStateUnknown`. Trường `Obj` lưu giữ quan sát cuối cùng được ghi nhận, có thể đã cũ chứ không phải bản chụp tại thời điểm xóa thực tế. Hàm xử lý cần chấp nhận cả đối tượng thông thường lẫn bia mộ dữ liệu (`tombstone`), đồng thời không suy diễn định danh mới từ tên gọi cũ.
 
-Nếu bạn ép kiểu trực tiếp:
+Nếu ta ép kiểu trực tiếp:
 ~~~go
 // CẢNH BÁO: Panic runtime nếu đối tượng rơi vào Tombstone!
 pod := obj.(*corev1.Pod)
@@ -276,7 +276,7 @@ Bài kiểm tra thêm mười lần cùng khóa của đối tượng `Pod` mang
 ### 2. Đọc trạng thái mới từ Cache thay vì Payload cũ (TestCacheNewerThanEvent)
 Bài kiểm tra đưa đối tượng `Pod` có `ResourceVersion: "1"` vào hàng đợi, rồi cập nhật bộ chỉ mục `Indexer` thành `"3"` trước khi tiến trình xử lý tiếp nhận. Kết quả quan sát ghi nhận giá trị `"3"`, xác nhận luồng xử lý luôn đọc lại bộ đệm thay vì giữ nguyên dữ liệu sự kiện cũ. Bài kiểm tra này không nhằm chứng minh bộ đệm luôn hoàn toàn đồng bộ với API Server.
 
-### 3. Tách biệt lỗi tạm thời và Lũy thừa thử lại (TestRateLimitedRetry)
+### 3. Tách biệt lỗi tạm thời và Lũy thừa thử lại (TestRateLimitedRetryDecoupledFromDomain)
 Bài kiểm tra `TestRateLimitedRetryDecoupledFromDomain` giả lập hai lần điều hòa thất bại và lần thứ ba thành công. Các câu khẳng định kiểm tra hai lượt thử lại, ba lượt triệu gọi và không làm rơi mất yêu cầu; nhánh thành công trong mã nguồn gọi `Forget(key)` để xóa lịch sử thử lại của khóa.
 
 ### 4. An toàn trước Tombstone (TestSafeDeletionAndTombstone)
@@ -292,7 +292,7 @@ Trong bài thực hành, nếu hàm `WaitForNamedCacheSyncWithContext` trả v�
 
 ## 8. Kiểm soát đồng thời lạc quan (OCC) và Lỗi 409 Conflict
 
-Khi controller quyết định cập nhật trạng thái `Pod` lên máy chủ API, nó gửi một lệnh HTTP `PUT` hoặc `PATCH`. Trong môi trường phân tán, một controller khác hoặc người dùng thông qua `kubectl` có thể đã sửa đổi Pod đó trước bạn một phần nghìn giây.
+Khi controller quyết định cập nhật trạng thái `Pod` lên máy chủ API, nó gửi một lệnh HTTP `PUT` hoặc `PATCH`. Trong môi trường phân tán, một controller khác hoặc người dùng thông qua `kubectl` có thể đã sửa đổi Pod đó trước ta một phần nghìn giây.
 
 Với thao tác `Update` dưới đây, `resourceVersion` được dùng làm tiền điều kiện kiểm tra: phiên bản cũ sẽ khiến máy chủ API trả về mã lỗi `409 Conflict`. Không phải mọi lệnh PATCH đều áp dụng cùng điều kiện; một bản vá có thể bỏ qua `resourceVersion` hoặc sử dụng cơ chế xử lý xung đột và quyền sở hữu trường khác. Hãy đọc kỹ khế ước của thao tác ghi đang áp dụng, tránh suy diễn cơ chế đồng thời lạc quan (OCC) chỉ thuần túy dựa vào phương thức HTTP.
 

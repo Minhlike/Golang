@@ -6,7 +6,7 @@ Xét một tác tử (Agent) có công cụ đọc trạng thái sức khỏe d�
 
 Khi tool nối tới production, cần hỏi cụ thể:
 
-> *Nếu trao cho Agent quyền truy cập vào một công cụ, làm sao bạn bảo đảm tác tử không bị tấn công tiêm lời nhắc (Prompt Injection) để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ hạ tầng?*
+> *Nếu trao cho Agent quyền truy cập vào một công cụ, làm sao ta bảo đảm tác tử không bị tấn công tiêm lời nhắc (Prompt Injection) để vô tình hoặc cố ý phá hủy cơ sở dữ liệu, rò rỉ token truy cập đám mây, hay làm sập toàn bộ hạ tầng?*
 
 Giao thức bối cảnh mô hình (MCP, tức *Model Context Protocol*) chuẩn hóa ranh giới giao tiếp, nhưng không tự động cấp quyền hay làm cho công cụ trở nên an toàn. Chương này sử dụng thư viện chính thức **`github.com/modelcontextprotocol/go-sdk/mcp`** (phiên bản v1.8.0) để dựng một máy chủ mẫu mang tính sư phạm theo nguyên tắc đặc quyền tối thiểu, có sổ đăng ký mục tiêu (*target registry*) và dấu vết kiểm toán (*audit trail*). Chính sách ủy quyền (*authorization policy*), độ tin cậy của sổ đăng ký mục tiêu và bộ chấp hành (*actuator*) thực tế vẫn là trách nhiệm của cấu hình triển khai.
 
@@ -594,10 +594,9 @@ Chương 28 kết nối các ranh giới công cụ kỹ thuật đã học. B�
 
 | Chặng đường | Phạm vi kiến thức và kỹ năng | Thành tựu kỹ thuật cốt lõi |
 | :--- | :--- | :--- |
-| **Phần I–III: Nền tảng** | Cú pháp, value, pointer, slice, interface và error. | Dự đoán copy/aliasing và đọc contract lỗi. |
-| **Phần IV–V: Đồng thời & Vận hành** | Memory model, worker pool, runtime, GC và pprof. | Tái lập race, thiết kế đường thoát và đo bottleneck. |
-| **Phần VI–VII: Mạng & Dịch vụ** | HTTP/gRPC, TLS, SQL và lifecycle server. | Đặt timeout, ownership tài nguyên và transaction boundary. |
-| **Phần VIII: Quan sát & Điều phối** | Metrics/trace, container, Kubernetes và opsprobe. | Phân biệt tín hiệu, desired state và observation. |
-| **Phần IX: Hạ tầng & Agent** | Controller, operator, AWS, Git, supply chain, eBPF và MCP. | Xét retry, identity, quyền và evidence của từng boundary. |
+| **Phần I: Nền tảng Cơ học & Bộ nhớ Go (Ch. 00–06)** | Cú pháp, value, pointer, slice, error, package và testing. | Dự đoán copy/aliasing, thiết kế package và đọc contract lỗi. |
+| **Phần II: Tương tranh & Độ ổn định Hệ thống (Ch. 07–13)** | I/O stream, memory model, race detector, worker pool, GC, client trace và server lifecycle. | Tái lập race, thiết kế đường thoát, đo bottleneck và ranh giới shutdown. |
+| **Phần III: Dịch vụ Phân tán & Cơ sở Dữ liệu (Ch. 14–21)** | Reflection, incident CLI, observability, container, CI/CD, generics và dự án opsprobe. | Đặt timeout, transaction boundary, type parameter và điều hòa hệ thống. |
+| **Phần IV: Kubernetes Operator & eBPF Nâng cao (Ch. 22–29)** | Controller client-go, Operator CRD, AWS SDK v2, GitHub automation, Cosign, eBPF và MCP. | Xét retry, identity, quyền và evidence của từng boundary an toàn. |
 
 Khi đưa những ý tưởng này vào môi trường vận hành thực tế, hãy rà soát lại mô hình mối đe dọa (*threat model*), ranh giới tin cậy (*trust boundary*), khối lượng công việc thực tế và quy trình xử lý sự cố của từng hệ thống cụ thể. Các bài thực hành chỉ chứng minh những khế ước kỹ thuật trong phạm vi hẹp; chúng không thể thay thế việc xác thực danh tính thực tế, chính sách kiểm soát lưu lượng đi ra (*egress policy*), hệ thống kiểm toán bền bỉ hay quy trình duyệt vận hành của con người.

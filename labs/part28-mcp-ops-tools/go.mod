@@ -1,6 +1,6 @@
 module example.com/golang-master/part28-mcp-ops-tools
 
-go 1.25.0
+go 1.27.1
 
 replace github.com/modelcontextprotocol/go-sdk => ../../library_sources/repos/mcp-go-sdk
 

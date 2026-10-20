@@ -1,5 +1,8 @@
-"""Render the two editable, grayscale Chapter 22 diagrams at print resolution."""
+"""DEPRECATED: This script is deprecated in favor of scripts/ch19_29_vector_diagrams.py.
 
+Do not use for production diagram generation. The authoritative single source of truth
+for Chapter 22 diagrams (Figures 36 & 37) is scripts/ch19_29_vector_diagrams.py.
+"""
 from __future__ import annotations
 
 from io import BytesIO

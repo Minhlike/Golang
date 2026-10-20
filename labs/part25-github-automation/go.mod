@@ -31,4 +31,3 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
 
-replace github.com/google/go-github/v68 => ../../library_sources/repos/go-github

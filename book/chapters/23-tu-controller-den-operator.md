@@ -31,7 +31,7 @@ spec:
   port: 8080
 ~~~
 
-Khi bạn nộp khai báo trên, bộ vận hành (`Operator`) sẽ tự động sinh ra đối tượng `Deployment` tương ứng, gắn nhãn, cấu hình health check, theo dõi sức khỏe và cập nhật trạng thái thực tế về cho bạn.
+Khi ta nộp khai báo trên, bộ vận hành (`Operator`) sẽ tự động sinh ra đối tượng `Deployment` tương ứng, gắn nhãn, cấu hình health check, theo dõi sức khỏe và cập nhật trạng thái thực tế.
 
 ---
 
@@ -74,7 +74,7 @@ Mọi kết quả quan sát (số replica đang sẵn sàng, phiên bản thực
 
 ### Phân lập Status Subresource
 
-Để bảo vệ ranh giới này, Kubernetes cung cấp cơ chế tài nguyên phụ trạng thái (**Status Subresource** - `/status` endpoint). Khi cập nhật trạng thái, bạn phải gọi:
+Để bảo vệ ranh giới này, Kubernetes cung cấp cơ chế tài nguyên phụ trạng thái (**Status Subresource** - `/status` endpoint). Khi cập nhật trạng thái, ta phải gọi:
 
 ~~~go
 // ĐÚNG: Chỉ sửa Status, không đổi metadata.generation
@@ -111,7 +111,7 @@ Thứ hai là khả năng theo dõi sự kiện ngược dòng (`Watch Events`):
 
 ## 5. Finalizer: Cổng gác vòng đời và Dọn dẹp tài nguyên ngoại vi
 
-Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng của bạn tạo ra các tài nguyên bên ngoài cụm như một cơ sở dữ liệu Amazon RDS, một bản ghi DNS trên Cloudflare, hay một hàng đợi tin nhắn AWS SQS?
+Nếu `OwnerReference` giải quyết xuất sắc việc dọn dẹp các tài nguyên nội bộ trong Kubernetes, thì điều gì sẽ xảy ra nếu ứng dụng tạo ra các tài nguyên bên ngoài cụm như một cơ sở dữ liệu Amazon RDS, một bản ghi DNS trên Cloudflare, hay một hàng đợi tin nhắn AWS SQS?
 
 Nếu đối tượng tài nguyên tùy biến (`AppService`) bị xóa trước khi quá trình dọn dẹp hoàn tất, bộ điều khiển có thể mất dữ liệu cần thiết để xác định tài nguyên ngoài cụm. Trong kịch bản này, cơ chế finalizer sẽ chặn việc hoàn tất xóa cho tới khi tiến trình dọn dẹp xác nhận đã hoàn thành an toàn; hệ thống vẫn cần cơ chế điều tra hoặc đối soát độc lập để xử lý các sự cố phát sinh ngoài luồng chạy bình thường.
 

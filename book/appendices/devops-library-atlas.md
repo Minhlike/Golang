@@ -107,7 +107,7 @@ type counter struct {
 }
 ```
 
-Bộ đếm tách giá trị ra làm hai thành phần: số nguyên (`valInt`) và số thực thập phân (`valBits`). Khi bạn gọi hàm thông dụng nhất là `Inc()` (tương đương `Add(1)`), hàm nhận thấy giá trị tăng là số nguyên dương. Nó lập tức kích hoạt đường dẫn nhanh (fast path):
+Bộ đếm tách giá trị ra làm hai thành phần: số nguyên (`valInt`) và số thực thập phân (`valBits`). Khi ta gọi hàm thông dụng nhất là `Inc()` (tương đương `Add(1)`), hàm nhận thấy giá trị tăng là số nguyên dương. Nó lập tức kích hoạt đường dẫn nhanh (fast path):
 
 ```go
 atomic.AddUint64(&c.valInt, 1)
@@ -184,7 +184,7 @@ Exporter helper có queue/retry policy tùy exporter và cấu hình. Persistent
 
 Trong đường Linux container đang xét, runtime tổ chức process với namespace, filesystem và cgroup theo cấu hình; nó dùng kernel của host, không tự có kernel riêng như VM. Không phải mọi container bật đủ cùng một tập namespace, và cgroup chỉ giới hạn những resource đã cấu hình. Moby điều phối các thành phần này; Docker trên host khác có boundary triển khai khác.
 
-Khi mổ xẻ `daemon/daemon.go` (`type Daemon`), bạn sẽ nhận ra Docker daemon không trực tiếp thực thi container. Nhiệm vụ chính của nó là quản lý trạng thái và phối hợp tài nguyên. Máy trạng thái vòng đời của một container được kiểm soát nghiêm ngặt tại `container/state.go` (`type State`):
+Khi mổ xẻ `daemon/daemon.go` (`type Daemon`), ta sẽ nhận ra Docker daemon không trực tiếp thực thi container. Nhiệm vụ chính của nó là quản lý trạng thái và phối hợp tài nguyên. Máy trạng thái vòng đời của một container được kiểm soát nghiêm ngặt tại `container/state.go` (`type State`):
 
 ```go
 type State struct {
@@ -205,7 +205,7 @@ type State struct {
 
 Mutex của `State` được dùng làm lock chung với `Container`. Các cờ không luôn loại trừ nhau: paused process vẫn có thể Running; `Dead` không chỉ là tên khác của một process vừa nhận SIGKILL. Lock bảo vệ các state transition theo implementation, không tự chứng minh toàn bộ lifecycle bên ngoài không có race.
 
-Khía cạnh kỹ thuật ngoạn mục thứ hai của Moby là hệ thống tập tin phân lớp (Layered Filesystem) thông qua đồ thị driver lưu trữ `daemon/graphdriver/overlay2`. Khi bạn khởi chạy một container từ image Ubuntu:
+Khía cạnh kỹ thuật ngoạn mục thứ hai của Moby là hệ thống tập tin phân lớp (Layered Filesystem) thông qua đồ thị driver lưu trữ `daemon/graphdriver/overlay2`. Khi ta khởi chạy một container từ image Ubuntu:
 - Các layer của image được mount dưới dạng các thư mục chỉ đọc (`lowerdir`).
 - Container được cấp một thư mục ghi duy nhất (`upperdir`).
 - Kernel kết hợp chúng lại thành một thư mục ảo duy nhất (`merged`) bằng hệ thống tập tin `overlayfs`.
@@ -235,7 +235,7 @@ Shim tách lifecycle task khỏi daemon containerd nên một số trường h�
 
 String Go có nhiều giá trị, trong đó chuỗi rỗng vẫn là giá trị hợp lệ; pointer có `nil` và các giá trị không `nil`. IaC cần biểu diễn thêm việc giá trị chưa biết tại plan time và null theo schema, thay vì dùng chuỗi rỗng cho tất cả trạng thái thiếu dữ liệu.
 
-Hãy xem xét kịch bản sau: Bạn viết một file cấu hình Terraform để tạo một mạng VPC mới, và trong cùng một kế hoạch đó, bạn tạo một Subnet sử dụng thuộc tính `vpc_id = aws_vpc.main.id`. Khi bạn chạy lệnh `terraform plan`, tài nguyên VPC chưa hề được tạo trên AWS, do đó `vpc_id` chưa hề tồn tại. Nếu Terraform gán giá trị đó bằng chuỗi rỗng `""` hoặc `nil`, các bước kiểm tra hợp lệ logic (validation) sẽ báo lỗi cú pháp sai, hoặc tệ hơn, provider sẽ gửi một request vô nghĩa lên cloud provider làm hỏng toàn bộ kế hoạch. Ngược lại, nếu coi nó là đã có giá trị, hệ thống sẽ hành xử sai.
+Hãy xem xét kịch bản sau: Kỹ sư viết một tệp cấu hình Terraform để tạo một mạng VPC mới, và trong cùng một kế hoạch đó, tạo một Subnet sử dụng thuộc tính `vpc_id = aws_vpc.main.id`. Khi chạy lệnh `terraform plan`, tài nguyên VPC chưa hề được tạo trên AWS, do đó `vpc_id` chưa hề tồn tại. Nếu Terraform gán giá trị đó bằng chuỗi rỗng `""` hoặc `nil`, các bước kiểm tra hợp lệ logic (validation) sẽ báo lỗi cú pháp sai, hoặc tệ hơn, provider sẽ gửi một request vô nghĩa lên cloud provider làm hỏng toàn bộ kế hoạch. Ngược lại, nếu coi nó là đã có giá trị, hệ thống sẽ hành xử sai.
 
 Ở boundary dữ liệu Terraform, `terraform-plugin-framework` dùng các value biểu diễn được known, null và unknown, thay vì chỉ dùng một giá trị primitive Go không mang đủ trạng thái. Điều này không có nghĩa implementation không còn dùng kiểu Go bên trong. Các interface và kiểu value được xem tại `attr/value.go` và các kiểu liên quan:
 
@@ -308,7 +308,7 @@ Một `ssh.Client` có thể multiplex shell, SFTP và port-forwarding trên cù
 
 Làm thế nào SSH có thể điều phối nhiều luồng dữ liệu khác nhau trên một socket mà không bị xáo trộn hoặc làm nghẽn lẫn nhau?
 
-Mã nguồn tại `ssh/mux.go` (`type mux`) và `ssh/channel.go` (`type channel`) chứa đựng câu trả lời. Giao thức SSHv2 phân chia kết nối TCP duy nhất thành nhiều **kênh logic (logical channels)**. Mỗi khi bạn gọi `client.NewSession()`, một gói tin `msgChannelOpen` được gửi qua mạng để đàm phán một kênh logic mới với ID riêng biệt. Bộ phân kênh `mux` lắng nghe luồng socket vật lý, đọc header của từng gói tin SSH và định tuyến các payload dữ liệu vào channel tương ứng.
+Mã nguồn tại `ssh/mux.go` (`type mux`) và `ssh/channel.go` (`type channel`) chứa đựng câu trả lời. Giao thức SSHv2 phân chia kết nối TCP duy nhất thành nhiều **kênh logic (logical channels)**. Mỗi khi ta gọi `client.NewSession()`, một gói tin `msgChannelOpen` được gửi qua mạng để đàm phán một kênh logic mới với ID riêng biệt. Bộ phân kênh `mux` lắng nghe luồng socket vật lý, đọc header của từng gói tin SSH và định tuyến các payload dữ liệu vào channel tương ứng.
 
 Xét scenario một channel liên tục xuất dữ liệu trong khi consumer đọc chậm, còn channel khác dùng port forwarding. Cần phân biệt cửa sổ nhận riêng của channel với tài nguyên TCP dùng chung; không thể suy ra thông lượng hay thời gian chặn từ tên thao tác `cat /dev/urandom`.
 
@@ -346,7 +346,7 @@ query, err := rego.New(
 
 ### 14. `github.com/sigstore/cosign/v2` (v2.6.5 — `3e82f50a`)
 
-Khi bạn kéo một container image `registry.internal/app:v1.2.0` về triển khai lên cụm Kubernetes sản xuất, làm sao bạn có thể chứng minh với hệ thống kiểm toán rằng image này thực sự được sinh ra từ pipeline CI/CD chính thức của công ty chứ không phải do một hacker nội bộ sửa đổi đè lên registry?
+Khi kéo một container image `registry.internal/app:v1.2.0` về triển khai lên cụm Kubernetes sản xuất, làm sao ta có thể chứng minh với hệ thống kiểm toán rằng image này thực sự được sinh ra từ pipeline CI/CD chính thức của công ty chứ không phải do một hacker nội bộ sửa đổi đè lên registry?
 
 Cosign hỗ trợ chữ ký tách rời gắn với image digest; ký số nói chung không bắt buộc sửa image. Cách lưu và tìm signature phụ thuộc artifact format và registry support của version được dùng.
 
@@ -566,7 +566,7 @@ Helper cập nhật condition trên object trong memory. Controller còn phải 
 
 ### 24. `github.com/google/go-github/v92` (v92.0.0 — `5149b4d7`)
 
-Khi viết một con bot tự động hóa GitHub Actions hoặc công cụ dọn dẹp các pull request cũ trong một tổ chức doanh nghiệp có hàng nghìn repositories, bạn sẽ phải đối mặt với bài toán phân trang (pagination) và giới hạn tần suất gọi API (Rate Limiting).
+Khi viết một con bot tự động hóa GitHub Actions hoặc công cụ dọn dẹp các pull request cũ trong một tổ chức doanh nghiệp có hàng nghìn repositories, ta sẽ phải đối mặt với bài toán phân trang (pagination) và giới hạn tần suất gọi API (Rate Limiting).
 
 Với REST endpoint phân trang theo page trong ví dụ, GitHub chỉ đường tiếp theo bằng HTTP header `Link`, chẳng hạn `<https://api.github.com/...page=2>; rel="next"`. Không lấy loop theo page này áp cho mọi endpoint hay cursor API.
 
@@ -649,7 +649,7 @@ Tuy nhiên, có một cái bẫy chết người mà rất nhiều kỹ sư Go m
 
 Kubernetes không ghi đè trực tiếp nội dung vào file cấu hình đang mở. Thay vào đó, nó tạo một thư mục mới có tên là một chuỗi timestamp, mount dữ liệu vào đó, rồi thực hiện hoán đổi một liên kết mềm (symlink) mang tên `..data` trỏ sang thư mục mới, sau đó xóa thư mục cũ.
 
-Nếu code Go của bạn chỉ lắng nghe sự kiện `fsnotify.Write` trên file cấu hình:
+Nếu ứng dụng Go chỉ lắng nghe sự kiện `fsnotify.Write` trên file cấu hình:
 
 ```go
 if event.Op&fsnotify.Write == fsnotify.Write { ... }
@@ -661,7 +661,7 @@ Watch một file có thể mất hiệu lực khi file được thay atomically 
 
 ### 28. `go.uber.org/zap` (v1.28.0 — `5b81b37b`)
 
-Nếu ứng dụng của bạn xử lý tải cao, việc ghi lại log trên mỗi request có thể trở thành nguồn áp lực cấp phát đáng kể. Nếu sử dụng thư viện log thông thường dựa trên `fmt.Printf` hoặc các thư viện dùng `interface{}`:
+Nếu ứng dụng xử lý tải cao, việc ghi lại log trên mỗi request có thể trở thành nguồn áp lực cấp phát đáng kể. Nếu sử dụng thư viện log thông thường dựa trên `fmt.Printf` hoặc các thư viện dùng `interface{}`:
 
 ```go
 log.Printf(
@@ -686,7 +686,7 @@ type Field struct {
 }
 ```
 
-Khi bạn ghi log: `logger.Info("transfer", zap.Int64("from", fromID), zap.Float64("amount", amount))`, `zap.Int64` không hề đưa số nguyên vào `interface{}`! Nó gán thẳng giá trị vào trường `Integer int64` bên trong struct `Field`.
+Khi ghi log: `logger.Info("transfer", zap.Int64("from", fromID), zap.Float64("amount", amount))`, `zap.Int64` không hề đưa số nguyên vào `interface{}`! Nó gán thẳng giá trị vào trường `Integer int64` bên trong struct `Field`.
 
 `zapcore/json_encoder.go` dùng bộ đệm tái sử dụng qua `sync.Pool` và ghi trực tiếp nhiều trường vào buffer. Điều đó giảm allocation trong những đường đi phù hợp, nhưng không cho phép suy ra một ngưỡng nano-giây hay `0 allocs/op` cho ứng dụng khác. Muốn so sánh với logger khác, cần benchmark cùng Go version, encoder, destination và tập field.
 
@@ -720,7 +720,7 @@ Xét scenario một client retry sau response 503 rồi dần gặp lỗi thiế
 
 Một nguyên nhân cần điều tra là vòng đời `response.Body` trong `net/http.Transport`. Caller phải luôn đóng `response.Body`; việc đọc đến EOF có thể là điều kiện hữu ích cho một số đường tái sử dụng kết nối, nhưng không phải bảo đảm tái sử dụng. Transport, giao thức, kích thước body, server và kết nối hiện có đều ảnh hưởng kết quả.
 
-Nếu bạn chỉ đơn thuần viết:
+Nếu ta chỉ đơn thuần viết:
 
 ```go
 resp, err := client.Do(req)
@@ -992,7 +992,7 @@ Khi dùng `trpc-agent-go`, kiểm tra các package agent/tool và middleware c�
 
 ### 49. `github.com/kagent-dev/kagent` (HEAD-main — `375fe73a`)
 
-Nếu bạn muốn trao quyền cho một AI Agent tự động điều tra nguyên nhân sự cố trong cụm máy chủ Kubernetes, làm thế nào để ngăn chặn con AI đó vô tình thực hiện một lệnh tai hại như xóa nhầm namespace `production`?
+Nếu muốn trao quyền cho một AI Agent tự động điều tra nguyên nhân sự cố trong cụm máy chủ Kubernetes, làm thế nào để ngăn chặn con AI đó vô tình thực hiện một lệnh tai hại như xóa nhầm namespace `production`?
 
 README ở commit này mô tả `Agent`, `ModelConfig`, `ToolServer` và controller/engine/UI/CLI. Kubernetes-native resource là cách tổ chức lifecycle, không bảo đảm Agent không thể xóa namespace.
 

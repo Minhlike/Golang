@@ -46,13 +46,7 @@ Lệnh đầu tạo `go.mod`; `example.com/first-go` là tên định danh minh 
 
 Từ trên xuống dưới, tệp mã nguồn được phân chia thành bốn vùng không gian cú pháp rõ rệt:
 
-Khai báo gói (`package`): Xác định không gian tên và đơn vị biên dịch mà tệp trực thuộc.
-
-Khai báo import (`import`): Đặt phụ thuộc và tên dùng để tham chiếu các định danh được export từ package khác.
-
-Khai báo cấp tệp: Không gian định nghĩa hằng số (`const`), biến toàn cục của gói (`var`), hoặc các kiểu dữ liệu và hàm dùng chung (`func`).
-
-Hàm khởi điểm (`func main`): Điểm neo mà Go runtime kích hoạt để bắt đầu thực thi logic sau khi hoàn tất giai đoạn khởi tạo môi trường.
+Một tệp mã nguồn Go được cấu trúc từ bốn thành phần ngữ pháp cơ bản: khai báo gói (`package`) xác định không gian tên và đơn vị biên dịch; khai báo import (`import`) thiết lập các gói phụ thuộc bên ngoài; khai báo cấp tệp định nghĩa hằng số (`const`), biến toàn cục (`var`), kiểu dữ liệu và hàm (`func`); và hàm khởi điểm (`func main`) là điểm neo thực thi logic khi chương trình khởi chạy. Bảng dưới đây đối chiếu chi tiết vai trò ngữ pháp và tác động thực thi của từng dòng mã trong tệp `main.go`:
 
 | Dòng mã | Vai trò ngữ pháp | Tác động thực thi |
 | :--- | :--- | :--- |
@@ -97,15 +91,7 @@ Quyền xuất khẩu (*exported identifier*) đòi hỏi hai điều kiện ti�
 
 ## Khai báo Biến và Khởi tạo Bộ nhớ
 
-Biến giữ một giá trị thuộc kiểu xác định. Bốn cách viết dưới đây khác nhau ở việc ghi kiểu và giá trị khởi tạo, không quyết định biến nằm trên stack hay heap:
-
-Khai báo tường minh bằng `var`: `var name Type = value` chọn kiểu cho biến; biểu thức khởi tạo phải gán được cho kiểu ấy. Ví dụ `var status int = 503` tạo biến kiểu `int` với giá trị ban đầu 503.
-
-Khai báo suy luận kiểu: Cú pháp `var name = value` cho phép compiler tự động suy diễn kiểu từ giá trị khởi tạo ở vế phải, giúp loại bỏ sự lặp lại thừa thãi.
-
-Khai báo không khởi tạo và Quy tắc Giá trị Mặc định: Nếu một biến được khai báo dưới dạng `var name Type` mà không gán giá trị khởi tạo tường minh, đặc tả ngôn ngữ Go bảo đảm biến đó nhận giá trị mặc định (*zero value*) theo đúng kiểu dữ liệu.
-
-Khai báo ngắn trong thân hàm bằng `:=`: Cú pháp `name := value` kết hợp đồng thời việc khai báo biến mới, suy luận kiểu và gán giá trị. Cú pháp này chỉ hợp lệ bên trong thân hàm, không được phép dùng ở cấp độ tệp.
+Biến giữ một giá trị thuộc kiểu xác định. Bốn cách viết dưới đây khác nhau ở việc ghi kiểu và giá trị khởi tạo, không quyết định biến nằm trên stack hay heap: khai báo tường minh với `var name Type = value` (ví dụ `var status int = 503`); khai báo suy luận kiểu với `var name = value`; khai báo không khởi tạo `var name Type` tuân theo giá trị mặc định; và khai báo ngắn `name := value` bên trong thân hàm. Bảng dưới đây tổng hợp các giá trị mặc định (*zero value*) chuẩn hóa theo đặc tả ngôn ngữ Go:
 
 | Kiểu dữ liệu | Giá trị Mặc định (Zero Value) theo Đặc tả | Ghi chú ngữ nghĩa |
 | :--- | :---: | :--- |
@@ -172,9 +158,7 @@ Trong `labs/edition-contracts`, ca kiểm thử `TestConstantsAndIdentity` lưu 
 
 Một trong những nhầm lẫn phổ biến nhất của người mới học là đồng nhất phạm vi từ vựng của tên biến (scope) với vòng đời lưu trữ của giá trị trong bộ nhớ (lifetime). Đây là hai khái niệm độc lập:
 
-Phạm vi từ vựng: Vùng source mà một tên có thể được tham chiếu hợp lệ. Block có ngoặc nhọn là trường hợp dễ thấy; Go còn có các block ngầm của tệp, `if`, `for`, `switch` và các cấu trúc khác. Khi gặp tên trùng, phải tìm khai báo thuộc phạm vi nào, không chỉ đếm ngoặc.
-
-Vòng đời lưu trữ (Storage Lifetime): Là khoảng thời gian mà vùng nhớ lưu trữ giá trị của biến thực sự tồn tại trong không gian bộ nhớ của tiến trình.
+Phạm vi từ vựng (*scope*) là vùng mã nguồn mà một định danh có thể được tham chiếu hợp lệ, bao gồm các khối lệnh ngoặc nhọn tường minh cũng như các khối lệnh ngầm định của tệp, `if`, `for`, `switch`; trong khi vòng đời lưu trữ (*storage lifetime*) là khoảng thời gian mà ô nhớ lưu trữ giá trị của biến thực sự tồn tại và hợp lệ trong không gian địa chỉ của tiến trình.
 
 ~~~go
 func main() {
@@ -221,7 +205,7 @@ Kiểu số thực gồm `float32` và `float64` tuân theo chuẩn IEEE-754. To
 
 Kiểu logic `bool` chỉ nhận một trong hai giá trị `true` hoặc `false`, đồng hành cùng các toán tử logic gồm phép và `&&`, phép hoặc `||`, và phép phủ định `!`.
 
-Kiểu `string` là chuỗi byte bất biến: chúng ta có thể gán một chuỗi mới cho biến, nhưng tuyệt đối không thể gán vào `text[0]` để sửa đổi từng byte của chuỗi hiện hành. Hàm `len` đếm số lượng byte, không đếm số lượng ký tự hiển thị. Chương 2 sẽ đi sâu vào định dạng UTF-8 và thao tác chuyển đổi sang lát cắt byte để kiểm chứng hai nguyên tắc này; bạn không cần phải giả định bố cục bộ nhớ nội bộ của chuỗi để tuân thủ đúng khế ước ngôn ngữ.
+Kiểu `string` là chuỗi byte bất biến: chúng ta có thể gán một chuỗi mới cho biến, nhưng tuyệt đối không thể gán vào `text[0]` để sửa đổi từng byte của chuỗi hiện hành. Hàm `len` đếm số lượng byte, không đếm số lượng ký tự hiển thị. Chương 2 sẽ đi sâu vào định dạng UTF-8 và thao tác chuyển đổi sang lát cắt byte để kiểm chứng hai nguyên tắc này; ta không cần phải giả định bố cục bộ nhớ nội bộ của chuỗi để tuân thủ đúng khế ước ngôn ngữ.
 
 Phép chuyển đổi kiểu bắt buộc phải thực hiện tường minh theo cú pháp `T(v)`, trong đó `T` là kiểu đích và `v` là giá trị cần chuyển:
 
@@ -446,4 +430,4 @@ Khi gặp lỗi biên dịch, hãy tìm tên, biểu thức hoặc khai báo mà
 | Sai lệch kiểu tham số hàm | Truyền `int` vào hàm nhận `string`. | `cannot use status (variable of type int) as string value in argument to takesString` | Tầng kiểm tra kiểu tĩnh (`types2`): Chữ ký hàm từ chối đối số không tương thích kiểu. |
 | Phép toán lệch kiểu số học | Thực hiện `a + b` giữa `int` và `int64`. | `invalid operation: a + b (mismatched types int and int64)` | Tầng kiểm tra kiểu tĩnh (`types2`): Cấm phép toán hai ngôi ngầm định giữa hai kiểu khác nhau. |
 
-Thông điệp biên dịch chỉ ra lỗi mà compiler phát hiện tại vị trí đang xét; nó không chứng minh chương trình đã đúng với yêu cầu hay an toàn khi chạy. Phân biệt lỗi phân giải tên, cú pháp và kiểu dữ liệu giúp bạn đặt giả thuyết cụ thể rồi kiểm chứng bằng một thay đổi nhỏ. Chương 2 tiếp tục cách điều tra đó với slice: vì sao một bản sao giá trị vẫn có thể chia sẻ bộ nhớ nền.
+Thông điệp biên dịch chỉ ra lỗi mà compiler phát hiện tại vị trí đang xét; nó không chứng minh chương trình đã đúng với yêu cầu hay an toàn khi chạy. Phân biệt lỗi phân giải tên, cú pháp và kiểu dữ liệu giúp ta đặt giả thuyết cụ thể rồi kiểm chứng bằng một thay đổi nhỏ. Chương 2 tiếp tục cách điều tra đó với slice: vì sao một bản sao giá trị vẫn có thể chia sẻ bộ nhớ nền.

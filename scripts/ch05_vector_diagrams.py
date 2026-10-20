@@ -271,7 +271,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
     d.add(Rect(cfg_x + 6.0, bot_box_y + col_h - 35.5, col_w - 12.0, 10.5,
                fillColor=COLOR_TAG_BG, strokeColor=None, rx=1.5, ry=1.5))
     d.add(String(cfg_x + (col_w / 2.0), bot_box_y + col_h - 32.5,
-                 "internal/ giới hạn theo cây thư mục cha",
+                 "internal/ giới hạn theo nhánh import/thư mục cha",
                  fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID, textAnchor="middle"))
 
     # Internal details
@@ -380,7 +380,7 @@ def build_package_boundary_graph_drawing(w: float = 369.13, h: float = 362.83) -
                  fontName="BookSansBold", fontSize=6.8, fillColor=COLOR_INK_DARK))
 
     d.add(String(x_left + 8.0, foot_y + foot_h - 23.0,
-                 "• Quy tắc bắt buộc của Go: internal/ giới hạn import theo cây thư mục cha; compiler từ chối mọi chu trình (import cycle not allowed).",
+                 "• Quy tắc bắt buộc của Go: internal/ giới hạn import theo nhánh import cha (hoặc thư mục cha); compiler từ chối mọi chu trình (import cycle not allowed).",
                  fontName="BookSans", fontSize=6.2, fillColor=COLOR_INK_MID))
     d.add(String(x_left + 8.0, foot_y + foot_h - 33.0,
                  "• Chính sách kiến trúc dự án: Dependency đi một chiều từ cmd; probe và config độc lập hoàn toàn, không import ngược hoặc chéo.",

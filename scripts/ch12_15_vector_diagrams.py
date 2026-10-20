@@ -160,14 +160,14 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     card_x = 5.0
     card_w = w - 10.0  # 175.80 pt
 
-    # Heights of 5 stages (Total stages = 262.0 pt)
-    s1_h = 44.0
-    s2_h = 38.0
-    s3_h = 58.0
-    s4_h = 66.0
-    s5_h = 56.0
-    total_stages_h = s1_h + s2_h + s3_h + s4_h + s5_h  # 262.0 pt
-    gap = (body_top - body_bot - total_stages_h) / 4.0  # (291.83 - 262.0) / 4 = 7.4575 pt
+    # Heights of 5 stages (Total stages = 276.0 pt, widened box 02 & 04 ISS-09)
+    s1_h = 43.0
+    s2_h = 46.0
+    s3_h = 56.0
+    s4_h = 77.0
+    s5_h = 54.0
+    total_stages_h = s1_h + s2_h + s3_h + s4_h + s5_h  # 276.0 pt
+    gap = (body_top - body_bot - total_stages_h) / 4.0  # ~3.95 pt
 
     # ------------------------------------------------------------------
     # Stage 1: Khởi tạo & Process Boundary (Startup)
@@ -191,10 +191,10 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     d.add(Rect(card_x + 4.0, y2 + s2_h - 11.0, 15.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 11.5, y2 + s2_h - 9.0, "02", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 23.0, y2 + s2_h - 9.0, "2. TIẾP NHẬN & PHỤC VỤ (ACTIVE)", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y2 + 22.5, "Incoming Request -> ServeHTTP(w, r)", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y2 + 15.5, "• r.Context() gắn theo vòng đời request", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 6.0, y2 + 9.5, "• Có thể kế thừa từ Server.BaseContext", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(card_x + 6.0, y2 + 4.5, "• Handler chạy độc lập với shutdown ctx", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y2 + 27.5, "Incoming Request -> ServeHTTP(w, r)", fontName="BookMono", fontSize=6.1, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y2 + 19.5, "• r.Context() gắn theo vòng đời request", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 6.0, y2 + 11.5, "• Có thể kế thừa từ Server.BaseContext", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(card_x + 6.0, y2 + 4.0, "• Handler chạy độc lập với shutdown ctx", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     draw_arrow(d, card_x + card_w / 2.0, y2, card_x + card_w / 2.0, y2 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
 
     # ------------------------------------------------------------------
@@ -243,13 +243,13 @@ def build_http_service_lifecycle_drawing(w: float = 185.80, h: float = 362.83) -
     d.add(Rect(card_x + 4.0, y4 + s4_h - 11.0, 15.0, 8.5, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
     d.add(String(card_x + 11.5, y4 + s4_h - 9.0, "04", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
     d.add(String(card_x + 23.0, y4 + s4_h - 9.0, "4. ĐIỀU PHỐI Server.Shutdown", fontName="BookSansBold", fontSize=6.3, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 50.5, "shutdownCtx, cancel := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 12.0, y4 + 43.5, "context.Background(), grace); defer cancel()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 36.0, "1. err := srv.Shutdown(shutdownCtx)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 10.0, y4 + 28.5, "• Lỗi Shutdown => return fmt.Errorf(\"shutdown: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 6.0, y4 + 21.0, "2. Chỉ khi Shutdown thành công mới nhận <-serveErr:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 10.0, y4 + 13.5, "• Khớp ErrServerClosed => return nil (sạch)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 10.0, y4 + 6.0, "• Khác ErrServerClosed => bọc lỗi và trả về", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(card_x + 6.0, y4 + 58.0, "shutdownCtx, cancel := context.WithTimeout(", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 12.0, y4 + 49.5, "context.Background(), grace); defer cancel()", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 41.0, "1. err := srv.Shutdown(shutdownCtx)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 10.0, y4 + 32.5, "• Lỗi Shutdown => return fmt.Errorf(\"shutdown: %w\", err)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 6.0, y4 + 24.0, "2. Chỉ khi Shutdown thành công mới nhận <-serveErr:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(card_x + 10.0, y4 + 15.5, "• Khớp ErrServerClosed => return nil (sạch)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 10.0, y4 + 6.5, "• Khác ErrServerClosed => bọc lỗi và trả về", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
     draw_arrow(d, card_x + card_w / 2.0, y4, card_x + card_w / 2.0, y4 - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
 
     # ------------------------------------------------------------------

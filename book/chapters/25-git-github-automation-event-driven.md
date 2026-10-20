@@ -30,7 +30,7 @@ Siêu dữ liệu về Pull Request, nhãn phân loại và đánh giá xét duy
 
 ## 2. Bảo mật Webhook: Phòng ngừa Timing Side-Channel bằng HMAC-SHA256
 
-Khi GitHub gửi một sự kiện (ví dụ `pull_request.opened`) đến máy chủ của bạn qua HTTP Webhook, làm sao bạn biết chắc chắn thông điệp này thực sự do GitHub phát ra chứ không phải do một kẻ xấu giả mạo?
+Khi GitHub gửi một sự kiện (ví dụ `pull_request.opened`) đến máy chủ qua HTTP Webhook, làm sao ta biết chắc chắn thông điệp này thực sự do GitHub phát ra chứ không phải do một kẻ xấu giả mạo?
 
 GitHub thực hiện ký toàn bộ nội dung thô của gói tin (*raw payload*) bằng chuỗi khóa bí mật thông qua thuật toán HMAC-SHA256, sau đó đính kèm vào tiêu đề yêu cầu:
 `X-Hub-Signature-256: sha256=<hex_digest>`
@@ -40,7 +40,7 @@ GitHub thực hiện ký toàn bộ nội dung thô của gói tin (*raw payload
 
 ### Rủi ro rò rỉ thông tin qua thời gian thực thi (Timing Side-Channel)
 
-Nếu bạn dùng toán tử thông thường để so sánh chữ ký:
+Nếu ta dùng toán tử thông thường để so sánh chữ ký:
 
 ~~~go
 // CẢNH BÁO: Rò rỉ thông tin qua thời gian thực thi!
@@ -51,7 +51,7 @@ Toán tử so sánh chuỗi hoặc mảng byte mặc định trong hầu hết n
 
 ### So sánh chữ ký an toàn với crypto/hmac.Equal hoặc crypto/subtle
 
-Trong Go, bạn bắt buộc phải dùng hàm `hmac.Equal` hoặc `subtle.ConstantTimeCompare`:
+Trong Go, ta bắt buộc phải dùng hàm `hmac.Equal` hoặc `subtle.ConstantTimeCompare`:
 
 ~~~go
 func VerifyHMACSHA256(
@@ -368,7 +368,7 @@ Kiểm chứng 4 ca biên: chữ ký đúng định dạng `sha256=` với secre
 ### 2. Khử trùng lặp sự kiện (TestWebhookDeliveryIdempotency)
 Gửi 2 webhook mang cùng một `X-GitHub-Delivery`. Lần đầu tiên xử lý thành công (`isDuplicate = false`). Lần thứ hai được nhận diện chính xác là sự kiện gửi lặp (`isDuplicate = true`), bảo vệ hệ thống không bị kích hoạt kép khi có redelivery từ UI hoặc qua REST API.
 
-### 3. Bóc tách Rate Limit hai tầng (TestRateLimitParsing)
+### 3. Bóc tách Rate Limit hai tầng (TestRateLimitParsingPrimaryAndSecondary)
 Kiểm chứng cả hai tình huống: khi chạm trần Primary Quota (`Remaining: 0`), tính đúng thời gian cần chờ đến mốc `ResetAt`; khi chạm trần Secondary Quota (`Retry-After: 120`), chuyển đổi chính xác thành khoảng chờ 120 giây.
 
 ### 4. Vận hành Git trên RAM (TestInMemGitCommitAndHead)
@@ -416,7 +416,7 @@ func ShouldDeployFromWebhook(payload []byte) bool {
 	}
 
 	// Chỉ kích hoạt tự động hóa trên nhánh chính (main)
-return push.Ref == "refs/heads/main"
+	return push.Ref == "refs/heads/main"
 }
 ~~~
 

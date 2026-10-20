@@ -2,7 +2,7 @@
 
 # Chương 2 — Khi một bản sao vẫn chia sẻ dữ liệu
 
-Chạy đoạn này trước khi cố giải thích nó. Nếu bạn đoán a và b khác nhau sau dòng b[0] = 99, đó là một dự đoán rất hợp lý - và cũng là cánh cửa vào phần này.
+Chạy đoạn này trước khi cố giải thích nó. Nếu ta đoán `a` và `b` khác nhau sau dòng `b[0] = 99`, đó là một dự đoán rất hợp lý - và cũng là cánh cửa vào phần này.
 
 ~~~go
 a := []int{10, 20, 30}
@@ -36,7 +36,7 @@ fmt.Println(a, b) // 10 99
 
 Go đã sao chép giá trị của `a` sang `b`. Sau đó `b` nhận giá trị mới; `a` không đổi. Phép gán sao chép giá trị; khi gọi hàm, đối số cũng được truyền theo giá trị. Cả hai quy tắc đều không hứa rằng mọi dữ liệu được tham chiếu bên trong giá trị ấy sẽ được sao chép. Ta cần biết chính xác giá trị đang chứa gì.
 
-Array giúp ta kiểm tra quy tắc ấy với nhiều phần tử. Độ dài là một phần của type, nên [3]int và [4]int là hai array type khác nhau. Khi array được gán, toàn bộ array value được copy.
+Array giúp ta kiểm tra quy tắc ấy với nhiều phần tử. Độ dài là một phần của type, nên `[3]int` và `[4]int` là hai array type khác nhau. Khi array được gán, toàn bộ array value được copy.
 
 ~~~go
 a := [3]int{10, 20, 30}
@@ -49,9 +49,9 @@ fmt.Println(b) // [99 20 30]
 
 ![Hai array value sau assignment: phần tử được copy vào vùng dữ liệu riêng.](../../assets/diagrams/array-copy.png)
 
-@figure Phép gán của mảng sao chép toàn bộ các phần tử. Việc thay đổi b[0] chỉ tác động vào mảng b riêng biệt.
+@figure Phép gán của mảng sao chép toàn bộ các phần tử. Việc thay đổi `b[0]` chỉ tác động vào mảng `b` riêng biệt.
 
-Đến đây, trực giác “copy nghĩa là độc lập” vẫn đúng. Sự thay đổi xuất hiện chỉ khi ta bỏ một ký tự trong type: [3]int trở thành []int.
+Đến đây, trực giác “copy nghĩa là độc lập” vẫn đúng. Sự thay đổi xuất hiện chỉ khi ta bỏ một ký tự trong type: `[3]int` trở thành `[]int`.
 
 ## Khoảnh khắc slice đổi kết quả
 
@@ -79,7 +79,7 @@ Vì vậy hai câu sau cùng đúng, và không mâu thuẫn:
 
 | Câu nói | Đúng ở đâu? |
 | --- | --- |
-| Assignment copy value. | b nhận một slice descriptor riêng: đổi len của b bằng reslice không tự đổi len của a. |
+| Assignment copy value. | `b` nhận một slice descriptor riêng: đổi `len` của `b` bằng reslice không tự đổi `len` của `a`. |
 | Hai slice có thể cùng đổi dữ liệu. | Slice descriptor cùng tham chiếu một backing array; mutation một element hiện ra qua mọi slice cùng nhìn element đó. |
 
 Từ aliasing dùng cho tình huống nhiều đường tham chiếu đến cùng dữ liệu. Nó không phải lỗi tự thân. Aliasing giúp cắt một cửa sổ trên buffer mà không copy cả buffer. Nó thành bug khi một người đọc tưởng mình có dữ liệu riêng nhưng thực tế lại đang sửa vùng dùng chung.
@@ -97,7 +97,7 @@ fmt.Println(len(x)) // 2
 fmt.Println(cap(x)) // 4
 ~~~
 
-x bắt đầu ở phần tử 20 của base và kết thúc trước 40. Vì thế length là 2. Capacity đếm số phần tử từ điểm bắt đầu của x đến cuối backing array mà x hiện có thể mở rộng tới; ở đây là 20, 30, 40, 50, nên là 4.
+`x` bắt đầu ở phần tử 20 của `base` và kết thúc trước 40. Vì thế length là 2. Capacity đếm số phần tử từ điểm bắt đầu của x đến cuối backing array mà x hiện có thể mở rộng tới; ở đây là 20, 30, 40, 50, nên là 4.
 
 ![Một slice window: vùng thấy được là len; phần còn có thể mở rộng là capacity.](../../assets/diagrams/slice-window.png)
 
@@ -116,7 +116,7 @@ fmt.Println(a)
 fmt.Println(b)
 ~~~
 
-Kết quả là [1 99 3 4], [1 99], [99 3]. a[1] và b[0] đều chỉ vào phần tử base[1]. Hình vẽ không thay thế được việc lần index: nó chỉ cho biết vì sao có thể có một phần tử chung để lần.
+Kết quả là [1 99 3 4], [1 99], [99 3]. `a[1]` và `b[0]` đều chỉ vào phần tử `base[1]`. Hình vẽ không thay thế được việc lần index: nó chỉ cho biết vì sao có thể có một phần tử chung để lần.
 
 ## append là một phép thử về capacity
 

@@ -2128,7 +2128,7 @@ Quy tắc open-ended trước đây kiểu “xác định chapter tiếp theo n
 
 Chương 22 → Chương 28 đã được người dùng khóa trước.
 Agent không được tự thay đổi roadmap này.
-Từ Chương 29 trở đi cần một review / instruction mới.
+Chương 29 đã được biên soạn và tích hợp hoàn chỉnh theo phê duyệt của Owner (xem book/chapters/29-ky-su-va-bang-chung-trong-ky-nguyen-agent.md).
 
 KẾ HOẠCH KHÓA CHÍNH XÁC 7 CHƯƠNG (CH22 → CH28):
 
@@ -2271,8 +2271,8 @@ CÁC LUẬT VĨNH VIỄN CỦA BẢN GIAO KÈO NỀN TẢNG:
 12. NON-FOUNDATION-CONTENT-SHOULD-NOT-DUPLICATE-FOUNDATIONS:
     Các chương ứng dụng và hệ thống (Ch11–Ch28) không được giải thích lại từ đầu các kiến thức nền tảng đã được hoàn thiện ở khối Foundation; thay vào đó, chỉ giữ lại các hệ quả đặc thù miền và sử dụng tham chiếu chéo về chương nền tảng tương ứng.
 
-QUY TẮC DỪNG:
-Sau khi hoàn thành Chương 28, DỪNG LẠI. Tuyệt đối không tự ý viết Chương 29.
+TRẠNG THÁI HIỆN TẠI:
+Chương 29 đã được hoàn thành và nghiệm thu. Cuốn sách đã khép lại toàn bộ 29 chương chính thức cùng Atlas Thư viện và Phụ lục A.
 
 
 

@@ -78,7 +78,7 @@ Trước khi sửa một dòng, hãy dự đoán: thay đổi này làm chương
 
 ![Vòng lặp phản hồi khi học và viết Go](../../assets/diagrams/feedback-loop.png)
 
-@figure Vòng lặp phản hồi giả thuyết – đo đạc – sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là công cụ kiểm định tĩnh sớm nhất cho các dự đoán của bạn.
+@figure Vòng lặp phản hồi giả thuyết – đo đạc – sửa mã nguồn. Trình biên dịch không phải là chướng ngại vật; trình biên dịch là công cụ kiểm định tĩnh sớm nhất cho các dự đoán của ta.
 
 Bảng dưới đây minh họa ba thí nghiệm nhỏ về ranh giới kiểm tra tĩnh của Go compiler:
 

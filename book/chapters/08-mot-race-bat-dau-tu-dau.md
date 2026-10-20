@@ -70,7 +70,7 @@ Data race là cặp truy cập vào cùng vị trí nhớ, có ít nhất một 
 
 Khóa `sync.Mutex` phù hợp với dữ liệu thực sự thuộc quyền sở hữu chung, khi nhiều goroutine cần luân phiên biến đổi hoặc chụp ảnh trạng thái cùng một vùng nhớ. Bất biến kỹ thuật của phòng thực hành mới là: sau khi tiến trình điều phối đã chờ toàn bộ công nhân xử lý hoàn tất, bản chụp dữ liệu phải chứa chính xác một báo cáo từ mỗi công nhân. Khóa bảo vệ lát cắt `reports` trong suốt quá trình bổ sung và sao chép; `sync.WaitGroup` cung cấp bằng chứng cho tiến trình điều phối biết chính xác thời điểm có thể đánh giá bất biến.
 
-Trước khi tham khảo `fixed/registry.go`, hãy đọc tệp `exercise/registry_test.go`. Bài kiểm thử đòi hỏi kiểu cấu trúc `Registry`, phương thức `Add(Report)` và phương thức `Snapshot() []Report`. Hãy tự quyết định trường dữ liệu nào cần khai báo, phương thức nào sử dụng bộ tiếp nhận con trỏ (*pointer receiver*), và phạm vi khóa (*critical section*) cần bao trùm tới ranh giới nào. Lệnh thực thi ban đầu sẽ báo lỗi đỏ vì mã nguồn chưa được lập trình:
+Trước khi tham khảo `fixed/registry.go`, hãy đọc tệp `exercise/registry_test.go`. Bài kiểm thử đòi hỏi kiểu cấu trúc `Registry`, phương thức `Add(Report)` và phương thức `Snapshot() []Report`. Hãy tự quyết định trường dữ liệu nào cần khai báo, phương thức nào sử dụng biến nhận con trỏ (*pointer receiver*), và phạm vi khóa (*critical section*) cần bao trùm tới ranh giới nào. Lệnh thực thi ban đầu sẽ báo lỗi đỏ vì mã nguồn chưa được lập trình:
 
 ~~~powershell
 go test -tags exercise ./exercise

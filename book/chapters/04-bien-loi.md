@@ -302,6 +302,8 @@ Công cụ `opsprobe` lúc này đã phân định minh bạch điều nó sở 
 
 ### Bốn câu hỏi trước khi merge một error boundary
 
+Trước khi hợp nhất một ranh giới xử lý lỗi vào mã nguồn chính, hãy đối chiếu quy trình kiểm định qua bốn tiêu chí kỹ thuật cốt lõi sau:
+
 | Tiêu chí kiểm định ranh giới lỗi | Yêu cầu kỹ thuật bắt buộc |
 | :--- | :--- |
 | Nhận diện định danh lỗi (Error Identity) | Bên gọi có cần rẽ nhánh quyết định theo từng loại lỗi cụ thể không? Nếu có, phải bảo toàn identity bằng sentinel error hoặc custom type có cấu trúc; cấm bắt caller parse chuỗi văn bản. |

@@ -196,15 +196,15 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     body_y = footer_y + footer_h + 5.0  # 37.0 pt
     body_h = (h - header_h) - body_y - 6.0  # 190.62 pt
 
-    # 3 Columns Layout
+    # 3 Columns Layout (optimized for safe padding & zero overflow ISS-09)
     col1_x = 8.0
-    col1_w = 114.0
+    col1_w = 108.0
 
     col2_x = 152.0
-    col2_w = 172.0
+    col2_w = 158.0
 
-    col3_x = 342.0
-    col3_w = w - col3_x - 8.0  # 126.22 pt
+    col3_x = 332.0
+    col3_w = w - col3_x - 8.0  # 136.22 pt
 
     # ------------------------------------------------------------------
     # COLUMN 1: DISPATCHER (Producer)
@@ -268,7 +268,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     # TRANSFER: Dispatcher -> in channel -> Workers
     # ------------------------------------------------------------------
     chan_jobs_x = col1_x + col1_w + 3.0
-    chan_jobs_w = col2_x - chan_jobs_x - 3.0  # 26.0 pt
+    chan_jobs_w = col2_x - chan_jobs_x - 3.0  # 30.0 pt (widen badge for chan Job padding)
     chan_jobs_y = d3_y + 17.0
     chan_jobs_h = 32.0
 
@@ -387,7 +387,7 @@ def build_channel_work_lifecycle_drawing(w: float = 476.22, h: float = 253.62) -
     cb1_y = c_bot_y + c_bot_h - 18.0 - 5.0 - cb1_h
     d.add(Rect(c_box_x, cb1_y, c_box_w, cb1_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER_SUBTLE, strokeWidth=0.6, rx=2, ry=2))
     d.add(String(c_box_x + 5.0, cb1_y + 22.5, "[Trích đoạn logic // Tiếp nhận]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_MUTED))
-    d.add(String(c_box_x + 5.0, cb1_y + 12.5, "for res := range results { ... }", fontName="BookMono", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(c_box_x + 4.0, cb1_y + 12.5, "for res := range results { ... }", fontName="BookMono", fontSize=5.9, fillColor=COLOR_INK_DARK))
     d.add(String(c_box_x + 5.0, cb1_y + 3.0, "Nhận kết quả bàn giao từ out", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow CB1 -> CB2

@@ -18,7 +18,7 @@ skinparam arrowColor #333333
 top to bottom direction
 
 rectangle "BẮT ĐẦU (BEGIN)\nkhởi tạo giao dịch" as begin
-rectangle "CẬP NHẬT\nchecks.enabled = false" as update
+rectangle "CẬP NHẬT\nUPDATE checks SET enabled = 0" as update
 rectangle "GHI NHẬT KÝ\ncheck_events: disabled" as audit
 rectangle "XÁC NHẬN (COMMIT)\ntrạng thái mới có hiệu lực" as committed
 rectangle "HOÀN NGUYÊN (ROLLBACK)\nbảo toàn trạng thái cũ" as rolled

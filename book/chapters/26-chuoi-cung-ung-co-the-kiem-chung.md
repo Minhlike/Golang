@@ -46,7 +46,7 @@ Dòng định dạng `h1:<base64-hash>` chứa chuỗi băm chuẩn tắc của 
 ### Go Checksum Database (`sum.golang.org`)
 Nếu một kẻ xấu xâm nhập được máy chủ Git của một thư viện bên thứ ba và tráo đổi nội dung của release tag `v1.2.0`, điều gì sẽ xảy ra?
 
-Nếu máy bạn chưa từng tải bản release đó, làm sao Go biết mã băm `h1:` nào là chuẩn?
+Nếu máy cục bộ chưa từng tải bản release đó, làm sao Go biết mã băm `h1:` nào là chuẩn?
 
 Với các mô-đun thuộc phạm vi kiểm tra của cơ sở dữ liệu mã băm và cấu hình mặc định phù hợp, bộ công cụ Go sẽ đối chiếu mã băm đã tải về với nhật ký minh bạch (*transparency log*) tại `sum.golang.org`. Nếu nội dung không trùng khớp, quá trình biên dịch sẽ lập tức báo lỗi kiểm tra mã băm. Cơ chế này bảo đảm tính toàn vẹn và nhất quán của nội dung tải về, hoàn toàn không chứng minh nội dung đó không chứa mã độc; các cấu hình như `GOPRIVATE`, `GONOSUMDB`, `GOSUMDB=off` và việc thay thế mã nguồn bằng chỉ thị `replace` sẽ tạo ra các ranh giới kiểm soát khác. Kỹ sư bắt buộc phải kiểm tra cấu hình biên dịch trước khi đưa ra kết luận rằng mô-đun đã đi qua cùng một quy trình thẩm định.
 
@@ -405,7 +405,7 @@ ok      part26-supply-chain-gate   2.128s
 | **Triển khai bằng Docker tag** (`:latest` hoặc `:v1.0.0`) thay vì sha256 digest. | Bị tấn công tráo đổi container image khi registry bị thỏa hiệp; pod scale up chạy phiên bản khác nhau. | Ghim (pin) mã băm bất biến `sha256:<hex>` trong Kubernetes Pod Spec. |
 | **Nhận public key và issuer do caller tự khai mà coi là identity đã xác thực.** | Caller tự ký rồi khai issuer được phép; model vẫn có thể chấp nhận. | Dùng verifier thật kiểm tra trust roots, certificate identity/issuer và claim digest; so chuỗi không đủ. |
 | **Thiết kế Cổng dạng Fail-Open:** Bỏ qua kiểm tra khi mạng tới OIDC/Registry bị timeout. | Khi mạng gặp sự cố, hệ thống tự động cho phép mọi image chưa được kiểm chứng đi thẳng vào production. | Luôn áp dụng nguyên tắc Fail-Closed: Bất kỳ lỗi mạng hay timeout nào cũng phải quy về `DENY`. |
-| **Bỏ go.sum vì xem nó là file rác.** | Mất checksum đã ghi nhận trong project; không tự đồng nghĩa checksum database bị tắt. | Commit checksum khi có dependency; hiểu GOSUMDB/GOPRIVATE/replace. go mod verify kiểm tra cache, không quét mã độc. |
+| **Bỏ `go.sum` vì xem nó là file rác.** | Mất checksum đã ghi nhận trong project; không tự đồng nghĩa checksum database bị tắt. | Commit checksum khi có dependency; hiểu `GOSUMDB`/`GOPRIVATE`/`replace`. `go mod verify` kiểm tra cache, không quét mã độc. |
 
 ---
 

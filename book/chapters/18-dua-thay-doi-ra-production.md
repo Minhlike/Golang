@@ -127,7 +127,7 @@ Hành động xử lý đúng đắn không phải là vội vã kết luận �
 
 ### Bài thực hành: Tự viết quyết định tiếp nhận đóng khi lỗi (fail-closed)
 
-Mở tệp `labs/part18-promotion-evidence/exercise/admission_test.go` trước. Bài kiểm thử không cần kết nối mạng, kho lưu trữ ngoài, biến bí mật hay thư viện mật mã. Nó yêu cầu bạn tự phân định rõ ràng sự khác biệt giữa một ứng viên có cấu trúc dữ liệu bị lỗi (*malformed*) với một ứng viên hợp lệ về hình thức nhưng chưa đủ bằng chứng phê chuẩn. Phần bài tập ban đầu sẽ báo lỗi đỏ vì hàm `Evaluate` chưa được viết; phần mã hoàn chỉnh giữ lại hiện thực cô đọng để kiểm chứng các bất biến trước khi phụ thuộc vào bất kỳ nhà cung cấp dịch vụ CI nào.
+Mở tệp `labs/part18-promotion-evidence/exercise/admission_test.go` trước. Bài kiểm thử không cần kết nối mạng, kho lưu trữ ngoài, biến bí mật hay thư viện mật mã. Nó yêu cầu ta tự phân định rõ ràng sự khác biệt giữa một ứng viên có cấu trúc dữ liệu bị lỗi (*malformed*) với một ứng viên hợp lệ về hình thức nhưng chưa đủ bằng chứng phê chuẩn. Phần bài tập ban đầu sẽ báo lỗi đỏ vì hàm `Evaluate` chưa được viết; phần mã hoàn chỉnh giữ lại hiện thực cô đọng để kiểm chứng các bất biến trước khi phụ thuộc vào bất kỳ nhà cung cấp dịch vụ CI nào.
 
 ~~~powershell
 cd labs/part18-promotion-evidence
@@ -256,7 +256,7 @@ go build -o promote-gate.exe ./cmd/promote-gate
 ~~~
 
 Khi truyền `--digest ":latest"`, chương trình dừng ngay với thông báo:
-`invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2. Các lệnh trên chạy binary vừa build, nên `$LASTEXITCODE` là mã của chương trình: 0 cho allow, 1 cho deny, 2 cho input lỗi. Nếu thay bằng `go run`, công cụ Go chỉ trả mã khác 0 khi chương trình lỗi; không giữ nguyên mã2 cho shell (chẩn đoán có thể ghi `exit status 2`). Hậu tố `.exe` và cách gọi trên dành cho PowerShell/Windows; trên Linux build tên không hậu tố rồi gọi `./promote-gate`.
+`invalid candidate: digest must be a lowercase sha256 digest` và trả mã lỗi 2. Các lệnh trên chạy binary vừa build, nên `$LASTEXITCODE` là mã của chương trình: 0 cho allow, 1 cho deny, 2 cho input lỗi. Nếu thay bằng `go run`, công cụ Go chỉ trả mã khác 0 khi chương trình lỗi; không giữ nguyên mã thoát 2 cho shell (chẩn đoán có thể ghi `exit status 2`). Hậu tố `.exe` và cách gọi trên dành cho PowerShell/Windows; trên Linux build tên không hậu tố rồi gọi `./promote-gate`.
 
 Đặc biệt, trong đường ống CI/CD, khi công cụ `promote-gate` trả về mã lỗi (khác 0) do thiếu dữ liệu xuất xứ hoặc trượt kiểm thử, tác vụ thăng hạng phải dừng lại ngay lập tức. Mọi cơ chế nuốt lỗi (như `|| echo` hay `continue-on-error`) nhằm để bước triển khai tiếp tục chạy đều là hành vi “diễn kịch bằng chứng”: dựng cổng kiểm soát cho có hình thức nhưng vẫn âm thầm phát hành mã nguồn chưa qua kiểm chứng. Ứng viên phát hành bị cổng từ chối đồng nghĩa với việc tuyệt đối không có bất kỳ lệnh triển khai nào được phép kích hoạt.
 

@@ -2,13 +2,13 @@
 
 # Chương 24 — Tự động hóa AWS bằng Go mà không biến credential thành bí mật dài hạn
 
-Trong hành trình xây dựng các công cụ vận hành và nền tảng hạ tầng, giao tiếp với các dịch vụ điện toán đám mây là nhiệm vụ thiết yếu của kỹ sư DevOps/SRE. Cho dù bạn viết công cụ dọn dẹp snapshot định kỳ, sao lưu cơ sở dữ liệu lên Amazon S3, hay điều phối máy chủ qua EC2, bạn đều phải trả lời một câu hỏi bảo mật sống còn:
+Trong hành trình xây dựng các công cụ vận hành và nền tảng hạ tầng, giao tiếp với các dịch vụ điện toán đám mây là nhiệm vụ thiết yếu của kỹ sư DevOps/SRE. Cho dù kỹ sư viết công cụ dọn dẹp snapshot định kỳ, sao lưu cơ sở dữ liệu lên Amazon S3, hay điều phối máy chủ qua EC2, ta đều phải trả lời một câu hỏi bảo mật cốt lõi:
 
 > *Làm thế nào để chương trình Go giao tiếp an toàn với AWS API mà không bao giờ nhúng Access Key dài hạn vào mã nguồn, file cấu hình hay biến môi trường?*
 
 Để lộ cặp khóa `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY` dài hạn trong repo hoặc log có thể cho phép sử dụng quyền của khóa cho đến khi bị thu hồi. Vì vậy chương này ưu tiên credential tạm thời và quyền tối thiểu; không gán thứ hạng nguyên nhân sự cố khi không có bộ dữ liệu tương ứng.
 
-Chương 21 đến Chương 23 đã xây dựng mô hình điều hòa: quan sát trạng thái, tính sai lệch, hành động và quan sát lại để đảm bảo tính lũy đẳng trong Kubernetes. Khi mở rộng sang đám mây, các nguyên lý ấy vẫn giữ nguyên giá trị: việc tự động hóa AWS API (như dọn dẹp snapshot hay lưu trữ backup) cũng là một dạng điều hòa với hệ thống ngoại vi, nơi tính lũy đẳng nghiệp vụ, ranh giới lỗi và quyền hạn tạm thời quyết định độ tin cậy của hệ thống. Chương này trang bị cho bạn tư duy thiết kế hệ thống tự động hóa đám mây dựa trên thư viện chính thức AWS SDK for Go v2: từ cơ chế cấp quyền động ngắn hạn (Temporary Credentials), xác định Region, ngăn xếp middleware Smithy, ký chữ ký số SigV4, đến duyệt dữ liệu lớn qua Paginator và phân loại lỗi chuẩn mực.
+Chương 21 đến Chương 23 đã xây dựng mô hình điều hòa: quan sát trạng thái, tính sai lệch, hành động và quan sát lại để đảm bảo tính lũy đẳng trong Kubernetes. Khi mở rộng sang đám mây, các nguyên lý ấy vẫn giữ nguyên giá trị: việc tự động hóa AWS API (như dọn dẹp snapshot hay lưu trữ backup) cũng là một dạng điều hòa với hệ thống ngoại vi, nơi tính lũy đẳng nghiệp vụ, ranh giới lỗi và quyền hạn tạm thời quyết định độ tin cậy của hệ thống. Chương này trang bị cho kỹ sư tư duy thiết kế hệ thống tự động hóa đám mây dựa trên thư viện chính thức AWS SDK for Go v2: từ cơ chế cấp quyền động ngắn hạn (Temporary Credentials), xác định Region, ngăn xếp middleware Smithy, ký chữ ký số SigV4, đến duyệt dữ liệu lớn qua Paginator và phân loại lỗi chuẩn mực.
 
 ---
 
@@ -75,7 +75,7 @@ resp, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 
 Một bucket trên S3 có thể chứa 10 triệu đối tượng. API `ListObjectsV2` mặc định chỉ trả về tối đa 1.000 file mỗi lần gọi và trả về mã thông báo tiếp tục (`NextContinuationToken`).
 
-Nếu bạn tự viết vòng lặp `for` với token thủ công, mã nguồn sẽ trở nên cồng kềnh và dễ gặp lỗi vòng lặp vô tận nếu xử lý sai điều kiện ngắt.
+Nếu ta tự viết vòng lặp `for` với token thủ công, mã nguồn sẽ trở nên cồng kềnh và dễ gặp lỗi vòng lặp vô tận nếu xử lý sai điều kiện ngắt.
 
 ### Mẫu hình chuẩn: SDK Paginator
 
@@ -106,7 +106,7 @@ Bộ phân trang chỉ lưu giữ trang dữ liệu đang xử lý tại thời 
 
 ## 4. Phân loại lỗi và Thử lại: smithy.APIError
 
-Khi một lệnh gọi AWS thất bại, bạn không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
+Khi một lệnh gọi AWS thất bại, ta không thể chỉ so sánh chuỗi lỗi bằng `strings.Contains(err.Error(), "404")`. AWS trả về lỗi có cấu trúc chuẩn mực thông qua interface `smithy.APIError`.
 
 Cơ chế thử lại ở tầng truyền vận của SDK (`aws.Retryer`, mặc định tối đa 3 lần với thuật toán lùi lũy thừa kèm độ trễ ngẫu nhiên cho các lỗi tạm thời) hoàn toàn không bảo đảm tính lũy đẳng nghiệp vụ (*business idempotency*). Nếu một yêu cầu ghi bị ngắt kết nối mạng sau khi máy chủ AWS đã tiếp nhận và thực thi thành công, việc SDK tự động thử lại có thể gây ra tác dụng phụ lặp lại ngoài ý muốn. Một số giao diện API của AWS cung cấp mã định danh lũy đẳng tường minh (như `ClientToken` trong EC2) để máy chủ nhận diện yêu cầu gửi lặp; tuy nhiên đối với thao tác `PutObject` trên Amazon S3, ngữ nghĩa phụ thuộc chặt chẽ vào cấu hình kho lưu trữ và các điều kiện tiên quyết. Khi kho lưu trữ bật tính năng quản lý phiên bản (*Versioning*), nhiều lượt gửi dữ liệu với cùng một khóa sẽ tạo ra các phiên bản độc lập chứ không ghi đè tại chỗ, do đó việc dùng chung một khóa không bảo đảm tạo ra một hiệu ứng phụ duy nhất. Khi bài toán đòi hỏi tạo mới mà không ghi đè, hệ thống có thể cần yêu cầu có điều kiện (như `If-None-Match: *` khi dịch vụ hỗ trợ), nhưng đây không phải giải pháp vạn năng cho mọi tình huống. Tính lũy đẳng nghiệp vụ bắt buộc phải được thiết kế dựa trên đúng khế ước kỹ thuật của từng thao tác và dịch vụ cụ thể. Trong chính sách của bài thực hành, lỗi từ chối truy cập `AccessDenied` tuyệt đối không được phép thử lại như lỗi tạm thời. Các lỗi điều tiết lưu lượng hoặc dịch vụ tạm thời không khả dụng có thể áp dụng thuật toán lùi lũy thừa, nhưng quyết định thử lại còn phụ thuộc vào bản chất thao tác, định mức tài nguyên và tính lũy đẳng. Đối với sự cố quá thời gian sau một thao tác ghi, máy chủ có thể đã hoàn tất hiệu ứng phụ; tuyệt đối không thử lại một cách mù quáng chỉ vì tên lỗi chứa chuỗi `RequestTimeout`. Hãy sử dụng bộ phân loại lỗi kết hợp chặt chẽ với khế ước dịch vụ và bộ thử lại đã được cấu hình cẩn trọng.
 

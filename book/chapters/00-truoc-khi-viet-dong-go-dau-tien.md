@@ -36,7 +36,7 @@ Trong giai đoạn đầu, nhóm sáng lập đặt nặng sự đồng thuận:
 
 Việc không có cây phân cấp kiểu dữ liệu giải phóng người đọc khỏi việc lần theo cây kế thừa; thay vào đó, giao diện và cơ chế hợp thành (`composition`) sẽ được phân tích kỹ lưỡng khi chúng ta đã nắm vững mã nguồn cơ bản. Việc không nạp chồng toán tử bảo đảm ý nghĩa của các toán tử không bị thay đổi tùy tiện theo từng kiểu dữ liệu. Lỗi được trả về trực tiếp dưới dạng giá trị thông thường thay vì chuyển qua cơ chế ném ngoại lệ. Và kiểu tổng quát được chủ động trì hoãn cho đến khi thiết kế chứng minh mang lại giá trị thực tế lớn hơn hẳn so với mức độ phức tạp đưa vào hệ thống kiểu và bộ công cụ. Đây là các lựa chọn kỹ thuật hoàn toàn có thể thảo luận và đối chiếu, không phải là những giáo điều đạo đức.
 
-Nhìn lịch sử theo cách này giúp lý giải cảm nhận đầu tiên khi tiếp cận Go. Bạn sẽ nhận thấy nhiều câu lệnh ngắn gọn, ít từ khóa rườm rà, khai báo rõ ràng và bộ công cụ hiện diện từ rất sớm. Những đặc điểm ấy là dấu vết của một mục tiêu nhất quán: giảm thiểu ma sát cho các kỹ sư cùng hợp tác xây dựng, đọc hiểu và bảo trì phần mềm qua nhiều năm tháng.
+Nhìn lịch sử theo cách này giúp lý giải cảm nhận đầu tiên khi tiếp cận Go. Ta sẽ nhận thấy nhiều câu lệnh ngắn gọn, ít từ khóa rườm rà, khai báo rõ ràng và bộ công cụ hiện diện từ rất sớm. Những đặc điểm ấy là dấu vết của một mục tiêu nhất quán: giảm thiểu ma sát cho các kỹ sư cùng hợp tác xây dựng, đọc hiểu và bảo trì phần mềm qua nhiều năm tháng.
 
 Sau gần hai thập kỷ tiến hóa, cách tiếp cận các quyết định thiết kế này không phải là đọc thêm những trang lịch sử. Hãy đặt chúng ngay trước mắt trong một tệp mã nguồn `.go` tinh gọn.
 

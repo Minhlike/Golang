@@ -38,6 +38,8 @@ Nếu hàm cần tạo một giá trị mới, cách tiếp cận trên rất r�
 
 ## Con trỏ: con đường dẫn tới một biến
 
+Để làm chủ cơ chế quản lý bộ nhớ và ranh giới biến đổi dữ liệu trong Go, kỹ sư cần phân biệt chính xác bốn khái niệm nền tảng sau:
+
 | Khái niệm trong Go Semantics | Định nghĩa kỹ thuật chuẩn xác | Ví dụ tương ứng |
 | :--- | :--- | :--- |
 | **Variable** | Vị trí lưu trữ dữ liệu được cấp phát, có thể đọc hoặc gán giá trị mới. | Biến `balance` |
@@ -189,7 +191,7 @@ Kiểu giá trị `T` và kiểu con trỏ `*T` không đồng nghĩa với khá
 | `v Service` | các field của struct value | Không với các field value; xem từng field nếu chúng chứa reference. |
 | `p *Service` | pointer value | Sửa field qua `p` sửa pointee của caller nếu pointer hợp lệ. |
 
-Bảng này không nhằm mục đích học thuộc lòng các kiểu dữ liệu. Nó cung cấp phương pháp luận để lần theo một lời gọi hàm: tham số mới tiếp nhận bản sao nào; bản sao ấy có dẫn tới vùng dữ liệu chung hay biến số chung hay không; biểu thức nào là đích gán cuối cùng? Đó cũng là lý do bộ tiếp nhận giá trị (*value receiver*) và bộ tiếp nhận con trỏ (*pointer receiver*) được giới thiệu song hành cùng phương thức, thay vì biến dấu hoa thị `*` thành một nghi thức cú pháp máy móc.
+Bảng này không nhằm mục đích học thuộc lòng các kiểu dữ liệu. Nó cung cấp phương pháp luận để lần theo một lời gọi hàm: tham số mới tiếp nhận bản sao nào; bản sao ấy có dẫn tới vùng dữ liệu chung hay biến số chung hay không; biểu thức nào là đích gán cuối cùng? Đó cũng là lý do biến nhận giá trị (*value receiver*) và biến nhận con trỏ (*pointer receiver*) được giới thiệu song hành cùng phương thức, thay vì biến dấu hoa thị `*` thành một nghi thức cú pháp máy móc.
 
 ### Bài thực hành: Sửa đúng khế ước kỹ thuật
 
@@ -224,7 +226,7 @@ Hai phiên bản khác biệt ở sự phân định trách nhiệm của bên g
 
 ### Bài thực hành: Lỗi logic khi mã nguồn vẫn biên dịch thành công
 
-Trong thư mục `labs/part3-data-models`, hãy mở tệp `main_test.go` trước. Trong hàm `recordProbe`, tạm thời lược bỏ câu lệnh `registry[name] = service`, rồi chạy riêng ca kiểm thử `TestRecordProbeUpdatesExistingMapEntry`. Mã nguồn vẫn biên dịch thành công vì bản sao cấu trúc cục bộ được sửa đổi hoàn toàn hợp lệ; tuy nhiên ca kiểm thử sẽ chỉ ra rằng phần tử trong bảng băm không hề nhận giá trị mới. Hãy khôi phục lại mã bằng đúng đường biến đổi dữ liệu mà bạn đã phân tích, thay vì sửa đổi kỳ vọng của bài kiểm thử. Sau đó, hãy xóa phần thân hàm `recordFailure` và tự viết lại dựa trên yêu cầu của `TestRecordFailureMutatesPointee`.
+Trong thư mục `labs/part3-data-models`, hãy mở tệp `main_test.go` trước. Trong hàm `recordProbe`, tạm thời lược bỏ câu lệnh `registry[name] = service`, rồi chạy riêng ca kiểm thử `TestRecordProbeUpdatesExistingMapEntry`. Mã nguồn vẫn biên dịch thành công vì bản sao cấu trúc cục bộ được sửa đổi hoàn toàn hợp lệ; tuy nhiên ca kiểm thử sẽ chỉ ra rằng phần tử trong bảng băm không hề nhận giá trị mới. Hãy khôi phục lại mã bằng đúng đường biến đổi dữ liệu mà anh đã phân tích, thay vì sửa đổi kỳ vọng của bài kiểm thử. Sau đó, hãy xóa phần thân hàm `recordFailure` và tự viết lại dựa trên yêu cầu của `TestRecordFailureMutatesPointee`.
 
 ---
 
@@ -348,7 +350,7 @@ Sổ đăng ký vừa giúp tra cứu dịch vụ theo tên. Nhưng nếu tên k
 
 Chưa thể vội vã kết luận rằng “bảng băm toàn cục luôn là rò rỉ bộ nhớ”. Một bảng cấu hình có số phần tử hữu hạn sống suốt vòng đời tiến trình là một thiết kế hoàn toàn bình thường. Một kho lưu trữ lịch sử có chính sách lưu giữ (*retention policy*), có dự báo tăng trưởng và hạn mức tài nguyên tương ứng cũng có thể tăng trưởng một cách hợp lệ. Bộ nhớ đệm hứa hẹn tiết kiệm tài nguyên nhưng nếu lưu giữ mọi khóa từng gặp mà không có điểm dừng sẽ trở thành thảm họa. Sai lầm nằm ở giao ước lưu giữ dữ liệu, chứ không nằm ở vị trí khai báo bảng băm. Rò rỉ bộ nhớ theo nghĩa vận hành là tài nguyên tiếp tục bị chiếm dụng sau khi nhu cầu sử dụng đã chấm dứt; trong Go, vùng nhớ đó thường vẫn ở trạng thái tiếp cận được (*reachable*), chứ không nhất thiết là việc mất dấu toàn bộ con trỏ như khái niệm rò rỉ trong các ngôn ngữ quản lý bộ nhớ thủ công.
 
-Trước khi tham khảo thư mục `fixed` của bài thực hành `part10-resource-retention`, bạn hãy thiết kế giao ước cho một bộ nhớ đệm đơn chủ sở hữu: tối đa hai phần tử, mỗi giá trị tối đa 4 MiB, mỗi khóa tối đa 128 byte; khi thêm khóa thứ ba thì tự động loại bỏ phần tử được thêm sớm nhất. Việc cập nhật khóa cũ không làm mới tuổi thọ của nó. Dữ liệu đầu vào vượt quá giới hạn phải bị từ chối ngay trước khi thay đổi trạng thái bộ đệm. Phía bên gọi được phép chỉnh sửa lát cắt byte của mình sau khi gọi `Put` mà không làm biến đổi bản sao bộ đệm đã lưu trữ. Đây là chiến lược vào trước ra trước (FIFO), không phải loại bỏ theo tần suất truy cập gần nhất (LRU), và hoàn toàn không có cơ chế thời hạn ngầm định.
+Trước khi tham khảo thư mục `fixed` của bài thực hành `part10-resource-retention`, anh hãy thiết kế giao ước cho một bộ nhớ đệm đơn chủ sở hữu: tối đa hai phần tử, mỗi giá trị tối đa 4 MiB, mỗi khóa tối đa 128 byte; khi thêm khóa thứ ba thì tự động loại bỏ phần tử được thêm sớm nhất. Việc cập nhật khóa cũ không làm mới tuổi thọ của nó. Dữ liệu đầu vào vượt quá giới hạn phải bị từ chối ngay trước khi thay đổi trạng thái bộ đệm. Phía bên gọi được phép chỉnh sửa lát cắt byte của mình sau khi gọi `Put` mà không làm biến đổi bản sao bộ đệm đã lưu trữ. Đây là chiến lược vào trước ra trước (FIFO), không phải loại bỏ theo tần suất truy cập gần nhất (LRU), và hoàn toàn không có cơ chế thời hạn ngầm định.
 
 Chính sách ấy dẫn tới những ca kiểm thử không cần đo RAM. Sau chuỗi `a, b, a, c`, bộ nhớ đệm (*cache*) phải còn `b` và `c`; cập nhật `a` không tạo phần tử (*entry*) thứ ba và không cứu nó khỏi bị loại. Gửi giá trị (*value*) quá lớn phải trả về lỗi (*error*), không được đẩy một phần tử hợp lệ ra ngoài. Chạy nhiều vòng khóa (*key*) mới, `Len()` không vượt hai. Sửa dữ liệu đầu vào (*input*) sau `Put` không được đổi giá trị đã lưu. Các ca kiểm thử nằm trong `fixed/retention_test.go`; hãy làm bản `exercise` chạy được trước khi đối chiếu phần triển khai (*implementation*).
 
@@ -414,6 +416,7 @@ Chuyển đổi kiểu (*conversion*) không phải là kiểm tra tính hợp l
 `recordProbe(registry, name, healthy)` đã làm đúng việc, nhưng khi `opsprobe` có thêm nhiều thao tác quanh một dịch vụ (*service*), chữ ký hàm bắt đầu lặp lại cùng một chủ thể. Một hàm cần tạo nhãn cho dịch vụ, một hàm khác ghi kết quả thăm dò (*probe*), hàm nữa kiểm tra cấu hình. Lúc này phương thức (*method*) giúp đặt hành vi cạnh kiểu dữ liệu mà nó đọc hoặc thay đổi; nó không thay đổi quy tắc ngữ nghĩa giá trị (*value semantics*) đã xây.
 
 ~~~go
+// Trích đoạn sư phạm tối giản (bài lab mở rộng xuất đủ %s healthy=%t retries=%d)
 func (service Service) Summary() string {
 	return service.Name
 }
@@ -426,7 +429,7 @@ func (service *Service) Record(healthy bool) {
 }
 ~~~
 
-Một phương thức (*method*) là hàm có bộ tiếp nhận (*receiver*): phần tham số đặc biệt đứng trước tên phương thức. `Summary` nhận giá trị `Service`, nên bộ tiếp nhận là một giá trị cấu trúc (*struct value*) được dùng để tạo kết quả. Phương thức `Record` nhận `*Service`, vì hành vi này có ý định sửa đổi đối tượng trỏ tới (*pointee*). Tên bộ tiếp nhận không phải từ khóa và không phải một biến toàn cục bí mật; nó chỉ là tham số được viết ở vị trí riêng để gắn phương thức với `Service`.
+Một phương thức (*method*) là hàm có biến nhận (*receiver*): phần tham số đặc biệt đứng trước tên phương thức. `Summary` nhận giá trị `Service`, nên biến nhận là một giá trị cấu trúc (*struct value*) được dùng để tạo kết quả. Phương thức `Record` nhận `*Service`, vì hành vi này có ý định sửa đổi đối tượng trỏ tới (*pointee*). Tên biến nhận không phải từ khóa và không phải một biến toàn cục bí mật; nó chỉ là tham số được viết ở vị trí riêng để gắn phương thức với `Service`.
 
 ~~~go
 billing := Service{Name: "billing", Healthy: true}
@@ -436,13 +439,13 @@ billing.Record(false)
 fmt.Println(billing.Healthy, billing.Retries) // false 1
 ~~~
 
-Biểu thức `billing.Record(false)` hợp lệ vì `billing` là biến có thể lấy địa chỉ (*addressable variable*). Trong trường hợp này, Go cho phép cách viết ngắn gọn thay cho `(&billing).Record(false)`. Sự tiện lợi ấy không biến bộ tiếp nhận giá trị thành bộ tiếp nhận con trỏ: tập phương thức (*method set*) của `Service` chỉ chứa các phương thức khai báo với bộ tiếp nhận `Service`; trong khi tập phương thức của `*Service` chứa cả các phương thức có bộ tiếp nhận `Service` lẫn `*Service`.
+Biểu thức `billing.Record(false)` hợp lệ vì `billing` là biến có thể lấy địa chỉ (*addressable variable*). Trong trường hợp này, Go cho phép cách viết ngắn gọn thay cho `(&billing).Record(false)`. Sự tiện lợi ấy không biến biến nhận giá trị thành biến nhận con trỏ: tập phương thức (*method set*) của `Service` chỉ chứa các phương thức khai báo với biến nhận `Service`; trong khi tập phương thức của `*Service` chứa cả các phương thức có biến nhận `Service` lẫn `*Service`.
 
 ![Hai lời gọi method trên cùng một Service variable: value receiver nhận value, pointer receiver đi qua địa chỉ của variable addressable.](../../assets/diagrams/method-receiver-trace.png)
 
-@figure Phương thức vẫn dựa trên giá trị bộ tiếp nhận. `Summary` dùng giá trị Service; `Record` cần `*Service` để chọn biến được trỏ tới làm đích biến đổi (*mutation*). Mũi tên là ngữ nghĩa truy vết (*trace semantics*), không mô tả cách bố trí bộ nhớ vật lý.
+@figure Phương thức vẫn dựa trên giá trị biến nhận. `Summary` dùng giá trị Service; `Record` cần `*Service` để chọn biến được trỏ tới làm đích biến đổi (*mutation*). Mũi tên là ngữ nghĩa truy vết (*trace semantics*), không mô tả cách bố trí bộ nhớ vật lý.
 
-Phần tử được truy xuất theo chỉ số map (*map index*) không có tính chất lấy được địa chỉ (*not addressable*) theo đặc tả ngôn ngữ, nên cú pháp viết tắt lấy địa chỉ để gọi phương thức có bộ tiếp nhận con trỏ (*pointer-receiver method*) không áp dụng được cho nó. Đây là giới hạn ở tầng mã nguồn, không phải kết luận rằng một địa chỉ vật lý “không ổn định” trong mọi bản cài đặt:
+Phần tử được truy xuất theo chỉ số map (*map index*) không có tính chất lấy được địa chỉ (*not addressable*) theo đặc tả ngôn ngữ, nên cú pháp viết tắt lấy địa chỉ để gọi phương thức có biến nhận con trỏ (*pointer-receiver method*) không áp dụng được cho nó. Đây là giới hạn ở tầng mã nguồn, không phải kết luận rằng một địa chỉ vật lý “không ổn định” trong mọi bản cài đặt:
 
 ~~~go
 // services["billing"].Record(false) // không hợp lệ
@@ -488,7 +491,7 @@ fmt.Println(tag.Label()) // phương thức được thăng cấp
 // var n Named = tag // Tagged không phải Named
 ~~~
 
-Phương thức `Label` vẫn nhận bộ tiếp nhận `Named`; lời gọi ngắn gọn đi xuyên qua trường được nhúng (*embedded field*). Hai trường nhúng có cùng tên bộ chọn ở cùng độ sâu có thể làm bộ chọn trở nên mơ hồ và bị trình biên dịch từ chối. Phương thức được thăng cấp (*promoted method*) cũng có thể khiến kiểu bên ngoài vô tình thỏa mãn một giao diện ngoài dự kiến. Vì vậy, nhúng cấu trúc là một quyết định về giao diện lập trình công khai (*public API*), không phải mẹo tiết kiệm thao tác gõ tên trường. Khi bên gọi cần nhìn rõ quyền sở hữu, trường có tên tường minh vẫn là lựa chọn an toàn và dễ duyệt mã hơn. Những quy tắc này thuộc đặc tả Go về kiểu cấu trúc, bộ chọn và tập phương thức, hoàn toàn không phụ thuộc vào cách sắp đặt bộ nhớ vật lý của cấu trúc.
+Phương thức `Label` vẫn nhận biến nhận `Named`; lời gọi ngắn gọn đi xuyên qua trường được nhúng (*embedded field*). Hai trường nhúng có cùng tên bộ chọn ở cùng độ sâu có thể làm bộ chọn trở nên mơ hồ và bị trình biên dịch từ chối. Phương thức được thăng cấp (*promoted method*) cũng có thể khiến kiểu bên ngoài vô tình thỏa mãn một giao diện ngoài dự kiến. Vì vậy, nhúng cấu trúc là một quyết định về giao diện lập trình công khai (*public API*), không phải mẹo tiết kiệm thao tác gõ tên trường. Khi bên gọi cần nhìn rõ quyền sở hữu, trường có tên tường minh vẫn là lựa chọn an toàn và dễ duyệt mã hơn. Những quy tắc này thuộc đặc tả Go về kiểu cấu trúc, bộ chọn và tập phương thức, hoàn toàn không phụ thuộc vào cách sắp đặt bộ nhớ vật lý của cấu trúc.
 
 ## Interface xuất hiện ở nơi cần một hành vi
 
@@ -504,7 +507,7 @@ func renderSummary(source SummarySource) string {
 }
 ~~~
 
-Hàm `renderSummary` không đòi hỏi bên gọi phải là `Service`, `StaticTarget`, hay một kiểu dữ liệu cụ thể nào trong tương lai. Nó chỉ phát lời gọi `Summary`. Ngôn ngữ Go không có từ khóa `implements`: phép gán hoặc đối số truyền vào hoàn toàn hợp lệ miễn là tập phương thức của kiểu thỏa mãn giao diện. Vì `Summary` có bộ tiếp nhận giá trị, cả `Service` lẫn `*Service` đều sở hữu phương thức đó trong tập phương thức của mình.
+Hàm `renderSummary` không đòi hỏi bên gọi phải là `Service`, `StaticTarget`, hay một kiểu dữ liệu cụ thể nào trong tương lai. Nó chỉ phát lời gọi `Summary`. Ngôn ngữ Go không có từ khóa `implements`: phép gán hoặc đối số truyền vào hoàn toàn hợp lệ miễn là tập phương thức của kiểu thỏa mãn giao diện. Vì `Summary` có biến nhận giá trị, cả `Service` lẫn `*Service` đều sở hữu phương thức đó trong tập phương thức của mình.
 
 ~~~go
 type StaticTarget string
@@ -525,7 +528,7 @@ Kết quả là hai dòng có cùng định dạng dù hai kiểu dữ liệu kh
 
 @figure `renderSummary` chỉ cần `Summary() string`. Sơ đồ cho thấy mối phụ thuộc đi từ bên tiêu dùng (*consumer*) tới giao ước (*contract*) nhỏ; `Service` và `StaticTarget` không cần khai báo bất kỳ quan hệ kế thừa hay đăng ký triển khai tường minh nào.
 
-Bộ tiếp nhận con trỏ (*pointer receiver*) thay đổi sự thỏa mãn giao diện (*interface satisfaction*) theo đúng quy tắc của tập phương thức (*method set*). Nếu giao ước đòi hỏi `Record(bool)`, giá trị `Service` sẽ không thỏa mãn vì phương thức đó chỉ thuộc về tập phương thức của `*Service`; chỉ có con trỏ `*Service` mới đáp ứng được.
+Biến nhận con trỏ (*pointer receiver*) thay đổi sự thỏa mãn giao diện (*interface satisfaction*) theo đúng quy tắc của tập phương thức (*method set*). Nếu giao ước đòi hỏi `Record(bool)`, giá trị `Service` sẽ không thỏa mãn vì phương thức đó chỉ thuộc về tập phương thức của `*Service`; chỉ có con trỏ `*Service` mới đáp ứng được.
 
 ~~~go
 type ProbeRecorder interface {
@@ -561,7 +564,7 @@ if src == nil {
 }
 ~~~
 
-Một giá trị giao diện chỉ bằng `nil` khi chưa có cả kiểu động lẫn giá trị động. Khi gán con trỏ `s` kiểu `*Service` có giá trị `nil` vào `src`, giao diện vẫn mang kiểu động `*Service`, do đó `src == nil` trả về `false`. Trong ví dụ này, `Summary` sở hữu bộ tiếp nhận giá trị `Service`: việc gọi `src.Summary()` bắt buộc phải giải tham chiếu (*dereference*) con trỏ `nil` để tạo giá trị cho bộ tiếp nhận, vì vậy lỗi hoảng loạn (`panic`) xảy ra ngay trước khi bước vào thân phương thức. Với một phương thức có bộ tiếp nhận con trỏ, bộ tiếp nhận `nil` có thể đi thẳng vào thân phương thức; phương thức ấy chỉ an toàn nếu giao ước và bản cài đặt chủ động kiểm tra `nil`. Đừng bao giờ suy diễn từ “giao diện không `nil`” thành “lời gọi phương thức chắc chắn an toàn”.
+Một giá trị giao diện chỉ bằng `nil` khi chưa có cả kiểu động lẫn giá trị động. Khi gán con trỏ `s` kiểu `*Service` có giá trị `nil` vào `src`, giao diện vẫn mang kiểu động `*Service`, do đó `src == nil` trả về `false`. Trong ví dụ này, `Summary` sở hữu biến nhận giá trị `Service`: việc gọi `src.Summary()` bắt buộc phải giải tham chiếu (*dereference*) con trỏ `nil` để tạo giá trị cho biến nhận, vì vậy lỗi hoảng loạn (`panic`) xảy ra ngay trước khi bước vào thân phương thức. Với một phương thức có biến nhận con trỏ, biến nhận `nil` có thể đi thẳng vào thân phương thức; phương thức ấy chỉ an toàn nếu giao ước và bản cài đặt chủ động kiểm tra `nil`. Đừng bao giờ suy diễn từ “giao diện không `nil`” thành “lời gọi phương thức chắc chắn an toàn”.
 
 ## So sánh được chưa chắc so sánh an toàn
 
@@ -581,9 +584,9 @@ var b any = []int{1}
 
 Ở cuối mạch thiết kế này, công cụ `opsprobe` đã có thể diễn đạt ba ý định kiến trúc khác nhau một cách mạch lạc mà không cần dựa vào những danh xưng mơ hồ:
 
-Phương thức `Summary` nhận bản sao bộ tiếp nhận `Service`; với các trường giá trị hiện có, nó chỉ đọc dữ liệu để tạo chuỗi. Nếu cấu trúc được bổ sung trường con trỏ, map hoặc lát cắt, bản sao bộ tiếp nhận vẫn có thể chia sẻ dữ liệu nền bên dưới. Bộ tiếp nhận giá trị không thể bảo đảm mọi phương thức trong tương lai đều không gây tác dụng phụ (*side effect*).
+Phương thức `Summary` nhận bản sao biến nhận `Service`; với các trường giá trị hiện có, nó chỉ đọc dữ liệu để tạo chuỗi. Nếu cấu trúc được bổ sung trường con trỏ, map hoặc lát cắt, bản sao biến nhận vẫn có thể chia sẻ dữ liệu nền bên dưới. Biến nhận giá trị không thể bảo đảm mọi phương thức trong tương lai đều không gây tác dụng phụ (*side effect*).
 
-Hàm `func (service *Service) Record(bool)` tiếp nhận bộ tiếp nhận dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
+Hàm `func (service *Service) Record(bool)` tiếp nhận biến nhận dưới dạng giá trị con trỏ, cho phép cập nhật trực tiếp biến trạng thái của bên gọi mà không cần sao chép toàn bộ cấu trúc dữ liệu.
 
 Hàm `func renderSummary(SummarySource) string` tiếp nhận giao diện mang hành vi mà bên tiêu dùng cần. Nó gọi `Summary` thay vì đọc trường của một cấu trúc cụ thể; đây chính là ranh giới trừu tượng cho phép thay thế bên cung cấp (*provider*) mà không cần sửa đổi mã nguồn hiển thị.
 
