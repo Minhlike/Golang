@@ -361,36 +361,36 @@ def build_type_information_boundaries_drawing(w: float = 413.18, h: float = 362.
     d.add(String(col1_x + 28.0, body_y + body_h - 10.5, "GENERIC (COMPILE-TIME)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
 
     d.add(String(col1_x + 8.0, body_y + 272.0, "Câu hỏi kỹ thuật:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, body_y + 261.0, "Cùng một thuật toán trên", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, body_y + 250.0, "nhiều kiểu; giữ kiểu tĩnh", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, body_y + 239.0, "để compiler bắt lỗi sớm?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 8.0, body_y + 261.0, "Cùng một thao tác trên", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 8.0, body_y + 250.0, "tập kiểu xác định; giữ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 8.0, body_y + 239.0, "kiểu tĩnh cho compiler?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # Box 1A
     b1_h = 112.0
     b1_y = body_y + 120.0
     d.add(Rect(col1_x + 5.0, b1_y, col_w - 10.0, b1_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col1_x + 8.0, b1_y + 99.0, "CƠ CHẾ & RÀNG BUỘC KIỂU", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b1_y + 87.0, "Unique[T comparable]([]T) []T", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b1_y + 75.0, "Max[T constraints.Ordered]", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b1_y + 63.0, "• Type unification & inference", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b1_y + 51.0, "• Bảo tồn exact named type:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 12.0, b1_y + 40.0, "Max(ms1, ms2) -> Millis", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b1_y + 28.0, "• Compiler từ chối gán nhầm", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b1_y + 16.0, "• GCShape stenciling chia sẻ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b1_y + 5.0, "  mã con trỏ qua dictionary", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col1_x + 9.5, b1_y + 99.0, "THAO TÁC & RÀNG BUỘC TĨNH", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b1_y + 87.0, "Unique[T comparable]([]T) []T", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b1_y + 75.0, "type Measurable interface {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 11.5, b1_y + 63.0, "~int | ~int64 | ~float64 }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b1_y + 51.0, "Max[T Measurable](l, r T) T", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b1_y + 39.0, "• Giữ nguyên defined type:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b1_y + 28.0, "Max(ms1, ms2) -> Milliseconds", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b1_y + 16.0, "• Kiểu: Set[T comparable]", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b1_y + 5.0, "• Method: Batch[E].Map[F any]", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 1B
     b2_h = 104.0
     b2_y = body_y + 10.0
     d.add(Rect(col1_x + 5.0, b2_y, col_w - 10.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col1_x + 8.0, b2_y + 91.0, "ĐÁNH ĐỔI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b2_y + 79.0, "[ĐẶC TÍNH RUNTIME]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b2_y + 68.0, "• Type safety tại compile-time", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b2_y + 57.0, "• Alloc tùy cách dùng giá trị", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b2_y + 44.0, "[GIỚI HẠN THIẾT KẾ]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, b2_y + 32.0, "• Không đa hình lúc chạy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b2_y + 21.0, "• Không hoán đổi plugin động", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 8.0, b2_y + 10.0, "• Dictionary passing có chi phí", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col1_x + 9.5, b2_y + 91.0, "RANH GIỚI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b2_y + 79.0, "[BẢO ĐẢM BIÊN DỊCH]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b2_y + 68.0, "• Kiểm tra constraint tĩnh", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b2_y + 57.0, "• Chặn gán nhầm sang int64", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b2_y + 44.0, "[KHI KHÔNG PHÙ HỢP]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 9.5, b2_y + 32.0, "• Không thay đa hình hành vi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b2_y + 21.0, "• Tránh Load[T any] mơ hồ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 9.5, b2_y + 10.0, "• T=any chứa slice vẫn panic", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Column 2: INTERFACE
     d.add(Rect(col2_x, body_y, col_w, body_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
@@ -399,32 +399,32 @@ def build_type_information_boundaries_drawing(w: float = 413.18, h: float = 362.
     d.add(String(col2_x + 28.0, body_y + body_h - 10.5, "INTERFACE (BEHAVIOR)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
 
     d.add(String(col2_x + 8.0, body_y + 272.0, "Câu hỏi kỹ thuật:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, body_y + 261.0, "Hành vi đồng nhất khi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, body_y + 250.0, "concrete type thay đổi hoặc", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, body_y + 239.0, "hoán đổi cài đặt lúc chạy?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 8.0, body_y + 261.0, "Bên gọi chỉ cần kích hoạt", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 8.0, body_y + 250.0, "hành vi; kiểu cụ thể có thể", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 8.0, body_y + 239.0, "thay đổi ở mỗi lần gọi?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # Box 2A
     d.add(Rect(col2_x + 5.0, b1_y, col_w - 10.0, b1_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col2_x + 8.0, b1_y + 99.0, "CẤU TRÚC ITAB & DATA", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b1_y + 87.0, "type SummaryReader interface {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 12.0, b1_y + 75.0, "Summary() string", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b1_y + 63.0, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b1_y + 51.0, "• Fat pointer: (itab, data)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b1_y + 40.0, "• itab chứa type descriptor", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b1_y + 28.0, "  và con trỏ hàm (func ptr)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b1_y + 16.0, "• Dynamic dispatch gián tiếp", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b1_y + 5.0, "• Boxing value type vào heap", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 9.5, b1_y + 99.0, "KHẾ ƯỚC HÀNH VI (METHOD SET)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 87.0, "type Checker interface {", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 11.5, b1_y + 75.0, "Check(context.Context) error", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 63.0, "}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 51.0, "RunOne(ctx, checker Checker)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 39.0, "• Thỏa mãn ngầm định:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 9.5, b1_y + 28.0, "var _ Checker = httpChecker{}", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 16.0, "• Nhánh đã biết: type switch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b1_y + 5.0, "switch typed := value.(type)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2B
     d.add(Rect(col2_x + 5.0, b2_y, col_w - 10.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col2_x + 8.0, b2_y + 91.0, "ĐÁNH ĐỔI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b2_y + 79.0, "[ƯU ĐIỂM THIẾT KẾ]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b2_y + 68.0, "• Đa hình runtime linh hoạt", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b2_y + 57.0, "• Decoupling giữa các package", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b2_y + 44.0, "[CHI PHÍ RUNTIME]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, b2_y + 32.0, "• Lời gọi qua con trỏ hàm", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b2_y + 21.0, "• Escape analysis đẩy ra heap", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 8.0, b2_y + 10.0, "• Type assertion có thể panic", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 9.5, b2_y + 91.0, "RANH GIỚI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b2_y + 79.0, "[BẢO ĐẢM THIẾT KẾ]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b2_y + 68.0, "• Đa hình hành vi lúc chạy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 9.5, b2_y + 57.0, "• Tách bên gọi và cài đặt", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 9.5, b2_y + 44.0, "[LƯU Ý NGỮ NGHĨA]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 9.5, b2_y + 32.0, "• Giữ (dynamic type, value)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 9.5, b2_y + 21.0, "• Bẫy typed nil (*ProbeError):", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 9.5, b2_y + 10.0, "  pointer nil nhưng err != nil", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Column 3: REFLECTION
     d.add(Rect(col3_x, body_y, col_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
@@ -433,34 +433,34 @@ def build_type_information_boundaries_drawing(w: float = 413.18, h: float = 362.
     d.add(String(col3_x + 28.0, body_y + body_h - 10.5, "REFLECTION (METADATA)", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
 
     d.add(String(col3_x + 8.0, body_y + 272.0, "Câu hỏi kỹ thuật:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, body_y + 261.0, "Dữ liệu chỉ biết lúc chạy,", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, body_y + 250.0, "cần duyệt trường struct,", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, body_y + 239.0, "đọc struct tags động?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 8.0, body_y + 261.0, "Hình thái dữ liệu hoặc", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 8.0, body_y + 250.0, "struct tag thực sự là", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 8.0, body_y + 239.0, "đầu vào lúc đang chạy?", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # Box 3A
     d.add(Rect(col3_x + 5.0, b1_y, col_w - 10.0, b1_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col3_x + 8.0, b1_y + 99.0, "KHẢO SÁT TYPE & VALUE", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b1_y + 87.0, "t := reflect.TypeOf(v)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b1_y + 75.0, "val := reflect.ValueOf(v)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b1_y + 63.0, "field := t.Field(i).Tag", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b1_y + 51.0, "• Kiểm tra Kind() runtime", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b1_y + 40.0, "• Duyệt slice, map, pointer", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b1_y + 28.0, "• CanSet() kiểm tra gán", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b1_y + 16.0, "• Phù hợp: JSON serializer,", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b1_y + 5.0, "  ORM, dependency injection", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 9.5, b1_y + 99.0, "SIÊU DỮ LIỆU RUNTIME", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b1_y + 87.0, "t := reflect.TypeOf(v)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b1_y + 75.0, "val := reflect.ValueOf(v)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b1_y + 63.0, "field := t.Field(i).Tag", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b1_y + 51.0, "• Khảo sát cấu trúc bất định", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b1_y + 39.0, "  chưa biết lúc biên dịch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b1_y + 28.0, "• Kiểm tra kiểu và gán động", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b1_y + 16.0, "• Bài toán: bộ giải mã, đọc", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b1_y + 5.0, "  lược đồ & tag (Chương 14)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3B
     d.add(Rect(col3_x + 5.0, b2_y, col_w - 10.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col3_x + 8.0, b2_y + 91.0, "ĐÁNH ĐỔI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b2_y + 79.0, "[ĐÁNH ĐỔI NẶNG NỀ]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b2_y + 68.0, "• Mất kiểm tra tĩnh compiler", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b2_y + 57.0, "• Lỗi sai kiểu chuyển sang run", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b2_y + 44.0, "[HIỆU NĂNG RUNTIME]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, b2_y + 32.0, "• Chậm hơn từ 10x đến 100x", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b2_y + 21.0, "• Cấp phát heap liên tục", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 8.0, b2_y + 10.0, "• Chỉ dùng khi không thể tránh", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 9.5, b2_y + 91.0, "RANH GIỚI & GIỚI HẠN", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b2_y + 79.0, "[ĐÁNH ĐỔI KỸ THUẬT]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b2_y + 68.0, "• Mất kiểm tra tĩnh compiler", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b2_y + 57.0, "• Sai lệch kiểu dời sang run", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b2_y + 44.0, "[NGUYÊN TẮC SỬ DỤNG]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 9.5, b2_y + 32.0, "• Không thay cho type switch", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b2_y + 21.0, "  khi nhánh kiểu đã biết rõ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 9.5, b2_y + 10.0, "• Đo đạc thực tế trên tải thật", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    draw_footer_banner(d, w, "• Invariant: Generic bảo tồn kiểu tĩnh; Interface trừu tượng hóa hành vi; Reflection phân tích metadata runtime. Chi phí phụ thuộc vào cách dùng cụ thể.")
+    draw_footer_banner(d, w, "• Invariant: Generics giữ thông tin kiểu cho compiler; Interface bảo toàn khế ước hành vi; Reflection chỉ dùng khi siêu dữ liệu runtime là đầu vào.")
     return d
 
 
@@ -3228,6 +3228,7 @@ def verify_all_diagram_typography() -> bool:
     print("  [SCOPE] Visual inspection (manual QA): arrow clearances, sequence lifelines, line crossings, semantics.")
 
     active_targets = {
+        "type-information-boundaries.png",
         "webhook-hmac-verification.png",
         "webhook-delivery-deduplication.png",
         "change-evidence-gate.png",

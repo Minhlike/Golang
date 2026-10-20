@@ -814,6 +814,65 @@ class PublicationContracts(unittest.TestCase):
         self.assertIsNone(re.search(r"\'[0-9]{1,2}:\s*package", fig_script), "Code block must not contain line number prefixes")
         self.assertIsNone(re.search(r"\'[0-9]{1,2}:\s*func", fig_script), "Code block must not contain line number prefixes")
 
+    def test_figure_34_semantic_and_identifier_contract(self):
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import ch19_29_vector_diagrams as vdiag
+        from reportlab.graphics.shapes import String
+
+        drawing = vdiag.build_type_information_boundaries_drawing()
+        texts = []
+
+        def collect_strings(node):
+            if isinstance(node, String):
+                texts.append(node.text)
+            elif hasattr(node, "contents"):
+                for child in node.contents:
+                    collect_strings(child)
+
+        collect_strings(drawing)
+        combined = "\n".join(texts)
+        combined_lower = combined.lower()
+
+        required_tokens = [
+            "Unique[T comparable]",
+            "Measurable",
+            "Max[T Measurable]",
+            "Milliseconds",
+            "Set[T comparable]",
+            "Batch[E].Map[F any]",
+            "Checker",
+            "RunOne",
+            "httpChecker",
+            "ProbeError",
+            "reflect.TypeOf",
+            "reflect.ValueOf",
+        ]
+        for token in required_tokens:
+            self.assertIn(token, combined, f"Figure 34 must contain Chapter 19 identifier '{token}'")
+
+        forbidden_tokens = [
+            "constraints.ordered",
+            "summaryreader",
+            "gcshape",
+            "stenciling",
+            "dictionary",
+            "itab",
+            "fat pointer",
+            "func ptr",
+            "boxing value type",
+            "escape analysis đẩy ra heap",
+            "cấp phát heap liên tục",
+            "10x",
+            "100x",
+            "cloneslice",
+            "maxordered",
+            "writesummary",
+            "decodepayload",
+        ]
+        for bad in forbidden_tokens:
+            self.assertNotIn(bad, combined_lower, f"Figure 34 must not contain unverified/contradictory claim '{bad}'")
+
 
 if __name__ == '__main__':
     unittest.main()
