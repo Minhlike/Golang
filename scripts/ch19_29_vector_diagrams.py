@@ -197,7 +197,7 @@ def build_workflow_promotion_jobs_drawing(w: float = 476.22, h: float = 330.21) 
     Quyền OIDC và môi trường triển khai không tự động thay thế cho việc cổng
     kiểm soát thẩm định ứng viên phát hành. Chỉ quyết định được phê duyệt mới
     được phép cập nhật trạng thái mong muốn bằng mã băm nội dung.
-    Exact dimensions: 476.22 x 330.21 pt (Page 331, xref 382).
+    Exact dimensions: 476.22 x 330.21 pt (Page 326, xref 382).
     """
     register_fonts()
     d = Drawing(w, h)
@@ -207,118 +207,122 @@ def build_workflow_promotion_jobs_drawing(w: float = 476.22, h: float = 330.21) 
         d, w, h,
         tag="CHƯƠNG 18 // HÌNH 33",
         title="QUY TRÌNH TRUYỀN ĐỊNH DANH VÀ BẰNG CHỨNG QUA CÁC JOB CI/CD",
-        subtitle="Phân định ranh giới giữa Artifact Producer, Policy Gate thẩm định và Deploy Environment.",
+        subtitle="Đối chiếu specimen delivery.yaml: verify -> build-artifact -> promote-production (fail-closed).",
     )
 
     body_y = 26.0
     body_h = header_y - body_y - 6.0
 
-    col_gap = 12.0
-    col_w = (w - 16.0 - 2 * col_gap) / 3.0  # 145.40 pt each
+    col_gap = 26.0
+    col_w = (w - 16.0 - 2 * col_gap) / 3.0  # 136.07 pt each
     col1_x = 8.0
     col2_x = col1_x + col_w + col_gap
     col3_x = col2_x + col_w + col_gap
 
-    # Job 1: BUILD & TEST
+    b1_h = 100.0
+    b1_y = body_y + 120.0
+    b2_h = 86.0
+    b2_y = body_y + 18.0
+
+    # Job 1: VERIFY
     d.add(Rect(col1_x, body_y, col_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(col1_x + 6.0, body_y + body_h - 13.0, 18.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
     d.add(String(col1_x + 15.0, body_y + body_h - 10.5, "01", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(col1_x + 28.0, body_y + body_h - 10.5, "JOB: BUILD & TEST", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 28.0, body_y + body_h - 10.5, "JOB: VERIFY", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
 
-    d.add(String(col1_x + 8.0, body_y + 242.0, "Runner: runs-on: ubuntu-latest", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 8.0, body_y + 232.0, "• Quyền: 0 quyền deploy cloud", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col1_x + 8.0, body_y + 242.0, "Runner: ubuntu-latest", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 8.0, body_y + 232.0, "• permissions: contents: read", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 1A
-    b1_h = 100.0
-    b1_y = body_y + 120.0
     d.add(Rect(col1_x + 6.0, b1_y, col_w - 12.0, b1_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col1_x + 10.0, b1_y + 88.0, "ĐÓNG GÓI & KIỂM THỬ", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b1_y + 76.0, "go test -race ./...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b1_y + 64.0, "docker buildx build \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 14.0, b1_y + 53.0, "--provenance=mode=max \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 14.0, b1_y + 42.0, "--sbom=true -t app:candidate", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b1_y + 28.0, "• Tạo bằng chứng SLSA", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 10.0, b1_y + 16.0, "• Phân tích call reachability", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 10.0, b1_y + 5.0, "• Sinh SBOM & metadata", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col1_x + 10.5, b1_y + 88.0, "KIỂM TRA SOURCE & TESTS", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b1_y + 76.0, "Checkout ghim bằng commit SHA", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 10.5, b1_y + 64.0, "go test -v ./...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b1_y + 52.0, "go vet ./...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b1_y + 40.0, "go test -race ./...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b1_y + 26.0, "• Chạy riêng từng module:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 10.5, b1_y + 15.0, "  labs/part16-real-signals", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 10.5, b1_y + 5.0, "  labs/part18-workflow-delivery", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 1B
-    b2_h = 86.0
-    b2_y = body_y + 18.0
     d.add(Rect(col1_x + 6.0, b2_y, col_w - 12.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col1_x + 10.0, b2_y + 74.0, "OUTPUT ARTIFACTS", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b2_y + 62.0, "Image Digest (SHA-256):", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b2_y + 51.0, "sha256:4a8f3b2c1d9e...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col1_x + 10.0, b2_y + 38.0, "Tệp attestation.json", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 10.0, b2_y + 26.0, "Tệp scan-results.sarif", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col1_x + 10.0, b2_y + 10.0, "• Đẩy lên Registry cô lập", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col1_x + 10.5, b2_y + 74.0, "BẰNG CHỨNG CHẶNG VERIFY", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b2_y + 61.0, "Đồ thị phụ thuộc (needs):", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b2_y + 49.0, "needs: verify -> Pass", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col1_x + 10.5, b2_y + 36.0, "• Cơ sở suy ra tests-passed=true", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 10.5, b2_y + 23.0, "• Chỉ bảo đảm trong phạm vi test", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col1_x + 10.5, b2_y + 10.0, "• 0 quyền id-token / deploy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    draw_arrow(d, col1_x + col_w, body_y + 170.0, col2_x, body_y + 170.0, color=COLOR_INK_DARK, width=0.8, head_size=3.2)
-    d.add(String((col1_x + col_w + col2_x) / 2.0, body_y + 174.0, "digest &", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String((col1_x + col_w + col2_x) / 2.0, body_y + 164.0, "evidence", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-
-    # Job 2: POLICY GATE
+    # Job 2: BUILD-ARTIFACT
     d.add(Rect(col2_x, body_y, col_w, body_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER_DARK, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(col2_x + 6.0, body_y + body_h - 13.0, 18.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
     d.add(String(col2_x + 15.0, body_y + body_h - 10.5, "02", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(col2_x + 28.0, body_y + body_h - 10.5, "JOB: POLICY GATE", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 28.0, body_y + body_h - 10.5, "JOB: BUILD-ARTIFACT", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
 
-    d.add(String(col2_x + 8.0, body_y + 242.0, "Môi trường: Thẩm định độc lập", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 8.0, body_y + 232.0, "• 0 quyền ghi hạ tầng production", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 8.0, body_y + 242.0, "needs: verify | ubuntu-latest", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 8.0, body_y + 232.0, "• permissions: contents: read", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2A
     d.add(Rect(col2_x + 6.0, b1_y, col_w - 12.0, b1_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col2_x + 10.0, b1_y + 88.0, "TIÊU CHÍ THẨM ĐỊNH", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b1_y + 76.0, "1. Xác minh chữ ký Cosign:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 14.0, b1_y + 65.0, "cosign verify --key ...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 10.0, b1_y + 52.0, "2. SLSA Level 3 Provenance:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 14.0, b1_y + 41.0, "Khớp repository, commit SHA", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 10.0, b1_y + 28.0, "3. Quét lỗ hổng reachability:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 14.0, b1_y + 17.0, "0 CVE nghiêm trọng gọi tới", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 10.0, b1_y + 5.0, "4. SBOM khớp dependency tree", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 10.5, b1_y + 88.0, "ĐÓNG GÓI & LẤY OCI DIGEST", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b1_y + 76.0, "sha=$(git rev-parse HEAD)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b1_y + 64.0, "docker buildx build --load \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b1_y + 52.0, "  --metadata-file metadata.json", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b1_y + 39.0, "• Đọc containerimage.digest", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 10.5, b1_y + 27.0, "• Khác với Local Image ID (.Id)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b1_y + 16.0, "• Kiểm tra mẫu ^sha256:[0-9a-f]{64}$", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 10.5, b1_y + 5.0, "• Thiếu/sai digest -> exit 1", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 2B
     d.add(Rect(col2_x + 6.0, b2_y, col_w - 12.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col2_x + 10.0, b2_y + 74.0, "QUYẾT ĐỊNH CỔNG KIỂM SOÁT", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2_y + 60.0, "[FAIL-CLOSED GATE]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2_y + 48.0, "• Thiếu 1 tiêu chí: DỪNG NGAY", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2_y + 36.0, "• Đạt 100%: Ký duyệt promotion", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col2_x + 10.0, b2_y + 22.0, "Promotion Ticket phát hành:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col2_x + 10.0, b2_y + 10.0, "Gắn chặt với Digest đã thẩm định", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col2_x + 10.5, b2_y + 74.0, "JOB OUTPUTS CHUYỂN GIAO", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b2_y + 61.0, "1. image_digest (OCI Manifest):", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b2_y + 49.0, "sha256:0123456789abcdef...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b2_y + 36.0, "2. source_revision (Git SHA):", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col2_x + 10.5, b2_y + 24.0, "bcb3fe0... (commit đầu vào)", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col2_x + 10.5, b2_y + 10.0, "• Specimen cục bộ; chưa ký số", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    draw_arrow(d, col2_x + col_w, body_y + 170.0, col3_x, body_y + 170.0, color=COLOR_INK_DARK, width=0.8, head_size=3.2)
-    d.add(String((col2_x + col_w + col3_x) / 2.0, body_y + 174.0, "approved", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String((col2_x + col_w + col3_x) / 2.0, body_y + 164.0, "decision", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-
-    # Job 3: DEPLOY
+    # Job 3: PROMOTE-PRODUCTION
     d.add(Rect(col3_x, body_y, col_w, body_h, fillColor=COLOR_BG_CARD, strokeColor=COLOR_BORDER, strokeWidth=0.8, rx=2, ry=2))
     d.add(Rect(col3_x + 6.0, body_y + body_h - 13.0, 18.0, 9.0, fillColor=COLOR_TAG_BG, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.0, ry=1.0))
     d.add(String(col3_x + 15.0, body_y + body_h - 10.5, "03", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
-    d.add(String(col3_x + 28.0, body_y + body_h - 10.5, "JOB: DEPLOY PRODUCTION", fontName="BookSansBold", fontSize=6.2, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 28.0, body_y + body_h - 10.5, "JOB: PROMOTE-PRODUCTION", fontName="BookSansBold", fontSize=6.1, fillColor=COLOR_INK_DARK))
 
-    d.add(String(col3_x + 8.0, body_y + 242.0, "Xác thực OIDC (Keyless Auth):", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 8.0, body_y + 232.0, "• Token ngắn hạn gắn IAM Role", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 8.0, body_y + 242.0, "if: refs/heads/main (non-PR)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 8.0, body_y + 232.0, "• permissions: id-token: write", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3A
     d.add(Rect(col3_x + 6.0, b1_y, col_w - 12.0, b1_h, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col3_x + 10.0, b1_y + 88.0, "ĐIỀU KIỆN TIÊN QUYẾT", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 10.0, b1_y + 76.0, "1. Kiểm tra Quyết định phê duyệt:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 14.0, b1_y + 65.0, "Ticket từ Job 02 còn hiệu lực", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 10.0, b1_y + 52.0, "2. Nhận dạng danh tính OIDC:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 14.0, b1_y + 41.0, "audience: sts.amazonaws.com", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 10.0, b1_y + 28.0, "3. Khóa định danh bất biến:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 14.0, b1_y + 17.0, "Triển khai bằng Digest SHA-256", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 10.0, b1_y + 5.0, "• Tuyệt đối không deploy bằng tag", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 10.5, b1_y + 88.0, "CHỐT CHẶN PROMOTE-GATE", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 76.0, "go run ./cmd/promote-gate \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 64.0, "  --digest $DIGEST \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 52.0, "  --revision $REVISION \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 40.0, "  --tests-passed=true \\", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 28.0, "  --provenance-verified=false", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b1_y + 16.0, "• Chưa có bước xác thực xuất xứ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 10.5, b1_y + 5.0, "• Không giả mạo cờ true", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Box 3B
     d.add(Rect(col3_x + 6.0, b2_y, col_w - 12.0, b2_h, fillColor=COLOR_BG_SUBTLE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
-    d.add(String(col3_x + 10.0, b2_y + 74.0, "CẬP NHẬT TRẠNG THÁI", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 10.0, b2_y + 62.0, "GitOps / Kube-API Server:", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 10.0, b2_y + 51.0, "image: app@sha256:4a8f3b...", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(col3_x + 10.0, b2_y + 38.0, "RollingUpdate Deployment", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 10.0, b2_y + 26.0, "Health Probe: /livez, /readyz", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(col3_x + 10.0, b2_y + 10.0, "• Tự rollback nếu probe lỗi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(col3_x + 10.5, b2_y + 74.0, "HÀNH VI GATE & DEPLOY MẪU", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b2_y + 61.0, "[TRONG LAB HIỆN TẠI: EXIT 1]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b2_y + 49.0, "• Từ chối đóng (fail-closed)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b2_y + 37.0, "• Dừng ngay; 0 lệnh deploy chạy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(col3_x + 10.5, b2_y + 23.0, "[MÔ TẢ SAU KHI ĐẠT GATE]", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
+    d.add(String(col3_x + 10.5, b2_y + 10.0, "• OIDC AssumeRole & deploy digest", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
-    draw_footer_banner(d, w, "• Invariant: Quyền OIDC và môi trường triển khai chỉ cấp kênh kết nối tạm thời; không tự động thay thế cho việc thẩm định bằng chứng tại policy gate.")
+    # Inter-column arrows drawn AFTER columns with wide 26pt gap so labels never touch borders
+    mid1_x = (col1_x + col_w + col2_x) / 2.0
+    draw_arrow(d, col1_x + col_w, body_y + 170.0, col2_x, body_y + 170.0, color=COLOR_INK_DARK, width=0.8, head_size=3.2)
+    d.add(String(mid1_x, body_y + 174.5, "needs:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(mid1_x, body_y + 161.5, "verify", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+
+    mid2_x = (col2_x + col_w + col3_x) / 2.0
+    draw_arrow(d, col2_x + col_w, body_y + 170.0, col3_x, body_y + 170.0, color=COLOR_INK_DARK, width=0.8, head_size=3.2)
+    d.add(String(mid2_x, body_y + 174.5, "digest", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+    d.add(String(mid2_x, body_y + 161.5, "& sha", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK, textAnchor="middle"))
+
+    draw_footer_banner(d, w, "• Invariant: Quyền OIDC và môi trường triển khai chỉ cấp kênh kết nối tạm thời; không tự động thay thế cho việc thẩm định bằng chứng tại promote-gate.")
     return d
 
 
@@ -2116,7 +2120,7 @@ def build_library_informer_data_path_drawing(w: float = 476.22, h: float = 265.6
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 51",
+        tag="ATLAS THƯ VIỆN // HÌNH 51",
         title="ĐƯỜNG OBSERVATION VÀ KHÓA CÔNG VIỆC TRONG INFORMER",
         subtitle="Cache cập nhật trước khi phát event; Handler chỉ đẩy Key vào Workqueue.",
     )
@@ -2202,7 +2206,7 @@ def build_library_informer_data_path_drawing(w: float = 476.22, h: float = 265.6
     d.add(String(b3_x + 8.0, body_y + body_h - 116.0, "• Dirty Set & Processing Set", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(b3_x + 8.0, body_y + body_h - 127.0, "• Tự động chống trùng lặp key", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(b3_x + 8.0, body_y + body_h - 138.0, "• Rate Limiting Backoff", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(b3_x + 8.0, body_y + 14.0, "• Done(key) hoàn tất chu kỳ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(b3_x + 8.0, body_y + body_h - 149.0, "• Done(key) hoàn tất chu kỳ", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow b3 -> b4
     draw_arrow(d, b3_x + b3_w, body_y + 36.0, b4_x, body_y + 36.0, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2243,7 +2247,7 @@ def build_library_smithy_step_order_drawing(w: float = 261.98, h: float = 362.83
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 52",
+        tag="ATLAS THƯ VIỆN // HÌNH 52",
         title="5 BƯỚC MIDDLEWARE TRONG SMITHY-GO",
         subtitle="Chuỗi lồng handler tuần tự từ Initialize đến Deserialize",
     )
@@ -2331,7 +2335,7 @@ def build_collector_pipeline_drawing(w: float = 337.01, h: float = 362.83) -> Dr
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 53",
+        tag="ATLAS THƯ VIỆN // HÌNH 53",
         title="PIPELINE OPENTELEMETRY COLLECTOR",
         subtitle="3 Thành phần chính: Receivers -> Processors -> Exporters",
     )
@@ -2367,7 +2371,7 @@ def build_collector_pipeline_drawing(w: float = 337.01, h: float = 362.83) -> Dr
         d.add(Rect(rx, s1_y + 6.0, rc_w, stage_h - 24.0, fillColor=COLOR_WHITE, strokeColor=COLOR_BORDER, strokeWidth=0.5, rx=1.5, ry=1.5))
         d.add(String(rx + 6.0, s1_y + stage_h - 25.0, proto, fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
         d.add(String(rx + 6.0, s1_y + stage_h - 37.0, port, fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_MID))
-        d.add(String(rx + 6.0, s1_y + 12.0, "Parse -> pdata", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
+        d.add(String(rx + 6.0, s1_y + stage_h - 49.0, "Parse -> pdata", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
 
     # Arrow down s1 -> s2
     draw_arrow(d, stage_x + stage_w / 2.0, s1_y, stage_x + stage_w / 2.0, s1_y - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2434,7 +2438,7 @@ def build_containerd_shim_boundary_drawing(w: float = 434.69, h: float = 362.83)
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 54",
+        tag="ATLAS THƯ VIỆN // HÌNH 54",
         title="RANH GIỚI TIẾN TRÌNH: DAEMON, SHIM VÀ CONTAINER TASK",
         subtitle="containerd daemon -> containerd-shim-v2 -> OCI runtime (runc) -> Container",
     )
@@ -2474,7 +2478,7 @@ def build_containerd_shim_boundary_drawing(w: float = 434.69, h: float = 362.83)
     d.add(String(c1_x + 10.0, body_y + body_h - 114.0, "• Fork/exec shim-v2 process", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c1_x + 10.0, body_y + body_h - 127.0, "• Đọc bootstrap socket path", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(c1_x + 10.0, body_y + body_h - 140.0, "• Kết nối ttrpc endpoint", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c1_x + 10.0, body_y + 14.0, "• Live-restore: nếu bật cấu hình", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c1_x + 10.0, body_y + body_h - 153.0, "• Live-restore: nếu bật cấu hình", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow c1 -> c2 (ttrpc IPC) - cleanly centered inside gap 1
     arrow1_y = body_y + body_h / 2.0
@@ -2496,7 +2500,7 @@ def build_containerd_shim_boundary_drawing(w: float = 434.69, h: float = 362.83)
     d.add(String(c2_x + 10.0, body_y + body_h - 114.0, "• Gọi runc create / runc start", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c2_x + 10.0, body_y + body_h - 127.0, "• runc thoát sau khi khởi tạo", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(c2_x + 10.0, body_y + body_h - 140.0, "• Shim làm subreaper tránh", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c2_x + 10.0, body_y + 14.0, "  zombie process trong OS", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c2_x + 10.0, body_y + body_h - 153.0, "  zombie process trong OS", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow c2 -> c3 (runc OCI) - cleanly centered inside gap 2
     arrow2_y = body_y + body_h / 2.0
@@ -2517,7 +2521,7 @@ def build_containerd_shim_boundary_drawing(w: float = 434.69, h: float = 362.83)
     d.add(String(c3_x + 10.0, body_y + body_h - 102.0, "• Thực thi logic nghiệp vụ", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(c3_x + 10.0, body_y + body_h - 120.0, "Ranh giới sự cố:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c3_x + 10.0, body_y + body_h - 133.0, "• Daemon chết: task vẫn chạy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(c3_x + 10.0, body_y + 14.0, "• Shim chết: task bị mồ côi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c3_x + 10.0, body_y + body_h - 146.0, "• Shim chết: task bị mồ côi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
 
@@ -2534,7 +2538,7 @@ def build_grpc_client_balancing_drawing(w: float = 476.22, h: float = 255.70) ->
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 55",
+        tag="ATLAS THƯ VIỆN // HÌNH 55",
         title="ĐIỀU HƯỚNG VÀ CÂN BẰNG TẢI CLIENT-SIDE TRONG GRPC",
         subtitle="Resolver cung cấp addresses -> Balancer quản lý SubConn -> Picker định tuyến RPC",
     )
@@ -2616,7 +2620,7 @@ def build_grpc_client_balancing_drawing(w: float = 476.22, h: float = 255.70) ->
     d.add(String(c3_x + 10.0, body_y + body_h - 68.0, "• Chỉ chọn SubConn", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c3_x + 10.0, body_y + body_h - 79.0, "  đang READY", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c3_x + 10.0, body_y + body_h - 94.0, "• Loại trừ IP3 lỗi", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c3_x + 10.0, body_y + 16.0, "• Không block kênh", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c3_x + 10.0, body_y + body_h - 109.0, "• Không block kênh", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow c3 -> c4
     draw_arrow(d, c3_x + c3_w, body_y + body_h / 2.0, c4_x, body_y + body_h / 2.0, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2656,7 +2660,7 @@ def build_cobra_hook_order_drawing(w: float = 476.22, h: float = 354.37) -> Draw
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 56",
+        tag="ATLAS THƯ VIỆN // HÌNH 56",
         title="THỨ TỰ HOOK VÀ CƠ CHẾ LAN TRUYỀN LỖI TRONG COBRA CLI",
         subtitle="PersistentPreRun[E] -> PreRun[E] -> Run[E] -> PostRun[E] -> PersistentPostRun[E]",
     )
@@ -2726,7 +2730,7 @@ def build_cobra_hook_order_drawing(w: float = 476.22, h: float = 354.37) -> Draw
     d.add(String(c2_x + 10.0, body_y + body_h - 136.0, "• Chỉ MỘT Persistent hook chạy (không gộp)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(c2_x + 10.0, body_y + body_h - 148.0, "• Nếu lệnh con tự khai báo PersistentPreRun,", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
     d.add(String(c2_x + 14.0, body_y + body_h - 159.0, "hook của lệnh cha bị ghi đè hoàn toàn", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(c2_x + 10.0, body_y + 14.0, "• Caller quyết định in lỗi hoặc thoát OS", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(c2_x + 10.0, body_y + body_h - 172.0, "• Caller quyết định in lỗi hoặc thoát OS", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
 
@@ -2743,7 +2747,7 @@ def build_viper_value_precedence_drawing(w: float = 414.95, h: float = 362.83) -
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 57",
+        tag="ATLAS THƯ VIỆN // HÌNH 57",
         title="THỨ TỰ ƯU TIÊN NGUỒN CẤU HÌNH TRONG VIPER",
         subtitle="Precedence Hierarchy khi đọc Get(key): Từ cao nhất xuống thấp nhất",
     )
@@ -2808,7 +2812,7 @@ def build_agent_mailbox_contract_drawing(w: float = 280.79, h: float = 362.83) -
 
     header_y = draw_header_banner(
         d, w, h,
-        tag="PHỤ LỤC B // HÌNH 58",
+        tag="ATLAS THƯ VIỆN // HÌNH 58",
         title="KHẾ ƯỚC GIAO TIẾP MAILBOX TRONG AGENT",
         subtitle="Mental model của Policy giao tiếp; Go không tự cấm chia sẻ con trỏ.",
     )
@@ -2842,7 +2846,7 @@ def build_agent_mailbox_contract_drawing(w: float = 280.79, h: float = 362.83) -
     d.add(String(card_x + 10.0, a1_y + a1_h - 25.0, "Tác nhân gửi thông điệp:", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, a1_y + a1_h - 37.0, "• Tạo tin nhắn dạng struct value (bất biến)", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, a1_y + a1_h - 48.0, "• KHÔNG gửi con trỏ chia sẻ (*Data)", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 10.0, a1_y + 10.0, "• Gửi qua channel: block nếu buffer đầy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
+    d.add(String(card_x + 10.0, a1_y + a1_h - 59.0, "• Gửi qua channel: block nếu buffer đầy", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
 
     # Arrow down a1 -> mailbox
     draw_arrow(d, card_x + card_w / 2.0, a1_y, card_x + card_w / 2.0, a1_y - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2857,7 +2861,7 @@ def build_agent_mailbox_contract_drawing(w: float = 280.79, h: float = 362.83) -
     d.add(String(card_x + 10.0, my + m_h - 25.0, "Kênh đệm có giới hạn: chan Message", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, my + m_h - 37.0, "• Hàng đợi độc quyền thuộc quyền sở hữu B", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, my + m_h - 48.0, "• Non-blocking yêu cầu select/default", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
-    d.add(String(card_x + 10.0, my + 10.0, "• Go runtime không tự cấm direct call", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(card_x + 10.0, my + m_h - 59.0, "• Go runtime không tự cấm direct call", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     # Arrow down mailbox -> a2
     draw_arrow(d, card_x + card_w / 2.0, my, card_x + card_w / 2.0, my - gap, color=COLOR_INK_DARK, width=1.0, head_size=3.6)
@@ -2873,7 +2877,7 @@ def build_agent_mailbox_contract_drawing(w: float = 280.79, h: float = 362.83) -
     d.add(String(card_x + 10.0, a2_y + a2_h - 37.0, "• for msg := range agent.mailbox { ... }", fontName="BookMono", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, a2_y + a2_h - 48.0, "• Xử lý tuần tự: loại trừ data race trên state", fontName="BookSansBold", fontSize=6.0, fillColor=COLOR_INK_DARK))
     d.add(String(card_x + 10.0, a2_y + a2_h - 60.0, "• Trạng thái nội bộ (Isolated State) được cô lập", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MID))
-    d.add(String(card_x + 10.0, a2_y + 10.0, "• An toàn là do kỷ luật thiết kế, không do Go tự ép", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
+    d.add(String(card_x + 10.0, a2_y + a2_h - 72.0, "• An toàn là do kỷ luật thiết kế, không do Go tự ép", fontName="BookSans", fontSize=6.0, fillColor=COLOR_INK_MUTED))
 
     return d
 
@@ -3228,6 +3232,7 @@ def verify_all_diagram_typography() -> bool:
     print("  [SCOPE] Visual inspection (manual QA): arrow clearances, sequence lifelines, line crossings, semantics.")
 
     active_targets = {
+        "workflow-promotion-jobs.png",
         "type-information-boundaries.png",
         "webhook-hmac-verification.png",
         "webhook-delivery-deduplication.png",

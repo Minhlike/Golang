@@ -873,6 +873,87 @@ class PublicationContracts(unittest.TestCase):
         for bad in forbidden_tokens:
             self.assertNotIn(bad, combined_lower, f"Figure 34 must not contain unverified/contradictory claim '{bad}'")
 
+    def test_figure_33_semantic_and_boundary_contract(self):
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import ch19_29_vector_diagrams as vdiag
+        from reportlab.graphics.shapes import String
+
+        drawing = vdiag.build_workflow_promotion_jobs_drawing()
+        texts = []
+
+        def collect_strings(node):
+            if isinstance(node, String):
+                texts.append(node.text)
+            elif hasattr(node, "contents"):
+                for child in node.contents:
+                    collect_strings(child)
+
+        collect_strings(drawing)
+        combined = "\n".join(texts)
+        combined_lower = combined.lower()
+
+        required_tokens = [
+            "JOB: VERIFY",
+            "JOB: BUILD-ARTIFACT",
+            "JOB: PROMOTE-PRODUCTION",
+            "promote-gate",
+            "--provenance-verified=false",
+            "fail-closed",
+            "exit 1",
+        ]
+        for token in required_tokens:
+            self.assertIn(token.lower(), combined_lower, f"Figure 33 must reflect delivery.yaml step '{token}'")
+
+        forbidden_tokens = [
+            "cosign verify",
+            "slsa level 3",
+            "attestation.json",
+            "scan-results.sarif",
+        ]
+        for bad in forbidden_tokens:
+            self.assertNotIn(bad, combined_lower, f"Figure 33 must not overclaim unimplemented feature '{bad}'")
+
+    def test_atlas_figures_51_to_58_header_and_line_spacing_contract(self):
+        import sys
+        sys.path.insert(0, str(Path("scripts").resolve()))
+        import ch19_29_vector_diagrams as vdiag
+        from reportlab.graphics.shapes import String
+
+        builders = [
+            (51, vdiag.build_library_informer_data_path_drawing),
+            (52, vdiag.build_library_smithy_step_order_drawing),
+            (53, vdiag.build_collector_pipeline_drawing),
+            (54, vdiag.build_containerd_shim_boundary_drawing),
+            (55, vdiag.build_grpc_client_balancing_drawing),
+            (56, vdiag.build_cobra_hook_order_drawing),
+            (57, vdiag.build_viper_value_precedence_drawing),
+            (58, vdiag.build_agent_mailbox_contract_drawing),
+        ]
+
+        for fig_num, builder in builders:
+            drawing = builder()
+            strings = []
+
+            def collect(node):
+                if isinstance(node, String):
+                    strings.append(node)
+                elif hasattr(node, "contents"):
+                    for c in node.contents:
+                        collect(c)
+
+            collect(drawing)
+            all_text = " ".join(s.text for s in strings)
+            self.assertNotIn("PHỤ LỤC B", all_text, f"Figure {fig_num} header must not reference 'PHỤ LỤC B'")
+            self.assertIn(f"ATLAS THƯ VIỆN // HÌNH {fig_num}", all_text, f"Figure {fig_num} header must be 'ATLAS THƯ VIỆN // HÌNH {fig_num}'")
+
+            if fig_num == 54:
+                # Test line distance between subreaper and zombie process
+                subreaper_s = next(s for s in strings if "Shim làm subreaper tránh" in s.text)
+                zombie_s = next(s for s in strings if "zombie process trong OS" in s.text)
+                delta_y = abs(subreaper_s.y - zombie_s.y)
+                self.assertLessEqual(delta_y, 18.0, f"Figure 54 zombie process text must not fall to bottom: delta_y={delta_y} pt")
+
 
 if __name__ == '__main__':
     unittest.main()
