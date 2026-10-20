@@ -13,9 +13,9 @@
 > - **Library Atlas Verification**: **50/50 thư viện đã đối soát source anchors và lock.json** (cilium/ebpf đạt phiên bản thực tế v0.22.0).
 >
 > **Định danh ấn bản Production Master**:
-> - PRODUCTION_MASTER_PDF: Golang_Master.pdf (**14.770.325 bytes, SHA-256: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89**) — **PROMOTED & VERIFIED**
+> - PRODUCTION_MASTER_PDF: Golang_Master.pdf (**14.829.560 bytes, SHA-256: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe**) — **PROMOTED & VERIFIED**
 > - BACKUP_ROLLBACK_PDF: Golang_Master.prev.pdf (13.542.255 bytes, SHA-256: 2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d) — **VERIFIED**
-> - CANDIDATE_PDF_PATH: 	mp/pdfs/Golang_Master.candidate.pdf (14.770.325 bytes, SHA-256: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89)
+> - CANDIDATE_PDF_PATH: 	mp/pdfs/Golang_Master.candidate.pdf (14.829.560 bytes, SHA-256: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe)
 > - EXACT_PAGE_COUNT: **590 trang ISO A4**
 > - REMEDIATION_BRANCH: ix/final-book-acceptance
 > - MASTER_SHA256 == CANDIDATE_SHA256: **100% MATCH**
@@ -48,7 +48,7 @@ Biên bản thẩm định và nghiệm thu xuất bản toàn diện (Final Who
 - STARTING_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - FINAL_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
 - SOURCE_FREEZE_HEAD: `0a4cea0bef424430cae87519697c5eeed60a7aad`
-- CANDIDATE_PDF_SHA256: `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89`
+- CANDIDATE_PDF_SHA256: `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe`
 - PAGE_COUNT: `611`
 - PUBLICATION_STATUS: `AWAITING_MANUAL_APPROVAL`
 - BOOK_STATUS: `REMEDIATION_COMPLETE_VERIFIED`

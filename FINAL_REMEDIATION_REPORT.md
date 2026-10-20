@@ -17,8 +17,8 @@
 | Thông số kỹ thuật | Bản Master Hiện hành (`Golang_Master.pdf`) | Bản Sao lưu Rollback (`Golang_Master.prev.pdf`) | Bản Ứng viên (`Golang_Master.candidate.pdf`) |
 | :--- | :--- | :--- | :--- |
 | **Trạng thái** | **OFFICIAL PRODUCTION MASTER** | **ROLLBACK BACKUP VERIFIED** | **RELEASE CANDIDATE (590P)** |
-| **Mã băm SHA-256** | `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89` | `2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d` | `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89` |
-| **Dung lượng byte** | `14,770,325` bytes | `13,542,255` bytes | `14,770,325` bytes |
+| **Mã băm SHA-256** | `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe` | `2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d` | `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe` |
+| **Dung lượng byte** | `14,829,560` bytes | `13,542,255` bytes | `14,829,560` bytes |
 | **Tổng số trang** | **590 trang ISO A4** | 493 trang | **590 trang ISO A4** |
 | **PDF Bookmarks** | **34 mục phân cấp chuẩn** | 34 mục | **34 mục phân cấp chuẩn** |
 | **Khớp nguyên byte** | **`MASTER_SHA256 == CANDIDATE_SHA256` (100% Khớp)** | — | Chuẩn đối chiếu |
@@ -74,7 +74,7 @@ Reviewer đã phát hiện sự khác biệt giữa con số 57 methods trong `s
 AUTOMATED PUBLICATION PDF PREFLIGHT SUMMARY
 ================================================================================
 File:                      D:\Golang\Golang_Master.pdf
-SHA-256:                   6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89
+SHA-256:                   6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe
 Total Pages:               590
 Page Geometry:             PASS (ISO A4 595.28 x 841.89 pt)
 Actually Rendered Fonts:   JetBrainsMono-Regular, SourceSans3-Regular, SourceSans3-Semibold, SourceSerif4-Regular

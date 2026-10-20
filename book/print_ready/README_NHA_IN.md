@@ -12,8 +12,8 @@
 1. **PDF Production Master (Content Production Master PDF):**
    - Vị trí: `Golang_Master.pdf`
    - Số trang: **ĐÚNG 590 TRANG** (Toàn bộ 29 chương, Atlas Thư viện và Phụ lục A).
-   - SHA-256: `6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89`
-   - Dung lượng: `14,770,325` bytes
+   - SHA-256: `6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe`
+   - Dung lượng: `14,829,560` bytes
    - Trạng thái: **OFFICIAL PRODUCTION MASTER — PROMOTED & VERIFIED**.
 
 2. **Tệp Ruột Sách Chế bản In Hai Mặt (Duplex Prepress Book Block):**

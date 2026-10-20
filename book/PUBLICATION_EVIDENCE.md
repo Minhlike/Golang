@@ -9,11 +9,11 @@ Tài liệu này xác lập ranh giới bằng chứng thực tế, phương ph�
 ## 1. Định danh ấn bản Production Master (Golang_Master.pdf)
 
 - **Tập tin Production Master**: Golang_Master.pdf (**PROMOTED & VERIFIED**)
-- **Mã băm SHA-256**: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89
-- **Dung lượng chính xác**: 14,770,325 bytes (14.1 MB)
+- **Mã băm SHA-256**: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe
+- **Dung lượng chính xác**: 14,829,560 bytes (14.1 MB)
 - **Số trang thực tế**: **590 trang** (ISO A4 dọc .28 \times 841.89\text{ pt}$)
 - **Tập tin Sao lưu Rollback**: Golang_Master.prev.pdf (13,542,255 bytes, SHA-256: 2d70b44e62ee4c743a06a590b6dd6ebc5a86955c9956888f78768d30889b041d) — **VERIFIED**
-- **Tập tin Ứng viên Đối chiếu**: 	mp/pdfs/Golang_Master.candidate.pdf (14,770,325 bytes, SHA-256: 6843fcbecf7ac361bf6f58f2790d62182c4589249bfb412f3d25dbb738fcde89)
+- **Tập tin Ứng viên Đối chiếu**: 	mp/pdfs/Golang_Master.candidate.pdf (14,829,560 bytes, SHA-256: 6614c2186c7b18ec3dabcccf8ae9f7b570cef70b23d5ea104c84a86f32d6a6fe)
 - **Khớp nguyên byte**: MASTER_SHA256 == CANDIDATE_SHA256 (**100% MATCH**)
 - **Baseline PDF đối chiếu**: 086c1670fd923d62d68b88680d6a2062df019bb80a2cacbf976338999f8276c (603 trang)
 - **Nhánh khắc phục**: ix/final-book-acceptance

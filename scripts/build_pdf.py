@@ -85,6 +85,7 @@ TMP = ROOT / "tmp/pdfs"
 CANDIDATE = TMP / "Golang_Master.candidate.pdf"
 CURRENT = ROOT / "Golang_Master.pdf"
 PREVIOUS = ROOT / "Golang_Master.prev.pdf"
+FRONT_COVER = ROOT / "book/design/agent2-2026/artwork/front_cover_page.pdf"
 
 
 def chapter_sort_key(p: Path) -> tuple[int, int, str]:
@@ -978,6 +979,24 @@ def build(*, candidate_only: bool = False) -> None:
     # Second pass: generate final document with populated TOC page numbers
     build_document([], body, body_bold, heading, heading_bold, mono, toc_pages=toc_pages)
     reader = add_outline(CANDIDATE, titles)
+    if FRONT_COVER.exists():
+        import pymupdf as fitz
+        fdoc = fitz.open(CANDIDATE)
+        cov_doc = fitz.open(FRONT_COVER)
+        out_doc = fitz.open()
+        out_doc.insert_pdf(cov_doc, from_page=0, to_page=0)
+        out_doc.insert_pdf(fdoc, from_page=1, to_page=len(fdoc) - 1)
+        out_doc.set_toc(fdoc.get_toc())
+        for p in out_doc:
+            p.set_bleedbox(p.rect)
+            p.set_trimbox(p.rect)
+        tmp_cand = CANDIDATE.with_suffix(".tmp.pdf")
+        out_doc.save(tmp_cand, deflate=True)
+        fdoc.close()
+        cov_doc.close()
+        out_doc.close()
+        tmp_cand.replace(CANDIDATE)
+        reader = PdfReader(str(CANDIDATE))
     extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     # Semantic assertions preventing regressions
